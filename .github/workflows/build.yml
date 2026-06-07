@@ -9,6 +9,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -39,7 +42,9 @@ jobs:
         env:
           # Don't try to code-sign / notarize — no Apple Developer account needed.
           CSC_IDENTITY_AUTO_DISCOVERY: false
-        run: npm run dist
+        # --publish never: we attach to the Release ourselves (next step),
+        # so electron-builder must not try to publish (which needs GH_TOKEN).
+        run: npm run build && npx electron-builder --publish never
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
