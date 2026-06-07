@@ -1,7 +1,7 @@
 {
   "D:\\stuff\\Design tool\\designtools\\designtools\\.claude\\launch.json": {
-    "mtime": 1780501175.391714,
-    "ast_hash": "4e8623a85ba53113b11947a2e92ba409",
+    "mtime": 1780837523.7230713,
+    "ast_hash": "693a17ff6491215f9e79c9b7198a9ae9",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\.claude\\settings.json": {
@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\package.json": {
-    "mtime": 1780834474.835223,
-    "ast_hash": "8d296a36e4faa6d71bee03c195166cae",
+    "mtime": 1780859773.0776079,
+    "ast_hash": "8b09afd1ed892a71a68f11908a149af9",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\App.jsx": {
@@ -75,8 +75,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\color.js": {
-    "mtime": 1780572121.054966,
-    "ast_hash": "975fb0255ef4382eba4bce90d5135bf2",
+    "mtime": 1780860552.4898047,
+    "ast_hash": "7c83e53e6322e26b825b6621148a1702",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\colorMatch.js": {
@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\DesignMode.jsx": {
-    "mtime": 1780501966.5684597,
-    "ast_hash": "953a4bd6317a89523302473f174cdfa4",
+    "mtime": 1780860855.1510608,
+    "ast_hash": "5382ffa483a8d88b0a6db77b270d75d6",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\ExportPanel.jsx": {
@@ -130,8 +130,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\Generators.jsx": {
-    "mtime": 1780572455.2466786,
-    "ast_hash": "e19cfc29b43fbaf1ede95339a95630fd",
+    "mtime": 1780860843.94549,
+    "ast_hash": "b70af929dc96640e6827d028851b65c1",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\IllustrationMode.jsx": {
@@ -367,6 +367,46 @@
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\unsavedChanges.js": {
     "mtime": 1780782030.7920628,
     "ast_hash": "97717aaee30946b7aba8fa49c9a8e594",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\Grade.jsx": {
+    "mtime": 1780860691.3929136,
+    "ast_hash": "ce8c408ccb8aec9aca312874baecda43",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\Gradient.jsx": {
+    "mtime": 1780860660.2357519,
+    "ast_hash": "5246e07b23115e92642739d31386040e",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\ImageExtract.jsx": {
+    "mtime": 1780860639.2810683,
+    "ast_hash": "7a921f2a564df08845dfc7235190e67f",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\Recipes.jsx": {
+    "mtime": 1780862397.1776693,
+    "ast_hash": "aef90a5c4e9c5196cd09c62d25b4dc62",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\Vision.jsx": {
+    "mtime": 1780860706.9874763,
+    "ast_hash": "723333b4ab62adf4b9f7e6c6bd5ff1e3",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\panelUi.jsx": {
+    "mtime": 1780860595.109571,
+    "ast_hash": "4c5f7ca23345ad8729a84d53e91192c8",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.github\\workflows\\build.yml": {
+    "mtime": 1780849644.804995,
+    "ast_hash": "a89718fb4bdaadfb4f29487e01518d3f",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\RUN-ON-MAC.md": {
+    "mtime": 1780844290.2240055,
+    "ast_hash": "318298fb9edd9f2bb3c2e224e786c2b2",
     "semantic_hash": ""
   }
 }

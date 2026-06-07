@@ -1,10 +1,15 @@
 import { useState } from 'react'
 import Generators from './Generators.jsx'
+import Recipes from './Recipes.jsx'
+import ImageExtract from './ImageExtract.jsx'
+import Gradient from './Gradient.jsx'
+import Grade from './Grade.jsx'
+import Vision from './Vision.jsx'
 import AutoFix from './AutoFix.jsx'
 import ContrastMatrix from './ContrastMatrix.jsx'
 import BGCheck from './BGCheck.jsx'
 
-const PANELS = ['Generators', 'AutoFix', 'Contrast', 'BG Check']
+const PANELS = ['Generators', 'Recipes', 'Image', 'Gradient', 'Grade', 'Vision', 'AutoFix', 'Contrast', 'BG Check']
 
 export default function DesignMode() {
   const [panel, setPanel] = useState('Generators')
@@ -23,6 +28,11 @@ export default function DesignMode() {
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
         {panel === 'Generators' && <Generators />}
+        {panel === 'Recipes'    && <Recipes />}
+        {panel === 'Image'      && <ImageExtract />}
+        {panel === 'Gradient'   && <Gradient />}
+        {panel === 'Grade'      && <Grade />}
+        {panel === 'Vision'     && <Vision />}
         {panel === 'AutoFix'    && <AutoFix />}
         {panel === 'Contrast'   && <ContrastMatrix />}
         {panel === 'BG Check'   && <BGCheck />}

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { generateHarmony, generateRamp, oklchToHex } from '../../lib/color.js'
 import { addSwatch, usePalette } from './store.js'
 import { NumberSlider, EditableNumber } from '../../components/NumberField.jsx'
+import Icon from '../../components/Icon.jsx'
 
 const ACCENT = '#8b5cf6'
 
@@ -76,10 +77,27 @@ export default function Generators() {
   const [cMin,        setCMin]        = useState(0.06)
   const [cMax,        setCMax]        = useState(0.28)
 
+  const [locked, setLocked] = useState({})   // { index: pinnedHex }
+
   const randomPalette = useMemo(
     () => generateRandomPalette({ seed, colorCount, hueModeIdx, lMin, lMax, cMin, cMax }),
     [seed, colorCount, hueModeIdx, lMin, lMax, cMin, cMax]
   )
+
+  // Locked slots keep their colour across rerolls; the rest follow the seed.
+  const displayPalette = useMemo(
+    () => randomPalette.map((h, i) => locked[i] ?? h),
+    [randomPalette, locked]
+  )
+
+  function toggleLock(i) {
+    setLocked(prev => {
+      const next = { ...prev }
+      if (next[i] != null) delete next[i]
+      else next[i] = prev[i] ?? randomPalette[i]
+      return next
+    })
+  }
 
   // ── Harmony state ─────────────────────────────────────────────────────────
   const [harmonyType, setHarmonyType] = useState('complementary')
@@ -148,10 +166,10 @@ export default function Generators() {
           onMaxChange={v => setCMax(Math.max(v, cMin + 0.01))}
           step={0.005} min={0} max={0.37} />
 
-        {/* Live preview strip */}
-        <SwatchStrip hexes={randomPalette} />
+        {/* Live preview strip with per-swatch lock — reroll keeps locked colors */}
+        <LockableStrip hexes={displayPalette} locked={locked} onToggle={toggleLock} />
 
-        <AddBtn onClick={() => addColors(randomPalette)}>
+        <AddBtn onClick={() => addColors(displayPalette)}>
           + Add {colorCount} colors to palette
         </AddBtn>
       </Section>
@@ -221,6 +239,52 @@ function SwatchStrip({ hexes }) {
       ))}
     </div>
   )
+}
+
+// ── Lockable swatch strip (Coolors-style lock + reroll) ───────────────────────
+
+function LockableStrip({ hexes, locked, onToggle }) {
+  const [hovered, setHovered] = useState(null)
+  return (
+    <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', height: 56 }}>
+      {hexes.map((hex, i) => {
+        const isLocked = locked[i] != null
+        const dark = isLightHex(hex)
+        return (
+          <div key={i}
+            onMouseEnter={() => setHovered(i)}
+            onMouseLeave={() => setHovered(null)}
+            onClick={() => onToggle(i)}
+            title={isLocked ? 'Unlock — reroll will change it' : 'Lock — reroll will keep it'}
+            style={{
+              flex: 1, background: hex, position: 'relative', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            {(isLocked || hovered === i) && (
+              <Icon name={isLocked ? 'lock' : 'lock_open'} size={13}
+                color={dark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.85)'} />
+            )}
+            {hovered === i && (
+              <div style={{
+                position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)',
+                background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 8,
+                padding: '1px 4px', borderRadius: 3, fontFamily: 'monospace',
+                whiteSpace: 'nowrap', pointerEvents: 'none',
+              }}>{hex}</div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function isLightHex(hex) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.55
 }
 
 // ── Range row (min + max sliders) ─────────────────────────────────────────────
