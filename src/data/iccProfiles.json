@@ -1,0 +1,50 @@
+[
+  {
+    "id": "FOGRA39",
+    "name": "FOGRA39 (ISO Coated v2)",
+    "region": "EU",
+    "substrate": "coated",
+    "tac": 330,
+    "description": "European offset printing on coated paper"
+  },
+  {
+    "id": "FOGRA52",
+    "name": "FOGRA52 (ISO Uncoated v2)",
+    "region": "EU",
+    "substrate": "uncoated",
+    "tac": 260,
+    "description": "European offset printing on uncoated paper"
+  },
+  {
+    "id": "GRACoL2013",
+    "name": "GRACoL 2013 (US Coated)",
+    "region": "US",
+    "substrate": "coated",
+    "tac": 300,
+    "description": "US commercial offset on grade 1 coated paper"
+  },
+  {
+    "id": "SWOP2013C3",
+    "name": "SWOP 2013 C3 (US Publication)",
+    "region": "US",
+    "substrate": "coated",
+    "tac": 240,
+    "description": "US web offset publication printing"
+  },
+  {
+    "id": "JapanColor2001",
+    "name": "Japan Color 2001 Coated",
+    "region": "JP",
+    "substrate": "coated",
+    "tac": 350,
+    "description": "Japanese offset printing on coated paper"
+  },
+  {
+    "id": "Newsprint",
+    "name": "ISO Newspaper (IFRA)",
+    "region": "EU",
+    "substrate": "newsprint",
+    "tac": 220,
+    "description": "Newspaper / newsprint offset"
+  }
+]

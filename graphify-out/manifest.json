@@ -1,0 +1,372 @@
+{
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.claude\\launch.json": {
+    "mtime": 1780501175.391714,
+    "ast_hash": "4e8623a85ba53113b11947a2e92ba409",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.claude\\settings.json": {
+    "mtime": 1780678098.7214537,
+    "ast_hash": "af5683cedca023035194f9ad92eb0eef",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.claude\\settings.local.json": {
+    "mtime": 1780669198.8695407,
+    "ast_hash": "0ff84f7c7b72a9c26347702030714148",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\electron\\main.js": {
+    "mtime": 1780782046.9211214,
+    "ast_hash": "e6e66d6487cd1b9a1f3846c5b07c058b",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\electron\\preload.js": {
+    "mtime": 1780782036.3669014,
+    "ast_hash": "7eae7765918866c24bf846e8b89d8ecf",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\package.json": {
+    "mtime": 1780834474.835223,
+    "ast_hash": "8d296a36e4faa6d71bee03c195166cae",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\App.jsx": {
+    "mtime": 1780681493.7228682,
+    "ast_hash": "bd9c3a4766c926a0d11c2149dc3e6e1a",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\components\\Sidebar.jsx": {
+    "mtime": 1780481777.1942956,
+    "ast_hash": "ceb4a8290d0877d177e8ac777c03e920",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\data\\colorNames.json": {
+    "mtime": 1780494491.0029173,
+    "ast_hash": "0bd73622fa84535d21f134025ca7658b",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\data\\hks.json": {
+    "mtime": 1780494436.7014775,
+    "ast_hash": "7b4923dce824cf26218ef01e1e5b27fd",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\data\\iccProfiles.json": {
+    "mtime": 1780494320.1103356,
+    "ast_hash": "72cca81cfbb851ffca6476f8be12bd8a",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\data\\ncs.json": {
+    "mtime": 1780494459.3715756,
+    "ast_hash": "304735eb3f87d800a6b72fc52181a279",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\data\\ral.json": {
+    "mtime": 1780494417.4381948,
+    "ast_hash": "cf31330805656db8f4022c136287ad87",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\data\\riso.json": {
+    "mtime": 1780494340.3251603,
+    "ast_hash": "f4bd881014983b872d26f20ca3c5dc82",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\cmyk.js": {
+    "mtime": 1780494538.9533162,
+    "ast_hash": "353d8f7ca9e7933d4f32be51dc0bf5b5",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\color.js": {
+    "mtime": 1780572121.054966,
+    "ast_hash": "975fb0255ef4382eba4bce90d5135bf2",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\colorMatch.js": {
+    "mtime": 1780494546.0200934,
+    "ast_hash": "500d104fa4de94e3af20e49cdd365936",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\export.js": {
+    "mtime": 1780492707.4424145,
+    "ast_hash": "480402e5b5979c5cdb498bef0f1739a1",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\file.js": {
+    "mtime": 1780485994.949447,
+    "ast_hash": "c807ce14bc6554270205b8e35eb6275a",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\svg.js": {
+    "mtime": 1780485981.1844182,
+    "ast_hash": "4abc2fd2a5d858f259a062f0537104eb",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\main.jsx": {
+    "mtime": 1780431300.4047258,
+    "ast_hash": "2d372ef1145ad6984baf68d65c547cfd",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\AutoFix.jsx": {
+    "mtime": 1780494690.9426148,
+    "ast_hash": "10a1d11779fe6f876b285dc3659584f4",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\BGCheck.jsx": {
+    "mtime": 1780501957.757781,
+    "ast_hash": "c7dd05af94ad8b233294109246336342",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\ContrastMatrix.jsx": {
+    "mtime": 1780494660.2117262,
+    "ast_hash": "4637def27801de98c2a874f385b4e66e",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\DesignMode.jsx": {
+    "mtime": 1780501966.5684597,
+    "ast_hash": "953a4bd6317a89523302473f174cdfa4",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\ExportPanel.jsx": {
+    "mtime": 1780782079.0864198,
+    "ast_hash": "0bccd5fa5c1215d064b474d3ac7e6fe1",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\Generators.jsx": {
+    "mtime": 1780572455.2466786,
+    "ast_hash": "e19cfc29b43fbaf1ede95339a95630fd",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\IllustrationMode.jsx": {
+    "mtime": 1780615892.9819286,
+    "ast_hash": "217707550025835f72bdfba1352a58fa",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\PaletteStrip.jsx": {
+    "mtime": 1780494797.4164639,
+    "ast_hash": "f06533a830e733492e12d245edf0cf9a",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\Picker.jsx": {
+    "mtime": 1780619029.9493492,
+    "ast_hash": "a4eb5f521166bb71d8ce87d03e0aaade",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\PrintPanel.jsx": {
+    "mtime": 1780494725.2401676,
+    "ast_hash": "422d5ce7fc7aa649b6d17e078a469e24",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\ShadowHighlight.jsx": {
+    "mtime": 1780615872.8021522,
+    "ast_hash": "8f33147b6e3b134edfda71b4f1b6391b",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\Swatch.jsx": {
+    "mtime": 1780494629.8378031,
+    "ast_hash": "8c8b76f2ff4c94d322bda4d0deb1b620",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\index.jsx": {
+    "mtime": 1780681501.0788739,
+    "ast_hash": "053986a768932c1b9477b12b8a3cb738",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\store.js": {
+    "mtime": 1780782056.0945256,
+    "ast_hash": "86f7fa981aa9b63be4c4d68c832b7830",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\BackgroundRow.jsx": {
+    "mtime": 1780486172.3560743,
+    "ast_hash": "77512f1a5fdb0b82d1038ddbca57ba0f",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\Clearspace.jsx": {
+    "mtime": 1780486161.1273358,
+    "ast_hash": "42d1a606df3db7ea011df9d0ebda8094",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\ExportPanel.jsx": {
+    "mtime": 1780486183.0955026,
+    "ast_hash": "5e0e63d56451ba5c4701af8e473e390e",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\FaviconView.jsx": {
+    "mtime": 1780492688.348688,
+    "ast_hash": "03ded951a45f073f8f83fd270555021b",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\FileSlot.jsx": {
+    "mtime": 1780486123.7611523,
+    "ast_hash": "3aa176f8edf958c8ecf27a068ea24d02",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\LockupSvg.jsx": {
+    "mtime": 1780488048.8485098,
+    "ast_hash": "66c2b3b8ef0f7871ac815a0ca8396f93",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\Treatments.jsx": {
+    "mtime": 1780486148.3023894,
+    "ast_hash": "54c76e56e7911447167dc0746a44dab4",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\VariationCard.jsx": {
+    "mtime": 1780486139.0776548,
+    "ast_hash": "ee1fb6ddc8f143b24726cc622ab3a43d",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\index.jsx": {
+    "mtime": 1780782218.2487354,
+    "ast_hash": "70cad48a286388e3ac13c200efe56fd4",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\layout.js": {
+    "mtime": 1780488028.5269313,
+    "ast_hash": "138d680b98cc826850e6de7476081cb1",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\ui.jsx": {
+    "mtime": 1780486052.2466776,
+    "ast_hash": "6c5e6a1db161d6cd3f1b59c605cd60cd",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\PatternMaker.jsx": {
+    "mtime": 1780782160.6106906,
+    "ast_hash": "a9c8c8dcc3db582587849eea143103d0",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\vite.config.js": {
+    "mtime": 1780431300.3682022,
+    "ast_hash": "cd1fab8516e898a075ffb345d82c47a4",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\CLAUDE.md": {
+    "mtime": 1780519464.047498,
+    "ast_hash": "8a6643a420fdad6bfb583523bc6cef16",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\index.html": {
+    "mtime": 1780431300.3733833,
+    "ast_hash": "c23c983536b94a4f003434b39b58c9f5",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\components\\NumberField.jsx": {
+    "mtime": 1780572157.042037,
+    "ast_hash": "92175df1e89328d4a84df9851eafb723",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\eyedropper.js": {
+    "mtime": 1780572182.3422327,
+    "ast_hash": "7a2117d218b7340ba6d03798b9bd6831",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\components\\Icon.jsx": {
+    "mtime": 1780681357.8266761,
+    "ast_hash": "0ad0e269d8b79c96b17af8eb986e66f7",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\data\\pigments.js": {
+    "mtime": 1780590768.0998735,
+    "ast_hash": "547bc89298ba35667eddbd981599722d",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\paintSim.js": {
+    "mtime": 1780592954.7244904,
+    "ast_hash": "95b65a5cca5690f4b80d7ea9291cf650",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\spectral.js": {
+    "mtime": 1780591873.3072484,
+    "ast_hash": "9988038955d5766accfd17660d9180d6",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\Mixer.jsx": {
+    "mtime": 1780592406.5018885,
+    "ast_hash": "9380619628af6fbe4fd0b8e52e543eaf",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\materials.js": {
+    "mtime": 1780617598.6303713,
+    "ast_hash": "b01e8f9f078a43133356a53f291391d4",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\MaterialPanel.jsx": {
+    "mtime": 1780617047.823913,
+    "ast_hash": "73381c959615ad40e2ee2bd35206527e",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\dist-electron\\win-unpacked\\vk_swiftshader_icd.json": {
+    "mtime": 1780619468.0150237,
+    "ast_hash": "8642dd3a87e2de6e991fae08458e302b",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\CobaltTool.jsx": {
+    "mtime": 1780782232.438451,
+    "ast_hash": "aac2d1519cb4ebb768f93350d698bc43",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\dist-electron\\builder-debug.yml": {
+    "mtime": 1780619539.2501833,
+    "ast_hash": "58136145756215c42ed618fe8b6c48b0",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\dist-electron\\win-unpacked\\LICENSE.electron.txt": {
+    "mtime": 1780619468.0067997,
+    "ast_hash": "4d42118d35941e0f664dddbd83f633c5",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\dist-electron\\win-unpacked\\LICENSES.chromium.html": {
+    "mtime": 1780619467.8378808,
+    "ast_hash": "bd0ced1bc275f592b03bafac4b301a93",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\dither.js": {
+    "mtime": 1780834890.9856124,
+    "ast_hash": "ec280888923ebbc360f5582e425c3882",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\halftone.js": {
+    "mtime": 1780684225.665747,
+    "ast_hash": "9fa4b009883c7916e8f5b3acbbd328cd",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\DitherTool\\index.jsx": {
+    "mtime": 1780835734.0313709,
+    "ast_hash": "87a9a29f875c6d5198a58dfec6489765",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\DitherTool\\palettes.js": {
+    "mtime": 1780681242.9674816,
+    "ast_hash": "f583df862d5377b86a58daaf33d1894f",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\DitherTool\\store.js": {
+    "mtime": 1780834905.921431,
+    "ast_hash": "2bbdd38c15de96d815908672eab972a1",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\ditherSvg.js": {
+    "mtime": 1780694233.2165031,
+    "ast_hash": "512fdb67f35a0331560aff6378653501",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\gif.js": {
+    "mtime": 1780697674.9388812,
+    "ast_hash": "6dd252af236bbe74bd48f8c1d545df09",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\glDither.js": {
+    "mtime": 1780836119.1269426,
+    "ast_hash": "7ee780e45737dc590d4ed74f07f6c29f",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\DitherTool\\presets.js": {
+    "mtime": 1780835156.6563523,
+    "ast_hash": "84741a41ec17b2423cd77a91bec13d22",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\unsavedChanges.js": {
+    "mtime": 1780782030.7920628,
+    "ast_hash": "97717aaee30946b7aba8fa49c9a8e594",
+    "semantic_hash": ""
+  }
+}

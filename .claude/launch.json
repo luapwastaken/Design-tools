@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "designtools-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "vite"],
+      "port": 5173
+    },
+    {
+      "name": "dragons-static",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8099", "--directory", "D:\\stuff\\dragons website"],
+      "port": 8099
+    }
+  ]
+}
