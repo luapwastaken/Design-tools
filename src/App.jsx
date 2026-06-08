@@ -4,6 +4,7 @@ import PatternMaker from './tools/PatternMaker.jsx'
 import LogoMaker from './tools/LogoMaker/index.jsx'
 import ColorPalette from './tools/ColorPalette/index.jsx'
 import DitherTool from './tools/DitherTool/index.jsx'
+import PostFX from './tools/PostFX/index.jsx'
 import CobaltTool from './tools/CobaltTool.jsx'
 import Icon from './components/Icon.jsx'
 
@@ -35,6 +36,13 @@ const TOOLS = [
     icon: <Icon name="grain" size={18} />,
     accentColor: '#f472b6',
     component: DitherTool,
+  },
+  {
+    id: 'post-fx',
+    label: 'Post FX',
+    icon: <Icon name="bolt" size={18} />,
+    accentColor: '#36d6c3',
+    component: PostFX,
   },
   {
     id: 'cobalt',

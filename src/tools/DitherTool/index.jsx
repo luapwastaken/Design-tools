@@ -14,6 +14,7 @@ import {
   undo, redo, canUndo, canRedo, resetState,
   applyPreset, saveCurrentPreset, removeSavedPreset, setInkCtl,
 } from './store.js'
+import { sendImageToPostFX } from '../PostFX/store.js'
 import { processFile } from '../../lib/file.js'
 import { decodeGif, fileToCanvas, encodeGif, framesToZip, gifDecodeSupported } from '../../lib/gif.js'
 import { markSaved } from '../../lib/unsavedChanges.js'
@@ -618,6 +619,13 @@ export default function DitherTool() {
   function onPointerMove(e) { if (panRef.current) setPan({ x: panRef.current.px + (e.clientX - panRef.current.x), y: panRef.current.py + (e.clientY - panRef.current.y) }) }
   function onPointerUp(e) { if (panRef.current) { panRef.current = null; try { viewportRef.current.releasePointerCapture(e.pointerId) } catch {} } }
 
+  // Hand the current rendered result over to the Post FX tool (cross-tool feed).
+  function sendToPostFX() {
+    if (!src) return
+    const cv = getResultCanvas()
+    if (cv) sendImageToPostFX(cv.toDataURL('image/png'))
+  }
+
   // ── Exports ─────────────────────────────────────────────────────────────────
   function exportPng() {
     if (!src) return
@@ -1032,6 +1040,7 @@ export default function DitherTool() {
               <Btn icon="download" label="PNG" onClick={exportPng} disabled={!src} />
               <Btn icon="download" label="SVG" onClick={exportSvg} disabled={!src || !svgAvailable()} title={svgAvailable() ? 'Vector export' : 'SVG: turn off post FX / use halftone or an ordered algorithm'} />
               <Btn icon="content_copy" label="Copy" onClick={copyClipboard} disabled={!src} />
+              <Btn icon="send" label="Send to Post FX" onClick={sendToPostFX} disabled={!src} title="Hand the current result to the Post FX tool" />
             </div>
             {!dither && layersMeta.length > 1 && <div style={{ marginTop: 6 }}><Btn icon="download" label="Export each layer (PNG)" onClick={exportAllLayers} disabled={!src} /></div>}
           </Section>
