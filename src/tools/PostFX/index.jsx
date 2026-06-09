@@ -3,6 +3,7 @@ import { NumberSlider, EditableNumber } from '../../components/NumberField.jsx'
 import Icon from '../../components/Icon.jsx'
 import { create as createGL } from '../../lib/glPostFX.js'
 import { processFile } from '../../lib/file.js'
+import { encodeGif } from '../../lib/gif.js'
 import { markSaved } from '../../lib/unsavedChanges.js'
 import { EFFECTS, EFFECT_LIST, CATEGORIES, BLEND_MODES } from './effects.js'
 import {
@@ -37,6 +38,12 @@ export default function PostFX() {
   const [presetName, setPresetName] = useState('')
   const [split, setSplit] = useState(null)   // null = off; 0..1 = divider position
   const splitDragRef = useRef(false)
+
+  // animated export
+  const [animDur, setAnimDur] = useState(2)      // loop length (seconds)
+  const [animFps, setAnimFps] = useState(15)     // frames per second
+  const [exporting, setExporting] = useState(null)   // null | 'gif' | 'video'
+  const busyRef = useRef(false)                  // pause the live anim loop during export
 
   // pan / zoom
   const viewportRef = useRef(null)
@@ -82,6 +89,43 @@ export default function PostFX() {
     loadFromUrl(r.dataUrl, r.name)
   }
 
+  // Synthetic Post-FX test card — exercises every effect family: a full hue
+  // spectrum + skin swatches (colour/tone), a smooth grey ramp (banding/posterize),
+  // concentric rings + a grid (geometric distortion), fine radial spokes + crisp
+  // text (sharpen / chromatic aberration), and bright dots on black (bloom/god rays).
+  function loadDebug() {
+    const W = 768, H = 576
+    const c = document.createElement('canvas'); c.width = W; c.height = H
+    const x = c.getContext('2d')
+    x.fillStyle = '#111'; x.fillRect(0, 0, W, H)
+    // 1. hue spectrum band (top)
+    const hb = H * 0.16
+    for (let i = 0; i < W; i++) { x.fillStyle = `hsl(${i / W * 360}, 85%, 55%)`; x.fillRect(i, 0, 1, hb) }
+    // 2. smooth grey ramp (banding / posterize)
+    const g = x.createLinearGradient(0, hb, W, hb); g.addColorStop(0, '#000'); g.addColorStop(1, '#fff')
+    x.fillStyle = g; x.fillRect(0, hb, W, hb * 0.6)
+    // 3. saturation/skin swatches
+    const sw = ['#0a0a0a', '#ffffff', '#e8b48f', '#c1855f', '#7a4a33', '#3b6ea5', '#d33f49', '#2fae66', '#f4c20d']
+    const swY = hb * 1.6, swH = hb * 0.6, cw = W / sw.length
+    sw.forEach((col, i) => { x.fillStyle = col; x.fillRect(i * cw, swY, cw, swH) })
+    // 4. left: concentric rings (lens distortion / twirl / bulge)
+    const midY = swY + swH, half = (H - midY)
+    const ccx = W * 0.25, ccy = midY + half * 0.5, R = half * 0.45
+    for (let r = R; r > 0; r -= 10) { x.beginPath(); x.arc(ccx, ccy, r, 0, 7); x.fillStyle = (Math.floor(r / 10) % 2) ? '#fafafa' : '#181818'; x.fill() }
+    // radial spokes over the rings (chromatic aberration / sharpen)
+    x.strokeStyle = '#e23'; x.lineWidth = 1.5
+    for (let a = 0; a < 36; a++) { const t = a / 36 * Math.PI * 2; x.beginPath(); x.moveTo(ccx, ccy); x.lineTo(ccx + Math.cos(t) * R, ccy + Math.sin(t) * R); x.stroke() }
+    // 5. right: checker grid (kaleidoscope / wave / pixelate)
+    const gx0 = W * 0.5, gw = W * 0.5, n = 12, cs = gw / n
+    for (let iy = 0; iy < Math.ceil(half / cs); iy++) for (let ix = 0; ix < n; ix++) { x.fillStyle = ((ix + iy) % 2) ? '#2a2a30' : '#cfcfd6'; x.fillRect(gx0 + ix * cs, midY + iy * cs, cs, cs) }
+    // 6. bright dots on the dark grid corner (bloom / god rays highlights)
+    for (const [dx, dy, rr] of [[0.7, 0.35, 7], [0.82, 0.62, 11], [0.6, 0.78, 5]]) { x.beginPath(); x.arc(W * dx, midY + half * dy, rr, 0, 7); x.fillStyle = '#fff'; x.fill() }
+    // 7. crisp label (edge detect / sharpen)
+    x.fillStyle = '#fff'; x.font = 'bold 44px sans-serif'; x.textBaseline = 'middle'
+    x.fillText('POST·FX', ccx - 96, ccy)
+    loadFromUrl(c.toDataURL('image/png'), 'debug-testcard')
+  }
+
   // ── Render ───────────────────────────────────────────────────────────────────
   const render = useCallback(() => {
     const gl = glRef.current
@@ -96,7 +140,7 @@ export default function PostFX() {
   // Animation loop — only while `animate` is on and an animated effect is present.
   useEffect(() => {
     if (!s.animate) { if (rafRef.current) cancelAnimationFrame(rafRef.current); rafRef.current = null; return }
-    const loop = () => { render(); rafRef.current = requestAnimationFrame(loop) }
+    const loop = () => { if (!busyRef.current) render(); rafRef.current = requestAnimationFrame(loop) }
     rafRef.current = requestAnimationFrame(loop)
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
   }, [s.animate, render])
@@ -168,6 +212,86 @@ export default function PostFX() {
       a.click()
       markSaved('post-fx')
     })
+  }
+
+  function downloadBlob(blob, name) {
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = name
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000)
+  }
+
+  function baseName() { return (src?.name?.replace(/\.[^.]+$/, '') || 'postfx') }
+
+  // First MP4 container the platform's MediaRecorder can encode, else WebM.
+  function pickVideoMime() {
+    const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+    return (typeof MediaRecorder !== 'undefined' && types.find(t => MediaRecorder.isTypeSupported(t))) || null
+  }
+  const videoMime = pickVideoMime()
+  const videoExt = videoMime && videoMime.includes('mp4') ? 'mp4' : 'webm'
+
+  // Render the stack at an explicit time and read it back to a 2D canvas.
+  function renderFrameAt(t) {
+    glRef.current.render(s.stack, EFFECTS, t)
+    return glRef.current.readToCanvas()
+  }
+
+  // Export a looping animated GIF: sample the effect stack across the loop period.
+  async function exportGif() {
+    if (!glRef.current || !workRef.current || exporting) return
+    setExporting('gif'); busyRef.current = true
+    try {
+      const fps = Math.max(1, Math.round(animFps))
+      const n = Math.max(1, Math.round(fps * animDur))
+      const delay = Math.round(1000 / fps)
+      const frames = []
+      for (let i = 0; i < n; i++) {
+        frames.push(renderFrameAt((i / fps) * s.animSpeed))
+        if (i % 4 === 3) await new Promise(r => setTimeout(r))   // yield (rAF-independent)
+      }
+      const blob = await encodeGif(frames, frames.map(() => delay))
+      if (blob) { downloadBlob(blob, baseName() + '-loop.gif'); markSaved('post-fx') }
+    } finally {
+      busyRef.current = false; setExporting(null); render()
+    }
+  }
+
+  // Record the animated canvas to MP4 (or WebM fallback) via MediaRecorder.
+  async function exportVideo() {
+    if (!glRef.current || !workRef.current || exporting || !videoMime) return
+    setExporting('video'); busyRef.current = true
+    try {
+      const fps = Math.max(1, Math.round(animFps))
+      const stream = canvasRef.current.captureStream(fps)
+      const rec = new MediaRecorder(stream, { mimeType: videoMime, videoBitsPerSecond: 12_000_000 })
+      const chunks = []
+      rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data) }
+      const stopped = new Promise(res => { rec.onstop = res })
+      rec.start()
+      // Drive the canvas with a fixed-interval timer (rAF-independent so it keeps
+      // recording even when the window isn't focused) and push each frame to the
+      // capture stream explicitly via requestFrame() when available.
+      const track = stream.getVideoTracks()[0]
+      const start = performance.now()
+      await new Promise(resolve => {
+        const tick = () => {
+          const el = (performance.now() - start) / 1000
+          renderFrameAt(el * s.animSpeed)
+          if (track && track.requestFrame) track.requestFrame()
+          if (el >= animDur) { resolve(); return }
+          setTimeout(tick, 1000 / fps)
+        }
+        tick()
+      })
+      rec.stop()
+      await stopped
+      downloadBlob(new Blob(chunks, { type: videoMime }), baseName() + '-loop.' + videoExt)
+      markSaved('post-fx')
+    } finally {
+      busyRef.current = false; setExporting(null); render()
+    }
   }
 
   function savePreset() {
@@ -263,8 +387,9 @@ export default function PostFX() {
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <Btn icon="upload" label="Import" onClick={() => fileRef.current?.click()} flex />
-            <Btn icon="download" label="Export PNG" onClick={exportPng} disabled={!src} flex />
+            <Btn icon="grain" label="Debug" onClick={loadDebug} title="Load a synthetic test card for tuning effects" flex />
           </div>
+          <Btn icon="download" label="Export PNG" onClick={exportPng} disabled={!src} flex />
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={e => e.target.files[0] && loadFile(e.target.files[0])} />
         </div>
 
@@ -297,12 +422,26 @@ export default function PostFX() {
           {/* selected effect controls */}
           {selected && <EffectControls layer={selected} />}
 
-          {/* animation */}
+          {/* animation + animated export */}
           <Section title="Animation">
             <Row label="Animate">
               <Toggle on={s.animate} onClick={() => setState({ animate: !s.animate })} />
             </Row>
-            <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>Drives time-based effects (Glitch, Grain, VHS, Wave, Noise).</div>
+            <Row label="Speed">
+              <NumberSlider min={0.1} max={4} step={0.1} value={s.animSpeed} onChange={v => setState({ animSpeed: v })} accent={ACC} labelWidth={0} numWidth={42} />
+            </Row>
+            <div style={{ fontSize: 10, color: C.muted, marginTop: 2, marginBottom: 8 }}>Drives time-based effects (Glitch, Grain, VHS, Wave, Noise, Scanline roll/flicker).</div>
+            <div style={{ height: 1, background: C.border, margin: '4px 0 8px' }} />
+            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5, color: C.muted, marginBottom: 6 }}>Loop export</div>
+            <Row label="Duration"><NumberSlider min={0.5} max={10} step={0.5} value={animDur} onChange={setAnimDur} accent={ACC} suffix="s" labelWidth={0} numWidth={42} /></Row>
+            <Row label="FPS"><NumberSlider min={5} max={60} step={1} value={animFps} onChange={setAnimFps} accent={ACC} labelWidth={0} numWidth={42} /></Row>
+            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+              <Btn icon="grain" label={exporting === 'gif' ? 'GIF…' : 'GIF'} onClick={exportGif} disabled={!src || !!exporting} flex />
+              <Btn icon="videocam" label={exporting === 'video' ? `${videoExt.toUpperCase()}…` : (videoMime ? videoExt.toUpperCase() : 'No video')} onClick={exportVideo} disabled={!src || !!exporting || !videoMime} flex />
+            </div>
+            <div style={{ fontSize: 9, color: C.muted, marginTop: 6 }}>
+              GIF loops seamlessly. {videoMime ? `Video records ${animDur}s as ${videoExt.toUpperCase()}.` : 'Video recording unsupported here.'} A static stack exports a still loop.
+            </div>
           </Section>
 
           {/* presets */}
