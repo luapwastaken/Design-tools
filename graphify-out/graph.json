@@ -592,7 +592,7 @@
       "label": "Icon()",
       "file_type": "code",
       "source_file": "src/components/Icon.jsx",
-      "source_location": "L44",
+      "source_location": "L45",
       "id": "components_icon_icon",
       "community": 37,
       "norm_label": "icon()"
@@ -6100,7 +6100,7 @@
       "label": "EFFECTS",
       "file_type": "code",
       "source_file": "src/tools/PostFX/effects.js",
-      "source_location": "L593",
+      "source_location": "L737",
       "id": "postfx_effects_effects",
       "community": 5,
       "norm_label": "effects"
@@ -6109,7 +6109,7 @@
       "label": "defaultLayer()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/effects.js",
-      "source_location": "L597",
+      "source_location": "L741",
       "id": "postfx_effects_defaultlayer",
       "community": 5,
       "norm_label": "defaultlayer()"
@@ -6118,7 +6118,7 @@
       "label": "BLEND_MODES",
       "file_type": "code",
       "source_file": "src/tools/PostFX/effects.js",
-      "source_location": "L604",
+      "source_location": "L748",
       "id": "postfx_effects_blend_modes",
       "community": 5,
       "norm_label": "blend_modes"
@@ -6136,7 +6136,7 @@
       "label": "C",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L16",
+      "source_location": "L17",
       "id": "postfx_index_c",
       "community": 5,
       "norm_label": "c"
@@ -6145,7 +6145,7 @@
       "label": "PostFX()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L24",
+      "source_location": "L25",
       "id": "postfx_index_postfx",
       "community": 5,
       "norm_label": "postfx()"
@@ -6154,7 +6154,7 @@
       "label": "StackRow()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L333",
+      "source_location": "L472",
       "id": "postfx_index_stackrow",
       "community": 5,
       "norm_label": "stackrow()"
@@ -6163,7 +6163,7 @@
       "label": "RowIcon()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L362",
+      "source_location": "L501",
       "id": "postfx_index_rowicon",
       "community": 5,
       "norm_label": "rowicon()"
@@ -6172,7 +6172,7 @@
       "label": "AddMenu()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L372",
+      "source_location": "L511",
       "id": "postfx_index_addmenu",
       "community": 5,
       "norm_label": "addmenu()"
@@ -6181,7 +6181,7 @@
       "label": "EffectControls()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L403",
+      "source_location": "L542",
       "id": "postfx_index_effectcontrols",
       "community": 5,
       "norm_label": "effectcontrols()"
@@ -6190,7 +6190,7 @@
       "label": "Param()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L424",
+      "source_location": "L563",
       "id": "postfx_index_param",
       "community": 5,
       "norm_label": "param()"
@@ -6199,7 +6199,7 @@
       "label": "Section()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L458",
+      "source_location": "L597",
       "id": "postfx_index_section",
       "community": 5,
       "norm_label": "section()"
@@ -6208,7 +6208,7 @@
       "label": "Row()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L471",
+      "source_location": "L610",
       "id": "postfx_index_row",
       "community": 5,
       "norm_label": "row()"
@@ -6217,7 +6217,7 @@
       "label": "Btn()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L480",
+      "source_location": "L619",
       "id": "postfx_index_btn",
       "community": 5,
       "norm_label": "btn()"
@@ -6226,7 +6226,7 @@
       "label": "MiniBtn()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L493",
+      "source_location": "L632",
       "id": "postfx_index_minibtn",
       "community": 5,
       "norm_label": "minibtn()"
@@ -6235,7 +6235,7 @@
       "label": "IconBtn()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L502",
+      "source_location": "L641",
       "id": "postfx_index_iconbtn",
       "community": 5,
       "norm_label": "iconbtn()"
@@ -6244,7 +6244,7 @@
       "label": "ZoomBtn()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L511",
+      "source_location": "L650",
       "id": "postfx_index_zoombtn",
       "community": 5,
       "norm_label": "zoombtn()"
@@ -6253,7 +6253,7 @@
       "label": "Toggle()",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L520",
+      "source_location": "L659",
       "id": "postfx_index_toggle",
       "community": 5,
       "norm_label": "toggle()"
@@ -6262,7 +6262,7 @@
       "label": "inputStyle",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L531",
+      "source_location": "L670",
       "id": "postfx_index_inputstyle",
       "community": 5,
       "norm_label": "inputstyle"
@@ -6271,7 +6271,7 @@
       "label": "selectStyle",
       "file_type": "code",
       "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L535",
+      "source_location": "L674",
       "id": "postfx_index_selectstyle",
       "community": 5,
       "norm_label": "selectstyle"
@@ -6667,7 +6667,7 @@
       "label": "EFFECT_LIST",
       "file_type": "code",
       "source_file": "src/tools/PostFX/effects.js",
-      "source_location": "L594",
+      "source_location": "L738",
       "id": "postfx_effects_effect_list",
       "community": 5,
       "norm_label": "effect_list"
@@ -7448,9 +7448,9 @@
       "source_file": "src/App.jsx",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_app",
-      "target": "postfx_index",
-      "confidence_score": 1.0
+      "target": "postfx_index"
     },
     {
       "relation": "contains",
@@ -7620,9 +7620,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "components_icon",
-      "confidence_score": 1.0
+      "target": "components_icon"
     },
     {
       "relation": "imports_from",
@@ -7770,9 +7770,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "components_numberfield",
-      "confidence_score": 1.0
+      "target": "components_numberfield"
     },
     {
       "relation": "calls",
@@ -7847,9 +7847,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "components_numberfield_editablenumber",
-      "confidence_score": 1.0
+      "target": "components_numberfield_editablenumber"
     },
     {
       "relation": "imports",
@@ -7924,9 +7924,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "components_numberfield_numberslider",
-      "confidence_score": 1.0
+      "target": "components_numberfield_numberslider"
     },
     {
       "relation": "contains",
@@ -11654,9 +11654,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "lib_file",
-      "confidence_score": 1.0
+      "target": "lib_file"
     },
     {
       "relation": "imports_from",
@@ -11764,9 +11764,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "lib_file_processfile",
-      "confidence_score": 1.0
+      "target": "lib_file_processfile"
     },
     {
       "relation": "imports_from",
@@ -11830,6 +11830,17 @@
       "target": "lib_gif_gifdecodesupported"
     },
     {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PostFX/index.jsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "postfx_index",
+      "target": "lib_gif",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -11872,6 +11883,17 @@
       "confidence_score": 1.0,
       "source": "dithertool_index",
       "target": "lib_gif_encodegif"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PostFX/index.jsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "postfx_index",
+      "target": "lib_gif_encodegif",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports",
@@ -12526,9 +12548,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L68",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx",
-      "target": "lib_glpostfx_buildfragment",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_buildfragment"
     },
     {
       "relation": "contains",
@@ -12536,9 +12558,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L89",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx",
-      "target": "lib_glpostfx_create",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_create"
     },
     {
       "relation": "contains",
@@ -12546,9 +12568,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L265",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx",
-      "target": "lib_glpostfx_hextorgb01",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_hextorgb01"
     },
     {
       "relation": "contains",
@@ -12556,9 +12578,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L95",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx",
-      "target": "lib_glpostfx_postfxengine",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine"
     },
     {
       "relation": "imports_from",
@@ -12567,9 +12589,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "lib_glpostfx",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx"
     },
     {
       "relation": "calls",
@@ -12578,9 +12600,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L129",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine_progfor",
-      "target": "lib_glpostfx_buildfragment",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_buildfragment"
     },
     {
       "relation": "imports",
@@ -12589,9 +12611,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "lib_glpostfx_create",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_create"
     },
     {
       "relation": "method",
@@ -12599,9 +12621,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L160",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine",
-      "target": "lib_glpostfx_postfxengine_bindquad",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_bindquad"
     },
     {
       "relation": "method",
@@ -12609,9 +12631,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L237",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine",
-      "target": "lib_glpostfx_postfxengine_blit",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_blit"
     },
     {
       "relation": "method",
@@ -12619,9 +12641,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L114",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine",
-      "target": "lib_glpostfx_postfxengine_compile",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_compile"
     },
     {
       "relation": "method",
@@ -12629,9 +12651,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L96",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine",
-      "target": "lib_glpostfx_postfxengine_constructor",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_constructor"
     },
     {
       "relation": "method",
@@ -12639,9 +12661,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L146",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine",
-      "target": "lib_glpostfx_postfxengine_fbo",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_fbo"
     },
     {
       "relation": "method",
@@ -12649,9 +12671,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L126",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine",
-      "target": "lib_glpostfx_postfxengine_progfor",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_progfor"
     },
     {
       "relation": "method",
@@ -12659,9 +12681,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L248",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine",
-      "target": "lib_glpostfx_postfxengine_readtocanvas",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_readtocanvas"
     },
     {
       "relation": "method",
@@ -12669,9 +12691,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L183",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine",
-      "target": "lib_glpostfx_postfxengine_render",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_render"
     },
     {
       "relation": "method",
@@ -12679,9 +12701,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L219",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine",
-      "target": "lib_glpostfx_postfxengine_setparams",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_setparams"
     },
     {
       "relation": "method",
@@ -12689,9 +12711,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L170",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine",
-      "target": "lib_glpostfx_postfxengine_setsource",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_setsource"
     },
     {
       "relation": "method",
@@ -12699,9 +12721,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L136",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine",
-      "target": "lib_glpostfx_postfxengine_tex",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_tex"
     },
     {
       "relation": "calls",
@@ -12710,9 +12732,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L103",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine_constructor",
-      "target": "lib_glpostfx_postfxengine_compile",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_compile"
     },
     {
       "relation": "calls",
@@ -12721,9 +12743,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L106",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine_constructor",
-      "target": "lib_glpostfx_postfxengine_tex",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_tex"
     },
     {
       "relation": "calls",
@@ -12732,9 +12754,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L129",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine_progfor",
-      "target": "lib_glpostfx_postfxengine_compile",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_compile"
     },
     {
       "relation": "calls",
@@ -12743,9 +12765,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L197",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine_render",
-      "target": "lib_glpostfx_postfxengine_progfor",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_progfor"
     },
     {
       "relation": "calls",
@@ -12754,9 +12776,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L149",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine_fbo",
-      "target": "lib_glpostfx_postfxengine_tex",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_tex"
     },
     {
       "relation": "calls",
@@ -12765,9 +12787,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L199",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine_render",
-      "target": "lib_glpostfx_postfxengine_fbo",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_fbo"
     },
     {
       "relation": "calls",
@@ -12776,9 +12798,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L241",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine_blit",
-      "target": "lib_glpostfx_postfxengine_bindquad",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_bindquad"
     },
     {
       "relation": "calls",
@@ -12787,9 +12809,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L203",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine_render",
-      "target": "lib_glpostfx_postfxengine_bindquad",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_bindquad"
     },
     {
       "relation": "calls",
@@ -12798,9 +12820,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L191",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine_render",
-      "target": "lib_glpostfx_postfxengine_blit",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_blit"
     },
     {
       "relation": "calls",
@@ -12809,9 +12831,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L211",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine_render",
-      "target": "lib_glpostfx_postfxengine_setparams",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_postfxengine_setparams"
     },
     {
       "relation": "calls",
@@ -12820,9 +12842,9 @@
       "source_file": "src/lib/glPostFX.js",
       "source_location": "L227",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_glpostfx_postfxengine_setparams",
-      "target": "lib_glpostfx_hextorgb01",
-      "confidence_score": 1.0
+      "target": "lib_glpostfx_hextorgb01"
     },
     {
       "relation": "imports_from",
@@ -14492,9 +14514,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "lib_unsavedchanges",
-      "confidence_score": 1.0
+      "target": "lib_unsavedchanges"
     },
     {
       "relation": "imports_from",
@@ -14503,9 +14525,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "lib_unsavedchanges",
-      "confidence_score": 1.0
+      "target": "lib_unsavedchanges"
     },
     {
       "relation": "imports_from",
@@ -14613,9 +14635,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "lib_unsavedchanges_markdirty",
-      "confidence_score": 1.0
+      "target": "lib_unsavedchanges_markdirty"
     },
     {
       "relation": "calls",
@@ -14624,9 +14646,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L75",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_notify",
-      "target": "lib_unsavedchanges_markdirty",
-      "confidence_score": 1.0
+      "target": "lib_unsavedchanges_markdirty"
     },
     {
       "relation": "imports",
@@ -14745,9 +14767,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "lib_unsavedchanges_marksaved",
-      "confidence_score": 1.0
+      "target": "lib_unsavedchanges_marksaved"
     },
     {
       "relation": "imports",
@@ -19560,9 +19582,9 @@
       "source_file": "src/tools/DitherTool/index.jsx",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dithertool_index",
-      "target": "postfx_store",
-      "confidence_score": 1.0
+      "target": "postfx_store"
     },
     {
       "relation": "imports",
@@ -19571,9 +19593,9 @@
       "source_file": "src/tools/DitherTool/index.jsx",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dithertool_index",
-      "target": "postfx_store_sendimagetopostfx",
-      "confidence_score": 1.0
+      "target": "postfx_store_sendimagetopostfx"
     },
     {
       "relation": "calls",
@@ -21459,9 +21481,9 @@
       "source_file": "src/tools/PostFX/effects.js",
       "source_location": "L604",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_effects",
-      "target": "postfx_effects_blend_modes",
-      "confidence_score": 1.0
+      "target": "postfx_effects_blend_modes"
     },
     {
       "relation": "contains",
@@ -21469,9 +21491,9 @@
       "source_file": "src/tools/PostFX/effects.js",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_effects",
-      "target": "postfx_effects_categories",
-      "confidence_score": 1.0
+      "target": "postfx_effects_categories"
     },
     {
       "relation": "contains",
@@ -21479,9 +21501,9 @@
       "source_file": "src/tools/PostFX/effects.js",
       "source_location": "L597",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_effects",
-      "target": "postfx_effects_defaultlayer",
-      "confidence_score": 1.0
+      "target": "postfx_effects_defaultlayer"
     },
     {
       "relation": "contains",
@@ -21489,9 +21511,9 @@
       "source_file": "src/tools/PostFX/effects.js",
       "source_location": "L593",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_effects",
-      "target": "postfx_effects_effects",
-      "confidence_score": 1.0
+      "target": "postfx_effects_effects"
     },
     {
       "relation": "contains",
@@ -21499,9 +21521,9 @@
       "source_file": "src/tools/PostFX/effects.js",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_effects",
-      "target": "postfx_effects_list",
-      "confidence_score": 1.0
+      "target": "postfx_effects_list"
     },
     {
       "relation": "imports_from",
@@ -21510,9 +21532,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_effects",
-      "confidence_score": 1.0
+      "target": "postfx_effects"
     },
     {
       "relation": "imports_from",
@@ -21521,9 +21543,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_effects",
-      "confidence_score": 1.0
+      "target": "postfx_effects"
     },
     {
       "relation": "imports",
@@ -21532,9 +21554,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_effects_categories",
-      "confidence_score": 1.0
+      "target": "postfx_effects_categories"
     },
     {
       "relation": "imports",
@@ -21543,9 +21565,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_effects_effects",
-      "confidence_score": 1.0
+      "target": "postfx_effects_effects"
     },
     {
       "relation": "imports",
@@ -21554,9 +21576,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_effects_defaultlayer",
-      "confidence_score": 1.0
+      "target": "postfx_effects_defaultlayer"
     },
     {
       "relation": "calls",
@@ -21576,9 +21598,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_effects_blend_modes",
-      "confidence_score": 1.0
+      "target": "postfx_effects_blend_modes"
     },
     {
       "relation": "imports",
@@ -21587,9 +21609,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_effects_effect_list",
-      "confidence_score": 1.0
+      "target": "postfx_effects_effect_list"
     },
     {
       "relation": "contains",
@@ -21597,9 +21619,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L372",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_addmenu",
-      "confidence_score": 1.0
+      "target": "postfx_index_addmenu"
     },
     {
       "relation": "contains",
@@ -21607,9 +21629,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L480",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_btn",
-      "confidence_score": 1.0
+      "target": "postfx_index_btn"
     },
     {
       "relation": "contains",
@@ -21617,9 +21639,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_c",
-      "confidence_score": 1.0
+      "target": "postfx_index_c"
     },
     {
       "relation": "contains",
@@ -21627,9 +21649,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L403",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_effectcontrols",
-      "confidence_score": 1.0
+      "target": "postfx_index_effectcontrols"
     },
     {
       "relation": "contains",
@@ -21637,9 +21659,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L502",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_iconbtn",
-      "confidence_score": 1.0
+      "target": "postfx_index_iconbtn"
     },
     {
       "relation": "contains",
@@ -21647,9 +21669,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L531",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_inputstyle",
-      "confidence_score": 1.0
+      "target": "postfx_index_inputstyle"
     },
     {
       "relation": "contains",
@@ -21657,9 +21679,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L493",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_minibtn",
-      "confidence_score": 1.0
+      "target": "postfx_index_minibtn"
     },
     {
       "relation": "contains",
@@ -21667,9 +21689,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L424",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_param",
-      "confidence_score": 1.0
+      "target": "postfx_index_param"
     },
     {
       "relation": "contains",
@@ -21677,9 +21699,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_postfx",
-      "confidence_score": 1.0
+      "target": "postfx_index_postfx"
     },
     {
       "relation": "contains",
@@ -21687,9 +21709,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L471",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_row",
-      "confidence_score": 1.0
+      "target": "postfx_index_row"
     },
     {
       "relation": "contains",
@@ -21697,9 +21719,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L362",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_rowicon",
-      "confidence_score": 1.0
+      "target": "postfx_index_rowicon"
     },
     {
       "relation": "contains",
@@ -21707,9 +21729,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L458",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_section",
-      "confidence_score": 1.0
+      "target": "postfx_index_section"
     },
     {
       "relation": "contains",
@@ -21717,9 +21739,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L535",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_selectstyle",
-      "confidence_score": 1.0
+      "target": "postfx_index_selectstyle"
     },
     {
       "relation": "contains",
@@ -21727,9 +21749,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L333",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_stackrow",
-      "confidence_score": 1.0
+      "target": "postfx_index_stackrow"
     },
     {
       "relation": "contains",
@@ -21737,9 +21759,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L520",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_toggle",
-      "confidence_score": 1.0
+      "target": "postfx_index_toggle"
     },
     {
       "relation": "contains",
@@ -21747,9 +21769,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L511",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_index_zoombtn",
-      "confidence_score": 1.0
+      "target": "postfx_index_zoombtn"
     },
     {
       "relation": "imports_from",
@@ -21758,9 +21780,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store",
-      "confidence_score": 1.0
+      "target": "postfx_store"
     },
     {
       "relation": "imports",
@@ -21769,9 +21791,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_addeffect",
-      "confidence_score": 1.0
+      "target": "postfx_store_addeffect"
     },
     {
       "relation": "imports",
@@ -21780,9 +21802,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_applypreset",
-      "confidence_score": 1.0
+      "target": "postfx_store_applypreset"
     },
     {
       "relation": "imports",
@@ -21791,9 +21813,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_canredo",
-      "confidence_score": 1.0
+      "target": "postfx_store_canredo"
     },
     {
       "relation": "imports",
@@ -21802,9 +21824,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_canundo",
-      "confidence_score": 1.0
+      "target": "postfx_store_canundo"
     },
     {
       "relation": "imports",
@@ -21813,9 +21835,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_clearincomingimage",
-      "confidence_score": 1.0
+      "target": "postfx_store_clearincomingimage"
     },
     {
       "relation": "imports",
@@ -21824,9 +21846,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_clearstack",
-      "confidence_score": 1.0
+      "target": "postfx_store_clearstack"
     },
     {
       "relation": "imports",
@@ -21835,9 +21857,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_duplicatelayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_duplicatelayer"
     },
     {
       "relation": "imports",
@@ -21846,9 +21868,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_getincomingimage",
-      "confidence_score": 1.0
+      "target": "postfx_store_getincomingimage"
     },
     {
       "relation": "imports",
@@ -21857,9 +21879,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_getstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_getstate"
     },
     {
       "relation": "imports",
@@ -21868,9 +21890,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_movelayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_movelayer"
     },
     {
       "relation": "imports",
@@ -21879,9 +21901,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_redo",
-      "confidence_score": 1.0
+      "target": "postfx_store_redo"
     },
     {
       "relation": "imports",
@@ -21890,9 +21912,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_removeeffect",
-      "confidence_score": 1.0
+      "target": "postfx_store_removeeffect"
     },
     {
       "relation": "imports",
@@ -21901,9 +21923,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_removesavedpreset",
-      "confidence_score": 1.0
+      "target": "postfx_store_removesavedpreset"
     },
     {
       "relation": "imports",
@@ -21912,9 +21934,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_reorderlayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_reorderlayer"
     },
     {
       "relation": "imports",
@@ -21923,9 +21945,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_resetstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_resetstate"
     },
     {
       "relation": "imports",
@@ -21934,9 +21956,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_savecurrentpreset",
-      "confidence_score": 1.0
+      "target": "postfx_store_savecurrentpreset"
     },
     {
       "relation": "imports",
@@ -21945,9 +21967,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_selectlayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_selectlayer"
     },
     {
       "relation": "imports",
@@ -21956,9 +21978,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_setlayerparam",
-      "confidence_score": 1.0
+      "target": "postfx_store_setlayerparam"
     },
     {
       "relation": "imports",
@@ -21967,9 +21989,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "imports",
@@ -21978,9 +22000,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_togglelayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_togglelayer"
     },
     {
       "relation": "imports",
@@ -21989,9 +22011,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_undo",
-      "confidence_score": 1.0
+      "target": "postfx_store_undo"
     },
     {
       "relation": "imports",
@@ -22000,9 +22022,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_updatelayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_updatelayer"
     },
     {
       "relation": "imports",
@@ -22011,9 +22033,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "postfx_store_usepostfx",
-      "confidence_score": 1.0
+      "target": "postfx_store_usepostfx"
     },
     {
       "relation": "calls",
@@ -22033,9 +22055,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L418",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index_effectcontrols",
-      "target": "postfx_store_setlayerparam",
-      "confidence_score": 1.0
+      "target": "postfx_store_setlayerparam"
     },
     {
       "relation": "calls",
@@ -22044,9 +22066,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L409",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index_effectcontrols",
-      "target": "postfx_store_updatelayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_updatelayer"
     },
     {
       "relation": "contains",
@@ -22054,9 +22076,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L99",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_addeffect",
-      "confidence_score": 1.0
+      "target": "postfx_store_addeffect"
     },
     {
       "relation": "contains",
@@ -22064,9 +22086,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L168",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_applypreset",
-      "confidence_score": 1.0
+      "target": "postfx_store_applypreset"
     },
     {
       "relation": "contains",
@@ -22074,9 +22096,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L71",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_canredo",
-      "confidence_score": 1.0
+      "target": "postfx_store_canredo"
     },
     {
       "relation": "contains",
@@ -22084,9 +22106,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L70",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_canundo",
-      "confidence_score": 1.0
+      "target": "postfx_store_canundo"
     },
     {
       "relation": "contains",
@@ -22094,9 +22116,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L187",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_clearincomingimage",
-      "confidence_score": 1.0
+      "target": "postfx_store_clearincomingimage"
     },
     {
       "relation": "contains",
@@ -22104,9 +22126,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L155",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_clearstack",
-      "confidence_score": 1.0
+      "target": "postfx_store_clearstack"
     },
     {
       "relation": "contains",
@@ -22114,9 +22136,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_default_state",
-      "confidence_score": 1.0
+      "target": "postfx_store_default_state"
     },
     {
       "relation": "contains",
@@ -22124,9 +22146,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L145",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_duplicatelayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_duplicatelayer"
     },
     {
       "relation": "contains",
@@ -22134,9 +22156,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L180",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_getincomingimage",
-      "confidence_score": 1.0
+      "target": "postfx_store_getincomingimage"
     },
     {
       "relation": "contains",
@@ -22144,9 +22166,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L79",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_getstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_getstate"
     },
     {
       "relation": "contains",
@@ -22154,9 +22176,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_history",
-      "confidence_score": 1.0
+      "target": "postfx_store_history"
     },
     {
       "relation": "contains",
@@ -22164,9 +22186,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L34",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_listeners",
-      "confidence_score": 1.0
+      "target": "postfx_store_listeners"
     },
     {
       "relation": "contains",
@@ -22174,9 +22196,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_load",
-      "confidence_score": 1.0
+      "target": "postfx_store_load"
     },
     {
       "relation": "contains",
@@ -22184,9 +22206,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_mkid",
-      "confidence_score": 1.0
+      "target": "postfx_store_mkid"
     },
     {
       "relation": "contains",
@@ -22194,9 +22216,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L127",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_movelayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_movelayer"
     },
     {
       "relation": "contains",
@@ -22204,9 +22226,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L73",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_notify",
-      "confidence_score": 1.0
+      "target": "postfx_store_notify"
     },
     {
       "relation": "contains",
@@ -22214,9 +22236,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L44",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_pushhistory",
-      "confidence_score": 1.0
+      "target": "postfx_store_pushhistory"
     },
     {
       "relation": "contains",
@@ -22224,9 +22246,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L64",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_redo",
-      "confidence_score": 1.0
+      "target": "postfx_store_redo"
     },
     {
       "relation": "contains",
@@ -22234,9 +22256,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L105",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_removeeffect",
-      "confidence_score": 1.0
+      "target": "postfx_store_removeeffect"
     },
     {
       "relation": "contains",
@@ -22244,9 +22266,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L173",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_removesavedpreset",
-      "confidence_score": 1.0
+      "target": "postfx_store_removesavedpreset"
     },
     {
       "relation": "contains",
@@ -22254,9 +22276,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L137",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_reorderlayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_reorderlayer"
     },
     {
       "relation": "contains",
@@ -22264,9 +22286,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L157",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_resetstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_resetstate"
     },
     {
       "relation": "contains",
@@ -22274,9 +22296,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L162",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_savecurrentpreset",
-      "confidence_score": 1.0
+      "target": "postfx_store_savecurrentpreset"
     },
     {
       "relation": "contains",
@@ -22284,9 +22306,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L125",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_selectlayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_selectlayer"
     },
     {
       "relation": "contains",
@@ -22294,9 +22316,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L196",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_sendimagetopostfx",
-      "confidence_score": 1.0
+      "target": "postfx_store_sendimagetopostfx"
     },
     {
       "relation": "contains",
@@ -22304,9 +22326,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L115",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_setlayerparam",
-      "confidence_score": 1.0
+      "target": "postfx_store_setlayerparam"
     },
     {
       "relation": "contains",
@@ -22314,9 +22336,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L81",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "contains",
@@ -22324,9 +22346,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L42",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_snap",
-      "confidence_score": 1.0
+      "target": "postfx_store_snap"
     },
     {
       "relation": "contains",
@@ -22334,9 +22356,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L33",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_state",
-      "confidence_score": 1.0
+      "target": "postfx_store_state"
     },
     {
       "relation": "contains",
@@ -22344,9 +22366,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L87",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_subscribe",
-      "confidence_score": 1.0
+      "target": "postfx_store_subscribe"
     },
     {
       "relation": "contains",
@@ -22354,9 +22376,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L121",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_togglelayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_togglelayer"
     },
     {
       "relation": "contains",
@@ -22364,9 +22386,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L58",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_undo",
-      "confidence_score": 1.0
+      "target": "postfx_store_undo"
     },
     {
       "relation": "contains",
@@ -22374,9 +22396,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L111",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_updatelayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_updatelayer"
     },
     {
       "relation": "contains",
@@ -22384,9 +22406,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L92",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store",
-      "target": "postfx_store_usepostfx",
-      "confidence_score": 1.0
+      "target": "postfx_store_usepostfx"
     },
     {
       "relation": "calls",
@@ -22395,9 +22417,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L148",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_duplicatelayer",
-      "target": "postfx_store_mkid",
-      "confidence_score": 1.0
+      "target": "postfx_store_mkid"
     },
     {
       "relation": "calls",
@@ -22406,9 +22428,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L163",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_savecurrentpreset",
-      "target": "postfx_store_mkid",
-      "confidence_score": 1.0
+      "target": "postfx_store_mkid"
     },
     {
       "relation": "calls",
@@ -22417,9 +22439,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L84",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_setstate",
-      "target": "postfx_store_pushhistory",
-      "confidence_score": 1.0
+      "target": "postfx_store_pushhistory"
     },
     {
       "relation": "calls",
@@ -22428,9 +22450,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L61",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_undo",
-      "target": "postfx_store_notify",
-      "confidence_score": 1.0
+      "target": "postfx_store_notify"
     },
     {
       "relation": "calls",
@@ -22439,9 +22461,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L67",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_redo",
-      "target": "postfx_store_notify",
-      "confidence_score": 1.0
+      "target": "postfx_store_notify"
     },
     {
       "relation": "calls",
@@ -22450,9 +22472,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L83",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_setstate",
-      "target": "postfx_store_notify",
-      "confidence_score": 1.0
+      "target": "postfx_store_notify"
     },
     {
       "relation": "calls",
@@ -22461,9 +22483,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L101",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_addeffect",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "calls",
@@ -22472,9 +22494,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L170",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_applypreset",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "calls",
@@ -22483,9 +22505,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L155",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_clearstack",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "calls",
@@ -22494,9 +22516,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L152",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_duplicatelayer",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "calls",
@@ -22505,9 +22527,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L133",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_movelayer",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "calls",
@@ -22516,9 +22538,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L108",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_removeeffect",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "calls",
@@ -22527,9 +22549,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L174",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_removesavedpreset",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "calls",
@@ -22538,9 +22560,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L142",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_reorderlayer",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "calls",
@@ -22549,9 +22571,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L158",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_resetstate",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "calls",
@@ -22560,9 +22582,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L164",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_savecurrentpreset",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "calls",
@@ -22571,9 +22593,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L125",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_selectlayer",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "calls",
@@ -22582,9 +22604,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L116",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_setlayerparam",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "calls",
@@ -22593,9 +22615,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L112",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_updatelayer",
-      "target": "postfx_store_setstate",
-      "confidence_score": 1.0
+      "target": "postfx_store_setstate"
     },
     {
       "relation": "calls",
@@ -22604,9 +22626,9 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L122",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_store_togglelayer",
-      "target": "postfx_store_updatelayer",
-      "confidence_score": 1.0
+      "target": "postfx_store_updatelayer"
     },
     {
       "relation": "contains",
@@ -22661,5 +22683,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "df9e89896cd5746cf4cae764511a3edcedd10bea"
+  "built_at_commit": "78938dcd0b5166455be5f798009d2231c287e5d4"
 }
