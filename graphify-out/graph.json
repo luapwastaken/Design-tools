@@ -549,25 +549,25 @@
       "source_file": "src/App.jsx",
       "source_location": "L1",
       "id": "src_app",
-      "community": 37,
+      "community": 36,
       "norm_label": "app.jsx"
     },
     {
       "label": "TOOLS",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L12",
+      "source_location": "L13",
       "id": "src_app_tools",
-      "community": 37,
+      "community": 36,
       "norm_label": "tools"
     },
     {
       "label": "App()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L56",
+      "source_location": "L64",
       "id": "src_app_app",
-      "community": 37,
+      "community": 36,
       "norm_label": "app()"
     },
     {
@@ -576,7 +576,7 @@
       "source_file": "src/components/Icon.jsx",
       "source_location": "L1",
       "id": "components_icon",
-      "community": 37,
+      "community": 30,
       "norm_label": "icon.jsx"
     },
     {
@@ -585,16 +585,16 @@
       "source_file": "src/components/Icon.jsx",
       "source_location": "L12",
       "id": "components_icon_icons",
-      "community": 37,
+      "community": 30,
       "norm_label": "icons"
     },
     {
       "label": "Icon()",
       "file_type": "code",
       "source_file": "src/components/Icon.jsx",
-      "source_location": "L45",
+      "source_location": "L46",
       "id": "components_icon_icon",
-      "community": 37,
+      "community": 30,
       "norm_label": "icon()"
     },
     {
@@ -648,7 +648,7 @@
       "source_file": "src/components/Sidebar.jsx",
       "source_location": "L1",
       "id": "components_sidebar",
-      "community": 37,
+      "community": 36,
       "norm_label": "sidebar.jsx"
     },
     {
@@ -657,7 +657,7 @@
       "source_file": "src/components/Sidebar.jsx",
       "source_location": "L1",
       "id": "components_sidebar_c",
-      "community": 37,
+      "community": 36,
       "norm_label": "c"
     },
     {
@@ -666,7 +666,7 @@
       "source_file": "src/components/Sidebar.jsx",
       "source_location": "L11",
       "id": "components_sidebar_sidebar",
-      "community": 37,
+      "community": 36,
       "norm_label": "sidebar()"
     },
     {
@@ -792,7 +792,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L28",
       "id": "lib_cmyk_cmyktorgb",
-      "community": 39,
+      "community": 6,
       "norm_label": "cmyktorgb()"
     },
     {
@@ -981,7 +981,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L132",
       "id": "lib_color_srgbtolinear",
-      "community": 24,
+      "community": 41,
       "norm_label": "srgbtolinear()"
     },
     {
@@ -999,7 +999,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L140",
       "id": "lib_color_reflectancetoks",
-      "community": 25,
+      "community": 41,
       "norm_label": "reflectancetoks()"
     },
     {
@@ -1008,7 +1008,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L144",
       "id": "lib_color_kstoreflectance",
-      "community": 25,
+      "community": 41,
       "norm_label": "kstoreflectance()"
     },
     {
@@ -1017,7 +1017,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L150",
       "id": "lib_color_mixlinearpigment",
-      "community": 25,
+      "community": 41,
       "norm_label": "mixlinearpigment()"
     },
     {
@@ -1026,7 +1026,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L160",
       "id": "lib_color_mixpigments",
-      "community": 25,
+      "community": 41,
       "norm_label": "mixpigments()"
     },
     {
@@ -1035,7 +1035,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L168",
       "id": "lib_color_oklchtohex",
-      "community": 30,
+      "community": 2,
       "norm_label": "oklchtohex()"
     },
     {
@@ -1386,7 +1386,7 @@
       "source_file": "src/lib/dither.js",
       "source_location": "L369",
       "id": "lib_dither_orderedmatrix",
-      "community": 23,
+      "community": 3,
       "norm_label": "orderedmatrix()"
     },
     {
@@ -2209,6 +2209,240 @@
       "norm_label": "renderhalftonesvg()"
     },
     {
+      "label": "lineart.js",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L1",
+      "id": "lib_lineart",
+      "community": 29,
+      "norm_label": "lineart.js"
+    },
+    {
+      "label": "toGray()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L15",
+      "id": "lib_lineart_togray",
+      "community": 29,
+      "norm_label": "togray()"
+    },
+    {
+      "label": "boxBlurF()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L33",
+      "id": "lib_lineart_boxblurf",
+      "community": 29,
+      "norm_label": "boxblurf()"
+    },
+    {
+      "label": "blurH()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L44",
+      "id": "lib_lineart_blurh",
+      "community": 29,
+      "norm_label": "blurh()"
+    },
+    {
+      "label": "blurV()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L57",
+      "id": "lib_lineart_blurv",
+      "community": 29,
+      "norm_label": "blurv()"
+    },
+    {
+      "label": "flatten()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L73",
+      "id": "lib_lineart_flatten",
+      "community": 29,
+      "norm_label": "flatten()"
+    },
+    {
+      "label": "autoLevels()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L86",
+      "id": "lib_lineart_autolevels",
+      "community": 29,
+      "norm_label": "autolevels()"
+    },
+    {
+      "label": "applyLevels()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L98",
+      "id": "lib_lineart_applylevels",
+      "community": 29,
+      "norm_label": "applylevels()"
+    },
+    {
+      "label": "toInk()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L114",
+      "id": "lib_lineart_toink",
+      "community": 29,
+      "norm_label": "toink()"
+    },
+    {
+      "label": "otsu()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L138",
+      "id": "lib_lineart_otsu",
+      "community": 29,
+      "norm_label": "otsu()"
+    },
+    {
+      "label": "adjustWeight()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L162",
+      "id": "lib_lineart_adjustweight",
+      "community": 29,
+      "norm_label": "adjustweight()"
+    },
+    {
+      "label": "despeckle()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L187",
+      "id": "lib_lineart_despeckle",
+      "community": 29,
+      "norm_label": "despeckle()"
+    },
+    {
+      "label": "compose()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L218",
+      "id": "lib_lineart_compose",
+      "community": 29,
+      "norm_label": "compose()"
+    },
+    {
+      "label": "smoothMask()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L242",
+      "id": "lib_lineart_smoothmask",
+      "community": 29,
+      "norm_label": "smoothmask()"
+    },
+    {
+      "label": "traceContours()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L260",
+      "id": "lib_lineart_tracecontours",
+      "community": 29,
+      "norm_label": "tracecontours()"
+    },
+    {
+      "label": "loopsToSvg()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L272",
+      "id": "lib_lineart_loopstosvg",
+      "community": 29,
+      "norm_label": "loopstosvg()"
+    },
+    {
+      "label": "renderLoops()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L284",
+      "id": "lib_lineart_renderloops",
+      "community": 29,
+      "norm_label": "renderloops()"
+    },
+    {
+      "label": "traceSvg()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L302",
+      "id": "lib_lineart_tracesvg",
+      "community": 29,
+      "norm_label": "tracesvg()"
+    },
+    {
+      "label": "fmt()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L307",
+      "id": "lib_lineart_fmt",
+      "community": 29,
+      "norm_label": "fmt()"
+    },
+    {
+      "label": "traceLoops()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L310",
+      "id": "lib_lineart_traceloops",
+      "community": 29,
+      "norm_label": "traceloops()"
+    },
+    {
+      "label": "collapseCollinear()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L352",
+      "id": "lib_lineart_collapsecollinear",
+      "community": 29,
+      "norm_label": "collapsecollinear()"
+    },
+    {
+      "label": "rdpClosed()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L364",
+      "id": "lib_lineart_rdpclosed",
+      "community": 29,
+      "norm_label": "rdpclosed()"
+    },
+    {
+      "label": "rdp()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L379",
+      "id": "lib_lineart_rdp",
+      "community": 29,
+      "norm_label": "rdp()"
+    },
+    {
+      "label": "perpDist()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L393",
+      "id": "lib_lineart_perpdist",
+      "community": 29,
+      "norm_label": "perpdist()"
+    },
+    {
+      "label": "dist2()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L400",
+      "id": "lib_lineart_dist2",
+      "community": 22,
+      "norm_label": "dist2()"
+    },
+    {
+      "label": "chaikin()",
+      "file_type": "code",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L403",
+      "id": "lib_lineart_chaikin",
+      "community": 29,
+      "norm_label": "chaikin()"
+    },
+    {
       "label": "materials.js",
       "file_type": "code",
       "source_file": "src/lib/materials.js",
@@ -2889,7 +3123,7 @@
       "source_file": "src/main.jsx",
       "source_location": "L1",
       "id": "src_main",
-      "community": 37,
+      "community": 36,
       "norm_label": "main.jsx"
     },
     {
@@ -3465,7 +3699,7 @@
       "source_file": "src/tools/ColorPalette/Generators.jsx",
       "source_location": "L67",
       "id": "colorpalette_generators_generators",
-      "community": 24,
+      "community": 30,
       "norm_label": "generators()"
     },
     {
@@ -3681,7 +3915,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L11",
       "id": "colorpalette_imageextract_rgbtooklab",
-      "community": 24,
+      "community": 41,
       "norm_label": "rgbtooklab()"
     },
     {
@@ -3690,7 +3924,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L24",
       "id": "colorpalette_imageextract_oklabtohex",
-      "community": 30,
+      "community": 2,
       "norm_label": "oklabtohex()"
     },
     {
@@ -3843,7 +4077,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L1",
       "id": "colorpalette_picker",
-      "community": 39,
+      "community": 6,
       "norm_label": "picker.jsx"
     },
     {
@@ -3852,7 +4086,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L11",
       "id": "colorpalette_picker_oklchlinearrgb",
-      "community": 39,
+      "community": 6,
       "norm_label": "oklchlinearrgb()"
     },
     {
@@ -3861,7 +4095,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L28",
       "id": "colorpalette_picker_isinsrgbgamut",
-      "community": 39,
+      "community": 6,
       "norm_label": "isinsrgbgamut()"
     },
     {
@@ -3870,7 +4104,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L36",
       "id": "colorpalette_picker_renderlcplane",
-      "community": 39,
+      "community": 6,
       "norm_label": "renderlcplane()"
     },
     {
@@ -3879,7 +4113,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L57",
       "id": "colorpalette_picker_hsltorgb01",
-      "community": 39,
+      "community": 6,
       "norm_label": "hsltorgb01()"
     },
     {
@@ -3888,7 +4122,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L66",
       "id": "colorpalette_picker_renderhslplane",
-      "community": 39,
+      "community": 6,
       "norm_label": "renderhslplane()"
     },
     {
@@ -3897,7 +4131,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L83",
       "id": "colorpalette_picker_renderhuestrip",
-      "community": 39,
+      "community": 6,
       "norm_label": "renderhuestrip()"
     },
     {
@@ -3906,7 +4140,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L96",
       "id": "colorpalette_picker_hextorgb01",
-      "community": 39,
+      "community": 6,
       "norm_label": "hextorgb01()"
     },
     {
@@ -3915,7 +4149,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L100",
       "id": "colorpalette_picker_rgb01tohex",
-      "community": 39,
+      "community": 6,
       "norm_label": "rgb01tohex()"
     },
     {
@@ -3924,7 +4158,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L104",
       "id": "colorpalette_picker_rgb255tohex",
-      "community": 39,
+      "community": 6,
       "norm_label": "rgb255tohex()"
     },
     {
@@ -3933,7 +4167,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L108",
       "id": "colorpalette_picker_hextohsl",
-      "community": 39,
+      "community": 6,
       "norm_label": "hextohsl()"
     },
     {
@@ -3942,7 +4176,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L122",
       "id": "colorpalette_picker_hsltohex",
-      "community": 39,
+      "community": 6,
       "norm_label": "hsltohex()"
     },
     {
@@ -3951,7 +4185,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L126",
       "id": "colorpalette_picker_hextorgb255",
-      "community": 39,
+      "community": 6,
       "norm_label": "hextorgb255()"
     },
     {
@@ -3960,7 +4194,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L130",
       "id": "colorpalette_picker_cmyktohex",
-      "community": 39,
+      "community": 6,
       "norm_label": "cmyktohex()"
     },
     {
@@ -3969,7 +4203,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L137",
       "id": "colorpalette_picker_getchannels",
-      "community": 39,
+      "community": 6,
       "norm_label": "getchannels()"
     },
     {
@@ -3978,7 +4212,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L147",
       "id": "colorpalette_picker_hexfromchannels",
-      "community": 39,
+      "community": 6,
       "norm_label": "hexfromchannels()"
     },
     {
@@ -3987,7 +4221,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L159",
       "id": "colorpalette_picker_getslidergradient",
-      "community": 39,
+      "community": 6,
       "norm_label": "getslidergradient()"
     },
     {
@@ -3996,7 +4230,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L181",
       "id": "colorpalette_picker_modes",
-      "community": 39,
+      "community": 6,
       "norm_label": "modes"
     },
     {
@@ -4005,7 +4239,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L185",
       "id": "colorpalette_picker_picker",
-      "community": 39,
+      "community": 6,
       "norm_label": "picker()"
     },
     {
@@ -4014,7 +4248,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L480",
       "id": "colorpalette_picker_gradientslider",
-      "community": 39,
+      "community": 6,
       "norm_label": "gradientslider()"
     },
     {
@@ -4176,7 +4410,7 @@
       "source_file": "src/tools/ColorPalette/Recipes.jsx",
       "source_location": "L207",
       "id": "colorpalette_recipes_rendertheme",
-      "community": 30,
+      "community": 2,
       "norm_label": "rendertheme()"
     },
     {
@@ -4977,7 +5211,7 @@
       "source_file": "src/tools/DitherTool/index.jsx",
       "source_location": "L35",
       "id": "dithertool_index_dithertool",
-      "community": 31,
+      "community": 43,
       "norm_label": "dithertool()"
     },
     {
@@ -4986,7 +5220,7 @@
       "source_file": "src/tools/DitherTool/index.jsx",
       "source_location": "L1120",
       "id": "dithertool_index_presetstrip",
-      "community": 29,
+      "community": 28,
       "norm_label": "presetstrip()"
     },
     {
@@ -5004,7 +5238,7 @@
       "source_file": "src/tools/DitherTool/index.jsx",
       "source_location": "L1200",
       "id": "dithertool_index_palettemanager",
-      "community": 29,
+      "community": 28,
       "norm_label": "palettemanager()"
     },
     {
@@ -5013,7 +5247,7 @@
       "source_file": "src/tools/DitherTool/index.jsx",
       "source_location": "L1215",
       "id": "dithertool_index_gradienteditor",
-      "community": 7,
+      "community": 45,
       "norm_label": "gradienteditor()"
     },
     {
@@ -5022,7 +5256,7 @@
       "source_file": "src/tools/DitherTool/index.jsx",
       "source_location": "L1258",
       "id": "dithertool_index_gradmapeditor",
-      "community": 29,
+      "community": 28,
       "norm_label": "gradmapeditor()"
     },
     {
@@ -5139,7 +5373,7 @@
       "source_file": "src/tools/DitherTool/index.jsx",
       "source_location": "L1337",
       "id": "dithertool_index_iscurve",
-      "community": 31,
+      "community": 43,
       "norm_label": "iscurve()"
     },
     {
@@ -5175,7 +5409,7 @@
       "source_file": "src/tools/DitherTool/index.jsx",
       "source_location": "L1356",
       "id": "dithertool_index_cssrgb01",
-      "community": 7,
+      "community": 45,
       "norm_label": "cssrgb01()"
     },
     {
@@ -5193,7 +5427,7 @@
       "source_file": "src/tools/DitherTool/index.jsx",
       "source_location": "L1358",
       "id": "dithertool_index_checkerbg",
-      "community": 31,
+      "community": 43,
       "norm_label": "checkerbg()"
     },
     {
@@ -5319,7 +5553,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L24",
       "id": "dithertool_store_mkid",
-      "community": 29,
+      "community": 28,
       "norm_label": "mkid()"
     },
     {
@@ -5373,7 +5607,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L123",
       "id": "dithertool_store_pushhistory",
-      "community": 29,
+      "community": 28,
       "norm_label": "pushhistory()"
     },
     {
@@ -5400,7 +5634,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L149",
       "id": "dithertool_store_canundo",
-      "community": 31,
+      "community": 43,
       "norm_label": "canundo()"
     },
     {
@@ -5409,7 +5643,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L150",
       "id": "dithertool_store_canredo",
-      "community": 31,
+      "community": 43,
       "norm_label": "canredo()"
     },
     {
@@ -5436,7 +5670,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L161",
       "id": "dithertool_store_setstate",
-      "community": 29,
+      "community": 28,
       "norm_label": "setstate()"
     },
     {
@@ -5445,7 +5679,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L171",
       "id": "dithertool_store_setinkctl",
-      "community": 7,
+      "community": 45,
       "norm_label": "setinkctl()"
     },
     {
@@ -5454,7 +5688,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L176",
       "id": "dithertool_store_resetstate",
-      "community": 29,
+      "community": 28,
       "norm_label": "resetstate()"
     },
     {
@@ -5472,7 +5706,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L185",
       "id": "dithertool_store_usedither",
-      "community": 31,
+      "community": 43,
       "norm_label": "usedither()"
     },
     {
@@ -5481,7 +5715,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L194",
       "id": "dithertool_store_allpalettes",
-      "community": 28,
+      "community": 43,
       "norm_label": "allpalettes()"
     },
     {
@@ -5490,7 +5724,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L198",
       "id": "dithertool_store_getpalette",
-      "community": 28,
+      "community": 43,
       "norm_label": "getpalette()"
     },
     {
@@ -5499,7 +5733,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L202",
       "id": "dithertool_store_savepalette",
-      "community": 29,
+      "community": 28,
       "norm_label": "savepalette()"
     },
     {
@@ -5508,7 +5742,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L208",
       "id": "dithertool_store_updatesavedpalette",
-      "community": 29,
+      "community": 28,
       "norm_label": "updatesavedpalette()"
     },
     {
@@ -5517,7 +5751,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L212",
       "id": "dithertool_store_removesavedpalette",
-      "community": 29,
+      "community": 28,
       "norm_label": "removesavedpalette()"
     },
     {
@@ -5535,7 +5769,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L239",
       "id": "dithertool_store_applypreset",
-      "community": 29,
+      "community": 28,
       "norm_label": "applypreset()"
     },
     {
@@ -5544,7 +5778,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L254",
       "id": "dithertool_store_savecurrentpreset",
-      "community": 29,
+      "community": 28,
       "norm_label": "savecurrentpreset()"
     },
     {
@@ -5553,7 +5787,7 @@
       "source_file": "src/tools/DitherTool/store.js",
       "source_location": "L262",
       "id": "dithertool_store_removesavedpreset",
-      "community": 29,
+      "community": 28,
       "norm_label": "removesavedpreset()"
     },
     {
@@ -5575,12 +5809,300 @@
       "norm_label": "clearincomingcolors()"
     },
     {
+      "label": "index.jsx",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L1",
+      "id": "linearttool_index",
+      "community": 29,
+      "norm_label": "index.jsx"
+    },
+    {
+      "label": "C",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L10",
+      "id": "linearttool_index_c",
+      "community": 29,
+      "norm_label": "c"
+    },
+    {
+      "label": "CHANNELS",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L20",
+      "id": "linearttool_index_channels",
+      "community": 29,
+      "norm_label": "channels"
+    },
+    {
+      "label": "MODES",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L26",
+      "id": "linearttool_index_modes",
+      "community": 29,
+      "norm_label": "modes"
+    },
+    {
+      "label": "LineartTool()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L32",
+      "id": "linearttool_index_linearttool",
+      "community": 29,
+      "norm_label": "linearttool()"
+    },
+    {
+      "label": "Section()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L572",
+      "id": "linearttool_index_section",
+      "community": 29,
+      "norm_label": "section()"
+    },
+    {
+      "label": "Row()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L581",
+      "id": "linearttool_index_row",
+      "community": 29,
+      "norm_label": "row()"
+    },
+    {
+      "label": "Toggle()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L592",
+      "id": "linearttool_index_toggle",
+      "community": 29,
+      "norm_label": "toggle()"
+    },
+    {
+      "label": "Hint()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L601",
+      "id": "linearttool_index_hint",
+      "community": 29,
+      "norm_label": "hint()"
+    },
+    {
+      "label": "IconBtn()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L605",
+      "id": "linearttool_index_iconbtn",
+      "community": 29,
+      "norm_label": "iconbtn()"
+    },
+    {
+      "label": "btnStyle()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L616",
+      "id": "linearttool_index_btnstyle",
+      "community": 29,
+      "norm_label": "btnstyle()"
+    },
+    {
+      "label": "chipStyle()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L625",
+      "id": "linearttool_index_chipstyle",
+      "community": 29,
+      "norm_label": "chipstyle()"
+    },
+    {
+      "label": "colorStyle",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L633",
+      "id": "linearttool_index_colorstyle",
+      "community": 29,
+      "norm_label": "colorstyle"
+    },
+    {
+      "label": "hexToRgb()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L638",
+      "id": "linearttool_index_hextorgb",
+      "community": 29,
+      "norm_label": "hextorgb()"
+    },
+    {
+      "label": "downloadCanvas()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L643",
+      "id": "linearttool_index_downloadcanvas",
+      "community": 29,
+      "norm_label": "downloadcanvas()"
+    },
+    {
+      "label": "downloadBlob()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L644",
+      "id": "linearttool_index_downloadblob",
+      "community": 29,
+      "norm_label": "downloadblob()"
+    },
+    {
+      "label": "store.js",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L1",
+      "id": "linearttool_store",
+      "community": 29,
+      "norm_label": "store.js"
+    },
+    {
+      "label": "load()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L12",
+      "id": "linearttool_store_load",
+      "community": 29,
+      "norm_label": "load()"
+    },
+    {
+      "label": "DEFAULT_STATE",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L16",
+      "id": "linearttool_store_default_state",
+      "community": 29,
+      "norm_label": "default_state"
+    },
+    {
+      "label": "_state",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L50",
+      "id": "linearttool_store_state",
+      "community": 29,
+      "norm_label": "_state"
+    },
+    {
+      "label": "_listeners",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L51",
+      "id": "linearttool_store_listeners",
+      "community": 29,
+      "norm_label": "_listeners"
+    },
+    {
+      "label": "_history",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L54",
+      "id": "linearttool_store_history",
+      "community": 29,
+      "norm_label": "_history"
+    },
+    {
+      "label": "snap()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L59",
+      "id": "linearttool_store_snap",
+      "community": 29,
+      "norm_label": "snap()"
+    },
+    {
+      "label": "pushHistory()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L61",
+      "id": "linearttool_store_pushhistory",
+      "community": 29,
+      "norm_label": "pushhistory()"
+    },
+    {
+      "label": "undo()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L75",
+      "id": "linearttool_store_undo",
+      "community": 29,
+      "norm_label": "undo()"
+    },
+    {
+      "label": "redo()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L81",
+      "id": "linearttool_store_redo",
+      "community": 29,
+      "norm_label": "redo()"
+    },
+    {
+      "label": "notify()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L88",
+      "id": "linearttool_store_notify",
+      "community": 29,
+      "norm_label": "notify()"
+    },
+    {
+      "label": "getState()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L93",
+      "id": "linearttool_store_getstate",
+      "community": 29,
+      "norm_label": "getstate()"
+    },
+    {
+      "label": "setState()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L95",
+      "id": "linearttool_store_setstate",
+      "community": 29,
+      "norm_label": "setstate()"
+    },
+    {
+      "label": "resetState()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L101",
+      "id": "linearttool_store_resetstate",
+      "community": 29,
+      "norm_label": "resetstate()"
+    },
+    {
+      "label": "subscribe()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L103",
+      "id": "linearttool_store_subscribe",
+      "community": 29,
+      "norm_label": "subscribe()"
+    },
+    {
+      "label": "useLineart()",
+      "file_type": "code",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L108",
+      "id": "linearttool_store_uselineart",
+      "community": 29,
+      "norm_label": "uselineart()"
+    },
+    {
       "label": "BackgroundRow.jsx",
       "file_type": "code",
       "source_file": "src/tools/LogoMaker/BackgroundRow.jsx",
       "source_location": "L1",
       "id": "logomaker_backgroundrow",
-      "community": 40,
+      "community": 0,
       "norm_label": "backgroundrow.jsx"
     },
     {
@@ -5589,7 +6111,7 @@
       "source_file": "src/tools/LogoMaker/BackgroundRow.jsx",
       "source_location": "L7",
       "id": "logomaker_backgroundrow_backgroundrow",
-      "community": 40,
+      "community": 0,
       "norm_label": "backgroundrow()"
     },
     {
@@ -6588,7 +7110,7 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L196",
       "id": "postfx_store_sendimagetopostfx",
-      "community": 7,
+      "community": 5,
       "norm_label": "sendimagetopostfx()"
     },
     {
@@ -7435,6 +7957,17 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_app",
+      "target": "linearttool_index"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
       "source_location": "L4",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -7617,6 +8150,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "components_icon"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L3",
       "weight": 1.0,
@@ -7761,6 +8305,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "dithertool_index",
+      "target": "components_numberfield"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
       "target": "components_numberfield"
     },
     {
@@ -7915,6 +8470,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "dithertool_index",
+      "target": "components_numberfield_numberslider"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
       "target": "components_numberfield_numberslider"
     },
     {
@@ -11629,6 +12195,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_file"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/tools/LogoMaker/FileSlot.jsx",
       "source_location": "L3",
       "weight": 1.0,
@@ -11739,6 +12316,17 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_file_processfile"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/tools/LogoMaker/FileSlot.jsx",
       "source_location": "L3",
       "weight": 1.0,
@@ -11836,9 +12424,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "lib_gif",
-      "confidence_score": 1.0
+      "target": "lib_gif"
     },
     {
       "relation": "imports",
@@ -11891,9 +12479,9 @@
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "postfx_index",
-      "target": "lib_gif_encodegif",
-      "confidence_score": 1.0
+      "target": "lib_gif_encodegif"
     },
     {
       "relation": "imports",
@@ -13064,6 +13652,17 @@
     {
       "relation": "calls",
       "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src/lib/halftone.js",
+      "source_location": "L68",
+      "weight": 1.0,
+      "source": "lib_halftone_buildpalettecoverage",
+      "target": "lib_lineart_dist2"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/lib/halftone.js",
       "source_location": "L82",
@@ -13148,6 +13747,652 @@
       "confidence_score": 1.0,
       "source": "dithertool_index",
       "target": "lib_halftone_renderhalftonesvg"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L162",
+      "weight": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_adjustweight",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L98",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_applylevels"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L86",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_autolevels"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L44",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_blurh"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L57",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_blurv"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L33",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_boxblurf"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L306",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_chaikin"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L255",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_collapsecollinear"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L169",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_compose"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L138",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_despeckle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L303",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_dist2"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L73",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_flatten"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L210",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_fmt"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L223",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_loopstosvg"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L138",
+      "weight": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_otsu",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L296",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_perpdist"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L282",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_rdp"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L267",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_rdpclosed"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L235",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_renderloops"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L193",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_smoothmask"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L15",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_togray"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L114",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_toink"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L211",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_tracecontours"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L213",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_traceloops"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L193",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart",
+      "target": "lib_lineart_tracesvg"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_togray"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L173",
+      "weight": 1.0,
+      "source": "lib_lineart_adjustweight",
+      "target": "lib_lineart_boxblurf",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L38",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_boxblurf",
+      "target": "lib_lineart_blurh"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L39",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_boxblurf",
+      "target": "lib_lineart_blurv"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L74",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_flatten",
+      "target": "lib_lineart_boxblurf"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L195",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_smoothmask",
+      "target": "lib_lineart_boxblurf"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L118",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_toink",
+      "target": "lib_lineart_boxblurf"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_flatten"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_autolevels"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_applylevels"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_toink"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_otsu",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_adjustweight",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_despeckle"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_compose"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_smoothmask"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L217",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_tracecontours",
+      "target": "lib_lineart_chaikin"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L215",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_tracecontours",
+      "target": "lib_lineart_collapsecollinear"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L216",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_tracecontours",
+      "target": "lib_lineart_rdpclosed"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L212",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_tracecontours",
+      "target": "lib_lineart_traceloops"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L255",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_tracesvg",
+      "target": "lib_lineart_tracecontours"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_tracecontours"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L226",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_loopstosvg",
+      "target": "lib_lineart_fmt"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L255",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_tracesvg",
+      "target": "lib_lineart_loopstosvg"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_loopstosvg"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_renderloops"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L200",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_tracesvg",
+      "target": "lib_lineart_chaikin"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L198",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_tracesvg",
+      "target": "lib_lineart_collapsecollinear"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L202",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_tracesvg",
+      "target": "lib_lineart_fmt"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L199",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_tracesvg",
+      "target": "lib_lineart_rdpclosed"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L195",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_tracesvg",
+      "target": "lib_lineart_traceloops"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_lineart_tracesvg"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L273",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_rdpclosed",
+      "target": "lib_lineart_dist2"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L278",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_rdpclosed",
+      "target": "lib_lineart_rdp"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/lineart.js",
+      "source_location": "L287",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_lineart_rdp",
+      "target": "lib_lineart_perpdist"
     },
     {
       "relation": "imports_from",
@@ -14500,6 +15745,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "lib_unsavedchanges"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/tools/LogoMaker/index.jsx",
       "source_location": "L13",
       "weight": 1.0,
@@ -14615,6 +15871,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "dithertool_store_notify",
+      "target": "lib_unsavedchanges_markdirty"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
       "target": "lib_unsavedchanges_markdirty"
     },
     {
@@ -14747,6 +16014,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "dithertool_index_downloadblob",
+      "target": "lib_unsavedchanges_marksaved"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
       "target": "lib_unsavedchanges_marksaved"
     },
     {
@@ -20377,6 +21655,482 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L487",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_btnstyle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_c"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L20",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_channels"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L496",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_chipstyle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L504",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_colorstyle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L515",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_downloadblob"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L514",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_downloadcanvas"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L509",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_hextorgb"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L472",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_hint"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L476",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_iconbtn"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L32",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_linearttool"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L26",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_modes"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L454",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_row"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L445",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_section"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L463",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_index_toggle"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_store"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_store_getstate"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_store_redo"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_store_resetstate"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_store_setstate"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_store_undo"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "linearttool_store_uselineart"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "postfx_store"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index",
+      "target": "postfx_store_sendimagetopostfx"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L311",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_index_linearttool",
+      "target": "linearttool_index_btnstyle"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/tools/LineartTool/index.jsx",
+      "source_location": "L33",
+      "weight": 1.0,
+      "source": "linearttool_index_linearttool",
+      "target": "linearttool_store_uselineart"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L16",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_default_state"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L87",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_getstate"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L48",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_history"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L45",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_listeners"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_load"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L82",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_notify"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L55",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_pushhistory"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L75",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_redo"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L95",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_resetstate"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L89",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_setstate"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L53",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_snap"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L44",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_state"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L97",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_subscribe"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L69",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_undo"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L102",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store",
+      "target": "linearttool_store_uselineart"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L92",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store_setstate",
+      "target": "linearttool_store_pushhistory"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L72",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store_undo",
+      "target": "linearttool_store_notify"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L78",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store_redo",
+      "target": "linearttool_store_notify"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L91",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store_setstate",
+      "target": "linearttool_store_notify"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/LineartTool/store.js",
+      "source_location": "L95",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "linearttool_store_resetstate",
+      "target": "linearttool_store_setstate"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "src/tools/LogoMaker/BackgroundRow.jsx",
       "source_location": "L7",
       "weight": 1.0,
@@ -22683,5 +24437,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "78938dcd0b5166455be5f798009d2231c287e5d4"
+  "built_at_commit": "1353ff9fb8bb34f70027743c15b212845ed9088a"
 }
