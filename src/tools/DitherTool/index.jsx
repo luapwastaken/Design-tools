@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { NumberSlider, EditableNumber } from '../../components/NumberField.jsx'
 import Icon from '../../components/Icon.jsx'
 import { processImage, sharpen, denoise, addNoise, applyLevels, extractPalette, buildPalette, gradientMap, ALGORITHMS, isMatrixOrdered } from '../../lib/dither.js'
@@ -15,6 +15,7 @@ import {
   applyPreset, saveCurrentPreset, removeSavedPreset, setInkCtl,
 } from './store.js'
 import { sendImageToPostFX } from '../PostFX/store.js'
+import { MOTION_PARAMS, PARAM_BY_KEY, WAVES, mkLfo, computeMods } from './motion.js'
 import { processFile } from '../../lib/file.js'
 import { decodeGif, fileToCanvas, encodeGif, framesToZip, gifDecodeSupported } from '../../lib/gif.js'
 import { markSaved } from '../../lib/unsavedChanges.js'
@@ -33,7 +34,13 @@ const HT_ANGLES = [15, 75, 0, 45, 22.5, 52.5, 67.5, 7.5, 37.5, 82.5, 30, 60, 12,
 const ALGO_GROUPS = ALGORITHMS.reduce((m, a) => { (m[a.group] ||= []).push(a); return m }, {})
 
 export default function DitherTool() {
-  const s = useDither()
+  const sBase = useDither()
+  const modRef = useRef(null)   // { key: value } LFO overrides during motion playback/export
+  // During motion playback every `s.param` read sees the LFO-modulated value via
+  // this proxy — the render pipeline animates with zero store churn per frame.
+  const s = useMemo(() => new Proxy(sBase, {
+    get: (t, k) => (modRef.current && k in modRef.current) ? modRef.current[k] : t[k],
+  }), [sBase])
   const fileRef = useRef(null)
   const lastRef = useRef(null)        // { type, layers, cpuCanvas }
   const htSourceRef = useRef(null)
@@ -189,23 +196,29 @@ export default function DitherTool() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deps])
 
-  // ── Glitch / grain animation loop ───────────────────────────────────────────
-  // Re-runs only the GPU post stack each frame (no re-dither) with an advancing
-  // time value, so glitch re-rolls and grain shimmers. Frozen otherwise.
+  // ── Glitch / grain / motion animation loop ──────────────────────────────────
+  // Post-only animation re-runs just the GPU post stack each frame; phase shimmer
+  // and LFO motion re-run the full (cheap, GPU) pipeline with modulated settings.
   useEffect(() => {
     const postActive = s.post && s.animate && (s.glitch || s.grain || s.vhs || s.wave)
     const phaseActive = s.phaseAnim && !s.halftone && isOrdered(s.algorithm)
-    const active = (postActive || phaseActive) && src && glRef.current
-    if (!active) { animatingRef.current = false; return }
+    const motionActive = sBase.motionPlay && sBase.lfos.some(l => l.on)
+    const active = (postActive || phaseActive || motionActive) && src && glRef.current && !exporting
+    if (!active) { animatingRef.current = false; modRef.current = null; return }
     animatingRef.current = true
     setSettled(false)
     let raf, start = performance.now()
     const tick = (now) => {
       const t = (now - start) / 1000 * (s.animSpeed || 1)
-      if (phaseActive) {
+      if (phaseActive) phaseRef.current = t * 24
+      if (motionActive) {
+        // loop phase 0..1 — integer LFO cycles make every loop seamless
+        const dur = Math.max(0.25, sBase.motionDur)
+        modRef.current = computeMods(sBase.lfos, ((now - start) / 1000 % dur) / dur, sBase)
+        renderFrame(src.img, src.w, src.h, { quiet: true, time: t })
+      } else if (phaseActive) {
         // Drift the ordered screen's origin → shimmering dither. Re-runs the (cheap)
         // GPU dither each frame; quiet skips React churn, canvas still updates.
-        phaseRef.current = t * 24
         renderFrame(src.img, src.w, src.h, { quiet: true, time: t })
       } else {
         glRef.current.repost(postP(lastOutScale.current, t))
@@ -213,9 +226,9 @@ export default function DitherTool() {
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
-    return () => { animatingRef.current = false; cancelAnimationFrame(raf) }
+    return () => { animatingRef.current = false; modRef.current = null; cancelAnimationFrame(raf) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deps])
+  }, [deps, exporting])
 
   // Auto-orient: when a new image is loaded in Halftone, set Invert so the
   // subject (not the background) gets the ink. Runs once per image.
@@ -716,6 +729,80 @@ export default function DitherTool() {
     }
   }
 
+  // ── Motion loop export ──────────────────────────────────────────────────────
+  // Samples the LFO loop at exactly fps×duration frames over one period — the
+  // last frame leads back into the first, so GIF/video/frames loop seamlessly.
+  async function renderMotionFrames(onFrame) {
+    const st = getState()
+    const fps = Math.max(1, Math.round(st.motionFps)), dur = Math.max(0.25, st.motionDur)
+    const n = Math.max(2, Math.round(fps * dur))
+    for (let i = 0; i < n; i++) {
+      modRef.current = computeMods(st.lfos, i / n, st)
+      renderFrame(src.img, src.w, src.h, { quiet: true, time: (i / fps) * (st.animSpeed || 1) })
+      onFrame(getResultCanvas(), Math.round(1000 / fps), i, n)
+      if (i % 4 === 3) await new Promise(r => setTimeout(r))
+    }
+    modRef.current = null
+  }
+  async function exportMotionGif() {
+    if (!src || exporting) return
+    setExporting('mgif')
+    try {
+      const canvases = [], delays = []
+      await renderMotionFrames((cv, delay) => { canvases.push(cv); delays.push(delay) })
+      const blob = await encodeGif(canvases, delays)
+      if (blob) downloadBlob(blob, baseName() + '-loop.gif')
+    } finally { modRef.current = null; setExporting(null); renderFrame(src.img, src.w, src.h) }
+  }
+  async function exportMotionFrames() {
+    if (!src || exporting) return
+    setExporting('mframes')
+    try {
+      const canvases = []
+      await renderMotionFrames(cv => canvases.push(cv))
+      const blob = await framesToZip(canvases, baseName() + '-loop')
+      downloadBlob(blob, baseName() + '-loop-frames.zip')
+    } finally { modRef.current = null; setExporting(null); renderFrame(src.img, src.w, src.h) }
+  }
+  // Record exactly one loop off the live canvas via MediaRecorder (same approach
+  // as the Post FX tool's video export).
+  function pickVideoMime() {
+    const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+    return (typeof MediaRecorder !== 'undefined' && types.find(t => MediaRecorder.isTypeSupported(t))) || null
+  }
+  async function exportMotionVideo() {
+    const mime = pickVideoMime()
+    if (!src || exporting || !mime) return
+    setExporting('mvideo')
+    try {
+      const st = getState()
+      const fps = Math.max(1, Math.round(st.motionFps)), dur = Math.max(0.25, st.motionDur)
+      const stream = canvasRef.current.captureStream(fps)
+      const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12_000_000 })
+      const chunks = []
+      rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data) }
+      const stopped = new Promise(res => { rec.onstop = res })
+      rec.start()
+      const track = stream.getVideoTracks()[0]
+      const n = Math.max(2, Math.round(fps * dur))
+      await new Promise(resolve => {
+        let i = 0
+        const tickFrame = () => {
+          modRef.current = computeMods(st.lfos, (i % n) / n, st)
+          renderFrame(src.img, src.w, src.h, { quiet: true, time: (i / fps) * (st.animSpeed || 1) })
+          if (track && track.requestFrame) track.requestFrame()
+          if (++i > n) { resolve(); return }
+          setTimeout(tickFrame, 1000 / fps)
+        }
+        tickFrame()
+      })
+      rec.stop()
+      await stopped
+      const ext = mime.includes('mp4') ? 'mp4' : 'webm'
+      downloadBlob(new Blob(chunks, { type: mime }), baseName() + '-loop.' + ext)
+    } finally { modRef.current = null; setExporting(null); renderFrame(src.img, src.w, src.h) }
+  }
+
   // ── Palette / preset helpers ────────────────────────────────────────────────
   function saveIncoming() { if (incoming.length) { savePalette('From Color tool', incoming); clearIncomingColors(); setIncoming([]) } }
   function extractFromImage() { if (src) { const { W, H } = workingSize(src.w, src.h); savePalette('Image colours', extractPalette(rawImageData(src.img, W, H), Math.max(2, extractN))) } }
@@ -1106,6 +1193,34 @@ export default function DitherTool() {
             )}
           </Section>
 
+          {/* ── MOTION ── */}
+          <Section title="Motion · seamless loop">
+            <div style={{ fontSize: 9, color: C.muted, marginBottom: 4 }}>
+              Modulators animate settings around their current values. Integer cycles per loop — every export loops perfectly.
+            </div>
+            <Toggle label="Play motion" checked={sBase.motionPlay} onChange={v => setState({ motionPlay: v })} />
+            <NumberSlider label="Loop length" min={0.5} max={10} step={0.5} value={sBase.motionDur} onChange={v => setState({ motionDur: v })} accent={ACC} suffix="s" labelWidth={70} />
+            <NumberSlider label="FPS" min={5} max={60} step={1} value={sBase.motionFps} onChange={v => setState({ motionFps: v })} accent={ACC} labelWidth={70} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+              {sBase.lfos.map(lfo => <LfoBlock key={lfo.id} lfo={lfo} halftone={sBase.halftone} />)}
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <Btn icon="add" label="Add modulator" onClick={() => setState({ lfos: [...getState().lfos, mkLfo(sBase.halftone ? 'htDotSize' : 'hue')] })} />
+            </div>
+            {sBase.lfos.length > 0 && (
+              <>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                  <Btn icon="download" label={exporting === 'mgif' ? 'GIF…' : 'Loop GIF'} onClick={exportMotionGif} disabled={!src || !!exporting} />
+                  <Btn icon="videocam" label={exporting === 'mvideo' ? 'Video…' : (pickVideoMime() ? 'Video' : 'No video')} onClick={exportMotionVideo} disabled={!src || !!exporting || !pickVideoMime()} />
+                  <Btn icon="download" label={exporting === 'mframes' ? 'ZIP…' : 'Frames'} onClick={exportMotionFrames} disabled={!src || !!exporting} />
+                </div>
+                <div style={{ fontSize: 9, color: C.muted, marginTop: 6 }}>
+                  Exports one loop ({Math.round(Math.max(1, sBase.motionFps) * Math.max(0.25, sBase.motionDur))} frames). Glitch / grain / VHS noise re-rolls per frame, so it reads seamless too.
+                </div>
+              </>
+            )}
+          </Section>
+
         </div>
       </div>
 
@@ -1169,6 +1284,46 @@ function PresetStrip({ s }) {
         <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <MiniBtn onClick={() => setNaming(true)}>+ Save current as preset</MiniBtn>
           {current && s.savedPresets.some(sp => sp.id === current.id) && <MiniBtn danger onClick={() => removeSavedPreset(current.id)}>Delete</MiniBtn>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Motion modulator row ────────────────────────────────────────────────────────
+// One LFO: which setting it drives, its wave, cycles per loop, depth and phase.
+// Spin (full-period sweep) is only offered for cyclic parameters.
+function LfoBlock({ lfo, halftone }) {
+  const def = PARAM_BY_KEY[lfo.param]
+  const upd = patch => setState({ lfos: getState().lfos.map(l => l.id === lfo.id ? { ...l, ...patch } : l) })
+  const del = () => setState({ lfos: getState().lfos.filter(l => l.id !== lfo.id) })
+  const groups = []
+  for (const p of MOTION_PARAMS) {
+    let g = groups.find(x => x.label === p.group)
+    if (!g) { g = { label: p.group, items: [] }; groups.push(g) }
+    g.items.push(p)
+  }
+  const waves = WAVES.filter(([id]) => id !== 'spin' || def?.cyclic)
+  const wrongMode = def && ((def.group === 'Halftone' && !halftone) || (def.group === 'Dither' && halftone))
+  return (
+    <div style={{ border: `1px solid ${lfo.on ? C.accent : C.border}`, borderRadius: 6, padding: '6px 8px', background: C.ctrl }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ width: 34, flexShrink: 0, marginTop: -8 }}><Toggle label="" checked={lfo.on} onChange={v => upd({ on: v })} /></div>
+        <select value={lfo.param} onChange={e => { const d = PARAM_BY_KEY[e.target.value]; upd({ param: e.target.value, wave: lfo.wave === 'spin' && !d?.cyclic ? 'sine' : lfo.wave }) }} style={{ ...selectStyle, flex: 1 }}>
+          {groups.map(g => <optgroup key={g.label} label={g.label}>{g.items.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}</optgroup>)}
+        </select>
+        <button onClick={del} title="Remove modulator" style={{ background: 'transparent', border: 'none', color: C.muted, cursor: 'pointer', display: 'flex', padding: 2 }}>
+          <Icon name="delete" size={13} />
+        </button>
+      </div>
+      {wrongMode && <div style={{ fontSize: 9, color: '#c47', marginTop: 4 }}>This setting only applies in {def.group} mode.</div>}
+      {lfo.on && (
+        <div style={{ marginTop: 6 }}>
+          <Row label="Wave"><select value={lfo.wave} onChange={e => upd({ wave: e.target.value })} style={{ ...selectStyle, width: 110 }}>{waves.map(([id, lbl]) => <option key={id} value={id}>{lbl}</option>)}</select></Row>
+          <NumberSlider label="Cycles / loop" min={1} max={8} step={1} value={lfo.cycles} onChange={v => upd({ cycles: Math.round(v) })} accent={ACC} labelWidth={70} />
+          {lfo.wave !== 'spin' && <NumberSlider label="Depth" min={0} max={100} step={1} value={lfo.depth} onChange={v => upd({ depth: v })} accent={ACC} suffix="%" labelWidth={70} />}
+          <NumberSlider label="Phase" min={0} max={360} step={5} value={lfo.phase} onChange={v => upd({ phase: v })} accent={ACC} suffix="°" labelWidth={70} />
+          {lfo.wave === 'noise' && <div style={{ marginTop: 6 }}><MiniBtn onClick={() => upd({ seed: (Math.random() * 0xffffff) | 0 })}>Reroll noise</MiniBtn></div>}
         </div>
       )}
     </div>

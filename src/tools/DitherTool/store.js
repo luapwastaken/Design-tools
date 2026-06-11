@@ -102,6 +102,11 @@ const DEFAULT_STATE = {
   wave: false, waveAmt: 0.3, waveFreq: 10, waveAxis: 'h',            // displacement warp
   vhs: false, vhsAmt: 0.5,            // analog tape composite
   animate: false, animSpeed: 1,       // live-animate glitch/grain/warp/VHS
+  // motion (LFO loop animation — see motion.js)
+  lfos: [],              // [{ id, on, param, wave, cycles, depth, phase, seed }]
+  motionDur: 3,          // loop length, seconds
+  motionFps: 24,         // export framerate
+  motionPlay: false,     // live playback
   // saved palette library + presets
   savedPalettes: [],     // [{ id, name, colors:[hex] }]
   savedPresets: [],      // [{ id, name, settings:{...} }]
@@ -233,6 +238,7 @@ const PRESET_KEYS = [
   'glitch', 'glitchAmt', 'grain', 'grainAmt', 'grainSize', 'grade', 'temp', 'tint',
   'streak', 'streakAmt', 'edge', 'edgeAmt', 'edgeThresh', 'edgeColor',
   'wave', 'waveAmt', 'waveFreq', 'waveAxis', 'vhs', 'vhsAmt', 'animate', 'animSpeed',
+  'lfos', 'motionDur', 'motionFps',
   'paletteId',
 ]
 
