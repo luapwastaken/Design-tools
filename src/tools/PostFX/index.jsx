@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import JSZip from 'jszip'
 import { NumberSlider, EditableNumber } from '../../components/NumberField.jsx'
 import Icon from '../../components/Icon.jsx'
 import { create as createGL } from '../../lib/glPostFX.js'
@@ -36,6 +37,9 @@ export default function PostFX() {
   const [dragOver, setDragOver] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [presetName, setPresetName] = useState('')
+  const [codeInput, setCodeInput] = useState('')
+  const [codeMsg, setCodeMsg] = useState('')
+  const [batchMsg, setBatchMsg] = useState('')
   const [split, setSplit] = useState(null)   // null = off; 0..1 = divider position
   const splitDragRef = useRef(false)
 
@@ -299,6 +303,74 @@ export default function PostFX() {
     setPresetName('')
   }
 
+  // ── Preset share codes ────────────────────────────────────────────────────────
+  // A preset travels as "PFX1.<base64 json>" — paste anywhere (chat, notes) and
+  // import it back. Unknown effect types are dropped on import for forward compat.
+  function stackToCode(stack) {
+    return 'PFX1.' + btoa(unescape(encodeURIComponent(JSON.stringify(stack))))
+  }
+  function codeToStack(code) {
+    try {
+      const m = String(code).trim().match(/^PFX1\.([A-Za-z0-9+/=]+)$/s)
+      const stack = JSON.parse(decodeURIComponent(escape(atob(m[1]))))
+      if (!Array.isArray(stack)) return null
+      const valid = stack.filter(l => l && EFFECTS[l.type])
+      return valid.length ? valid : null
+    } catch { return null }
+  }
+  async function copyCode(stack) {
+    try { await navigator.clipboard.writeText(stackToCode(stack)); setCodeMsg('Code copied') }
+    catch { setCodeMsg('Copy failed') }
+    setTimeout(() => setCodeMsg(''), 1800)
+  }
+  function importCode() {
+    const stack = codeToStack(codeInput)
+    if (!stack) { setCodeMsg('Invalid code'); setTimeout(() => setCodeMsg(''), 1800); return }
+    applyPreset({ stack })
+    setCodeInput('')
+    setCodeMsg(`Applied ${stack.length} effect${stack.length === 1 ? '' : 's'}`)
+    setTimeout(() => setCodeMsg(''), 1800)
+  }
+
+  // ── Batch processing ──────────────────────────────────────────────────────────
+  // Apply the current stack to every dropped/selected image and download a zip.
+  async function runBatch(files) {
+    const gl = glRef.current
+    if (!gl || exporting) return
+    const list = [...files].filter(f => f.type.startsWith('image/'))
+    if (!list.length) return
+    setExporting('batch'); busyRef.current = true
+    setBatchMsg(`0 / ${list.length}`)
+    try {
+      const zip = new JSZip()
+      let done = 0
+      for (const file of list) {
+        const r = await processFile(file)
+        if (!r || r.type !== 'raster') continue
+        const img = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = r.dataUrl })
+        if (!img) continue
+        const scale = Math.min(1, MAX_EDGE / Math.max(img.width, img.height))
+        const w = Math.max(1, Math.round(img.width * scale)), h = Math.max(1, Math.round(img.height * scale))
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h
+        cv.getContext('2d').drawImage(img, 0, 0, w, h)
+        gl.setSource(cv)
+        gl.render(getState().stack, EFFECTS, 0)
+        const out = gl.readToCanvas()
+        const blob = await new Promise(res => out.toBlob(res, 'image/png'))
+        if (blob) zip.file(r.name.replace(/\.[^.]+$/, '') + '-fx.png', blob)
+        setBatchMsg(`${++done} / ${list.length}`)
+        await new Promise(res => setTimeout(res))
+      }
+      const blob = await zip.generateAsync({ type: 'blob' })
+      downloadBlob(blob, 'postfx-batch.zip')
+      markSaved('post-fx')
+    } finally {
+      busyRef.current = false; setExporting(null); setBatchMsg('')
+      // restore the interactive source
+      if (workRef.current) { gl.setSource(workRef.current); render() }
+    }
+  }
+
   const selected = s.stack.find(l => l.id === s.selectedId)
   const cursor = panRef.current ? 'grabbing' : space ? 'grab' : 'default'
 
@@ -312,7 +384,12 @@ export default function PostFX() {
           onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
           onDragOver={e => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
-          onDrop={e => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]) }}
+          onDrop={e => {
+            e.preventDefault(); setDragOver(false)
+            const files = e.dataTransfer.files
+            if (files.length > 1) runBatch(files)
+            else if (files[0]) loadFile(files[0])
+          }}
           style={{
             position: 'absolute', inset: 0, cursor,
             background: 'repeating-conic-gradient(#141417 0% 25%, #0e0e11 0% 50%) 0 / 24px 24px',
@@ -390,7 +467,13 @@ export default function PostFX() {
             <Btn icon="grain" label="Debug" onClick={loadDebug} title="Load a synthetic test card for tuning effects" flex />
           </div>
           <Btn icon="download" label="Export PNG" onClick={exportPng} disabled={!src} flex />
-          <input ref={fileRef} type="file" accept="image/*" hidden onChange={e => e.target.files[0] && loadFile(e.target.files[0])} />
+          <input ref={fileRef} type="file" accept="image/*" multiple hidden
+            onChange={e => {
+              const files = e.target.files
+              if (files.length > 1) runBatch(files)
+              else if (files[0]) loadFile(files[0])
+              e.target.value = ''
+            }} />
         </div>
 
         {/* scrollable body */}
@@ -445,7 +528,7 @@ export default function PostFX() {
           </Section>
 
           {/* presets */}
-          <Section title="Presets">
+          <Section title="Presets" right={codeMsg && <span style={{ fontSize: 9, color: ACC }}>{codeMsg}</span>}>
             <div style={{ display: 'flex', gap: 6 }}>
               <input value={presetName} onChange={e => setPresetName(e.target.value)} placeholder="Preset name"
                 style={inputStyle} onKeyDown={e => e.key === 'Enter' && savePreset()} />
@@ -457,9 +540,29 @@ export default function PostFX() {
                 <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, padding: '3px 6px', background: C.ctrl, borderRadius: 4 }}>
                   <span style={{ flex: 1, cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} onClick={() => applyPreset(p)}>{p.name}</span>
                   <span style={{ fontSize: 9, color: C.muted }}>{p.stack.length}</span>
+                  <span title="Copy share code" style={{ cursor: 'pointer', color: C.muted, display: 'flex' }} onClick={() => copyCode(p.stack)}><Icon name="content_copy" size={12} /></span>
                   <span style={{ cursor: 'pointer', color: C.muted, display: 'flex' }} onClick={() => removeSavedPreset(p.id)}><Icon name="close" size={12} /></span>
                 </div>
               ))}
+            </div>
+            <div style={{ height: 1, background: C.border, margin: '8px 0' }} />
+            <div style={{ display: 'flex', gap: 6 }}>
+              <MiniBtn onClick={() => copyCode(s.stack)} disabled={s.stack.length === 0}>Copy stack code</MiniBtn>
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+              <input value={codeInput} onChange={e => setCodeInput(e.target.value)} placeholder="Paste preset code (PFX1.…)"
+                style={inputStyle} onKeyDown={e => e.key === 'Enter' && importCode()} />
+              <MiniBtn onClick={importCode} disabled={!codeInput.trim()}>Import</MiniBtn>
+            </div>
+            <div style={{ fontSize: 9, color: C.muted, marginTop: 6 }}>Share codes carry the whole effect stack as text.</div>
+          </Section>
+
+          {/* batch */}
+          <Section title="Batch" right={batchMsg && <span style={{ fontSize: 9, color: ACC }}>{batchMsg}</span>}>
+            <Btn icon="folder" label={exporting === 'batch' ? `Processing ${batchMsg}…` : 'Batch process images…'}
+              onClick={() => fileRef.current?.click()} disabled={!!exporting} flex />
+            <div style={{ fontSize: 9, color: C.muted, marginTop: 6 }}>
+              Select or drop multiple images to apply the current stack to each and download a zip. Animated effects render at t=0.
             </div>
           </Section>
         </div>

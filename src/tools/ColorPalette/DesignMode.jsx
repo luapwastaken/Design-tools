@@ -6,10 +6,12 @@ import Gradient from './Gradient.jsx'
 import Grade from './Grade.jsx'
 import Vision from './Vision.jsx'
 import AutoFix from './AutoFix.jsx'
+import Harmony from './Harmony.jsx'
+import PaintMix from './PaintMix.jsx'
 import ContrastMatrix from './ContrastMatrix.jsx'
 import BGCheck from './BGCheck.jsx'
 
-const PANELS = ['Generators', 'Recipes', 'Image', 'Gradient', 'Grade', 'Vision', 'AutoFix', 'Contrast', 'BG Check']
+const PANELS = ['Generators', 'Recipes', 'Image', 'Gradient', 'Grade', 'Vision', 'Harmony', 'Paint Mix', 'AutoFix', 'Contrast', 'BG Check']
 
 export default function DesignMode() {
   const [panel, setPanel] = useState('Generators')
@@ -33,6 +35,8 @@ export default function DesignMode() {
         {panel === 'Gradient'   && <Gradient />}
         {panel === 'Grade'      && <Grade />}
         {panel === 'Vision'     && <Vision />}
+        {panel === 'Harmony'    && <Harmony />}
+        {panel === 'Paint Mix'  && <PaintMix />}
         {panel === 'AutoFix'    && <AutoFix />}
         {panel === 'Contrast'   && <ContrastMatrix />}
         {panel === 'BG Check'   && <BGCheck />}
