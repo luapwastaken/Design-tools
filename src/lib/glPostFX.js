@@ -52,6 +52,9 @@ vec3 hsv2rgb(vec3 c){
 }
 // Sample the incoming image (clamped) — effects use this instead of texture(uTex,…).
 vec3 src(vec2 uv){ return texture(uTex, clamp(uv, 0.0, 1.0)).rgb; }
+// Sample the PREVIOUS frame's final output — the basis for frame-feedback effects
+// (datamosh motion smear). Equals the source on the first frame / after a reload.
+vec3 prev(vec2 uv){ return texture(uPrev, clamp(uv, 0.0, 1.0)).rgb; }
 vec3 blendModes(vec3 b, vec3 s, int mode){
   if (mode == 1) return b * s;                                  // multiply
   if (mode == 2) return 1.0 - (1.0 - b) * (1.0 - s);            // screen
@@ -70,6 +73,7 @@ function buildFragment(effect) {
 precision highp float;
 in vec2 vUv; out vec4 fragColor;
 uniform sampler2D uTex;
+uniform sampler2D uPrev;  // previous frame's final output (frame feedback)
 uniform vec2 uRes;        // pixel size of the working image
 uniform vec2 uTexel;      // 1.0 / uRes
 uniform float uTime;      // seconds (for animated effects)
@@ -105,9 +109,10 @@ precision highp float; in vec2 vUv; out vec4 fragColor; uniform sampler2D uTex;
 void main(){ fragColor = texture(uTex, vUv); }`)
     this.srcTex = this._tex()
     this.programs = new Map()   // effect.type -> compiled program
-    this.fbos = {}              // 'a' | 'b' ping-pong pool
+    this.fbos = {}              // 'a' | 'b' ping-pong pool + 'hist' feedback
     this.w = 0; this.h = 0
     this.hasSource = false
+    this.histDirty = true       // seed the history texture from the source next render
   }
 
   // ── compile / cache ────────────────────────────────────────────────────────
@@ -167,7 +172,10 @@ void main(){ fragColor = texture(uTex, vUv); }`)
   }
 
   // ── source upload ───────────────────────────────────────────────────────────
-  setSource(srcCanvas) {
+  // resetHist=true (default) seeds the feedback history from this frame — use when
+  // a NEW image loads. During video/GIF playback pass false so datamosh feedback
+  // accumulates across the moving frames instead of resetting every frame.
+  setSource(srcCanvas, resetHist = true) {
     const gl = this.gl
     this.w = srcCanvas.width; this.h = srcCanvas.height
     gl.bindTexture(gl.TEXTURE_2D, this.srcTex)
@@ -175,6 +183,7 @@ void main(){ fragColor = texture(uTex, vUv); }`)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, srcCanvas)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
     this.hasSource = true
+    if (resetHist) this.histDirty = true
   }
 
   // ── render the whole stack ──────────────────────────────────────────────────
@@ -186,23 +195,30 @@ void main(){ fragColor = texture(uTex, vUv); }`)
     const w = this.w, h = this.h
     if (this.canvas.width !== w || this.canvas.height !== h) { this.canvas.width = w; this.canvas.height = h }
 
+    const hist = this._fbo('hist', w, h)
+    if (this.histDirty) { this._copy(this.srcTex, hist.fb, w, h); this.histDirty = false }
+
     const active = stack.filter(l => l.enabled && EFFECTS[l.type])
-    // No effects → just blit the source to the screen.
-    if (active.length === 0) { this._blit(this.srcTex); return }
+    // No effects → blit the source and keep history in sync.
+    if (active.length === 0) { this._blit(this.srcTex); this._copy(this.srcTex, hist.fb, w, h); return }
 
     let read = this.srcTex
+    let finalTex = this.srcTex
     for (let i = 0; i < active.length; i++) {
       const layer = active[i]
       const effect = EFFECTS[layer.type]
       const prog = this._progFor(effect)
-      const last = i === active.length - 1
-      const target = last ? null : this._fbo(i % 2 === 0 ? 'a' : 'b', w, h)
+      // Always render into an FBO so the final result can be both shown and fed
+      // back into history for the next frame.
+      const target = this._fbo(i % 2 === 0 ? 'a' : 'b', w, h)
 
-      gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.fb : null)
+      gl.bindFramebuffer(gl.FRAMEBUFFER, target.fb)
       gl.viewport(0, 0, w, h)
       this._bindQuad(prog)
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, read)
       gl.uniform1i(gl.getUniformLocation(prog, 'uTex'), 0)
+      const prevLoc = gl.getUniformLocation(prog, 'uPrev')
+      if (prevLoc != null) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, hist.tex); gl.uniform1i(prevLoc, 1) }
       gl.uniform2f(gl.getUniformLocation(prog, 'uRes'), w, h)
       gl.uniform2f(gl.getUniformLocation(prog, 'uTexel'), 1 / w, 1 / h)
       gl.uniform1f(gl.getUniformLocation(prog, 'uTime'), time)
@@ -211,8 +227,23 @@ void main(){ fragColor = texture(uTex, vUv); }`)
       this._setParams(prog, effect, layer.params || {})
       gl.drawArrays(gl.TRIANGLES, 0, 3)
 
-      if (target) read = target.tex
+      read = target.tex
+      finalTex = target.tex
     }
+    // Show the result, then snapshot it into history for next frame's prev().
+    this._blit(finalTex)
+    this._copy(finalTex, hist.fb, w, h)
+  }
+
+  // Copy a texture into a target framebuffer (used to seed/update history).
+  _copy(tex, destFb, w, h) {
+    const gl = this.gl
+    gl.bindFramebuffer(gl.FRAMEBUFFER, destFb)
+    gl.viewport(0, 0, w, h)
+    this._bindQuad(this.copyProg)
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex)
+    gl.uniform1i(gl.getUniformLocation(this.copyProg, 'uTex'), 0)
+    gl.drawArrays(gl.TRIANGLES, 0, 3)
   }
 
   // Set per-effect uniforms from the descriptor's param schema.
