@@ -1,12 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import JSZip from 'jszip'
 import { NumberSlider, EditableNumber } from '../../components/NumberField.jsx'
 import Icon from '../../components/Icon.jsx'
 import { create as createGL } from '../../lib/glPostFX.js'
 import { processFile } from '../../lib/file.js'
-import { encodeGif } from '../../lib/gif.js'
+import { encodeGif, decodeGif, gifDecodeSupported } from '../../lib/gif.js'
 import { markSaved } from '../../lib/unsavedChanges.js'
 import { EFFECTS, EFFECT_LIST, CATEGORIES, BLEND_MODES } from './effects.js'
+import { BUILTIN_FX_PRESETS } from './presets.js'
 import {
   usePostFX, getState, addEffect, removeEffect, updateLayer, setLayerParam,
   toggleLayer, selectLayer, moveLayer, reorderLayer, duplicateLayer, clearStack,
@@ -33,10 +34,19 @@ export default function PostFX() {
   const rafRef = useRef(null)
   const startRef = useRef(performance.now())
 
+  // ── Media (still / animated GIF / video) ──────────────────────────────────────
+  const mediaRef = useRef(null)      // { kind:'image'|'gif'|'video', ... }
+  const gifBaseRef = useRef(0)       // gif playback time offset (seconds) for resume after scrub
+  const videoUrlRef = useRef(null)   // object URL to revoke on replace/unmount
+  const [mediaKind, setMediaKind] = useState('image')
+  const [playing, setPlaying] = useState(false)
+  const [progress, setProgress] = useState(0)   // 0..1 timeline position
+  const [mediaDur, setMediaDur] = useState(0)    // seconds (for the readout)
+
   const [src, setSrc] = useState(null)   // { name, w, h }
   const [dragOver, setDragOver] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
-  const [presetName, setPresetName] = useState('')
+  const [paletteOpen, setPaletteOpen] = useState(false)
   const [codeInput, setCodeInput] = useState('')
   const [codeMsg, setCodeMsg] = useState('')
   const [batchMsg, setBatchMsg] = useState('')
@@ -60,7 +70,7 @@ export default function PostFX() {
   useEffect(() => {
     if (!canvasRef.current) return
     glRef.current = createGL(canvasRef.current)
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); if (videoUrlRef.current) { try { URL.revokeObjectURL(videoUrlRef.current) } catch {} } }
   }, [])
 
   // ── Incoming image from another tool (e.g. Dither "Send to Post FX") ──────────
@@ -69,28 +79,114 @@ export default function PostFX() {
     if (url) { loadFromUrl(url, 'from-dither.png'); clearIncomingImage() }
   }, [])
 
+  // ── Working-size canvas + frame drawing ───────────────────────────────────────
+  // Working canvas is sized to the media's downscaled dimensions; every frame
+  // (still, GIF frame, or video frame) is drawn into it and handed to the engine.
+  function ensureWork(srcW, srcH) {
+    const scale = Math.min(1, MAX_EDGE / Math.max(srcW, srcH))
+    const w = Math.max(1, Math.round(srcW * scale)), h = Math.max(1, Math.round(srcH * scale))
+    let cv = workRef.current
+    if (!cv || cv.width !== w || cv.height !== h) { cv = document.createElement('canvas'); cv.width = w; cv.height = h; workRef.current = cv }
+    return { cv, w, h }
+  }
+  function drawToWork(drawable) {
+    const cv = workRef.current; if (!cv) return
+    const ctx = cv.getContext('2d')
+    ctx.imageSmoothingEnabled = true
+    ctx.drawImage(drawable, 0, 0, cv.width, cv.height)
+  }
+
   // ── Load helpers ──────────────────────────────────────────────────────────────
+  function disposeMedia() {
+    if (videoUrlRef.current) { try { URL.revokeObjectURL(videoUrlRef.current) } catch {} ; videoUrlRef.current = null }
+    const m = mediaRef.current
+    if (m?.kind === 'video' && m.el) { try { m.el.pause() } catch {} }
+    mediaRef.current = null
+    setPlaying(false); setProgress(0); setMediaDur(0)
+  }
+
   function loadFromUrl(url, name = 'image.png') {
     const img = new Image()
     img.onload = () => {
-      const scale = Math.min(1, MAX_EDGE / Math.max(img.width, img.height))
-      const w = Math.max(1, Math.round(img.width * scale))
-      const h = Math.max(1, Math.round(img.height * scale))
-      const cv = document.createElement('canvas'); cv.width = w; cv.height = h
+      disposeMedia()
+      const { cv, w, h } = ensureWork(img.width, img.height)
       cv.getContext('2d').drawImage(img, 0, 0, w, h)
-      workRef.current = cv
       origUrlRef.current = cv.toDataURL('image/png')
+      mediaRef.current = { kind: 'image' }
+      setMediaKind('image')
       glRef.current?.setSource(cv)
       setSrc({ name, w, h })
+      render()
       requestAnimationFrame(() => fitView(w, h))
     }
     img.src = url
   }
 
-  async function loadFile(file) {
+  async function loadGif(file) {
+    if (!gifDecodeSupported()) { return loadFromUrl(URL.createObjectURL(file), file.name) }
+    try {
+      const { frames } = await decodeGif(file)
+      if (!frames?.length) return
+      if (frames.length === 1) { loadFromUrl(frames[0].canvas.toDataURL('image/png'), file.name); return }
+      disposeMedia()
+      const fw = frames[0].canvas.width, fh = frames[0].canvas.height
+      const { cv, w, h } = ensureWork(fw, fh)
+      const delays = frames.map(f => Math.max(20, f.delay || 100))
+      mediaRef.current = { kind: 'gif', frames: frames.map(f => f.canvas), delays, totalMs: delays.reduce((a, b) => a + b, 0) }
+      gifBaseRef.current = 0
+      setMediaKind('gif'); setMediaDur(mediaRef.current.totalMs / 1000)
+      cv.getContext('2d').drawImage(frames[0].canvas, 0, 0, w, h)
+      origUrlRef.current = cv.toDataURL('image/png')
+      glRef.current?.setSource(cv); render()
+      setSrc({ name: file.name, w, h })
+      requestAnimationFrame(() => fitView(w, h))
+      setPlaying(true)
+    } catch (e) { console.warn('GIF decode failed', e) }
+  }
+
+  function loadVideo(file) {
+    disposeMedia()
+    const url = URL.createObjectURL(file); videoUrlRef.current = url
+    const el = document.createElement('video')
+    el.src = url; el.muted = true; el.loop = true; el.playsInline = true; el.crossOrigin = 'anonymous'
+    el.onloadeddata = () => {
+      const dur = isFinite(el.duration) ? el.duration : 0
+      const { cv, w, h } = ensureWork(el.videoWidth || 640, el.videoHeight || 480)
+      mediaRef.current = { kind: 'video', el, duration: dur }
+      setMediaKind('video'); setMediaDur(dur)
+      cv.getContext('2d').drawImage(el, 0, 0, w, h)
+      origUrlRef.current = cv.toDataURL('image/png')
+      glRef.current?.setSource(cv); render()
+      setSrc({ name: file.name, w, h })
+      requestAnimationFrame(() => fitView(w, h))
+      setPlaying(true)
+    }
+    el.onerror = () => console.warn('Video load failed', file.name)
+    el.load()
+  }
+
+  // Route a dropped/selected/pasted file to the right loader by type.
+  function loadFile(file) {
+    if (!file) return
+    const isGif = file.type === 'image/gif' || /\.gif$/i.test(file.name)
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|m4v|ogv|ogg)$/i.test(file.name)
+    if (isGif) return loadGif(file)
+    if (isVideo) return loadVideo(file)
+    loadImageFile(file)
+  }
+  async function loadImageFile(file) {
     const r = await processFile(file)
     if (!r || r.type !== 'raster') return
     loadFromUrl(r.dataUrl, r.name)
+  }
+
+  // Draw the GIF frame for a given playback time (seconds, looping) into work.
+  function drawGifAt(tsec) {
+    const m = mediaRef.current; if (m?.kind !== 'gif') return
+    const tt = ((tsec * 1000) % m.totalMs + m.totalMs) % m.totalMs
+    let acc = 0, idx = 0
+    for (let i = 0; i < m.frames.length; i++) { acc += m.delays[i]; if (tt < acc) { idx = i; break } }
+    drawToWork(m.frames[idx])
   }
 
   // Synthetic Post-FX test card — exercises every effect family: a full hue
@@ -141,17 +237,71 @@ export default function PostFX() {
   // Re-render on any settings change.
   useEffect(() => { render() }, [render])
 
-  // Animation loop — only while `animate` is on and an animated effect is present.
+  // Unified playback / animation loop. Runs while media (GIF/video) is playing or
+  // an animated effect is enabled. Each tick draws the current media frame into the
+  // source, advances uTime, and renders the stack — so effects (and datamosh
+  // feedback) process the moving footage frame by frame.
   useEffect(() => {
-    if (!s.animate) { if (rafRef.current) cancelAnimationFrame(rafRef.current); rafRef.current = null; return }
-    const loop = () => { if (!busyRef.current) render(); rafRef.current = requestAnimationFrame(loop) }
-    rafRef.current = requestAnimationFrame(loop)
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
-  }, [s.animate, render])
+    const m = mediaRef.current
+    const isVideo = m?.kind === 'video', isGif = m?.kind === 'gif'
+    const mediaPlay = playing && (isVideo || isGif)
+    if ((!mediaPlay && !s.animate) || !glRef.current) return
+    let raf
+    const wallStart = performance.now()
+    let lastGifT = gifBaseRef.current
+    if (isVideo && mediaPlay) m.el.play().catch(() => {})
+    const loop = () => {
+      if (!busyRef.current) {
+        let t = 0
+        if (mediaPlay && isVideo) {
+          drawToWork(m.el); glRef.current.setSource(workRef.current, false)   // keep feedback across frames
+          t = m.el.currentTime; setProgress(m.el.duration ? t / m.el.duration : 0)
+        } else if (mediaPlay && isGif) {
+          t = gifBaseRef.current + (performance.now() - wallStart) / 1000; lastGifT = t
+          drawGifAt(t); glRef.current.setSource(workRef.current, false)
+          const dur = m.totalMs / 1000; setProgress(((t % dur) + dur) % dur / dur)
+        } else {
+          t = (performance.now() - startRef.current) / 1000
+        }
+        glRef.current.render(s.stack, EFFECTS, t * (s.animSpeed || 1))
+      }
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    return () => {
+      cancelAnimationFrame(raf)
+      if (isGif) gifBaseRef.current = lastGifT
+      if (isVideo) { try { m.el.pause() } catch {} }
+    }
+  }, [playing, mediaKind, s.animate, s.stack, s.animSpeed])
 
-  // ── Keyboard: space-pan + undo/redo ───────────────────────────────────────────
+  // Scrub the timeline (paused or playing). Draws the target frame immediately.
+  function seekTo(pos) {
+    const m = mediaRef.current; if (!m) return
+    pos = Math.max(0, Math.min(1, pos))
+    setProgress(pos)
+    if (m.kind === 'video') {
+      const el = m.el
+      if (el.duration) el.currentTime = pos * el.duration
+      const draw = () => { drawToWork(el); glRef.current?.setSource(workRef.current); render(); el.removeEventListener('seeked', draw) }
+      el.addEventListener('seeked', draw)
+    } else if (m.kind === 'gif') {
+      gifBaseRef.current = pos * (m.totalMs / 1000)
+      drawGifAt(gifBaseRef.current); glRef.current?.setSource(workRef.current); render()
+    }
+  }
+  const fmtTime = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`
+
+  // ── Keyboard: Tab command palette + space-pan + undo/redo ──────────────────────
   useEffect(() => {
     const dn = e => {
+      // Tab anywhere opens the effect search palette (unless typing in a text field).
+      if (e.key === 'Tab' && !paletteOpen) {
+        const ae = document.activeElement
+        const typing = ae && ((ae.tagName === 'INPUT' && /^(text|search|number)$/.test(ae.type)) || ae.tagName === 'TEXTAREA' || ae.isContentEditable)
+        if (!typing) { e.preventDefault(); setPaletteOpen(true) }
+        return
+      }
       if (e.code === 'Space' && !e.target.matches('input,textarea')) { setSpace(true); e.preventDefault() }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo() }
       if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) { e.preventDefault(); redo() }
@@ -159,7 +309,7 @@ export default function PostFX() {
     const up = e => { if (e.code === 'Space') setSpace(false) }
     window.addEventListener('keydown', dn); window.addEventListener('keyup', up)
     return () => { window.removeEventListener('keydown', dn); window.removeEventListener('keyup', up) }
-  }, [])
+  }, [paletteOpen])
 
   // ── Paste image ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -241,31 +391,51 @@ export default function PostFX() {
     glRef.current.render(s.stack, EFFECTS, t)
     return glRef.current.readToCanvas()
   }
+  // Process one media frame (drawable) through the stack and read it back. reset
+  // seeds feedback (first frame); subsequent frames keep it so datamosh flows.
+  function processFrame(drawable, t, reset) {
+    drawToWork(drawable)
+    glRef.current.setSource(workRef.current, reset)
+    glRef.current.render(getState().stack, EFFECTS, t)
+    return glRef.current.readToCanvas()
+  }
+  // Seek a video to `tsec` and resolve once the frame is decoded.
+  function seekVideo(el, tsec) {
+    return new Promise(res => { const h = () => { el.removeEventListener('seeked', h); res() }; el.addEventListener('seeked', h); el.currentTime = Math.min(tsec, (el.duration || 0) - 0.001) })
+  }
 
-  // Export a looping animated GIF: sample the effect stack across the loop period.
+  // Export a GIF. With a GIF loaded → re-encode every processed frame at its own
+  // delay. With a video → sample at the chosen FPS across its duration. Else →
+  // sample the animated stack across the loop length (synthetic loop).
   async function exportGif() {
     if (!glRef.current || !workRef.current || exporting) return
-    setExporting('gif'); busyRef.current = true
+    const m = mediaRef.current
+    setExporting('gif'); busyRef.current = true; const wasPlaying = playing; setPlaying(false)
     try {
-      const fps = Math.max(1, Math.round(animFps))
-      const n = Math.max(1, Math.round(fps * animDur))
-      const delay = Math.round(1000 / fps)
-      const frames = []
-      for (let i = 0; i < n; i++) {
-        frames.push(renderFrameAt((i / fps) * s.animSpeed))
-        if (i % 4 === 3) await new Promise(r => setTimeout(r))   // yield (rAF-independent)
+      const frames = [], delays = []
+      if (m?.kind === 'gif') {
+        let acc = 0
+        for (let i = 0; i < m.frames.length; i++) { frames.push(processFrame(m.frames[i], acc / 1000, i === 0)); delays.push(m.delays[i]); acc += m.delays[i]; if (i % 3 === 2) await new Promise(r => setTimeout(r)) }
+      } else if (m?.kind === 'video') {
+        const fps = Math.max(1, Math.round(animFps)), dur = m.el.duration || 1, n = Math.max(2, Math.round(fps * dur)), delay = Math.round(1000 / fps)
+        for (let i = 0; i < n; i++) { await seekVideo(m.el, i / fps); frames.push(processFrame(m.el, i / fps, i === 0)); delays.push(delay) }
+      } else {
+        const fps = Math.max(1, Math.round(animFps)), n = Math.max(1, Math.round(fps * animDur)), delay = Math.round(1000 / fps)
+        for (let i = 0; i < n; i++) { frames.push(renderFrameAt((i / fps) * s.animSpeed)); delays.push(delay); if (i % 4 === 3) await new Promise(r => setTimeout(r)) }
       }
-      const blob = await encodeGif(frames, frames.map(() => delay))
-      if (blob) { downloadBlob(blob, baseName() + '-loop.gif'); markSaved('post-fx') }
+      const blob = await encodeGif(frames, delays)
+      if (blob) { downloadBlob(blob, baseName() + (m?.kind === 'image' ? '-loop' : '-fx') + '.gif'); markSaved('post-fx') }
     } finally {
-      busyRef.current = false; setExporting(null); render()
+      busyRef.current = false; setExporting(null); setPlaying(wasPlaying); render()
     }
   }
 
-  // Record the animated canvas to MP4 (or WebM fallback) via MediaRecorder.
+  // Record processed output to MP4/WebM. Video → play the clip through once;
+  // GIF → record its processed loop; still → record the synthetic loop.
   async function exportVideo() {
     if (!glRef.current || !workRef.current || exporting || !videoMime) return
-    setExporting('video'); busyRef.current = true
+    const m = mediaRef.current
+    setExporting('video'); busyRef.current = true; const wasPlaying = playing; setPlaying(false)
     try {
       const fps = Math.max(1, Math.round(animFps))
       const stream = canvasRef.current.captureStream(fps)
@@ -274,33 +444,53 @@ export default function PostFX() {
       rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data) }
       const stopped = new Promise(res => { rec.onstop = res })
       rec.start()
-      // Drive the canvas with a fixed-interval timer (rAF-independent so it keeps
-      // recording even when the window isn't focused) and push each frame to the
-      // capture stream explicitly via requestFrame() when available.
       const track = stream.getVideoTracks()[0]
-      const start = performance.now()
-      await new Promise(resolve => {
-        const tick = () => {
-          const el = (performance.now() - start) / 1000
-          renderFrameAt(el * s.animSpeed)
-          if (track && track.requestFrame) track.requestFrame()
-          if (el >= animDur) { resolve(); return }
-          setTimeout(tick, 1000 / fps)
-        }
-        tick()
-      })
+      const push = () => { if (track && track.requestFrame) track.requestFrame() }
+      if (m?.kind === 'video') {
+        const el = m.el; el.pause(); el.currentTime = 0
+        const dur = el.duration || 1; const start = performance.now()
+        await new Promise(resolve => {
+          const tick = () => {
+            const el2 = (performance.now() - start) / 1000
+            seekVideo(el, el2).then(() => {})
+            processFrame(el, el2, el2 < 0.05)
+            push()
+            if (el2 >= dur) { resolve(); return }
+            setTimeout(tick, 1000 / fps)
+          }
+          tick()
+        })
+      } else if (m?.kind === 'gif') {
+        const dur = m.totalMs / 1000; const start = performance.now()
+        await new Promise(resolve => {
+          const tick = () => {
+            const el2 = (performance.now() - start) / 1000
+            drawGifAt(el2); glRef.current.setSource(workRef.current, el2 < 0.05); glRef.current.render(getState().stack, EFFECTS, el2)
+            push()
+            if (el2 >= dur) { resolve(); return }
+            setTimeout(tick, 1000 / fps)
+          }
+          tick()
+        })
+      } else {
+        const start = performance.now()
+        await new Promise(resolve => {
+          const tick = () => {
+            const el2 = (performance.now() - start) / 1000
+            renderFrameAt(el2 * s.animSpeed); push()
+            if (el2 >= animDur) { resolve(); return }
+            setTimeout(tick, 1000 / fps)
+          }
+          tick()
+        })
+      }
       rec.stop()
       await stopped
-      downloadBlob(new Blob(chunks, { type: videoMime }), baseName() + '-loop.' + videoExt)
-      markSaved('post-fx')
+      downloadBlob(new Blob(chunks, { type: videoMime }), baseName() + (m?.kind === 'image' ? '-loop' : '-fx') + '.' + videoExt)
+      markSaved('post-fx'); setPlaying(wasPlaying)
     } finally {
       busyRef.current = false; setExporting(null); render()
     }
-  }
-
-  function savePreset() {
-    saveCurrentPreset(presetName || 'Preset')
-    setPresetName('')
   }
 
   // ── Preset share codes ────────────────────────────────────────────────────────
@@ -413,7 +603,14 @@ export default function PostFX() {
           </div>
         </div>
 
-        {/* split divider */}
+        {paletteOpen && (
+        <CommandPalette
+          onPick={t => { addEffect(t); setPaletteOpen(false) }}
+          onClose={() => setPaletteOpen(false)}
+        />
+      )}
+
+      {/* split divider */}
         {src && split != null && (
           <div
             onPointerDown={e => { e.stopPropagation(); splitDragRef.current = true; viewportRef.current.setPointerCapture(e.pointerId) }}
@@ -438,15 +635,31 @@ export default function PostFX() {
               <span style={{ fontSize: 11, color: C.muted, background: 'rgba(8,8,10,0.7)', borderRadius: 5, padding: '3px 8px' }}>{src.name} · {src.w}×{src.h}</span>
               {!glRef.current && <span style={{ fontSize: 10, color: '#e0795a' }}>WebGL unavailable</span>}
             </div>
-            <div style={{ position: 'absolute', bottom: 10, right: 10, fontSize: 9, color: C.muted, background: 'rgba(8,8,10,0.7)', borderRadius: 5, padding: '3px 7px', pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', bottom: mediaKind !== 'image' ? 48 : 10, right: 10, fontSize: 9, color: C.muted, background: 'rgba(8,8,10,0.7)', borderRadius: 5, padding: '3px 7px', pointerEvents: 'none' }}>
               Space / middle-drag to pan · scroll to zoom
             </div>
-            <div style={{ position: 'absolute', bottom: 10, left: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
+            <div style={{ position: 'absolute', bottom: mediaKind !== 'image' ? 48 : 10, left: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
               <ZoomBtn onClick={() => fitView(src.w, src.h)}>Fit</ZoomBtn>
               <ZoomBtn onClick={() => { setZoom(1); setPan({ x: (viewportRef.current.clientWidth - src.w) / 2, y: (viewportRef.current.clientHeight - src.h) / 2 }) }}>1:1</ZoomBtn>
               <span style={{ fontSize: 10, color: C.muted, minWidth: 38, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{Math.round(zoom * 100)}%</span>
               <ZoomBtn onClick={() => setSplit(split == null ? 0.5 : null)} active={split != null}>Before / After</ZoomBtn>
             </div>
+
+            {/* timeline (GIF / video) */}
+            {mediaKind !== 'image' && (
+              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 40, background: 'rgba(8,8,10,0.9)', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px' }}>
+                <button onClick={() => setPlaying(p => !p)} title={playing ? 'Pause' : 'Play'}
+                  style={{ background: C.ctrl, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, width: 30, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name={playing ? 'pause' : 'play_arrow'} size={15} />
+                </button>
+                <input type="range" min={0} max={1} step={0.001} value={progress}
+                  onChange={e => { setPlaying(false); seekTo(+e.target.value) }}
+                  style={{ flex: 1, accentColor: ACC }} />
+                <span style={{ fontSize: 10, color: C.muted, minWidth: 92, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                  {mediaKind === 'video' ? `${fmtTime(progress * mediaDur)} / ${fmtTime(mediaDur)}` : `${Math.round(progress * 100)}% · ${mediaRef.current?.frames?.length || 0}f`}
+                </span>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -467,7 +680,7 @@ export default function PostFX() {
             <Btn icon="grain" label="Debug" onClick={loadDebug} title="Load a synthetic test card for tuning effects" flex />
           </div>
           <Btn icon="download" label="Export PNG" onClick={exportPng} disabled={!src} flex />
-          <input ref={fileRef} type="file" accept="image/*" multiple hidden
+          <input ref={fileRef} type="file" accept="image/*,video/*,.gif" multiple hidden
             onChange={e => {
               const files = e.target.files
               if (files.length > 1) runBatch(files)
@@ -500,6 +713,9 @@ export default function PostFX() {
               <Btn icon="add" label="Add effect" onClick={() => setAddOpen(v => !v)} flex />
               {addOpen && <AddMenu onPick={t => { addEffect(t); setAddOpen(false) }} onClose={() => setAddOpen(false)} />}
             </div>
+            <div style={{ fontSize: 9, color: C.muted, marginTop: 6, textAlign: 'center' }}>
+              Press <kbd style={kbdStyle}>Tab</kbd> anywhere to search effects
+            </div>
           </Section>
 
           {/* selected effect controls */}
@@ -529,23 +745,8 @@ export default function PostFX() {
 
           {/* presets */}
           <Section title="Presets" right={codeMsg && <span style={{ fontSize: 9, color: ACC }}>{codeMsg}</span>}>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input value={presetName} onChange={e => setPresetName(e.target.value)} placeholder="Preset name"
-                style={inputStyle} onKeyDown={e => e.key === 'Enter' && savePreset()} />
-              <MiniBtn onClick={savePreset} disabled={s.stack.length === 0}>Save</MiniBtn>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 8 }}>
-              {s.savedPresets.length === 0 && <div style={{ fontSize: 10, color: C.muted }}>No saved presets.</div>}
-              {s.savedPresets.map(p => (
-                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, padding: '3px 6px', background: C.ctrl, borderRadius: 4 }}>
-                  <span style={{ flex: 1, cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} onClick={() => applyPreset(p)}>{p.name}</span>
-                  <span style={{ fontSize: 9, color: C.muted }}>{p.stack.length}</span>
-                  <span title="Copy share code" style={{ cursor: 'pointer', color: C.muted, display: 'flex' }} onClick={() => copyCode(p.stack)}><Icon name="content_copy" size={12} /></span>
-                  <span style={{ cursor: 'pointer', color: C.muted, display: 'flex' }} onClick={() => removeSavedPreset(p.id)}><Icon name="close" size={12} /></span>
-                </div>
-              ))}
-            </div>
-            <div style={{ height: 1, background: C.border, margin: '8px 0' }} />
+            <PresetStrip savedPresets={s.savedPresets} selectedPresetId={s.selectedPresetId} onCopyCode={copyCode} />
+            <div style={{ height: 1, background: C.border, margin: '10px 0 8px' }} />
             <div style={{ display: 'flex', gap: 6 }}>
               <MiniBtn onClick={() => copyCode(s.stack)} disabled={s.stack.length === 0}>Copy stack code</MiniBtn>
             </div>
@@ -565,6 +766,165 @@ export default function PostFX() {
               Select or drop multiple images to apply the current stack to each and download a zip. Animated effects render at t=0.
             </div>
           </Section>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Preset strip (mirrors the Dither tool) ────────────────────────────────────
+// Grouped dropdown + ‹ › steppers + scroll-wheel to flip through built-in and
+// saved presets, with an "N / total · group" counter. Save current / Delete
+// inline. Built-ins group by their `group` field; saved presets fall under
+// "Saved".
+function PresetStrip({ savedPresets, selectedPresetId, onCopyCode }) {
+  const [naming, setNaming] = useState(false)
+  const [name, setName] = useState('')
+
+  const all = [...BUILTIN_FX_PRESETS, ...savedPresets]
+  const idx = all.findIndex(p => p.id === selectedPresetId)
+  const current = idx >= 0 ? all[idx] : null
+  const curGroup = current ? (current.group || 'Saved') : null
+
+  const groups = []
+  for (const p of BUILTIN_FX_PRESETS) {
+    let g = groups.find(x => x.label === (p.group || 'Other'))
+    if (!g) { g = { label: p.group || 'Other', items: [] }; groups.push(g) }
+    g.items.push(p)
+  }
+  if (savedPresets.length) groups.push({ label: 'Saved', items: savedPresets })
+
+  const step = d => {
+    if (!all.length) return
+    const base = idx < 0 ? 0 : (idx + d + all.length) % all.length
+    applyPreset(all[base])
+  }
+  const isSaved = current && savedPresets.some(sp => sp.id === current.id)
+
+  return (
+    <div>
+      <div onWheel={e => { e.preventDefault(); step(e.deltaY > 0 ? 1 : -1) }}
+        style={{ display: 'flex', gap: 4, alignItems: 'center' }}
+        title="Scroll or ‹ › to flip through — preview updates live">
+        <StepBtn onClick={() => step(-1)}>‹</StepBtn>
+        <select value={selectedPresetId || ''} onChange={e => { const p = all.find(x => x.id === e.target.value); if (p) applyPreset(p) }} style={{ ...selectStyle, flex: 1 }}>
+          {!current && <option value="">— Custom —</option>}
+          {groups.map(g => <optgroup key={g.label} label={g.label}>{g.items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</optgroup>)}
+        </select>
+        <StepBtn onClick={() => step(1)}>›</StepBtn>
+      </div>
+      <div style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>
+        {current ? `${idx + 1} / ${all.length} · ${curGroup}` : `Custom · ${all.length} presets`}
+      </div>
+
+      {naming ? (
+        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+          <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Preset name…"
+            onKeyDown={e => { if (e.key === 'Enter' && name.trim()) { saveCurrentPreset(name.trim()); setNaming(false); setName('') } if (e.key === 'Escape') setNaming(false) }}
+            style={inputStyle} />
+          <MiniBtn onClick={() => { if (name.trim()) { saveCurrentPreset(name.trim()); setNaming(false); setName('') } }}>Save</MiniBtn>
+          <MiniBtn onClick={() => setNaming(false)}>×</MiniBtn>
+        </div>
+      ) : (
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <MiniBtn onClick={() => setNaming(true)}>+ Save current as preset</MiniBtn>
+          {current && <MiniBtn onClick={() => onCopyCode(current.stack)}>Copy code</MiniBtn>}
+          {isSaved && <MiniBtn onClick={() => removeSavedPreset(current.id)}>Delete</MiniBtn>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function StepBtn({ children, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      width: 24, height: 28, flexShrink: 0, background: C.ctrl, border: `1px solid ${C.border}`,
+      borderRadius: 5, color: C.text, fontSize: 16, lineHeight: 1, cursor: 'pointer',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>{children}</button>
+  )
+}
+
+// ── Command palette (Tab to open) ─────────────────────────────────────────────
+// Fuzzy-ish search over every effect; arrow keys move, Enter adds, Esc closes.
+// Ranks exact label prefix > label substring > category substring.
+const CAT_LABEL = Object.fromEntries(CATEGORIES.map(c => [c.id, c.label]))
+
+function scoreEffect(e, q) {
+  const label = e.label.toLowerCase(), cat = (CAT_LABEL[e.category] || '').toLowerCase()
+  if (label.startsWith(q)) return 0
+  const wordStart = label.split(/[\s/]+/).some(w => w.startsWith(q))
+  if (wordStart) return 1
+  if (label.includes(q)) return 2
+  if (cat.includes(q)) return 3
+  return -1
+}
+
+function CommandPalette({ onPick, onClose }) {
+  const [q, setQ] = useState('')
+  const [sel, setSel] = useState(0)
+  const inputRef = useRef(null)
+  const listRef = useRef(null)
+
+  const results = useMemo(() => {
+    const query = q.trim().toLowerCase()
+    if (!query) return EFFECT_LIST
+    return EFFECT_LIST
+      .map(e => ({ e, s: scoreEffect(e, query) }))
+      .filter(x => x.s >= 0)
+      .sort((a, b) => a.s - b.s)
+      .map(x => x.e)
+  }, [q])
+
+  useEffect(() => { inputRef.current?.focus() }, [])
+  useEffect(() => { setSel(0) }, [q])
+  // keep the selected row scrolled into view
+  useEffect(() => {
+    const el = listRef.current?.querySelector('[data-sel="1"]')
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [sel])
+
+  function onKey(e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setSel(s => Math.min(results.length - 1, s + 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setSel(s => Math.max(0, s - 1)) }
+    else if (e.key === 'Enter') { e.preventDefault(); if (results[sel]) onPick(results[sel].type) }
+    else if (e.key === 'Escape') { e.preventDefault(); onClose() }
+    else if (e.key === 'Tab') { e.preventDefault(); setSel(s => (s + (e.shiftKey ? -1 : 1) + results.length) % Math.max(1, results.length)) }
+  }
+
+  return (
+    <div onMouseDown={onClose} style={{
+      position: 'absolute', inset: 0, zIndex: 50, background: 'rgba(6,6,8,0.55)',
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '14vh',
+    }}>
+      <div onMouseDown={e => e.stopPropagation()} style={{
+        width: 440, maxWidth: '90%', background: '#15151a', border: `1px solid ${C.border}`,
+        borderRadius: 10, boxShadow: '0 16px 50px rgba(0,0,0,0.6)', overflow: 'hidden',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderBottom: `1px solid ${C.border}` }}>
+          <Icon name="search" size={16} color={C.mutedHi} />
+          <input
+            ref={inputRef} value={q} onChange={e => setQ(e.target.value)} onKeyDown={onKey}
+            placeholder="Search effects…"
+            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: C.text, fontSize: 14, fontFamily: 'inherit' }}
+          />
+          <span style={{ fontSize: 9, color: C.muted }}>↑↓ · Enter · Esc</span>
+        </div>
+        <div ref={listRef} style={{ maxHeight: 320, overflowY: 'auto', padding: 4 }}>
+          {results.length === 0 && <div style={{ padding: 14, fontSize: 12, color: C.muted, textAlign: 'center' }}>No effects match “{q}”.</div>}
+          {results.map((e, i) => (
+            <div key={e.type} data-sel={i === sel ? '1' : '0'}
+              onMouseEnter={() => setSel(i)} onClick={() => onPick(e.type)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 6, cursor: 'pointer',
+                background: i === sel ? C.accentLo : 'transparent',
+                border: `1px solid ${i === sel ? ACC : 'transparent'}`,
+              }}>
+              <span style={{ flex: 1, fontSize: 12, color: i === sel ? C.text : '#ccc' }}>{e.label}</span>
+              <span style={{ fontSize: 9, color: C.muted, textTransform: 'uppercase', letterSpacing: 0.5 }}>{CAT_LABEL[e.category]}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -773,6 +1133,10 @@ function Toggle({ on, onClick }) {
 const inputStyle = {
   flex: 1, fontSize: 11, padding: '4px 8px', background: C.ctrl, color: C.text,
   border: `1px solid ${C.border}`, borderRadius: 4, outline: 'none', minWidth: 0,
+}
+const kbdStyle = {
+  background: C.ctrl, border: `1px solid ${C.border}`, borderRadius: 3,
+  padding: '0 4px', fontSize: 9, fontFamily: 'inherit', color: C.mutedHi,
 }
 const selectStyle = {
   fontSize: 11, padding: '3px 6px', background: C.ctrl, color: C.text,

@@ -23,6 +23,7 @@ export const CATEGORIES = [
   { id: 'stylize', label: 'Stylize', icon: 'auto_awesome' },
   { id: 'film', label: 'Film & Retro', icon: 'tv' },
   { id: 'distort', label: 'Distort & Warp', icon: 'waves' },
+  { id: 'datamosh', label: 'Datamosh & Glitch', icon: 'grid_view' },
   { id: 'light', label: 'Light & Atmosphere', icon: 'wb_sunny' },
 ]
 
@@ -570,6 +571,131 @@ const LIST = [
     }`,
   },
 
+  {
+    type: 'filmstock', label: 'Film Stock', category: 'film', icon: 'camera_roll',
+    params: [
+      { key: 'uStock', label: 'Stock', type: 'select', default: 0, options: [
+        { label: 'Portra 400', value: 0 }, { label: 'Ektachrome E100', value: 1 },
+        { label: 'Velvia 50', value: 2 }, { label: 'Tri-X 400 (B&W)', value: 3 },
+        { label: 'Cinestill 800T', value: 4 }, { label: 'Cross-process', value: 5 },
+      ] },
+      { key: 'uExposure', label: 'Exposure', min: -2, max: 2, step: 0.01, default: 0 },
+      { key: 'uContrast', label: 'Contrast', min: -0.5, max: 1, step: 0.01, default: 0 },
+      { key: 'uHalation', label: 'Halation', min: 0, max: 1, step: 0.01, default: 0.3 },
+      { key: 'uGrain', label: 'Grain', min: 0, max: 1, step: 0.01, default: 0.25 },
+      { key: 'uGrainSize', label: 'Grain size', min: 1, max: 6, step: 0.5, default: 1.5, suffix: 'px' },
+      { key: 'uMix', label: 'Mix', min: 0, max: 1, step: 0.01, default: 1 },
+    ],
+    uniforms: 'uniform int uStock; uniform float uExposure, uContrast, uHalation, uGrain, uGrainSize, uMix;',
+    glsl: `vec3 stock(vec3 c){
+      // Per-stock characteristic curve: channel gamma (dye response), a colour
+      // cast that splits between shadows and highlights, and a saturation feel.
+      if (uStock == 0){            // Portra 400 — warm, soft, creamy skin
+        c = pow(c, vec3(0.90, 0.95, 1.06));
+        c += vec3(0.03, 0.02, 0.0) * (1.0 - c);
+        c = mix(vec3(luma(c)), c, 0.9);
+      } else if (uStock == 1){     // Ektachrome E100 — cool, clean, punchy
+        c = (c - 0.5) * 1.12 + 0.5;
+        c.b += 0.025 * (1.0 - c.b);
+        c = mix(vec3(luma(c)), c, 1.12);
+      } else if (uStock == 2){     // Velvia 50 — vivid, contrasty slide film
+        c = (c - 0.5) * 1.22 + 0.5;
+        c = mix(vec3(luma(c)), c, 1.5);
+        c.g += 0.015 * (1.0 - luma(c));
+      } else if (uStock == 3){     // Tri-X 400 — panchromatic B&W, gutsy contrast
+        float l = dot(c, vec3(0.24, 0.62, 0.14));
+        l = (l - 0.5) * 1.28 + 0.5;
+        c = vec3(clamp(l, 0.0, 1.0));
+      } else if (uStock == 4){     // Cinestill 800T — tungsten, cool, red halation
+        c += vec3(-0.015, 0.0, 0.05);
+        c = (c - 0.5) * 1.06 + 0.5;
+        c.b += 0.04 * (1.0 - luma(c));
+      } else {                     // Cross-process (E-6 in C-41) — wild casts
+        c = (c - 0.5) * 1.32 + 0.5;
+        c.r = pow(clamp(c.r, 0.0, 1.0), 0.82);
+        c.b = pow(clamp(c.b, 0.0, 1.0), 1.25);
+        c += vec3(-0.03, 0.02, 0.06) * (1.0 - luma(c));   // cyan-green shadows
+        c.g += 0.05 * luma(c);                            // yellow highlights
+        c = mix(vec3(luma(c)), c, 1.3);
+      }
+      return clamp(c, 0.0, 1.0);
+    }
+    vec4 effect(vec2 uv){
+      vec3 c = src(uv);
+      c *= pow(2.0, uExposure);
+      c = stock(clamp(c, 0.0, 1.0));
+      c = (c - 0.5) * (1.0 + uContrast) + 0.5;
+      // Halation: light scatters off the film base behind highlights and re-exposes
+      // the red-sensitive layer — a soft red-orange bloom around bright areas.
+      if (uHalation > 0.0){
+        vec3 h = vec3(0.0); float w = 0.0;
+        for (int i = 0; i < 16; i++){
+          float a = float(i) / 16.0 * TAU;
+          for (int j = 1; j <= 3; j++){
+            vec2 o = vec2(cos(a), sin(a)) * float(j) * 4.0 * uTexel;
+            h += max(luma(src(uv + o)) - 0.72, 0.0); w += 1.0;
+          }
+        }
+        c += h / w * uHalation * 5.0 * vec3(1.0, 0.4, 0.18);
+      }
+      // Physically-flavoured grain: silver crystals clump more in the mid/shadows,
+      // so weight by (1 - luma); re-rolls over uTime when animated.
+      if (uGrain > 0.0){
+        vec2 gp = floor(uv * uRes / max(uGrainSize, 1.0)) + vec2(uTime * 53.0, uTime * 37.0);
+        float g = hash21(gp) - 0.5;
+        c += g * uGrain * 0.5 * mix(0.5, 1.0, 1.0 - luma(c));
+      }
+      return vec4(mix(src(uv), clamp(c, 0.0, 1.0), uMix), 1.0);
+    }`,
+  },
+  {
+    type: 'analog', label: 'Analog Artifacts', category: 'film', icon: 'theaters',
+    params: [
+      { key: 'uWeave', label: 'Gate weave', min: 0, max: 1, step: 0.01, default: 0.4 },
+      { key: 'uFlicker', label: 'Flicker', min: 0, max: 1, step: 0.01, default: 0.3 },
+      { key: 'uScratch', label: 'Scratches', min: 0, max: 1, step: 0.01, default: 0.3 },
+      { key: 'uDust', label: 'Dust & specks', min: 0, max: 1, step: 0.01, default: 0.3 },
+      { key: 'uBurn', label: 'Edge burn', min: 0, max: 1, step: 0.01, default: 0.3 },
+      { key: 'uJump', label: 'Frame jump', min: 0, max: 1, step: 0.01, default: 0 },
+    ],
+    uniforms: 'uniform float uWeave, uFlicker, uScratch, uDust, uBurn, uJump;',
+    glsl: `vec4 effect(vec2 uv){
+      float t = uTime;
+      // Gate weave — the whole frame drifts as the film rides loosely in the gate.
+      vec2 weave = vec2(sin(t * 4.3) + 0.5 * sin(t * 9.1), cos(t * 3.7) + 0.4 * sin(t * 7.3)) * uWeave * 0.0035;
+      // Occasional vertical frame jump (sprocket slip).
+      float jumpOn = step(0.85, hash21(vec2(floor(t * 3.0), 4.0)));
+      weave.y += uJump * jumpOn * (hash21(vec2(floor(t * 3.0), 8.0)) - 0.5) * 0.12;
+      vec2 p = uv + weave;
+      vec3 c = src(p);
+      // Projector flicker — fast brightness flutter + slow lamp shimmer.
+      c *= 1.0 - uFlicker * (0.10 * (0.5 + 0.5 * sin(t * 16.0)) + 0.06 * hash21(vec2(floor(t * 24.0), 1.0)));
+      // Vertical scratches — thin bright lines that wander between exposures.
+      if (uScratch > 0.0){
+        float sc = 0.0;
+        for (int i = 0; i < 3; i++){
+          float seed = float(i) * 13.0 + floor(t * 5.0);
+          float sx = hash21(vec2(seed, 3.0));
+          float on = step(1.0 - uScratch * 0.5, hash21(vec2(seed, 7.0)));
+          sc += on * smoothstep(0.0018, 0.0, abs(p.x - sx));
+        }
+        c += sc * 0.5;
+      }
+      // Dust & specks — sparse light/dark flecks that pop per frame.
+      if (uDust > 0.0){
+        vec2 dp = floor(p * uRes / 3.0) + floor(vec2(t * 17.0, t * 11.0));
+        float d = hash21(dp);
+        float spk = step(1.0 - uDust * 0.025, d);
+        c = mix(c, vec3(step(0.5, hash21(dp + 1.7))), spk * 0.85);
+      }
+      // Edge burn — darkened, slightly uneven frame border.
+      vec2 e = abs(uv - 0.5) * 2.0;
+      float burn = smoothstep(0.78, 1.25, max(e.x, e.y) + 0.05 * vnoise(uv * 6.0 + t));
+      c *= 1.0 - burn * uBurn;
+      return vec4(clamp(c, 0.0, 1.0), 1.0);
+    }`,
+  },
+
   // ─────────────────────────── DISTORT & WARP ───────────────────────────
   {
     type: 'wave', label: 'Wave / Ripple', category: 'distort', icon: 'waves',
@@ -730,6 +856,472 @@ const LIST = [
       }
       ray = ray / 48.0 * uAmt * 6.0 * uTint;
       return vec4(1.0 - (1.0 - base) * (1.0 - clamp(ray, 0.0, 1.0)), 1.0);
+    }`,
+  },
+
+  // ─────────────────────────── PAINTERLY (STYLIZE) ───────────────────────────
+  {
+    type: 'kuwahara', label: 'Oil Paint (Kuwahara)', category: 'stylize', icon: 'brush',
+    params: [
+      { key: 'uRadius', label: 'Brush size', min: 1, max: 8, step: 1, default: 4, suffix: 'px' },
+    ],
+    uniforms: 'uniform float uRadius;',
+    glsl: `vec4 effect(vec2 uv){
+      // For each of 4 quadrants around the pixel, find mean & variance; output the
+      // mean of the lowest-variance quadrant → flat regions stay flat, edges align
+      // to the smoother side, giving painterly brush facets.
+      vec3 sum[4]; vec3 sq[4]; float cnt[4];
+      for (int q = 0; q < 4; q++){ sum[q] = vec3(0.0); sq[q] = vec3(0.0); cnt[q] = 0.0; }
+      const int R = 8;
+      for (int i = -R; i <= R; i++){
+        for (int j = -R; j <= R; j++){
+          if (abs(float(i)) > uRadius || abs(float(j)) > uRadius) continue;
+          vec3 c = src(uv + vec2(float(i), float(j)) * uTexel);
+          int q = (i <= 0 ? 0 : 1) + (j <= 0 ? 0 : 2);
+          sum[q] += c; sq[q] += c * c; cnt[q] += 1.0;
+        }
+      }
+      vec3 best = src(uv); float bestVar = 1e9;
+      for (int q = 0; q < 4; q++){
+        if (cnt[q] < 1.0) continue;
+        vec3 m = sum[q] / cnt[q];
+        vec3 v = sq[q] / cnt[q] - m * m;
+        float lv = v.r + v.g + v.b;
+        if (lv < bestVar){ bestVar = lv; best = m; }
+      }
+      return vec4(best, 1.0);
+    }`,
+  },
+  {
+    type: 'crosshatch', label: 'Cross-Hatch / Engraving', category: 'stylize', icon: 'gesture',
+    params: [
+      { key: 'uScale', label: 'Line spacing', min: 2, max: 16, step: 0.5, default: 6, suffix: 'px' },
+      { key: 'uWidth', label: 'Line weight', min: 0.1, max: 0.5, step: 0.01, default: 0.32 },
+      { key: 'uAngle', label: 'Angle', min: 0, max: 90, step: 1, default: 45, suffix: '°' },
+      { key: 'uBg', label: 'Keep image', min: 0, max: 1, step: 0.01, default: 0 },
+      { key: 'uInk', label: 'Ink', type: 'color', default: '#1a1a1a' },
+      { key: 'uPaper', label: 'Paper', type: 'color', default: '#f4f0e6' },
+    ],
+    uniforms: 'uniform float uScale, uWidth, uAngle, uBg; uniform vec3 uInk, uPaper;',
+    glsl: `float ln(vec2 frag, float ang, float spacing){
+      float a = ang * PI / 180.0; vec2 d = vec2(cos(a), sin(a));
+      float coord = frag.x * (-d.y) + frag.y * d.x;
+      return abs(fract(coord / spacing) - 0.5) * 2.0;   // 0 at line centre
+    }
+    vec4 effect(vec2 uv){
+      vec2 frag = uv * uRes;
+      float l = luma(src(uv));
+      float ink = 0.0;
+      if (l < 0.85) ink = max(ink, 1.0 - step(uWidth, ln(frag, uAngle, uScale)));
+      if (l < 0.6)  ink = max(ink, 1.0 - step(uWidth, ln(frag, uAngle + 90.0, uScale)));
+      if (l < 0.4)  ink = max(ink, 1.0 - step(uWidth, ln(frag, uAngle + 45.0, uScale)));
+      if (l < 0.2)  ink = max(ink, 1.0 - step(uWidth, ln(frag, uAngle - 45.0, uScale)));
+      vec3 paper = mix(uPaper, src(uv), uBg);
+      return vec4(mix(paper, uInk, ink), 1.0);
+    }`,
+  },
+  {
+    type: 'celshade', label: 'Cel Shade (Toon)', category: 'stylize', icon: 'format_paint',
+    params: [
+      { key: 'uBands', label: 'Shade bands', min: 2, max: 6, step: 1, default: 3 },
+      { key: 'uSat', label: 'Saturation', min: -1, max: 1, step: 0.01, default: 0.2 },
+      { key: 'uEdge', label: 'Outline', min: 0, max: 1, step: 0.01, default: 0.7 },
+      { key: 'uEdgeThresh', label: 'Outline threshold', min: 0, max: 1, step: 0.01, default: 0.25 },
+    ],
+    uniforms: 'uniform float uBands, uSat, uEdge, uEdgeThresh;',
+    glsl: `vec4 effect(vec2 uv){
+      vec3 hsvc = rgb2hsv(src(uv));
+      hsvc.z = floor(hsvc.z * uBands + 0.5) / uBands;       // quantise lightness
+      hsvc.y = clamp(hsvc.y * (1.0 + uSat), 0.0, 1.0);
+      vec3 toon = hsv2rgb(hsvc);
+      vec2 t = uTexel;
+      float l0=luma(src(uv+t*vec2(-1,-1))),l1=luma(src(uv+t*vec2(0,-1))),l2=luma(src(uv+t*vec2(1,-1)));
+      float l3=luma(src(uv+t*vec2(-1,0))),                                l5=luma(src(uv+t*vec2(1,0)));
+      float l6=luma(src(uv+t*vec2(-1,1))),l7=luma(src(uv+t*vec2(0,1))),  l8=luma(src(uv+t*vec2(1,1)));
+      float gx=(l2+2.0*l5+l8)-(l0+2.0*l3+l6);
+      float gy=(l6+2.0*l7+l8)-(l0+2.0*l1+l2);
+      float e = smoothstep(uEdgeThresh, uEdgeThresh + 0.2, sqrt(gx*gx + gy*gy)) * uEdge;
+      return vec4(mix(toon, vec3(0.0), e), 1.0);
+    }`,
+  },
+  {
+    type: 'stipple', label: 'Stipple Dots', category: 'stylize', icon: 'blur_on',
+    params: [
+      { key: 'uScale', label: 'Dot spacing', min: 2, max: 14, step: 0.5, default: 5, suffix: 'px' },
+      { key: 'uContrast', label: 'Contrast', min: 0, max: 1, step: 0.01, default: 0.2 },
+      { key: 'uJitter', label: 'Jitter', min: 0, max: 0.5, step: 0.01, default: 0.2 },
+      { key: 'uInk', label: 'Ink', type: 'color', default: '#111111' },
+      { key: 'uPaper', label: 'Paper', type: 'color', default: '#ffffff' },
+    ],
+    uniforms: 'uniform float uScale, uContrast, uJitter; uniform vec3 uInk, uPaper;',
+    glsl: `vec4 effect(vec2 uv){
+      vec2 g = uv * uRes / uScale;
+      vec2 cell = floor(g); vec2 f = fract(g) - 0.5;
+      float l = luma(src((cell + 0.5) * uScale / uRes));
+      l = clamp((l - 0.5) * (1.0 + uContrast * 2.0) + 0.5, 0.0, 1.0);
+      float rad = (1.0 - l) * 0.7;                       // darker → bigger dot
+      vec2 jit = (hash22(cell) - 0.5) * uJitter;
+      float d = length(f - jit);
+      float dot = smoothstep(rad, rad - 0.12, d);
+      return vec4(mix(uPaper, uInk, dot), 1.0);
+    }`,
+  },
+  {
+    type: 'voronoi', label: 'Crystallize / Stained Glass', category: 'stylize', icon: 'diamond',
+    params: [
+      { key: 'uScale', label: 'Cell size', min: 6, max: 80, step: 1, default: 24, suffix: 'px' },
+      { key: 'uEdge', label: 'Leading', min: 0, max: 1, step: 0.01, default: 0 },
+      { key: 'uEdgeColor', label: 'Leading color', type: 'color', default: '#000000' },
+    ],
+    uniforms: 'uniform float uScale, uEdge; uniform vec3 uEdgeColor;',
+    glsl: `vec4 effect(vec2 uv){
+      vec2 g = uv * uRes / uScale;
+      vec2 ip = floor(g), f = fract(g);
+      float md = 1e9, md2 = 1e9; vec2 site = ip;
+      for (int y = -1; y <= 1; y++){
+        for (int x = -1; x <= 1; x++){
+          vec2 o = vec2(float(x), float(y));
+          vec2 jit = hash22(ip + o);
+          vec2 p = o + jit - f;
+          float d = dot(p, p);
+          if (d < md){ md2 = md; md = d; site = ip + o + jit; }
+          else if (d < md2){ md2 = d; }
+        }
+      }
+      vec3 c = src(site * uScale / uRes);
+      if (uEdge > 0.0){
+        float edge = smoothstep(0.0, uEdge * 0.12, sqrt(md2) - sqrt(md));
+        c = mix(uEdgeColor, c, edge);
+      }
+      return vec4(c, 1.0);
+    }`,
+  },
+  {
+    type: 'iridescent', label: 'Oil-Slick Iridescence', category: 'stylize', icon: 'opacity',
+    params: [
+      { key: 'uAmt', label: 'Amount', min: 0, max: 1, step: 0.01, default: 0.6 },
+      { key: 'uScale', label: 'Spectral scale', min: 1, max: 8, step: 0.1, default: 3 },
+      { key: 'uShift', label: 'Hue shift', min: 0, max: 1, step: 0.01, default: 0 },
+      { key: 'uEdge', label: 'Edge boost', min: 0, max: 12, step: 0.5, default: 8 },
+    ],
+    uniforms: 'uniform float uAmt, uScale, uShift, uEdge;',
+    glsl: `vec3 iris(float t){ return 0.5 + 0.5 * cos(TAU * (vec3(1.0, 1.0, 1.0) * t + vec3(0.0, 0.33, 0.67))); }
+    vec4 effect(vec2 uv){
+      vec3 c = src(uv);
+      float l = luma(c);
+      float gx = luma(src(uv + vec2(uTexel.x, 0.0))) - l;
+      float gy = luma(src(uv + vec2(0.0, uTexel.y))) - l;
+      float thick = l * uScale + length(vec2(gx, gy)) * uEdge + uShift;
+      vec3 sheen = iris(thick);
+      vec3 outc = mix(c, blendModes(c, sheen, 2), uAmt * smoothstep(0.25, 0.9, l));
+      return vec4(outc, 1.0);
+    }`,
+  },
+  {
+    type: 'photocopy', label: 'Photocopy / Xerox', category: 'stylize', icon: 'content_copy',
+    params: [
+      { key: 'uThresh', label: 'Threshold', min: 0, max: 1, step: 0.01, default: 0.5 },
+      { key: 'uSharp', label: 'Edge bite', min: 0, max: 1, step: 0.01, default: 0.5 },
+      { key: 'uGrain', label: 'Toner grain', min: 0, max: 1, step: 0.01, default: 0.3 },
+      { key: 'uInk', label: 'Ink', type: 'color', default: '#111111' },
+      { key: 'uPaper', label: 'Paper', type: 'color', default: '#fafafa' },
+    ],
+    uniforms: 'uniform float uThresh, uSharp, uGrain; uniform vec3 uInk, uPaper;',
+    glsl: `vec4 effect(vec2 uv){
+      vec2 t = uTexel * 2.0;
+      float l = luma(src(uv));
+      float mean = (luma(src(uv + vec2(t.x, 0.0))) + luma(src(uv - vec2(t.x, 0.0)))
+                  + luma(src(uv + vec2(0.0, t.y))) + luma(src(uv - vec2(0.0, t.y)))) * 0.25;
+      float v = l + (l - mean) * uSharp * 4.0;
+      float g = (hash21(uv * uRes + uTime * 37.0) - 0.5) * uGrain * 0.4;
+      float ink = step(uThresh, v + g);
+      return vec4(mix(uInk, uPaper, ink), 1.0);
+    }`,
+  },
+
+  // ─────────────────────────── BLUR (extra) ───────────────────────────
+  {
+    type: 'tiltshift', label: 'Tilt-Shift Miniature', category: 'blur', icon: 'center_focus_strong',
+    params: [
+      { key: 'uFocus', label: 'Focus position', min: 0, max: 1, step: 0.01, default: 0.5 },
+      { key: 'uWidth', label: 'Focus width', min: 0.02, max: 0.6, step: 0.01, default: 0.22 },
+      { key: 'uBlur', label: 'Blur', min: 0, max: 30, step: 0.5, default: 12, suffix: 'px' },
+      { key: 'uVert', label: 'Vertical band', type: 'bool', default: 0 },
+    ],
+    uniforms: 'uniform float uFocus, uWidth, uBlur; uniform int uVert;',
+    glsl: `vec4 effect(vec2 uv){
+      float axis = uVert == 1 ? uv.x : uv.y;
+      float d = abs(axis - uFocus);
+      float b = smoothstep(uWidth, uWidth + 0.25, d) * uBlur;
+      if (b < 0.5) return vec4(src(uv), 1.0);
+      vec3 sum = vec3(0.0); float wsum = 0.0;
+      const int N = 24;
+      for (int i = 0; i < N; i++){
+        float t = float(i) / float(N);
+        float ang = t * TAU * 4.0; float rad = sqrt(t) * b;
+        sum += src(uv + vec2(cos(ang), sin(ang)) * rad * uTexel); wsum += 1.0;
+      }
+      return vec4(sum / wsum, 1.0);
+    }`,
+  },
+  {
+    type: 'bokeh', label: 'Bokeh Blur', category: 'blur', icon: 'lens',
+    params: [
+      { key: 'uRadius', label: 'Radius', min: 2, max: 30, step: 0.5, default: 10, suffix: 'px' },
+      { key: 'uThresh', label: 'Highlight', min: 0, max: 1, step: 0.01, default: 0.6 },
+      { key: 'uBoost', label: 'Bokeh boost', min: 0, max: 3, step: 0.05, default: 1.5 },
+    ],
+    uniforms: 'uniform float uRadius, uThresh, uBoost;',
+    glsl: `vec4 effect(vec2 uv){
+      vec3 sum = vec3(0.0); float wsum = 0.0;
+      const int N = 48;
+      for (int i = 0; i < N; i++){
+        float t = float(i) / float(N);
+        float ang = t * TAU * 6.0; float rad = sqrt(t) * uRadius;
+        vec3 s = src(uv + vec2(cos(ang), sin(ang)) * rad * uTexel);
+        float w = 1.0 + smoothstep(uThresh, 1.0, luma(s)) * uBoost * 6.0;
+        sum += s * w; wsum += w;
+      }
+      return vec4(sum / wsum, 1.0);
+    }`,
+  },
+
+  // ─────────────────────────── LENS (extra) ───────────────────────────
+  {
+    type: 'prism', label: 'Prism Dispersion', category: 'lens', icon: 'looks',
+    params: [
+      { key: 'uAmt', label: 'Spread', min: 0, max: 0.06, step: 0.001, default: 0.02 },
+      { key: 'uAngle', label: 'Angle', min: 0, max: 360, step: 1, default: 0, suffix: '°' },
+      { key: 'uRadial', label: 'Radial', type: 'bool', default: 0 },
+    ],
+    uniforms: 'uniform float uAmt, uAngle; uniform int uRadial;',
+    glsl: `vec3 wl(float t){ return clamp(vec3(1.0 - 2.0 * t, 1.0 - 2.0 * abs(t - 0.5), 2.0 * t - 1.0), 0.0, 1.0); }
+    vec4 effect(vec2 uv){
+      vec2 dir;
+      if (uRadial == 1) dir = normalize(uv - 0.5 + 1e-5);
+      else { float a = uAngle * PI / 180.0; dir = vec2(cos(a), sin(a)); }
+      vec3 sum = vec3(0.0); vec3 wsum = vec3(0.0);
+      const int N = 24;
+      for (int i = 0; i < N; i++){
+        float t = float(i) / float(N - 1);
+        vec3 w = wl(t);
+        sum += src(uv + dir * (t - 0.5) * uAmt) * w; wsum += w;
+      }
+      return vec4(sum / max(wsum, vec3(0.001)), 1.0);
+    }`,
+  },
+  {
+    type: 'anaglyph', label: 'Anaglyph 3D', category: 'lens', icon: 'view_in_ar',
+    params: [
+      { key: 'uAmt', label: 'Separation', min: 0, max: 0.05, step: 0.001, default: 0.012 },
+      { key: 'uDepth', label: 'Depth (luma)', min: -1, max: 1, step: 0.01, default: 0.5 },
+    ],
+    uniforms: 'uniform float uAmt, uDepth;',
+    glsl: `vec4 effect(vec2 uv){
+      float dL = (luma(src(uv)) - 0.5) * uDepth;
+      vec2 sh = vec2(uAmt * (1.0 + dL), 0.0);
+      float r = src(uv + sh).r;
+      vec3 cy = src(uv - sh);
+      return vec4(r, cy.g, cy.b, 1.0);
+    }`,
+  },
+
+  // ─────────────────────────── COLOR (extra) ───────────────────────────
+  {
+    type: 'solarize', label: 'Solarize / Sabattier', category: 'color', icon: 'wb_incandescent',
+    params: [
+      { key: 'uThresh', label: 'Threshold', min: 0, max: 1, step: 0.01, default: 0.5 },
+      { key: 'uStrength', label: 'Strength', min: 0, max: 1, step: 0.01, default: 1 },
+      { key: 'uPerChannel', label: 'Per channel', type: 'bool', default: 0 },
+    ],
+    uniforms: 'uniform float uThresh, uStrength; uniform int uPerChannel;',
+    glsl: `vec4 effect(vec2 uv){
+      vec3 c = src(uv);
+      vec3 s;
+      if (uPerChannel == 1){
+        s = mix(c, 1.0 - c, step(vec3(uThresh), c));
+      } else {
+        float l = luma(c);
+        s = l > uThresh ? mix(c, 1.0 - c, (l - uThresh) / max(1.0 - uThresh, 0.001)) : c;
+      }
+      return vec4(mix(c, s, uStrength), 1.0);
+    }`,
+  },
+  {
+    type: 'channelmixer', label: 'Channel Mixer', category: 'color', icon: 'tune',
+    params: [
+      { key: 'uRR', label: 'Red ← R', min: -2, max: 2, step: 0.01, default: 1 },
+      { key: 'uRG', label: 'Red ← G', min: -2, max: 2, step: 0.01, default: 0 },
+      { key: 'uRB', label: 'Red ← B', min: -2, max: 2, step: 0.01, default: 0 },
+      { key: 'uGR', label: 'Green ← R', min: -2, max: 2, step: 0.01, default: 0 },
+      { key: 'uGG', label: 'Green ← G', min: -2, max: 2, step: 0.01, default: 1 },
+      { key: 'uGB', label: 'Green ← B', min: -2, max: 2, step: 0.01, default: 0 },
+      { key: 'uBR', label: 'Blue ← R', min: -2, max: 2, step: 0.01, default: 0 },
+      { key: 'uBG', label: 'Blue ← G', min: -2, max: 2, step: 0.01, default: 0 },
+      { key: 'uBB', label: 'Blue ← B', min: -2, max: 2, step: 0.01, default: 1 },
+      { key: 'uMono', label: 'Monochrome', type: 'bool', default: 0 },
+    ],
+    uniforms: 'uniform float uRR,uRG,uRB,uGR,uGG,uGB,uBR,uBG,uBB; uniform int uMono;',
+    glsl: `vec4 effect(vec2 uv){
+      vec3 c = src(uv);
+      if (uMono == 1){ float m = dot(c, vec3(uRR, uRG, uRB)); return vec4(clamp(vec3(m), 0.0, 1.0), 1.0); }
+      vec3 o = vec3(dot(c, vec3(uRR, uRG, uRB)), dot(c, vec3(uGR, uGG, uGB)), dot(c, vec3(uBR, uBG, uBB)));
+      return vec4(clamp(o, 0.0, 1.0), 1.0);
+    }`,
+  },
+
+  // ─────────────────────────── DISTORT (extra) ───────────────────────────
+  {
+    type: 'droste', label: 'Droste Spiral', category: 'distort', icon: 'all_inclusive',
+    params: [
+      { key: 'uStrength', label: 'Twist', min: -3, max: 3, step: 0.05, default: 1 },
+      { key: 'uZoom', label: 'Recursion', min: 1.2, max: 5, step: 0.05, default: 2 },
+      { key: 'uCx', label: 'Center X', min: 0, max: 1, step: 0.01, default: 0.5 },
+      { key: 'uCy', label: 'Center Y', min: 0, max: 1, step: 0.01, default: 0.5 },
+    ],
+    uniforms: 'uniform float uStrength, uZoom, uCx, uCy;',
+    glsl: `vec4 effect(vec2 uv){
+      vec2 c = vec2(uCx, 1.0 - uCy);
+      vec2 p = uv - c; float ar = uRes.x / uRes.y; p.x *= ar;
+      float r = length(p), a = atan(p.y, p.x);
+      float lr = log(max(r, 1e-4));
+      a += lr * uStrength;
+      lr = fract(lr / log(uZoom)) * log(uZoom);
+      r = exp(lr);
+      p = vec2(cos(a), sin(a)) * r; p.x /= ar;
+      return vec4(src(c + p), 1.0);
+    }`,
+  },
+  {
+    type: 'heathaze', label: 'Heat Haze / Liquid', category: 'distort', icon: 'air',
+    params: [
+      { key: 'uAmt', label: 'Amount', min: 0, max: 0.1, step: 0.001, default: 0.02 },
+      { key: 'uScale', label: 'Scale', min: 1, max: 20, step: 0.5, default: 6 },
+      { key: 'uSpeed', label: 'Speed', min: 0, max: 4, step: 0.05, default: 1 },
+      { key: 'uMode', label: 'Mode', type: 'select', default: 0, options: [{ label: 'Liquid', value: 0 }, { label: 'Heat rising', value: 1 }] },
+    ],
+    uniforms: 'uniform float uAmt, uScale, uSpeed; uniform int uMode;',
+    glsl: `vec4 effect(vec2 uv){
+      float t = uTime * uSpeed;
+      vec2 q = vec2(vnoise(uv * uScale + vec2(0.0, t)), vnoise(uv * uScale + vec2(5.2, t * 1.3 + 1.0)));
+      vec2 warp = (q - 0.5) * uAmt * 2.0;
+      if (uMode == 1) warp.y *= 0.3;
+      return vec4(src(uv + warp), 1.0);
+    }`,
+  },
+
+  // ─────────────────────────── DATAMOSH & GLITCH ───────────────────────────
+  {
+    type: 'datamosh', label: 'Datamosh (Motion Smear)', category: 'datamosh', icon: 'blur_linear',
+    params: [
+      { key: 'uFlow', label: 'Smear strength', min: 0, max: 1, step: 0.01, default: 0.5 },
+      { key: 'uDir', label: 'Direction', min: 0, max: 360, step: 1, default: 90, suffix: '°' },
+      { key: 'uKeep', label: 'Refresh (I-frame)', min: 0, max: 1, step: 0.01, default: 0.12 },
+      { key: 'uBlock', label: 'Block size', min: 1, max: 64, step: 1, default: 16, suffix: 'px' },
+      { key: 'uTurb', label: 'Turbulence', min: 0, max: 1, step: 0.01, default: 0.5 },
+    ],
+    uniforms: 'uniform float uFlow, uDir, uKeep, uBlock, uTurb;',
+    glsl: `vec4 effect(vec2 uv){
+      // Pull the previous frame along a per-macroblock motion vector and only
+      // occasionally bleed the current source back in. With Animate on, the
+      // smear accumulates frame over frame — true feedback datamosh.
+      vec2 block = floor(uv * uRes / max(uBlock, 1.0));
+      float a = uDir * PI / 180.0;
+      vec2 base = vec2(cos(a), sin(a));
+      vec2 turb = (hash22(block + floor(uTime * 8.0)) - 0.5) * uTurb;
+      vec2 mv = (base + turb) * uFlow * 0.02;
+      vec3 moved = prev(uv - mv);
+      return vec4(mix(moved, src(uv), uKeep), 1.0);
+    }`,
+  },
+  {
+    type: 'datamoshblocks', label: 'Datamosh Blocks (P-frame)', category: 'datamosh', icon: 'grid_view',
+    params: [
+      { key: 'uBlock', label: 'Block size', min: 4, max: 64, step: 1, default: 24, suffix: 'px' },
+      { key: 'uAmt', label: 'Displace', min: 0, max: 1, step: 0.01, default: 0.6 },
+      { key: 'uRefresh', label: 'Refresh rate', min: 0, max: 1, step: 0.01, default: 0.12 },
+      { key: 'uShift', label: 'Drift', min: 0, max: 1, step: 0.01, default: 0.5 },
+      { key: 'uRate', label: 'Update speed', min: 1, max: 24, step: 1, default: 6 },
+    ],
+    uniforms: 'uniform float uBlock, uAmt, uRefresh, uShift, uRate;',
+    glsl: `vec4 effect(vec2 uv){
+      vec2 bsz = vec2(max(uBlock, 2.0)) * uTexel;
+      vec2 block = floor(uv / bsz);
+      float tick = floor(uTime * uRate);
+      float refresh = step(1.0 - uRefresh, hash21(block + vec2(7.0, tick)));
+      vec2 mv = (hash22(block + tick) - 0.5) * uShift * bsz * 4.0;
+      vec3 p = prev(uv + mv);
+      vec3 cur = src(uv);
+      return vec4(refresh > 0.5 ? cur : mix(cur, p, uAmt), 1.0);
+    }`,
+  },
+  {
+    type: 'pixelstretch', label: 'Pixel Stretch', category: 'datamosh', icon: 'view_week',
+    params: [
+      { key: 'uThresh', label: 'Trigger', min: 0, max: 1, step: 0.01, default: 0.6 },
+      { key: 'uAmt', label: 'Length', min: 0, max: 1, step: 0.01, default: 0.5 },
+      { key: 'uDir', label: 'Direction', type: 'select', default: 3, options: [{ label: 'Left', value: 0 }, { label: 'Up', value: 1 }, { label: 'Down', value: 2 }, { label: 'Right', value: 3 }] },
+      { key: 'uTrigger', label: 'Trigger on', type: 'select', default: 1, options: [{ label: 'Dark', value: 0 }, { label: 'Bright', value: 1 }] },
+    ],
+    uniforms: 'uniform float uThresh, uAmt; uniform int uDir, uTrigger;',
+    glsl: `vec4 effect(vec2 uv){
+      vec2 dir = uDir == 0 ? vec2(-1, 0) : uDir == 1 ? vec2(0, -1) : uDir == 2 ? vec2(0, 1) : vec2(1, 0);
+      vec3 outc = src(uv);
+      const int N = 64;
+      float range = uAmt * float(N);
+      for (int i = 1; i < N; i++){
+        if (float(i) > range) break;
+        vec3 s = src(uv - dir * float(i) * uTexel);
+        float trig = uTrigger == 1 ? luma(s) : 1.0 - luma(s);
+        if (trig > uThresh){ outc = s; break; }   // nearest trigger behind smears forward
+      }
+      return vec4(outc, 1.0);
+    }`,
+  },
+  {
+    type: 'dctblocks', label: 'Compression Blocks (DCT)', category: 'datamosh', icon: 'apps',
+    params: [
+      { key: 'uBlock', label: 'Block size', min: 4, max: 32, step: 1, default: 8, suffix: 'px' },
+      { key: 'uQuant', label: 'Color steps', min: 2, max: 32, step: 1, default: 8 },
+      { key: 'uRing', label: 'Ringing', min: 0, max: 1, step: 0.01, default: 0.5 },
+    ],
+    uniforms: 'uniform float uBlock, uQuant, uRing;',
+    glsl: `vec4 effect(vec2 uv){
+      vec2 bsz = vec2(max(uBlock, 2.0)) * uTexel;
+      vec2 block = floor(uv / bsz);
+      vec2 bc = (block + 0.5) * bsz;
+      vec3 c = src(bc);
+      c = floor(c * uQuant + 0.5) / uQuant;              // coarse colour quantisation
+      float ring = luma(src(bc + vec2(bsz.x, 0.0))) - luma(c);
+      vec2 f = fract(uv / bsz);
+      c += ring * uRing * sin(f.x * PI) * 0.5;            // edge ringing within the block
+      return vec4(clamp(c, 0.0, 1.0), 1.0);
+    }`,
+  },
+
+  // ─────────────────────────── LIGHT (extra) ───────────────────────────
+  {
+    type: 'caustics', label: 'Caustics', category: 'light', icon: 'water',
+    params: [
+      { key: 'uAmt', label: 'Intensity', min: 0, max: 1, step: 0.01, default: 0.4 },
+      { key: 'uScale', label: 'Scale', min: 2, max: 20, step: 0.5, default: 8 },
+      { key: 'uSpeed', label: 'Speed', min: 0, max: 4, step: 0.05, default: 1 },
+      { key: 'uSharp', label: 'Sharpness', min: 1, max: 8, step: 0.5, default: 4 },
+      { key: 'uTint', label: 'Tint', type: 'color', default: '#bfe6ff' },
+    ],
+    uniforms: 'uniform float uAmt, uScale, uSpeed, uSharp; uniform vec3 uTint;',
+    glsl: `float caustic(vec2 p, float t){
+      float v = 0.0;
+      for (int i = 0; i < 3; i++){
+        float fi = float(i + 1);
+        v += sin(p.x * fi * 3.0 + t * 1.3 * fi) * sin(p.y * fi * 3.0 - t * 1.1 * fi);
+      }
+      return pow(max(v / 3.0 * 0.5 + 0.5, 0.0), uSharp);
+    }
+    vec4 effect(vec2 uv){
+      vec3 c = src(uv);
+      float k = caustic(uv * uScale, uTime * uSpeed);
+      return vec4(clamp(c + uTint * k * uAmt, 0.0, 1.0), 1.0);
     }`,
   },
 ]

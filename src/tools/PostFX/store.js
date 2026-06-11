@@ -25,6 +25,7 @@ function mkId() { return Math.random().toString(36).slice(2, 9) }
 const DEFAULT_STATE = {
   stack: [],          // [{ id, type, enabled, opacity, blend, params{} }]
   selectedId: null,   // layer currently open in the controls panel
+  selectedPresetId: null,  // applied preset (cleared once the stack diverges)
   animate: false,     // drive uTime for animated effects (glitch/grain/vhs/wave)
   animSpeed: 1,
   savedPresets: [],   // [{ id, name, stack:[...] }]
@@ -79,6 +80,10 @@ function notify() {
 export function getState() { return _state }
 
 export function setState(patch) {
+  // Any change that doesn't explicitly carry a preset id diverges from the
+  // applied preset — clear the selection so the picker shows "Custom" (mirrors
+  // the Dither tool). applyPreset / saveCurrentPreset pass it through.
+  if (!('selectedPresetId' in patch)) patch = { ...patch, selectedPresetId: null }
   _state = { ..._state, ...patch }
   notify()
   pushHistory()
@@ -122,7 +127,8 @@ export function toggleLayer(id) {
   updateLayer(id, { enabled: !_state.stack.find(l => l.id === id)?.enabled })
 }
 
-export function selectLayer(id) { setState({ selectedId: id }) }
+// Pure UI selection — preserve the applied-preset highlight (no divergence).
+export function selectLayer(id) { setState({ selectedId: id, selectedPresetId: _state.selectedPresetId }) }
 
 export function moveLayer(id, dir) {
   const stack = [..._state.stack]
@@ -161,13 +167,13 @@ export function resetState() {
 // ── Presets ────────────────────────────────────────────────────────────────────
 export function saveCurrentPreset(name) {
   const p = { id: mkId(), name: name || 'Preset', stack: JSON.parse(JSON.stringify(_state.stack)) }
-  setState({ savedPresets: [..._state.savedPresets, p] })
+  setState({ savedPresets: [..._state.savedPresets, p], selectedPresetId: p.id })
   return p.id
 }
 
 export function applyPreset(preset) {
   const stack = (preset.stack || []).map(l => ({ ...JSON.parse(JSON.stringify(l)), id: mkId() }))
-  setState({ stack, selectedId: stack[stack.length - 1]?.id ?? null })
+  setState({ stack, selectedId: stack[stack.length - 1]?.id ?? null, selectedPresetId: preset.id ?? null })
 }
 
 export function removeSavedPreset(id) {
