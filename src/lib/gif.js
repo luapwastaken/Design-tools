@@ -57,18 +57,38 @@ export function fileToCanvas(file) {
 
 // Encode result canvases into an animated, looping GIF. All frames are resized to
 // the first frame's dimensions. delaysMs is a per-frame array (milliseconds).
+//
+// Performance: quantize() (k-means palette generation) is by far the most
+// expensive step, so we compute ONE shared palette from a small downscaled
+// montage of sampled frames and reuse it for every frame. Per-frame we only run
+// the cheap applyPalette(). This is many times faster than quantizing each frame
+// and also removes inter-frame palette flicker.
 export async function encodeGif(canvases, delaysMs) {
   if (!canvases.length) return null
   const W = canvases[0].width, H = canvases[0].height
   const enc = GIFEncoder()
+
+  // Build the shared palette from up to 6 evenly-spaced frames, each drawn into a
+  // small tile so quantize() runs on a tiny representative sample.
+  const sampleCount = Math.min(canvases.length, 6)
+  const tile = 160
+  const montage = document.createElement('canvas')
+  montage.width = tile * sampleCount; montage.height = tile
+  const mctx = montage.getContext('2d', { willReadFrequently: true })
+  for (let s = 0; s < sampleCount; s++) {
+    const idx = Math.floor((s / sampleCount) * canvases.length)
+    mctx.drawImage(canvases[idx], s * tile, 0, tile, tile)
+  }
+  const palette = quantize(mctx.getImageData(0, 0, montage.width, montage.height).data, 256)
+
+  let resize = null
   for (let i = 0; i < canvases.length; i++) {
     let cv = canvases[i]
     if (cv.width !== W || cv.height !== H) {
-      const t = document.createElement('canvas'); t.width = W; t.height = H
-      t.getContext('2d').drawImage(cv, 0, 0, W, H); cv = t
+      if (!resize) { resize = document.createElement('canvas'); resize.width = W; resize.height = H }
+      resize.getContext('2d').drawImage(cv, 0, 0, W, H); cv = resize
     }
     const { data } = cv.getContext('2d').getImageData(0, 0, W, H)
-    const palette = quantize(data, 256)
     const index = applyPalette(data, palette)
     enc.writeFrame(index, W, H, { palette, delay: Math.max(20, delaysMs[i] || 100) })
     // Yield occasionally so the UI can update on long sequences.

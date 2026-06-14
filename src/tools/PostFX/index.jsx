@@ -6,6 +6,7 @@ import { create as createGL } from '../../lib/glPostFX.js'
 import { processFile } from '../../lib/file.js'
 import { encodeGif, decodeGif, gifDecodeSupported } from '../../lib/gif.js'
 import { markSaved } from '../../lib/unsavedChanges.js'
+import { useGlobalUndo } from '../../lib/undo.js'
 import { EFFECTS, EFFECT_LIST, CATEGORIES, BLEND_MODES } from './effects.js'
 import { BUILTIN_FX_PRESETS } from './presets.js'
 import {
@@ -26,6 +27,7 @@ const MAX_EDGE = 1600   // cap the working long edge for interactive performance
 
 export default function PostFX() {
   const s = usePostFX()
+  useGlobalUndo(undo, redo)
   const fileRef = useRef(null)
   const canvasRef = useRef(null)     // visible WebGL canvas
   const glRef = useRef(null)
@@ -55,6 +57,8 @@ export default function PostFX() {
 
   // animated export
   const [animDur, setAnimDur] = useState(2)      // loop length (seconds)
+  const animDurRef = useRef(animDur)             // live value for the rAF loop closure
+  animDurRef.current = animDur
   const [animFps, setAnimFps] = useState(15)     // frames per second
   const [exporting, setExporting] = useState(null)   // null | 'gif' | 'video'
   const busyRef = useRef(false)                  // pause the live anim loop during export
@@ -230,7 +234,9 @@ export default function PostFX() {
   const render = useCallback(() => {
     const gl = glRef.current
     if (!gl || !workRef.current) return
-    const t = s.animate ? (performance.now() - startRef.current) / 1000 : 0
+    // Wrap to the loop length so uTime stays bounded — large uTime values wreck
+    // float32 precision in the shaders and make the animation break over time.
+    const t = s.animate ? ((performance.now() - startRef.current) / 1000) % animDurRef.current : 0
     gl.render(s.stack, EFFECTS, t)
   }, [s.stack, s.animate])
 
@@ -261,7 +267,9 @@ export default function PostFX() {
           drawGifAt(t); glRef.current.setSource(workRef.current, false)
           const dur = m.totalMs / 1000; setProgress(((t % dur) + dur) % dur / dur)
         } else {
-          t = (performance.now() - startRef.current) / 1000
+          // Wrap to the loop length: keeps uTime small (float32-safe over long
+          // playback) and makes the live preview loop match the exported GIF.
+          t = ((performance.now() - startRef.current) / 1000) % animDurRef.current
         }
         glRef.current.render(s.stack, EFFECTS, t * (s.animSpeed || 1))
       }
@@ -303,8 +311,6 @@ export default function PostFX() {
         return
       }
       if (e.code === 'Space' && !e.target.matches('input,textarea')) { setSpace(true); e.preventDefault() }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo() }
-      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) { e.preventDefault(); redo() }
     }
     const up = e => { if (e.code === 'Space') setSpace(false) }
     window.addEventListener('keydown', dn); window.addEventListener('keyup', up)

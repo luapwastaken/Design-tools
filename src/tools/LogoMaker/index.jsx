@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { C, btn, Section, Row, SliderRow, HexInput, Toggle, SegmentedControl } from './ui.jsx'
 import { VARIATIONS, BOTH_LAYOUTS, computeLayout } from './layout.js'
 import { LockupSvg, Handle } from './LockupSvg.jsx'
@@ -11,6 +11,8 @@ import { FaviconView } from './FaviconView.jsx'
 import { isSvgLikelyBlack, parseSvgText, buildTreatmentFilterStr } from '../../lib/svg.js'
 import { processFile } from '../../lib/file.js'
 import { markDirty, markSaved } from '../../lib/unsavedChanges.js'
+import { useGlobalUndo } from '../../lib/undo.js'
+import { sendLogoToMotion } from '../MotionMaker/store.js'
 
 // ── Session storage ───────────────────────────────────────────────────────────
 const LM_KEY = 'designtools-logomaker'
@@ -58,6 +60,7 @@ export default function LogoMaker() {
   const [exportEnabled, setExportEnabled] = useState(() => lmLoad().exportEnabled ?? {})
 
   const [saved, setSaved] = useState(false)
+  const [sentMotion, setSentMotion] = useState(false)
   const [copyState, setCopyState] = useState(null) // null | 'svg' | 'png'
   const [exportAllSvg, setExportAllSvg] = useState(true)
   const [exportAllPng, setExportAllPng] = useState(true)
@@ -137,31 +140,22 @@ export default function LogoMaker() {
       activeTreatment, treatmentSpotColor, treatmentDuotoneDark, treatmentDuotoneLight,
       showClearspace, clearspaceN, showMinSizes, showBgContext, brandColor, exportEnabled])
 
-  // Ctrl+Z / Ctrl+Y keyboard handler
-  useEffect(() => {
-    function onKey(e) {
-      const ctrl = e.ctrlKey || e.metaKey
-      if (!ctrl) return
-      if (e.key === 'z' && !e.shiftKey) {
-        e.preventDefault()
-        const idx = historyIdxRef.current
-        if (idx > 0) {
-          historyIdxRef.current = idx - 1
-          applyDocStateRef.current(historyRef.current[historyIdxRef.current])
-        }
-      }
-      if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
-        e.preventDefault()
-        const idx = historyIdxRef.current
-        if (idx < historyRef.current.length - 1) {
-          historyIdxRef.current = idx + 1
-          applyDocStateRef.current(historyRef.current[historyIdxRef.current])
-        }
-      }
+  // Undo / redo — registered with the global handler (Ctrl+Z / Ctrl+Y in App)
+  const doUndo = useCallback(() => {
+    const idx = historyIdxRef.current
+    if (idx > 0) {
+      historyIdxRef.current = idx - 1
+      applyDocStateRef.current(historyRef.current[historyIdxRef.current])
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
   }, [])
+  const doRedo = useCallback(() => {
+    const idx = historyIdxRef.current
+    if (idx < historyRef.current.length - 1) {
+      historyIdxRef.current = idx + 1
+      applyDocStateRef.current(historyRef.current[historyIdxRef.current])
+    }
+  }, [])
+  useGlobalUndo(doUndo, doRedo)
 
   // ── Clipboard paste ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -292,6 +286,19 @@ export default function LogoMaker() {
       data = localStorage.getItem(LM_KEY + '-manual')
     }
     if (data) { try { applySessionState(JSON.parse(data)) } catch {} }
+  }
+
+  // Send the current icon/wordmark to Motion Maker as a structured (still
+  // separable) payload, so each lands there as its own animatable node.
+  function handleSendToMotion() {
+    const strip = f => f ? { name: f.name, type: f.type, dataUrl: f.dataUrl, aspect: f.aspect } : null
+    sendLogoToMotion({
+      icon: strip(iconFile), wordmark: strip(wordmarkFile),
+      layout: { iconScale, gapRatio, alignment, layout: activeVariation.layout },
+      bgColor,
+    })
+    setSentMotion(true)
+    setTimeout(() => setSentMotion(false), 2500)
   }
 
   // ── Drag handle logic ───────────────────────────────────────────────────────
@@ -693,6 +700,14 @@ export default function LogoMaker() {
             <button onClick={handleLoad} style={{ ...btn(), flex: 1 }}>Load</button>
           </div>
           <div style={{ fontSize: 10, color: C.dim }}>● Auto-saved · Save writes to app data folder</div>
+          {(iconFile || wordmarkFile) && (
+            <>
+              <button onClick={handleSendToMotion} style={{ ...btn(sentMotion), width: '100%', marginTop: 8, padding: '6px 0' }}>
+                {sentMotion ? '✓ Sent — open Motion Maker' : '▶ Send to Motion Maker'}
+              </button>
+              <div style={{ fontSize: 10, color: C.dim, marginTop: 4, lineHeight: 1.5 }}>Then switch to the Motion Maker tool to animate it.</div>
+            </>
+          )}
         </Section>
 
         <Section title="Overlays">

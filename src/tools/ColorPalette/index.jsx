@@ -8,6 +8,7 @@ import {
 } from './store.js'
 import { oklchToHex, autoName } from '../../lib/color.js'
 import { pickScreenColor, eyeDropperSupported } from '../../lib/eyedropper.js'
+import { useGlobalUndo } from '../../lib/undo.js'
 import Icon from '../../components/Icon.jsx'
 import Picker from './Picker.jsx'
 import DesignMode from './DesignMode.jsx'
@@ -42,14 +43,11 @@ export default function ColorPalette() {
   const L_MIN = 252, L_MAX = 500
   const P_MIN = 100, P_MAX = 340
 
+  useGlobalUndo(undo, redo)
   useEffect(() => {
     function onKey(e) {
       const ctrl = e.ctrlKey || e.metaKey
       const inInput = document.activeElement?.tagName === 'INPUT'
-      if (ctrl) {
-        if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return }
-        if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); return }
-      }
       if (!ctrl && (e.key === 'y' || e.key === 'Y') && !inInput) {
         setGreyColors(v => !v)
       }
