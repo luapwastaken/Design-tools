@@ -6,6 +6,7 @@ import { useLineart, setState, getState, undo, redo, resetState, TOOL_ID } from 
 import { sendImageToPostFX } from '../PostFX/store.js'
 import { processFile } from '../../lib/file.js'
 import { markDirty, markSaved } from '../../lib/unsavedChanges.js'
+import { useGlobalUndo } from '../../lib/undo.js'
 
 const C = {
   bg: '#0b0b0d', panel: '#111114', ctrl: '#18181c',
@@ -53,14 +54,12 @@ export default function LineartTool() {
   const fittedKey = useRef('')
   const [dims, setDims] = useState(null)
 
-  // ── Keyboard: space pan, undo/redo ──────────────────────────────────────────
+  // ── Keyboard: space pan (undo/redo handled globally in App) ──────────────────
+  useGlobalUndo(undo, redo)
   useEffect(() => {
     const isField = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
     function down(e) {
       if (e.code === 'Space' && !isField()) { e.preventDefault(); setSpace(true); return }
-      const ctrl = e.ctrlKey || e.metaKey
-      if (ctrl && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) { e.preventDefault(); undo() }
-      else if (ctrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey) || (e.key === 'Z' && e.shiftKey))) { e.preventDefault(); redo() }
     }
     function up(e) { if (e.code === 'Space') setSpace(false) }
     window.addEventListener('keydown', down); window.addEventListener('keyup', up)

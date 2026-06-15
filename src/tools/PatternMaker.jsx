@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { readAsText } from '../lib/file.js'
 import { markDirty, markSaved } from '../lib/unsavedChanges.js'
+import Icon from '../components/Icon.jsx'
 
 function mkRng(s) {
   return () => {
@@ -145,15 +146,42 @@ const Slider = ({ min, max, value, onChange, step = 1 }) => (
 
 const SliderRow = ({ label, min, max, value, onChange, step = 1, suffix = '' }) => {
   const [draft, setDraft] = useState(null)
+  const [scrubbing, setScrubbing] = useState(false)
   const commit = raw => {
     const n = parseFloat(raw)
     if (!isNaN(n)) onChange(Math.min(max, Math.max(min, n)))
     setDraft(null)
   }
   const active = draft !== null
+
+  // Drag the label horizontally to scrub the value (full range over ~200px).
+  const onScrubStart = e => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startVal = value
+    const perPx = (max - min) / 200
+    setScrubbing(true)
+    document.body.style.cursor = 'ew-resize'
+    const move = ev => {
+      const raw = startVal + (ev.clientX - startX) * perPx
+      const snapped = Math.round(raw / step) * step
+      onChange(Math.min(max, Math.max(min, snapped)))
+    }
+    const up = () => {
+      setScrubbing(false)
+      document.body.style.cursor = ''
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', marginBottom: 7, gap: 8 }}>
-      <div style={{ fontSize: 11, color: C.muted, width: 72, flexShrink: 0 }}>{label}</div>
+      <div onMouseDown={onScrubStart} title="Drag to scrub"
+        style={{ fontSize: 11, color: scrubbing ? C.accent : C.muted, width: 72, flexShrink: 0,
+          cursor: 'ew-resize', userSelect: 'none' }}>{label}</div>
       <input type="range" min={min} max={max} value={value} step={step}
         onChange={e => onChange(+e.target.value)}
         style={{ flex: 1, accentColor: C.accent }} />
@@ -335,6 +363,47 @@ export default function PatternMaker() {
   const handleHGap = v => { setHGap(v); if (linkGap) setVGap(v) }
   const handleVGap = v => { setVGap(v); if (linkGap) setHGap(v) }
 
+  // Randomize the layout/geometry within sane ranges — leaves the user's shapes,
+  // colors and palette untouched so it explores composition, not brand.
+  const surpriseMe = () => {
+    const rnd = (a, b) => a + Math.random() * (b - a)
+    const rndInt = (a, b) => Math.floor(rnd(a, b + 1))
+    setMode(modeOpts[rndInt(0, modeOpts.length - 1)][0])
+    const c = rndInt(2, 8), rw = rndInt(2, 8)
+    setCols(c); setRows(linkGrid ? c : rw)
+    const g = rndInt(-20, 80)
+    setHGap(g); setVGap(linkGap ? g : rndInt(-20, 80))
+    const base = rndInt(40, 180)
+    setSzMn(base); setSzMx(base + rndInt(0, 140))
+    const ro = Math.random() > 0.35
+    setRotOn(ro)
+    if (ro) { setRotMn(0); setRotMx(rndInt(90, 360)) } else setRotFixed(rndInt(0, 360))
+    setJitter(rndInt(0, 35))
+    const off = Math.random() > 0.5
+    setOffsetOn(off)
+    if (off) { setOffsetAxis(Math.random() > 0.5 ? 'row' : 'col'); setOffsetAmt(rndInt(20, 80)) }
+    setSeed(Math.floor(Math.random() * 99999))
+  }
+
+  // Restore every setting to its factory default (matches the useState initializers).
+  const resetAll = () => {
+    if (!window.confirm('Reset all settings to defaults? This clears the current pattern.')) return
+    setSA(S1); setSB(S2)
+    setMode('check')
+    setCols(4); setRows(4); setLinkGrid(false)
+    setHGap(12); setVGap(12); setLinkGap(false)
+    setSzMn(75); setSzMx(75)
+    setRotOn(true); setRotFixed(0); setRotMn(0); setRotMx(360)
+    setSeed(7331)
+    setSeamless(true)
+    setBgOn(false); setBgCol('#f5e6c8')
+    setFColA('#e8a838'); setFColB('#e8a838')
+    setPaletteOn(false); setPalette(['#e8a838', '#e8693b', '#c43b3b', '#8b5e2e'])
+    setJitter(0)
+    setOffsetOn(false); setOffsetAmt(50); setOffsetAxis('row')
+    setExportW(2000); setExportH(2000); setLinkExport(true)
+  }
+
   const download = () => {
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))
@@ -453,6 +522,7 @@ export default function PatternMaker() {
   const modeOpts = [['A','A'],['B','B'],['check','Checker'],['rand','Random']]
 
   const btn = (accent) => ({
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
     padding: '6px 14px', borderRadius: 4, border: 'none', cursor: 'pointer',
     fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
     background: accent ? C.accent : C.ctrl,
@@ -467,7 +537,14 @@ export default function PatternMaker() {
         overflowY: 'auto', padding: '48px 22px 14px 14px', flexShrink: 0, position: 'relative' }}>
 
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: C.accent,
-          marginBottom: 18 }}>PATTERN MAKER</div>
+          marginBottom: 12 }}>PATTERN MAKER</div>
+
+        <button onClick={surpriseMe} title="Randomize the layout (keeps your shapes & colors)"
+          style={{ ...btn(true), width: '100%', marginBottom: 18, padding: '8px 14px' }}
+          onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.08)'}
+          onMouseLeave={e => e.currentTarget.style.filter = ''}>
+          <Icon name="casino" size={15} color="#000" />Surprise me
+        </button>
 
         {/* resize handle */}
         <div
@@ -540,7 +617,7 @@ export default function PatternMaker() {
             <SliderRow label="Min°" min={0} max={360} value={rotMn} onChange={v => setRotMn(Math.min(v, rotMx))} suffix="°" />
             <SliderRow label="Max°" min={0} max={360} value={rotMx} onChange={v => setRotMx(Math.max(v, rotMn))} suffix="°" />
             <button onClick={() => setSeed(Math.floor(Math.random() * 99999))} style={{ ...btn(false), width: '100%', marginTop: 2 }}>
-              ↻ RESEED &nbsp;<span style={{ color: C.accent }}>#{seed}</span>
+              <Icon name="refresh" size={13} />RESEED&nbsp;<span style={{ color: C.accent }}>#{seed}</span>
             </button>
           </> :
             <SliderRow label="Angle" min={0} max={360} value={rotFixed} onChange={setRotFixed} suffix="°" />
@@ -588,11 +665,20 @@ export default function PatternMaker() {
         <Section title="Session">
           <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
             <button onClick={handleSave} style={{ ...btn(true), flex: 1, transition: 'opacity 0.15s' }}>
-              {saved ? '✓ Saved' : 'Save'}
+              {saved ? <><Icon name="check_circle" size={13} />Saved</> : <><Icon name="save" size={13} />Save</>}
             </button>
-            <button onClick={handleLoad} style={{ ...btn(false), flex: 1 }}>Load</button>
+            <button onClick={handleLoad} style={{ ...btn(false), flex: 1 }}>
+              <Icon name="folder" size={13} />Load
+            </button>
           </div>
-          <div style={{ fontSize: 10, color: C.dim }}>● Auto-saved · Save writes to app data folder</div>
+          <button onClick={resetAll} title="Restore all settings to defaults"
+            style={{ ...btn(false), width: '100%', marginBottom: 6, fontWeight: 400 }}>
+            <Icon name="restart_alt" size={13} />Reset to defaults
+          </button>
+          <div style={{ fontSize: 10, color: C.dim, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: C.accent, flexShrink: 0 }} />
+            Auto-saved · Save writes to app data folder
+          </div>
         </Section>
 
         <Section title="Export Size">
@@ -618,10 +704,10 @@ export default function PatternMaker() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <div style={{ height: 40, borderBottom: `1px solid ${C.border}`, flexShrink: 0,
           display: 'flex', alignItems: 'center', padding: '0 12px', gap: 6 }}>
-          <button onClick={download} style={btn(true)}>⬇ TILE</button>
-          <button onClick={downloadSwatch} style={btn(false)} title="Clean tile (no edge-wrap) for Illustrator Object → Pattern → Make">⬇ AI SWATCH</button>
-          <button onClick={downloadCanvas} style={btn(false)}>⬇ {exportW}×{exportH}</button>
-          <button onClick={copyToClipboard} style={btn(false)}>⧉ COPY SVG</button>
+          <button onClick={download} style={btn(true)}><Icon name="download" size={14} />TILE</button>
+          <button onClick={downloadSwatch} style={btn(false)} title="Clean tile (no edge-wrap) for Illustrator Object → Pattern → Make"><Icon name="image" size={14} />AI SWATCH</button>
+          <button onClick={downloadCanvas} style={btn(false)}><Icon name="download" size={14} />{exportW}×{exportH}</button>
+          <button onClick={copyToClipboard} style={btn(false)}><Icon name="content_copy" size={14} />COPY SVG</button>
           <div style={{ width: 1, height: 20, background: C.border, margin: '0 4px', flexShrink: 0 }} />
           <span style={{ fontSize: 11, color: C.muted }}>
             tile <span style={{ color: C.text }}>{tW.toFixed(0)}×{tH.toFixed(0)}px</span>

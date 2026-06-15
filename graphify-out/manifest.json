@@ -25,13 +25,13 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\package.json": {
-    "mtime": 1781203523.318324,
-    "ast_hash": "9272bd4fa69371f81c68731209c70f9b",
+    "mtime": 1781481239.593435,
+    "ast_hash": "584fbffc14f5e820a669468dc8f9bbb9",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\App.jsx": {
-    "mtime": 1781109490.9908764,
-    "ast_hash": "d0ebc980689a8418ccad3463cb4276f9",
+    "mtime": 1781464042.8925838,
+    "ast_hash": "bdd4511ed7f1cf0ba02298f2b490ed33",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\components\\Sidebar.jsx": {
@@ -100,8 +100,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\main.jsx": {
-    "mtime": 1780431300.4047258,
-    "ast_hash": "2d372ef1145ad6984baf68d65c547cfd",
+    "mtime": 1781217552.7510371,
+    "ast_hash": "77aec6a5b6658994843f448daddf4233",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\AutoFix.jsx": {
@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\index.jsx": {
-    "mtime": 1780681501.0788739,
-    "ast_hash": "053986a768932c1b9477b12b8a3cb738",
+    "mtime": 1781464152.1685352,
+    "ast_hash": "c15931dea269adcf2401f1afa5807d43",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\ColorPalette\\store.js": {
@@ -215,8 +215,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\index.jsx": {
-    "mtime": 1780782218.2487354,
-    "ast_hash": "70cad48a286388e3ac13c200efe56fd4",
+    "mtime": 1781464176.6487975,
+    "ast_hash": "b5f26b60dea0fc1b140460d4f2e378bc",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\layout.js": {
@@ -230,8 +230,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\PatternMaker.jsx": {
-    "mtime": 1780782160.6106906,
-    "ast_hash": "a9c8c8dcc3db582587849eea143103d0",
+    "mtime": 1781218006.0598948,
+    "ast_hash": "326d2e47766762e9725222becc12e757",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\vite.config.js": {
@@ -260,8 +260,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\components\\Icon.jsx": {
-    "mtime": 1781191825.322342,
-    "ast_hash": "27f403af85d1ec67b745511ad2358708",
+    "mtime": 1781462442.7783828,
+    "ast_hash": "61cbbd8aac25f8ae72692122863e3d62",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\data\\pigments.js": {
@@ -330,8 +330,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\DitherTool\\index.jsx": {
-    "mtime": 1781113726.339,
-    "ast_hash": "3ddd5199fc58ae3436c3db78560c5189",
+    "mtime": 1781464115.0016203,
+    "ast_hash": "dd5e5067a6132c12c6bcbecc54f51956",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\DitherTool\\palettes.js": {
@@ -350,8 +350,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\gif.js": {
-    "mtime": 1780697674.9388812,
-    "ast_hash": "6dd252af236bbe74bd48f8c1d545df09",
+    "mtime": 1781216105.9518545,
+    "ast_hash": "f5eb36c057d9148345cf3ce236439b04",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\glDither.js": {
@@ -420,8 +420,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\PostFX\\index.jsx": {
-    "mtime": 1781203398.0459602,
-    "ast_hash": "b78eac5a778dec327f6d5d972230e54d",
+    "mtime": 1781464093.1455674,
+    "ast_hash": "3e8a9d8421ed7693a4f50e3da355ba1b",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\PostFX\\store.js": {
@@ -435,8 +435,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LineartTool\\index.jsx": {
-    "mtime": 1781111292.2310572,
-    "ast_hash": "8f6a3ff49bbd4ca2fb47ce1facb5348e",
+    "mtime": 1781464134.9538622,
+    "ast_hash": "8378e6c20fb98bfd0b11b889974c5505",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LineartTool\\store.js": {
@@ -467,6 +467,86 @@
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\PostFX\\presets.js": {
     "mtime": 1781172779.157542,
     "ast_hash": "0ded5f25939e56b995434f7f8dab157b",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\skills-lock.json": {
+    "mtime": 1781216787.5497491,
+    "ast_hash": "c75019dc3c066b17080f38c2e19d439e",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\Graph.jsx": {
+    "mtime": 1781465419.1255887,
+    "ast_hash": "8146e1f0e45eaf95a62d633319f974da",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\Inspector.jsx": {
+    "mtime": 1781464414.7280514,
+    "ast_hash": "298e43fb51f3ca903a094bf6529c0331",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\Stage.jsx": {
+    "mtime": 1781481020.2486074,
+    "ast_hash": "98cb8f3e1d8c57ca3187f31dedfc391b",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\Timeline.jsx": {
+    "mtime": 1781462616.8155053,
+    "ast_hash": "26116f91e103008411d981a5c7e50f80",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\engine.js": {
+    "mtime": 1781462517.0639107,
+    "ast_hash": "88c2cd849ea0c47f269dcd44054d7a34",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\exporters.js": {
+    "mtime": 1781462815.29974,
+    "ast_hash": "62566f6ec9bc578cea1feac8a8c2085f",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\index.jsx": {
+    "mtime": 1781465496.957031,
+    "ast_hash": "5820c465f23a35995c7d80dd44ade424",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\nodes.js": {
+    "mtime": 1781462484.1457126,
+    "ast_hash": "2e71ee825f20b6765ca11c168c32b6aa",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\presets.js": {
+    "mtime": 1781462755.594957,
+    "ast_hash": "b64620c8fb355e5de2e03e5a54baab03",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\render.jsx": {
+    "mtime": 1781462583.1080537,
+    "ast_hash": "fe495772e74931057f429c342acd3e34",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\store.js": {
+    "mtime": 1781481012.7466292,
+    "ast_hash": "8b1a80dba2ad01e7c447c0fab16e7fd9",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.claude\\skills\\frontend-design\\LICENSE.txt": {
+    "mtime": 1781216786.843865,
+    "ast_hash": "29256199be2a609aac596980ffc11996",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.claude\\skills\\frontend-design\\SKILL.md": {
+    "mtime": 1781216786.8448648,
+    "ast_hash": "f5c3db69b9c6a00578301dd0cbe90253",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\docs\\superpowers\\specs\\2026-06-14-motion-maker-design.md": {
+    "mtime": 1781462276.9812942,
+    "ast_hash": "573e66a22abfab079bef437158be3f3e",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\lib\\undo.js": {
+    "mtime": 1781464025.1404135,
+    "ast_hash": "b78fbd63a5fcc88da6a09b6bf792eb63",
     "semantic_hash": ""
   }
 }

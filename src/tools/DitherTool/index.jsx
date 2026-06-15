@@ -17,6 +17,7 @@ import {
 import { sendImageToPostFX } from '../PostFX/store.js'
 import { MOTION_PARAMS, PARAM_BY_KEY, WAVES, mkLfo, computeMods } from './motion.js'
 import { processFile } from '../../lib/file.js'
+import { useGlobalUndo } from '../../lib/undo.js'
 import { decodeGif, fileToCanvas, encodeGif, framesToZip, gifDecodeSupported } from '../../lib/gif.js'
 import { markSaved } from '../../lib/unsavedChanges.js'
 
@@ -95,14 +96,12 @@ export default function DitherTool() {
   // ── Incoming colours ────────────────────────────────────────────────────────
   useEffect(() => { const c = getIncomingColors(); if (c.length) setIncoming(c) }, [])
 
-  // ── Keyboard: space pan, undo/redo ──────────────────────────────────────────
+  // ── Keyboard: space pan (undo/redo handled globally in App) ──────────────────
+  useGlobalUndo(undo, redo)
   useEffect(() => {
     const isField = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
     function down(e) {
       if (e.code === 'Space' && !isField()) { e.preventDefault(); setSpace(true); return }
-      const ctrl = e.ctrlKey || e.metaKey
-      if (ctrl && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) { e.preventDefault(); undo() }
-      else if (ctrl && (e.key === 'y' || e.key === 'Z' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo() }
     }
     function up(e) { if (e.code === 'Space') setSpace(false) }
     window.addEventListener('keydown', down); window.addEventListener('keyup', up)

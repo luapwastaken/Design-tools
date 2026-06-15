@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar.jsx'
+import { globalUndo, globalRedo } from './lib/undo.js'
 import PatternMaker from './tools/PatternMaker.jsx'
 import LogoMaker from './tools/LogoMaker/index.jsx'
 import ColorPalette from './tools/ColorPalette/index.jsx'
 import DitherTool from './tools/DitherTool/index.jsx'
 import PostFX from './tools/PostFX/index.jsx'
 import LineartTool from './tools/LineartTool/index.jsx'
+import MotionMaker from './tools/MotionMaker/index.jsx'
 import CobaltTool from './tools/CobaltTool.jsx'
 import Icon from './components/Icon.jsx'
 
@@ -53,6 +55,13 @@ const TOOLS = [
     component: LineartTool,
   },
   {
+    id: 'motion-maker',
+    label: 'Motion Maker',
+    icon: <Icon name="movie_filter" size={18} />,
+    accentColor: '#ff7849',
+    component: MotionMaker,
+  },
+  {
     id: 'cobalt',
     label: 'cobalt.tools',
     icon: <Icon name="download" size={18} />,
@@ -64,6 +73,19 @@ const TOOLS = [
 export default function App() {
   const [active, setActive] = useState(TOOLS[0].id)
   const ActiveTool = TOOLS.find(t => t.id === active)?.component
+
+  // ── Global undo / redo — dispatches to the active tool (see lib/undo.js) ──────
+  useEffect(() => {
+    function onKey(e) {
+      const ctrl = e.ctrlKey || e.metaKey
+      if (!ctrl) return
+      const k = e.key.toLowerCase()
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); globalUndo() }
+      else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); globalRedo() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0b0b0d' }}>
