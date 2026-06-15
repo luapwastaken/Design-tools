@@ -3,10 +3,56 @@ import { useRef } from 'react'
 import { C, btn, Section, HexInput } from '../LogoMaker/ui.jsx'
 import { NumberSlider } from '../../components/NumberField.jsx'
 import Icon from '../../components/Icon.jsx'
-import { NODE_DEFS, CATEGORY_COLOR } from './nodes.js'
+import { NODE_DEFS, CATEGORY_COLOR, EASE_OPTIONS } from './nodes.js'
 import { processFile } from '../../lib/file.js'
 
 const ACCENT = '#ff7849'
+
+// ── Keyframes editor ───────────────────────────────────────────────────────────
+// Compact per-key rows (frame / value / ease) + add/remove. The engine sorts keys
+// at eval time, so we keep edit order stable here (no reorder-on-type focus jumps).
+function miniInput(value, onChange, step = 1) {
+  return (
+    <input type="number" value={value} step={step}
+      onChange={e => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+      style={{ width: 52, background: C.ctrl, color: C.text, border: `1px solid ${C.border}`, borderRadius: 4, padding: '3px 5px', fontSize: 11, fontFamily: 'inherit', outline: 'none' }} />
+  )
+}
+
+function KeyframesEditor({ value, onChange, accent }) {
+  const keys = Array.isArray(value) ? value : []
+  const set = (i, patch) => onChange(keys.map((k, idx) => idx === i ? { ...k, ...patch } : k))
+  const add = () => {
+    const lastF = keys.length ? Math.max(...keys.map(k => k.frame || 0)) : 0
+    const lastV = keys.length ? keys[keys.length - 1].value : 0
+    onChange([...keys, { frame: lastF + 15, value: lastV, ease: 'easeOut' }])
+  }
+  const remove = (i) => onChange(keys.filter((_, idx) => idx !== i))
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 6, fontSize: 9, color: C.dim, padding: '0 2px 4px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+        <span style={{ width: 52 }}>Frame</span><span style={{ width: 52 }}>Value</span><span style={{ flex: 1 }}>Ease</span><span style={{ width: 18 }} />
+      </div>
+      {keys.map((k, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          {miniInput(k.frame, v => set(i, { frame: v }))}
+          {miniInput(k.value, v => set(i, { value: v }), 0.01)}
+          <select value={k.ease || 'linear'} onChange={e => set(i, { ease: e.target.value })}
+            style={{ flex: 1, minWidth: 0, background: C.ctrl, color: C.text, border: `1px solid ${C.border}`, borderRadius: 4, padding: '3px 4px', fontSize: 10, fontFamily: 'inherit', outline: 'none', cursor: 'pointer' }}>
+            {EASE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+          <button onClick={() => remove(i)} title="Remove key"
+            style={{ ...btn(false), padding: '2px 4px', width: 18, color: C.muted }}>
+            <Icon name="close" size={12} />
+          </button>
+        </div>
+      ))}
+      <button onClick={add} style={{ ...btn(false), width: '100%', marginTop: 4, fontSize: 10, padding: '4px 0', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+        <Icon name="add" size={12} /> Add key
+      </button>
+    </div>
+  )
+}
 
 function ImageParam({ value, onChange }) {
   const inputRef = useRef(null)
@@ -67,6 +113,7 @@ export default function Inspector({ node, boundKeys, onParam, onRemove }) {
           const bound = boundKeys.has(p.key)
           const val = node.params[p.key]
           if (p.type === 'image') return <ImageParam key={p.key} value={val} onChange={v => onParam(node.id, p.key, v)} />
+          if (p.type === 'keyframes') return <KeyframesEditor key={p.key} value={val} accent={col} onChange={v => onParam(node.id, p.key, v)} />
           if (p.type === 'select') return (
             <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
               <span style={{ fontSize: 10, color: C.muted, width: 60, flexShrink: 0 }}>{p.label}</span>
