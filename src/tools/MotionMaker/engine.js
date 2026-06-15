@@ -74,7 +74,21 @@ function fbmSigned(t, seed = 0, octaves = 1) {
   return norm ? sum / norm : 0
 }
 
-// ── Value node evaluation → a number at `frame` ──────────────────────────────────
+// ── Color helpers (color-value socket) ───────────────────────────────────────────
+function parseHex(hex) {
+  let h = String(hex || '#000').replace('#', '')
+  if (h.length === 3) h = h.split('').map(c => c + c).join('')
+  const n = parseInt(h, 16)
+  return Number.isNaN(n) ? [0, 0, 0] : [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+const hex2 = v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')
+function lerpColor(a, b, t) {
+  const A = parseHex(a), B = parseHex(b)
+  return '#' + A.map((v, i) => hex2(v + (B[i] - v) * t)).join('')
+}
+function hexToRgba(hex, a) { const [r, g, b] = parseHex(hex); return `rgba(${r},${g},${b},${a})` }
+
+// ── Value node evaluation → a number (or color string) at `frame` ─────────────────
 export function evalValueNode(node, frame, ctx, seen) {
   // value→value chaining (unlock 1): a value node may itself be driven by upstream
   // value nodes. Resolve its params through the bindings first (with a cycle guard),
@@ -215,6 +229,14 @@ export function evalValueNode(node, frame, ctx, seen) {
       }
       return v
     }
+
+    // ── Color value nodes → a color string ─────────────────────────────────────────
+    case 'colorSwatch': {
+      const a = clamp(p.alpha ?? 1, 0, 1)
+      return a >= 1 ? p.color : hexToRgba(p.color, a)
+    }
+    case 'gradientMap':
+      return lerpColor(p.colorA, p.colorB, clamp(p.input ?? 0, 0, 1))
     default:
       return 0
   }
@@ -237,8 +259,20 @@ function resolveParams(node, frame, ctx, seen) {
   return out
 }
 
+// Format a number with fixed decimals and optional thousands separators.
+function formatNumber(v, decimals, thousands) {
+  let s = (v).toFixed(Math.max(0, Math.round(decimals || 0)))
+  if (thousands === 'on') {
+    const neg = s[0] === '-' ? '-' : ''
+    if (neg) s = s.slice(1)
+    const [int, frac] = s.split('.')
+    s = neg + int.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (frac ? '.' + frac : '')
+  }
+  return s
+}
+
 // ── Build a renderable scene object from a source node ───────────────────────────
-function sourceObject(node, rp, ctx) {
+function sourceObject(node, rp, ctx, frame) {
   const { canvas } = ctx
   const cx = canvas.w / 2, cy = canvas.h / 2
   const fit = Math.min(canvas.w, canvas.h) * 0.55   // base footprint for images
@@ -248,6 +282,29 @@ function sourceObject(node, rp, ctx) {
       id: node.id, kind: 'shape', shape: rp.kind, color: rp.color,
       w: rp.w, h: rp.h,
       x: cx + rp.x, y: cy + rp.y, rotate: rp.rotate, opacity: rp.opacity,
+    }
+  }
+
+  // Text — live type. Render uses `h` as the font size, so every w/h-scaling modifier
+  // (Transform, Echo, Array…) scales the type naturally.
+  if (node.type === 'text' || node.type === 'counter') {
+    let str
+    if (node.type === 'counter') {
+      const span = (rp.endFrame - rp.startFrame) || 1
+      const e = (EASES[rp.ease] || EASES.linear)(clamp((frame - rp.startFrame) / span, 0, 1))
+      const v = rp.from + (rp.to - rp.from) * e
+      str = (rp.prefix || '') + formatNumber(v, rp.decimals, rp.thousands) + (rp.suffix || '')
+    } else {
+      str = String(rp.string ?? '')
+      if (rp.case === 'upper') str = str.toUpperCase()
+      else if (rp.case === 'lower') str = str.toLowerCase()
+    }
+    return {
+      id: node.id, kind: 'text', string: str,
+      font: rp.font, weight: rp.weight || '700', fill: rp.fill,
+      tracking: rp.tracking || 0, align: rp.align || 'center',
+      w: rp.size * Math.max(1, str.length) * 0.6, h: rp.size,
+      x: cx + rp.x, y: cy + rp.y, rotate: rp.rotate || 0, opacity: rp.opacity,
     }
   }
 
@@ -448,6 +505,43 @@ function applyParticles(objs, rp, frame, ctx) {
   return out
 }
 
+// Scramble / Decode — cycle random glyphs that settle into the real text. Operates on
+// text objects' `string`; deterministic per (position, frame, seed).
+const SCRAMBLE_CHARS = {
+  alphanumeric: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+  letters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  symbols: '!@#$%^&*<>/?=+~|',
+  binary: '01',
+  katakana: 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホ',
+}
+function applyScramble(objs, rp, frame) {
+  const chars = SCRAMBLE_CHARS[rp.charset] || SCRAMBLE_CHARS.alphanumeric
+  const start = rp.startFrame || 0, dur = Math.max(1, rp.duration || 1)
+  const t = clamp((frame - start) / dur, 0, 1)
+  const speed = Math.max(1, Math.round(rp.speed || 1))
+  const tick = Math.floor(frame / speed)
+  return objs.map(o => {
+    if (o.kind !== 'text' || o.string == null) return o
+    const s = o.string, n = s.length
+    const revealCount = Math.floor(t * n)
+    const revealed = (i) => {
+      switch (rp.settleOrder) {
+        case 'right-left':  return i >= n - revealCount
+        case 'center-out':  return Math.abs(i - (n - 1) / 2) <= (revealCount - 1) / 2
+        case 'random':      return hash01(i, (rp.seed || 0) + 101) < t   // stable per-char reveal time
+        default:            return i < revealCount   // left-right
+      }
+    }
+    let out = ''
+    for (let i = 0; i < n; i++) {
+      const ch = s[i]
+      if (ch === ' ' || revealed(i)) out += ch
+      else out += chars[Math.floor(hash01(i * 131 + tick * 977, rp.seed || 0) * chars.length)]
+    }
+    return { ...o, string: out }
+  })
+}
+
 // Camera — global zoom/pan/rotate of the whole comp about an anchor point. Applies to
 // every upstream item, so it's drivable like any node (push-ins, whip-pans).
 function applyCamera(objs, rp, ctx) {
@@ -571,7 +665,7 @@ function gatherObjects(nodeId, frame, ctx, seen) {
   const rp = resolveParams(node, frame, ctx)
 
   if (def.category === 'source') {
-    const o = sourceObject(node, rp, ctx)
+    const o = sourceObject(node, rp, ctx, frame)
     return o ? [o] : []
   }
 
@@ -615,6 +709,7 @@ function gatherObjects(nodeId, frame, ctx, seen) {
     case 'particles': return applyParticles(objs, rp, frame, ctx)
     case 'shatter':   return applyShatter(objs, rp)
     case 'camera':    return applyCamera(objs, rp, ctx)
+    case 'scramble':  return applyScramble(objs, rp, frame)
     case 'sort': {
       const a = [...objs]
       if (rp.mode === 'reverse') a.reverse()

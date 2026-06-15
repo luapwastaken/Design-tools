@@ -13,6 +13,8 @@ const clampNum = (v, a, b) => Math.min(b, Math.max(a, v))
 
 // ── Effect filters ───────────────────────────────────────────────────────────────
 function sanitizeId(id) { return String(id).replace(/[^a-zA-Z0-9_-]/g, '_') }
+function xmlEscape(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])) }
+const textAnchor = (align) => align === 'left' ? 'start' : align === 'right' ? 'end' : 'middle'
 
 // hex (#rgb / #rrggbb) → [r,g,b] in 0..1
 function hexRgb(hex) {
@@ -143,6 +145,10 @@ function itemSvg(it, filterId) {
     const rect = `<rect x="${(-it.w / 2).toFixed(2)}" y="${(-it.h / 2).toFixed(2)}" width="${it.w.toFixed(2)}" height="${it.h.toFixed(2)}" fill="${useGrad ? `url(#${gid})` : it.colorA}"/>`
     return `<g transform="${t}" opacity="${it.opacity}"${fAttr}${bAttr}>${defs}${rect}</g>`
   }
+  if (it.kind === 'text') {
+    const tx = `<text x="0" y="0" font-family="${it.font || 'system-ui'}" font-size="${it.h}" font-weight="${it.weight || 700}" fill="${it.fill}" text-anchor="${textAnchor(it.align)}" dominant-baseline="central" letter-spacing="${it.tracking || 0}" style="white-space:pre">${xmlEscape(it.string || '')}</text>`
+    return `<g transform="${t}" opacity="${it.opacity}"${fAttr}${bAttr}>${tx}</g>`
+  }
   if (it.kind === 'fragment') {
     // a shard of an image: clip a full-size image down to this piece's cell
     const cp = 'cp_' + sanitizeId(it.id)
@@ -209,6 +215,15 @@ export function SceneSvg({ scene, style }) {
             <g key={it.id || i} {...gProps}>
               {useGrad && <defs dangerouslySetInnerHTML={{ __html: gradientDef(it, gid) }} />}
               <rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} fill={useGrad ? `url(#${gid})` : it.colorA} />
+            </g>
+          )
+        }
+        if (it.kind === 'text') {
+          return (
+            <g key={it.id || i} {...gProps}>
+              <text x={0} y={0} fontFamily={it.font || 'system-ui'} fontSize={it.h} fontWeight={it.weight || 700}
+                fill={it.fill} textAnchor={textAnchor(it.align)} dominantBaseline="central"
+                letterSpacing={it.tracking || 0} style={{ whiteSpace: 'pre' }}>{it.string}</text>
             </g>
           )
         }

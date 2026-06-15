@@ -29,6 +29,8 @@ export const EASE_OPTIONS = [
   'outBack', 'inBack', 'inOutBack', 'outElastic', 'outBounce',
 ]
 
+const FONT_OPTIONS = ['system-ui', 'JetBrains Mono', 'Georgia', 'Impact', 'Courier New', 'Arial Black']
+
 export const NODE_DEFS = {
   // ── Sources ──────────────────────────────────────────────────────────────────
   icon: {
@@ -66,6 +68,45 @@ export const NODE_DEFS = {
       N('x', 'X', -2000, 2000, 1, 0),
       N('y', 'Y', -2000, 2000, 1, 0),
       N('rotate', 'Rotate', -1080, 1080, 1, 0),
+      N('opacity', 'Opacity', 0, 1, 0.01, 1),
+    ],
+  },
+  text: {
+    type: 'text', label: 'Text', category: 'source',
+    obj: { in: false, out: true }, value: false,
+    params: [
+      { key: 'string', label: 'Text', type: 'text', default: 'TAGLINE' },
+      { key: 'font', label: 'Font', type: 'select', options: FONT_OPTIONS, default: 'system-ui' },
+      { key: 'weight', label: 'Weight', type: 'select', options: ['400', '600', '700', '900'], default: '700' },
+      { key: 'case', label: 'Case', type: 'select', options: ['none', 'upper', 'lower'], default: 'none' },
+      { key: 'align', label: 'Align', type: 'select', options: ['left', 'center', 'right'], default: 'center' },
+      { key: 'fill', label: 'Fill', type: 'color', default: '#ffffff' },
+      N('size', 'Size', 4, 800, 1, 80),
+      N('tracking', 'Tracking', -20, 80, 0.5, 0),
+      N('x', 'X', -2000, 2000, 1, 0),
+      N('y', 'Y', -2000, 2000, 1, 0),
+      N('rotate', 'Rotate', -1080, 1080, 1, 0),
+      N('opacity', 'Opacity', 0, 1, 0.01, 1),
+    ],
+  },
+  counter: {
+    type: 'counter', label: 'Counter / Ticker', category: 'source',
+    obj: { in: false, out: true }, value: false,
+    params: [
+      N('from', 'From', -1e9, 1e9, 1, 0),
+      N('to', 'To', -1e9, 1e9, 1, 100),
+      N('startFrame', 'Start f', 0, 6000, 1, 0),
+      N('endFrame', 'End f', 0, 6000, 1, 60),
+      { key: 'ease', label: 'Ease', type: 'select', options: EASE_OPTIONS, default: 'easeOut' },
+      N('decimals', 'Decimals', 0, 4, 1, 0),
+      { key: 'thousands', label: 'Thousands', type: 'select', options: ['off', 'on'], default: 'off' },
+      { key: 'prefix', label: 'Prefix', type: 'text', default: '' },
+      { key: 'suffix', label: 'Suffix', type: 'text', default: '' },
+      { key: 'font', label: 'Font', type: 'select', options: FONT_OPTIONS, default: 'JetBrains Mono' },
+      { key: 'fill', label: 'Fill', type: 'color', default: '#ffffff' },
+      N('size', 'Size', 4, 800, 1, 120),
+      N('x', 'X', -2000, 2000, 1, 0),
+      N('y', 'Y', -2000, 2000, 1, 0),
       N('opacity', 'Opacity', 0, 1, 0.01, 1),
     ],
   },
@@ -231,6 +272,18 @@ export const NODE_DEFS = {
       N('index', 'Index', 0, 32, 1, 0),
     ],
   },
+  scramble: {
+    type: 'scramble', label: 'Scramble / Decode', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('startFrame', 'Start f', 0, 6000, 1, 0),
+      N('duration', 'Duration f', 1, 600, 1, 30),
+      { key: 'charset', label: 'Charset', type: 'select', options: ['alphanumeric', 'letters', 'symbols', 'binary', 'katakana'], default: 'alphanumeric' },
+      { key: 'settleOrder', label: 'Order', type: 'select', options: ['left-right', 'right-left', 'center-out', 'random'], default: 'left-right' },
+      N('speed', 'Cycle f', 1, 20, 1, 2),
+      N('seed', 'Seed', 0, 9999, 1, 1),
+    ],
+  },
   particles: {
     type: 'particles', label: 'Particle System', category: 'modifier',
     obj: { in: true, out: true }, value: false,
@@ -348,6 +401,25 @@ export const NODE_DEFS = {
       N('max', 'Max', -5000, 5000, 0.01, 1),
       N('smooth', 'Smooth', 0, 1, 0.01, 0),
       N('seed', 'Seed', 0, 9999, 1, 1),
+    ],
+  },
+
+  // ── Color value nodes (color-value socket unlock) ──────────────────────────────
+  colorSwatch: {
+    type: 'colorSwatch', label: 'Color Swatch', category: 'value', vtype: 'color',
+    obj: { in: false, out: false }, value: true,
+    params: [
+      { key: 'color', label: 'Color', type: 'color', default: '#ff7849' },
+      N('alpha', 'Alpha', 0, 1, 0.01, 1),
+    ],
+  },
+  gradientMap: {
+    type: 'gradientMap', label: 'Gradient Map', category: 'value', vtype: 'color',
+    obj: { in: false, out: false }, value: true,
+    params: [
+      N('input', 'Input 0-1', 0, 1, 0.01, 0.5),
+      { key: 'colorA', label: 'Color A', type: 'color', default: '#000000' },
+      { key: 'colorB', label: 'Color B', type: 'color', default: '#ff7849' },
     ],
   },
 
@@ -488,10 +560,11 @@ export const NODE_TYPES = Object.keys(NODE_DEFS)
 
 // Convenience groupings for the "add node" menu.
 export const NODE_MENU = [
-  { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'backdrop'] },
-  { group: 'Modifiers', types: ['transform', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch'] },
+  { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'text', 'counter', 'backdrop'] },
+  { group: 'Modifiers', types: ['transform', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
   { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'blend', 'dither', 'glitch'] },
   { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
+  { group: 'Color',     types: ['colorSwatch', 'gradientMap'] },
   { group: 'Operators', types: ['math', 'mapRange', 'curve', 'mix', 'clamp'] },
   { group: 'Output',    types: ['scene'] },
 ]

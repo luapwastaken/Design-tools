@@ -114,6 +114,13 @@ export default function Inspector({ node, boundKeys, onParam, onRemove }) {
           const val = node.params[p.key]
           if (p.type === 'image') return <ImageParam key={p.key} value={val} onChange={v => onParam(node.id, p.key, v)} />
           if (p.type === 'keyframes') return <KeyframesEditor key={p.key} value={val} accent={col} onChange={v => onParam(node.id, p.key, v)} />
+          if (p.type === 'text') return (
+            <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <span style={{ fontSize: 10, color: C.muted, width: 60, flexShrink: 0 }}>{p.label}</span>
+              <input type="text" value={val ?? ''} onChange={e => onParam(node.id, p.key, e.target.value)}
+                style={{ flex: 1, minWidth: 0, background: C.ctrl, color: C.text, border: `1px solid ${C.border}`, borderRadius: 4, padding: '4px 6px', fontSize: 11, fontFamily: 'inherit', outline: 'none' }} />
+            </div>
+          )
           if (p.type === 'select') return (
             <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
               <span style={{ fontSize: 10, color: C.muted, width: 60, flexShrink: 0 }}>{p.label}</span>
@@ -124,8 +131,9 @@ export default function Inspector({ node, boundKeys, onParam, onRemove }) {
             </div>
           )
           if (p.type === 'color') return (
-            <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <span style={{ fontSize: 10, color: C.muted, width: 60 }}>{p.label}</span>
+            <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, opacity: bound ? 0.45 : 1 }}
+              title={bound ? 'Driven by a color node' : ''}>
+              <span style={{ fontSize: 10, color: C.muted, width: 60 }}>{(bound ? '◆ ' : '') + p.label}</span>
               <HexInput value={val} onChange={v => onParam(node.id, p.key, v)} />
             </div>
           )

@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\package.json": {
-    "mtime": 1781547184.7554855,
-    "ast_hash": "32d959dcd963c1c950003fb2ca5a5f2a",
+    "mtime": 1781565595.2862146,
+    "ast_hash": "228ae861b13ac63bbcd1b63ff986091a",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\App.jsx": {
@@ -475,13 +475,13 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\Graph.jsx": {
-    "mtime": 1781532187.0528743,
-    "ast_hash": "4128b5565b0a8b4bbf9c48f300836356",
+    "mtime": 1781565595.287217,
+    "ast_hash": "17a62189a388b891abcb1f06fb88ab7a",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\Inspector.jsx": {
-    "mtime": 1781532210.7570071,
-    "ast_hash": "e4453b14419c019570186ee3678ccbd3",
+    "mtime": 1781565595.287217,
+    "ast_hash": "c02a4eb3c8074c2fc7b01e4fea08109e",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\Stage.jsx": {
@@ -495,8 +495,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\engine.js": {
-    "mtime": 1781547091.554612,
-    "ast_hash": "9136724e0c0a2831ec6e9e7487eaa168",
+    "mtime": 1781565595.2882166,
+    "ast_hash": "65fbba114941dd4afcdeed68d97239f2",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\exporters.js": {
@@ -510,18 +510,18 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\nodes.js": {
-    "mtime": 1781547050.7621362,
-    "ast_hash": "44be38c9eecf48517afe18404465a0fe",
+    "mtime": 1781565595.2892165,
+    "ast_hash": "101f2be04eb07731919a2b6c30d87f2e",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\presets.js": {
-    "mtime": 1781544207.5235915,
-    "ast_hash": "4df5879cd4129e96ad6d9dbdfdc66b90",
+    "mtime": 1781565595.2892165,
+    "ast_hash": "f28175ba2c96399a80293586f32791cc",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\render.jsx": {
-    "mtime": 1781547139.823409,
-    "ast_hash": "37c53603415ba329e304991620657480",
+    "mtime": 1781565595.2902162,
+    "ast_hash": "948f2cc2aa03f1f164eb3493b23add35",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\store.js": {
