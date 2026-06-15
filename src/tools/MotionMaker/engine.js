@@ -251,6 +251,13 @@ function sourceObject(node, rp, ctx) {
     }
   }
 
+  if (node.type === 'backdrop') {
+    return {
+      id: node.id, kind: 'backdrop', mode: rp.mode, colorA: rp.colorA, colorB: rp.colorB, angle: rp.angle,
+      w: canvas.w, h: canvas.h, x: cx, y: cy, rotate: 0, opacity: rp.opacity,
+    }
+  }
+
   // icon / wordmark — image source
   const img = rp.image
   if (!img || !img.dataUrl) return null
@@ -391,6 +398,168 @@ function applyPhysics(objs, rp, frame, ctx) {
   })
 }
 
+// Particle System (unlock 4) — emit copies of each upstream object as particles over
+// time. Fully deterministic: particle p is born at a fixed frame and its randomness +
+// analytic trajectory derive only from (p, seed), so frame N always renders the same.
+function applyParticles(objs, rp, frame, ctx) {
+  const fps = ctx.fps || 30
+  const ppf = (rp.rate || 0) / fps                 // particles spawned per frame
+  if (ppf <= 0) return []
+  const start = rp.startFrame || 0
+  const life = Math.max(1, rp.lifespan || 1)
+  const maxP = Math.max(1, Math.round(rp.maxParticles || 1))
+  const lastP = Math.floor((frame - start) * ppf)  // highest index spawned by now
+  if (lastP < 0) return []
+  // only iterate living particles: born within the last `life` frames, capped by max
+  let firstP = Math.max(0, Math.ceil((frame - start - life) * ppf))
+  firstP = Math.max(firstP, lastP - maxP + 1)
+  const lerp = (a, b, t) => a + (b - a) * t
+  const out = []
+  for (const tpl of objs) {
+    for (let p = firstP; p <= lastP; p++) {
+      const birth = start + p / ppf
+      const age = frame - birth
+      if (age < 0 || age >= life) continue
+      const t = age / life
+      const r1 = hash01(p, rp.seed || 0), r2 = hash01(p, (rp.seed || 0) + 13), r3 = hash01(p, (rp.seed || 0) + 29)
+      // emit-shape offset
+      let ox = 0, oy = 0
+      if (rp.emitShape === 'line') ox = (r1 * 2 - 1) * (rp.emitSize || 0)
+      else if (rp.emitShape === 'circle') {
+        const a = r1 * 2 * Math.PI, rad = (rp.emitSize || 0) * Math.sqrt(r2)
+        ox = Math.cos(a) * rad; oy = Math.sin(a) * rad
+      }
+      // velocity (0° points up; spread fans it out)
+      const ang = ((rp.direction || 0) + (r2 * 2 - 1) * (rp.spread || 0)) * Math.PI / 180 - Math.PI / 2
+      const spd = (rp.velocity || 0) * (0.6 + 0.8 * r3)
+      const vx = Math.cos(ang) * spd, vy = Math.sin(ang) * spd
+      const px = tpl.x + ox + vx * age
+      const py = tpl.y + oy + vy * age + 0.5 * (rp.gravity || 0) * age * age
+      const sc = lerp(rp.scaleStart ?? 1, rp.scaleEnd ?? 1, t)
+      const op = lerp(rp.opacityStart ?? 1, rp.opacityEnd ?? 0, t)
+      out.push({
+        ...tpl, id: `${tpl.id}~p${p}`,
+        x: px, y: py, w: tpl.w * sc, h: tpl.h * sc,
+        rotate: tpl.rotate + r3 * 360 + (rp.rotateVel || 0) * age,
+        opacity: clamp(tpl.opacity * op, 0, 1),
+      })
+    }
+  }
+  return out
+}
+
+// Camera — global zoom/pan/rotate of the whole comp about an anchor point. Applies to
+// every upstream item, so it's drivable like any node (push-ins, whip-pans).
+function applyCamera(objs, rp, ctx) {
+  const cx = ctx.canvas.w / 2, cy = ctx.canvas.h / 2
+  const ax = cx + (rp.anchorX || 0), ay = cy + (rp.anchorY || 0)
+  const zoom = rp.zoom ?? 1
+  const rad = (rp.rotate || 0) * Math.PI / 180
+  const c = Math.cos(rad), s = Math.sin(rad)
+  return objs.map(o => {
+    const dx = o.x - ax, dy = o.y - ay
+    const rx = (dx * c - dy * s) * zoom, ry = (dx * s + dy * c) * zoom
+    return {
+      ...o,
+      x: ax + rx + (rp.x || 0), y: ay + ry + (rp.y || 0),
+      w: o.w * zoom, h: o.h * zoom,
+      rotate: o.rotate + (rp.rotate || 0),
+    }
+  })
+}
+
+// Shatter / Assemble — fragment each object into a cols×rows grid and fly the pieces
+// out by `progress` (direction 'in' runs it in reverse as a reveal). Image pieces keep
+// their own sub-region of the source (render kind 'fragment' with a clip rect); shapes
+// become solid cells. Deterministic per piece via hash(k, seed).
+function applyShatter(objs, rp) {
+  const cols = Math.max(1, Math.round(rp.cols || 1))
+  const rows = Math.max(1, Math.round(rp.rows || 1))
+  const t = clamp(rp.direction === 'in' ? 1 - (rp.progress ?? 0) : (rp.progress ?? 0), 0, 1)
+  const out = []
+  for (const o of objs) {
+    const cw = o.w / cols, ch = o.h / rows
+    const isImg = o.kind === 'image'
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const k = j * cols + i
+        const hx = (i + 0.5) * cw - o.w / 2          // cell home offset from object centre
+        const hy = (j + 0.5) * ch - o.h / 2
+        const r1 = hash01(k, rp.seed || 0), r2 = hash01(k, (rp.seed || 0) + 13), r3 = hash01(k, (rp.seed || 0) + 29)
+        const ang = r1 * 2 * Math.PI
+        const dist = (rp.spread || 0) * t * (0.5 + 0.5 * r2)
+        const flyX = Math.cos(ang) * dist
+        const flyY = Math.sin(ang) * dist + (rp.gravity || 0) * t * t
+        const piece = {
+          id: `${o.id}~s${k}`,
+          x: o.x + hx + flyX, y: o.y + hy + flyY,
+          rotate: o.rotate + (r3 * 2 - 1) * (rp.rotateChaos || 0) * t,
+          opacity: clamp(o.opacity * (1 - t), 0, 1),
+          w: cw, h: ch, blend: o.blend, fx: o.fx,
+        }
+        if (isImg) out.push({ ...piece, kind: 'fragment', href: o.href, imgW: o.w, imgH: o.h, imgCX: -hx, imgCY: -hy })
+        else out.push({ ...piece, kind: 'shape', shape: 'rect', color: o.color })
+      }
+    }
+  }
+  return out
+}
+
+// ── Time-domain modifiers (unlock 4) ──────────────────────────────────────────────
+// Echo / Trails — time-delayed ghosts of the upstream motion, falling off in opacity
+// and scale. Trailing ghosts draw oldest-first (behind), then the current frame on top.
+function applyEcho(gather, frame, rp) {
+  const copies = Math.max(0, Math.round(rp.copies || 0))
+  const delay = Math.max(1, rp.frameDelay || 1)
+  const opF = clamp(rp.opacityFalloff ?? 0.7, 0, 1)
+  const scF = rp.scaleFalloff ?? 1
+  const out = []
+  const ghost = (i, dir) => {
+    const op = Math.pow(opF, i), sc = Math.pow(scF, i)
+    for (const o of gather(frame + dir * i * delay)) {
+      out.push({ ...o, id: `${o.id}~e${dir}${i}`, opacity: clamp(o.opacity * op, 0, 1), w: o.w * sc, h: o.h * sc })
+    }
+  }
+  for (let i = copies; i >= 1; i--) ghost(i, -1)                              // trailing past
+  if (rp.mode === 'onion-skin') for (let i = copies; i >= 1; i--) ghost(i, +1) // leading future
+  for (const o of gather(frame)) out.push(o)                                  // current on top
+  return out
+}
+
+// Stop-Motion / Strobe — hold the upstream on a stepped frame for choppy charm.
+function strobeFrame(frame, rp) {
+  const step = Math.max(1, Math.round(rp.step || 1))
+  const phase = rp.phase || 0
+  const idx = Math.floor((frame - phase) / step)
+  let f = idx * step + phase
+  if (rp.jitter) f += Math.round((hash01(idx, 7) * 2 - 1) * rp.jitter)
+  return f
+}
+
+// Loop / Boomerang — wrap the upstream's time into a seamless loop of `loopFrames`.
+function loopFrame(frame, rp, ctx) {
+  const L = Math.max(1, Math.round(rp.loopFrames || 1))
+  const start = ctx.frameStart || 0
+  const d = frame - start
+  if (rp.mode === 'mirror') {
+    const m = (((d % (2 * L)) + 2 * L) % (2 * L))
+    return start + (m <= L ? m : 2 * L - m)
+  }
+  return start + (((d % L) + L) % L)   // cycle
+}
+
+// Time Remap / Time Warp — rewrite the frame fed upstream: freeze, reverse, speed-
+// scale, or ease the timing itself across [inFrame, outFrame].
+function remapFrame(frame, rp) {
+  const inF = rp.inFrame || 0, outF = rp.outFrame || 0
+  if (rp.mode === 'freeze') return inF
+  if (rp.mode === 'reverse') return inF + outF - frame
+  if (rp.mode === 'speed') return inF + (frame - inF) * (rp.speed ?? 1)
+  const span = (outF - inF) || 1
+  const e = (EASES[rp.ease] || EASES.linear)(clamp((frame - inF) / span, 0, 1))
+  return inF + e * span               // remap: ease the timing
+}
+
 // Gather the objects produced by walking the object-flow graph backwards from a
 // node. Each object input may have multiple incoming edges → an array.
 function gatherObjects(nodeId, frame, ctx, seen) {
@@ -406,10 +575,35 @@ function gatherObjects(nodeId, frame, ctx, seen) {
     return o ? [o] : []
   }
 
-  // modifier / output: pull objects from upstream, then (for modifiers) transform
+  // modifier / output: pull objects from upstream, then (for modifiers) transform.
+  // `gather(f)` re-evaluates the whole upstream subtree at frame f — the multi-frame
+  // sampling unlock (4). Because the engine is pure f(frame), time-domain modifiers
+  // just call it with a warped frame.
   const inputs = ctx.objEdgesByTarget[nodeId] || []
-  let objs = []
-  for (const srcId of inputs) objs = objs.concat(gatherObjects(srcId, frame, ctx, new Set(seen)))
+  const gather = (f) => {
+    let out = []
+    for (const srcId of inputs) out = out.concat(gatherObjects(srcId, f, ctx, new Set(seen)))
+    return out
+  }
+
+  // Switch / Selector — route between object inputs by a drivable index (wire order =
+  // input order). Gathers only the selected branch, so unused branches cost nothing.
+  if (node.type === 'switch') {
+    if (!inputs.length) return []
+    const n = inputs.length
+    const pick = (((Math.round(rp.index || 0)) % n) + n) % n
+    return gatherObjects(inputs[pick], frame, ctx, new Set(seen))
+  }
+
+  // ── Time-domain modifiers (re-time the upstream subtree) ───────────────────────
+  switch (node.type) {
+    case 'echo':      return applyEcho(gather, frame, rp)
+    case 'strobe':    return gather(strobeFrame(frame, rp))
+    case 'loop':      return gather(loopFrame(frame, rp, ctx))
+    case 'timeRemap': return gather(remapFrame(frame, rp))
+  }
+
+  const objs = gather(frame)
 
   switch (node.type) {
     case 'transform': return objs.map(o => applyTransform(o, rp, ctx))
@@ -418,6 +612,16 @@ function gatherObjects(nodeId, frame, ctx, seen) {
     case 'wiggle':    return applyWiggle(objs, rp, frame)
     case 'clip':      return applyClip(objs, rp, frame, ctx)
     case 'physics':   return applyPhysics(objs, rp, frame, ctx)
+    case 'particles': return applyParticles(objs, rp, frame, ctx)
+    case 'shatter':   return applyShatter(objs, rp)
+    case 'camera':    return applyCamera(objs, rp, ctx)
+    case 'sort': {
+      const a = [...objs]
+      if (rp.mode === 'reverse') a.reverse()
+      else if (rp.mode === 'by-Y') a.sort((p, q) => p.y - q.y)
+      else if (rp.mode === 'by-Y-desc') a.sort((p, q) => q.y - p.y)
+      return a   // 'by-index' keeps incoming order; later items render on top
+    }
     // ── Appearance / effects ──────────────────────────────────────────────────────
     case 'tint':       return objs.map(o => withFx(o, { type: 'tint', mode: rp.mode, color: rp.color, amount: rp.amount, hueShift: rp.hueShift }))
     case 'blur':       return objs.map(o => withFx(o, { type: 'blur', radius: rp.radius, direction: rp.direction }))
