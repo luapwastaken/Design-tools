@@ -75,6 +75,17 @@ function summarize(node) {
   if (node.type === 'ramp') return `${p.from}→${p.to} · f${p.startFrame}-${p.endFrame}`
   if (node.type === 'lfo') return `${p.wave} · T${p.period} · ±${p.amp}`
   if (node.type === 'spring') return `${p.from}→${p.to} · k${p.stiffness}`
+  if (node.type === 'constant') return `${p.value}`
+  if (node.type === 'time') return `${p.mode} · ×${p.scale}`
+  if (node.type === 'noise') return `f${p.frequency} · ±${p.amplitude}`
+  if (node.type === 'pulse') return `${p.shape} · every ${p.interval}f`
+  if (node.type === 'randomHold') return `${p.min}–${p.max} · ${p.interval}f`
+  if (node.type === 'keyframes') return `${(p.keys || []).length} keys · ${p.extrapolate}`
+  if (node.type === 'math') return `A ${p.op} B`
+  if (node.type === 'mapRange') return `→ [${p.outMin}, ${p.outMax}]`
+  if (node.type === 'curve') return `${p.ease}`
+  if (node.type === 'mix') return `${p.mode} · t${p.t}`
+  if (node.type === 'clamp') return `[${p.min}, ${p.max}]${p.steps > 1 ? ' /' + p.steps : ''}`
   return ''
 }
 

@@ -191,9 +191,14 @@ export default function MotionMaker() {
               onSave={name => store.saveCurrentPreset(name)}
               onDelete={id => store.removeSavedPreset(id)}
             />
-            <button onClick={() => { store.resetDoc(); setFrameRaw(0); setPlaying(false) }} style={{ ...btn(false), width: '100%', marginTop: 8, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} title="Reset graph">
-              <Icon name="restart_alt" size={13} /> Reset graph
-            </button>
+            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+              <button onClick={() => store.arrangeLockup()} style={{ ...btn(false), flex: 1, fontSize: 10 }} title="Position icon + wordmark as a lockup">
+                Arrange lockup
+              </button>
+              <button onClick={() => { store.resetDoc(); setFrameRaw(0); setPlaying(false) }} style={{ ...btn(false), fontSize: 10, display: 'flex', alignItems: 'center', gap: 6 }} title="Reset graph">
+                <Icon name="restart_alt" size={13} /> Reset
+              </button>
+            </div>
           </Section>
 
           <Section title="Project">

@@ -639,7 +639,7 @@
       "source_file": "src/App.jsx",
       "source_location": "L1",
       "id": "src_app",
-      "community": 26,
+      "community": 50,
       "norm_label": "app.jsx"
     },
     {
@@ -648,7 +648,7 @@
       "source_file": "src/App.jsx",
       "source_location": "L15",
       "id": "src_app_tools",
-      "community": 26,
+      "community": 50,
       "norm_label": "tools"
     },
     {
@@ -657,7 +657,7 @@
       "source_file": "src/App.jsx",
       "source_location": "L73",
       "id": "src_app_app",
-      "community": 26,
+      "community": 50,
       "norm_label": "app()"
     },
     {
@@ -666,7 +666,7 @@
       "source_file": "src/components/Icon.jsx",
       "source_location": "L1",
       "id": "components_icon",
-      "community": 37,
+      "community": 50,
       "norm_label": "icon.jsx"
     },
     {
@@ -675,7 +675,7 @@
       "source_file": "src/components/Icon.jsx",
       "source_location": "L12",
       "id": "components_icon_icons",
-      "community": 37,
+      "community": 50,
       "norm_label": "icons"
     },
     {
@@ -684,7 +684,7 @@
       "source_file": "src/components/Icon.jsx",
       "source_location": "L60",
       "id": "components_icon_icon",
-      "community": 37,
+      "community": 50,
       "norm_label": "icon()"
     },
     {
@@ -693,7 +693,7 @@
       "source_file": "src/components/NumberField.jsx",
       "source_location": "L1",
       "id": "components_numberfield",
-      "community": 19,
+      "community": 30,
       "norm_label": "numberfield.jsx"
     },
     {
@@ -702,7 +702,7 @@
       "source_file": "src/components/NumberField.jsx",
       "source_location": "L16",
       "id": "components_numberfield_decimalsfor",
-      "community": 19,
+      "community": 30,
       "norm_label": "decimalsfor()"
     },
     {
@@ -711,7 +711,7 @@
       "source_file": "src/components/NumberField.jsx",
       "source_location": "L23",
       "id": "components_numberfield_clamp",
-      "community": 19,
+      "community": 30,
       "norm_label": "clamp()"
     },
     {
@@ -720,7 +720,7 @@
       "source_file": "src/components/NumberField.jsx",
       "source_location": "L26",
       "id": "components_numberfield_editablenumber",
-      "community": 19,
+      "community": 30,
       "norm_label": "editablenumber()"
     },
     {
@@ -729,7 +729,7 @@
       "source_file": "src/components/NumberField.jsx",
       "source_location": "L81",
       "id": "components_numberfield_numberslider",
-      "community": 19,
+      "community": 30,
       "norm_label": "numberslider()"
     },
     {
@@ -738,7 +738,7 @@
       "source_file": "src/components/Sidebar.jsx",
       "source_location": "L1",
       "id": "components_sidebar",
-      "community": 26,
+      "community": 50,
       "norm_label": "sidebar.jsx"
     },
     {
@@ -747,7 +747,7 @@
       "source_file": "src/components/Sidebar.jsx",
       "source_location": "L1",
       "id": "components_sidebar_c",
-      "community": 26,
+      "community": 50,
       "norm_label": "c"
     },
     {
@@ -756,7 +756,7 @@
       "source_file": "src/components/Sidebar.jsx",
       "source_location": "L11",
       "id": "components_sidebar_sidebar",
-      "community": 26,
+      "community": 50,
       "norm_label": "sidebar()"
     },
     {
@@ -774,7 +774,7 @@
       "source_file": "src/data/hks.json",
       "source_location": "L1",
       "id": "data_hks",
-      "community": 6,
+      "community": 41,
       "norm_label": "hks.json"
     },
     {
@@ -783,7 +783,7 @@
       "source_file": "src/data/iccProfiles.json",
       "source_location": "L1",
       "id": "data_iccprofiles",
-      "community": 6,
+      "community": 41,
       "norm_label": "iccprofiles.json"
     },
     {
@@ -792,7 +792,7 @@
       "source_file": "src/data/ncs.json",
       "source_location": "L1",
       "id": "data_ncs",
-      "community": 6,
+      "community": 41,
       "norm_label": "ncs.json"
     },
     {
@@ -837,7 +837,7 @@
       "source_file": "src/data/ral.json",
       "source_location": "L1",
       "id": "data_ral",
-      "community": 6,
+      "community": 41,
       "norm_label": "ral.json"
     },
     {
@@ -846,7 +846,7 @@
       "source_file": "src/data/riso.json",
       "source_location": "L1",
       "id": "data_riso",
-      "community": 6,
+      "community": 41,
       "norm_label": "riso.json"
     },
     {
@@ -855,7 +855,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L1",
       "id": "lib_cmyk",
-      "community": 6,
+      "community": 41,
       "norm_label": "cmyk.js"
     },
     {
@@ -864,7 +864,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L7",
       "id": "lib_cmyk_getprofile",
-      "community": 6,
+      "community": 41,
       "norm_label": "getprofile()"
     },
     {
@@ -873,7 +873,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L11",
       "id": "lib_cmyk_rgbtocmyk",
-      "community": 6,
+      "community": 41,
       "norm_label": "rgbtocmyk()"
     },
     {
@@ -891,7 +891,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L37",
       "id": "lib_cmyk_tac",
-      "community": 6,
+      "community": 41,
       "norm_label": "tac()"
     },
     {
@@ -900,7 +900,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L41",
       "id": "lib_cmyk_tacwarning",
-      "community": 6,
+      "community": 41,
       "norm_label": "tacwarning()"
     },
     {
@@ -909,7 +909,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L49",
       "id": "lib_cmyk_richblacksuggestion",
-      "community": 6,
+      "community": 41,
       "norm_label": "richblacksuggestion()"
     },
     {
@@ -918,7 +918,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L57",
       "id": "lib_cmyk_hextocmyk",
-      "community": 6,
+      "community": 41,
       "norm_label": "hextocmyk()"
     },
     {
@@ -936,7 +936,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L6",
       "id": "lib_color_hextorgb",
-      "community": 20,
+      "community": 49,
       "norm_label": "hextorgb()"
     },
     {
@@ -945,7 +945,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L15",
       "id": "lib_color_relativeluminance",
-      "community": 40,
+      "community": 20,
       "norm_label": "relativeluminance()"
     },
     {
@@ -954,7 +954,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L23",
       "id": "lib_color_wcagcontrast",
-      "community": 40,
+      "community": 20,
       "norm_label": "wcagcontrast()"
     },
     {
@@ -963,7 +963,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L33",
       "id": "lib_color_wcagrating",
-      "community": 40,
+      "community": 20,
       "norm_label": "wcagrating()"
     },
     {
@@ -972,7 +972,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L42",
       "id": "lib_color_parse",
-      "community": 20,
+      "community": 27,
       "norm_label": "_parse()"
     },
     {
@@ -981,7 +981,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L51",
       "id": "lib_color_parsecolor",
-      "community": 24,
+      "community": 20,
       "norm_label": "parsecolor()"
     },
     {
@@ -990,7 +990,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L55",
       "id": "lib_color_tooklch",
-      "community": 20,
+      "community": 27,
       "norm_label": "tooklch()"
     },
     {
@@ -999,7 +999,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L61",
       "id": "lib_color_tohex",
-      "community": 20,
+      "community": 27,
       "norm_label": "tohex()"
     },
     {
@@ -1008,7 +1008,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L69",
       "id": "lib_color_torgb255",
-      "community": 6,
+      "community": 41,
       "norm_label": "torgb255()"
     },
     {
@@ -1017,7 +1017,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L78",
       "id": "lib_color_contrast",
-      "community": 20,
+      "community": 37,
       "norm_label": "contrast()"
     },
     {
@@ -1026,7 +1026,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L88",
       "id": "lib_color_deltae",
-      "community": 20,
+      "community": 32,
       "norm_label": "deltae()"
     },
     {
@@ -1035,7 +1035,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L98",
       "id": "lib_color_insrgbgamut",
-      "community": 20,
+      "community": 27,
       "norm_label": "insrgbgamut()"
     },
     {
@@ -1044,7 +1044,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L102",
       "id": "lib_color_gamutmap",
-      "community": 20,
+      "community": 27,
       "norm_label": "gamutmap()"
     },
     {
@@ -1053,7 +1053,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L112",
       "id": "lib_color_interpolate",
-      "community": 20,
+      "community": 49,
       "norm_label": "interpolate()"
     },
     {
@@ -1080,7 +1080,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L134",
       "id": "lib_color_lineartosrgb8",
-      "community": 20,
+      "community": 49,
       "norm_label": "lineartosrgb8()"
     },
     {
@@ -1098,7 +1098,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L144",
       "id": "lib_color_kstoreflectance",
-      "community": 20,
+      "community": 49,
       "norm_label": "kstoreflectance()"
     },
     {
@@ -1125,7 +1125,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L168",
       "id": "lib_color_oklchtohex",
-      "community": 40,
+      "community": 27,
       "norm_label": "oklchtohex()"
     },
     {
@@ -1143,7 +1143,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L203",
       "id": "lib_color_cvd_types",
-      "community": 37,
+      "community": 20,
       "norm_label": "cvd_types"
     },
     {
@@ -1179,7 +1179,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L233",
       "id": "lib_color_autoname",
-      "community": 20,
+      "community": 32,
       "norm_label": "autoname()"
     },
     {
@@ -1188,7 +1188,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L245",
       "id": "lib_color_generateharmony",
-      "community": 20,
+      "community": 49,
       "norm_label": "generateharmony()"
     },
     {
@@ -1206,7 +1206,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L272",
       "id": "lib_color_oklchpixel",
-      "community": 19,
+      "community": 30,
       "norm_label": "oklchpixel()"
     },
     {
@@ -1233,7 +1233,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L334",
       "id": "lib_color_maxchromaingamut",
-      "community": 41,
+      "community": 20,
       "norm_label": "maxchromaingamut()"
     },
     {
@@ -1242,7 +1242,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L345",
       "id": "lib_color_lumaoklch",
-      "community": 19,
+      "community": 30,
       "norm_label": "lumaoklch()"
     },
     {
@@ -1260,7 +1260,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L362",
       "id": "lib_color_oklchforluma",
-      "community": 41,
+      "community": 20,
       "norm_label": "oklchforluma()"
     },
     {
@@ -1269,7 +1269,7 @@
       "source_file": "src/lib/colorMatch.js",
       "source_location": "L1",
       "id": "lib_colormatch",
-      "community": 6,
+      "community": 41,
       "norm_label": "colormatch.js"
     },
     {
@@ -1278,7 +1278,7 @@
       "source_file": "src/lib/colorMatch.js",
       "source_location": "L7",
       "id": "lib_colormatch_cache",
-      "community": 6,
+      "community": 41,
       "norm_label": "_cache"
     },
     {
@@ -1287,7 +1287,7 @@
       "source_file": "src/lib/colorMatch.js",
       "source_location": "L9",
       "id": "lib_colormatch_cachekey",
-      "community": 6,
+      "community": 41,
       "norm_label": "cachekey()"
     },
     {
@@ -1296,7 +1296,7 @@
       "source_file": "src/lib/colorMatch.js",
       "source_location": "L11",
       "id": "lib_colormatch_nearestmatch",
-      "community": 6,
+      "community": 41,
       "norm_label": "nearestmatch()"
     },
     {
@@ -1305,7 +1305,7 @@
       "source_file": "src/lib/colorMatch.js",
       "source_location": "L27",
       "id": "lib_colormatch_clearmatchcache",
-      "community": 6,
+      "community": 41,
       "norm_label": "clearmatchcache()"
     },
     {
@@ -1314,7 +1314,7 @@
       "source_file": "src/lib/colorMatch.js",
       "source_location": "L30",
       "id": "lib_colormatch_nearestmatches",
-      "community": 6,
+      "community": 41,
       "norm_label": "nearestmatches()"
     },
     {
@@ -1647,7 +1647,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L1",
       "id": "lib_export",
-      "community": 0,
+      "community": 57,
       "norm_label": "export.js"
     },
     {
@@ -1656,7 +1656,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L8",
       "id": "lib_export_svgtopngblob",
-      "community": 0,
+      "community": 57,
       "norm_label": "svgtopngblob()"
     },
     {
@@ -1665,7 +1665,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L34",
       "id": "lib_export_svgtopngbase64",
-      "community": 0,
+      "community": 57,
       "norm_label": "svgtopngbase64()"
     },
     {
@@ -1674,7 +1674,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L58",
       "id": "lib_export_buildico",
-      "community": 0,
+      "community": 57,
       "norm_label": "buildico()"
     },
     {
@@ -1683,7 +1683,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L109",
       "id": "lib_export_buildfaviconzip",
-      "community": 0,
+      "community": 57,
       "norm_label": "buildfaviconzip()"
     },
     {
@@ -1692,7 +1692,7 @@
       "source_file": "src/lib/eyedropper.js",
       "source_location": "L1",
       "id": "lib_eyedropper",
-      "community": 41,
+      "community": 49,
       "norm_label": "eyedropper.js"
     },
     {
@@ -1701,7 +1701,7 @@
       "source_file": "src/lib/eyedropper.js",
       "source_location": "L11",
       "id": "lib_eyedropper_eyedroppersupported",
-      "community": 41,
+      "community": 49,
       "norm_label": "eyedroppersupported()"
     },
     {
@@ -1710,7 +1710,7 @@
       "source_file": "src/lib/eyedropper.js",
       "source_location": "L16",
       "id": "lib_eyedropper_ispicking",
-      "community": 41,
+      "community": 49,
       "norm_label": "ispicking()"
     },
     {
@@ -1719,7 +1719,7 @@
       "source_file": "src/lib/eyedropper.js",
       "source_location": "L18",
       "id": "lib_eyedropper_pickscreencolor",
-      "community": 41,
+      "community": 49,
       "norm_label": "pickscreencolor()"
     },
     {
@@ -1728,7 +1728,7 @@
       "source_file": "src/lib/file.js",
       "source_location": "L1",
       "id": "lib_file",
-      "community": 0,
+      "community": 45,
       "norm_label": "file.js"
     },
     {
@@ -1746,7 +1746,7 @@
       "source_file": "src/lib/file.js",
       "source_location": "L12",
       "id": "lib_file_readasdataurl",
-      "community": 0,
+      "community": 45,
       "norm_label": "readasdataurl()"
     },
     {
@@ -1755,7 +1755,7 @@
       "source_file": "src/lib/file.js",
       "source_location": "L20",
       "id": "lib_file_processfile",
-      "community": 0,
+      "community": 45,
       "norm_label": "processfile()"
     },
     {
@@ -2313,7 +2313,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L1",
       "id": "lib_lineart",
-      "community": 29,
+      "community": 52,
       "norm_label": "lineart.js"
     },
     {
@@ -2322,7 +2322,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L15",
       "id": "lib_lineart_togray",
-      "community": 29,
+      "community": 52,
       "norm_label": "togray()"
     },
     {
@@ -2331,7 +2331,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L33",
       "id": "lib_lineart_boxblurf",
-      "community": 29,
+      "community": 58,
       "norm_label": "boxblurf()"
     },
     {
@@ -2340,7 +2340,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L44",
       "id": "lib_lineart_blurh",
-      "community": 29,
+      "community": 58,
       "norm_label": "blurh()"
     },
     {
@@ -2349,7 +2349,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L57",
       "id": "lib_lineart_blurv",
-      "community": 29,
+      "community": 58,
       "norm_label": "blurv()"
     },
     {
@@ -2358,7 +2358,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L73",
       "id": "lib_lineart_flatten",
-      "community": 29,
+      "community": 58,
       "norm_label": "flatten()"
     },
     {
@@ -2367,7 +2367,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L86",
       "id": "lib_lineart_autolevels",
-      "community": 29,
+      "community": 52,
       "norm_label": "autolevels()"
     },
     {
@@ -2376,7 +2376,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L98",
       "id": "lib_lineart_applylevels",
-      "community": 29,
+      "community": 52,
       "norm_label": "applylevels()"
     },
     {
@@ -2385,7 +2385,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L114",
       "id": "lib_lineart_toink",
-      "community": 29,
+      "community": 58,
       "norm_label": "toink()"
     },
     {
@@ -2394,7 +2394,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L138",
       "id": "lib_lineart_otsu",
-      "community": 29,
+      "community": 52,
       "norm_label": "otsu()"
     },
     {
@@ -2403,7 +2403,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L162",
       "id": "lib_lineart_adjustweight",
-      "community": 29,
+      "community": 58,
       "norm_label": "adjustweight()"
     },
     {
@@ -2412,7 +2412,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L187",
       "id": "lib_lineart_despeckle",
-      "community": 29,
+      "community": 52,
       "norm_label": "despeckle()"
     },
     {
@@ -2421,7 +2421,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L218",
       "id": "lib_lineart_compose",
-      "community": 29,
+      "community": 52,
       "norm_label": "compose()"
     },
     {
@@ -2430,7 +2430,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L242",
       "id": "lib_lineart_smoothmask",
-      "community": 29,
+      "community": 58,
       "norm_label": "smoothmask()"
     },
     {
@@ -2439,7 +2439,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L260",
       "id": "lib_lineart_tracecontours",
-      "community": 29,
+      "community": 52,
       "norm_label": "tracecontours()"
     },
     {
@@ -2448,7 +2448,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L272",
       "id": "lib_lineart_loopstosvg",
-      "community": 29,
+      "community": 52,
       "norm_label": "loopstosvg()"
     },
     {
@@ -2457,7 +2457,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L284",
       "id": "lib_lineart_renderloops",
-      "community": 29,
+      "community": 52,
       "norm_label": "renderloops()"
     },
     {
@@ -2466,7 +2466,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L302",
       "id": "lib_lineart_tracesvg",
-      "community": 29,
+      "community": 52,
       "norm_label": "tracesvg()"
     },
     {
@@ -2475,7 +2475,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L307",
       "id": "lib_lineart_fmt",
-      "community": 29,
+      "community": 52,
       "norm_label": "fmt()"
     },
     {
@@ -2484,7 +2484,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L310",
       "id": "lib_lineart_traceloops",
-      "community": 29,
+      "community": 52,
       "norm_label": "traceloops()"
     },
     {
@@ -2493,7 +2493,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L352",
       "id": "lib_lineart_collapsecollinear",
-      "community": 29,
+      "community": 52,
       "norm_label": "collapsecollinear()"
     },
     {
@@ -2502,7 +2502,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L364",
       "id": "lib_lineart_rdpclosed",
-      "community": 29,
+      "community": 52,
       "norm_label": "rdpclosed()"
     },
     {
@@ -2511,7 +2511,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L379",
       "id": "lib_lineart_rdp",
-      "community": 29,
+      "community": 52,
       "norm_label": "rdp()"
     },
     {
@@ -2520,7 +2520,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L393",
       "id": "lib_lineart_perpdist",
-      "community": 29,
+      "community": 52,
       "norm_label": "perpdist()"
     },
     {
@@ -2538,7 +2538,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L403",
       "id": "lib_lineart_chaikin",
-      "community": 29,
+      "community": 52,
       "norm_label": "chaikin()"
     },
     {
@@ -2754,7 +2754,7 @@
       "source_file": "src/lib/paintRecipe.js",
       "source_location": "L169",
       "id": "lib_paintrecipe_recipeverdict",
-      "community": 45,
+      "community": 37,
       "norm_label": "recipeverdict()"
     },
     {
@@ -3240,7 +3240,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L1",
       "id": "lib_svg",
-      "community": 0,
+      "community": 45,
       "norm_label": "svg.js"
     },
     {
@@ -3249,7 +3249,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L3",
       "id": "lib_svg_svgtodataurl",
-      "community": 0,
+      "community": 45,
       "norm_label": "svgtodataurl()"
     },
     {
@@ -3258,7 +3258,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L11",
       "id": "lib_svg_parsesvgtext",
-      "community": 0,
+      "community": 45,
       "norm_label": "parsesvgtext()"
     },
     {
@@ -3267,7 +3267,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L27",
       "id": "lib_svg_issvglikelyblack",
-      "community": 0,
+      "community": 45,
       "norm_label": "issvglikelyblack()"
     },
     {
@@ -3276,7 +3276,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L42",
       "id": "lib_svg_buildtreatmentfilterstr",
-      "community": 0,
+      "community": 45,
       "norm_label": "buildtreatmentfilterstr()"
     },
     {
@@ -3285,7 +3285,7 @@
       "source_file": "src/lib/undo.js",
       "source_location": "L1",
       "id": "lib_undo",
-      "community": 26,
+      "community": 50,
       "norm_label": "undo.js"
     },
     {
@@ -3294,7 +3294,7 @@
       "source_file": "src/lib/undo.js",
       "source_location": "L12",
       "id": "lib_undo_setundohandlers",
-      "community": 26,
+      "community": 50,
       "norm_label": "setundohandlers()"
     },
     {
@@ -3303,7 +3303,7 @@
       "source_file": "src/lib/undo.js",
       "source_location": "L13",
       "id": "lib_undo_clearundohandlers",
-      "community": 26,
+      "community": 50,
       "norm_label": "clearundohandlers()"
     },
     {
@@ -3312,7 +3312,7 @@
       "source_file": "src/lib/undo.js",
       "source_location": "L15",
       "id": "lib_undo_globalundo",
-      "community": 26,
+      "community": 50,
       "norm_label": "globalundo()"
     },
     {
@@ -3321,7 +3321,7 @@
       "source_file": "src/lib/undo.js",
       "source_location": "L16",
       "id": "lib_undo_globalredo",
-      "community": 26,
+      "community": 50,
       "norm_label": "globalredo()"
     },
     {
@@ -3339,7 +3339,7 @@
       "source_file": "src/lib/unsavedChanges.js",
       "source_location": "L1",
       "id": "lib_unsavedchanges",
-      "community": 42,
+      "community": 18,
       "norm_label": "unsavedchanges.js"
     },
     {
@@ -3348,7 +3348,7 @@
       "source_file": "src/lib/unsavedChanges.js",
       "source_location": "L9",
       "id": "lib_unsavedchanges_dirty",
-      "community": 42,
+      "community": 18,
       "norm_label": "_dirty"
     },
     {
@@ -3357,7 +3357,7 @@
       "source_file": "src/lib/unsavedChanges.js",
       "source_location": "L10",
       "id": "lib_unsavedchanges_listeners",
-      "community": 42,
+      "community": 18,
       "norm_label": "_listeners"
     },
     {
@@ -3366,7 +3366,7 @@
       "source_file": "src/lib/unsavedChanges.js",
       "source_location": "L12",
       "id": "lib_unsavedchanges_sync",
-      "community": 42,
+      "community": 18,
       "norm_label": "_sync()"
     },
     {
@@ -3375,7 +3375,7 @@
       "source_file": "src/lib/unsavedChanges.js",
       "source_location": "L19",
       "id": "lib_unsavedchanges_markdirty",
-      "community": 42,
+      "community": 18,
       "norm_label": "markdirty()"
     },
     {
@@ -3384,7 +3384,7 @@
       "source_file": "src/lib/unsavedChanges.js",
       "source_location": "L24",
       "id": "lib_unsavedchanges_marksaved",
-      "community": 42,
+      "community": 41,
       "norm_label": "marksaved()"
     },
     {
@@ -3393,7 +3393,7 @@
       "source_file": "src/lib/unsavedChanges.js",
       "source_location": "L28",
       "id": "lib_unsavedchanges_hasunsavedchanges",
-      "community": 42,
+      "community": 18,
       "norm_label": "hasunsavedchanges()"
     },
     {
@@ -3402,7 +3402,7 @@
       "source_file": "src/lib/unsavedChanges.js",
       "source_location": "L30",
       "id": "lib_unsavedchanges_subscribe",
-      "community": 42,
+      "community": 18,
       "norm_label": "subscribe()"
     },
     {
@@ -3411,7 +3411,7 @@
       "source_file": "src/lib/unsavedChanges.js",
       "source_location": "L36",
       "id": "lib_unsavedchanges_useunsavedchanges",
-      "community": 42,
+      "community": 18,
       "norm_label": "useunsavedchanges()"
     },
     {
@@ -3420,7 +3420,7 @@
       "source_file": "src/main.jsx",
       "source_location": "L1",
       "id": "src_main",
-      "community": 26,
+      "community": 50,
       "norm_label": "main.jsx"
     },
     {
@@ -3483,7 +3483,7 @@
       "source_file": "src/tools/CobaltTool.jsx",
       "source_location": "L57",
       "id": "tools_cobalttool_batchpanel",
-      "community": 42,
+      "community": 18,
       "norm_label": "batchpanel()"
     },
     {
@@ -3636,7 +3636,7 @@
       "source_file": "src/tools/ColorPalette/AutoFix.jsx",
       "source_location": "L1",
       "id": "colorpalette_autofix",
-      "community": 20,
+      "community": 27,
       "norm_label": "autofix.jsx"
     },
     {
@@ -3645,7 +3645,7 @@
       "source_file": "src/tools/ColorPalette/AutoFix.jsx",
       "source_location": "L5",
       "id": "colorpalette_autofix_runautofix",
-      "community": 20,
+      "community": 27,
       "norm_label": "runautofix()"
     },
     {
@@ -3654,7 +3654,7 @@
       "source_file": "src/tools/ColorPalette/AutoFix.jsx",
       "source_location": "L76",
       "id": "colorpalette_autofix_autofix",
-      "community": 20,
+      "community": 27,
       "norm_label": "autofix()"
     },
     {
@@ -3663,7 +3663,7 @@
       "source_file": "src/tools/ColorPalette/AutoFix.jsx",
       "source_location": "L155",
       "id": "colorpalette_autofix_btn",
-      "community": 20,
+      "community": 27,
       "norm_label": "btn()"
     },
     {
@@ -3672,7 +3672,7 @@
       "source_file": "src/tools/ColorPalette/BGCheck.jsx",
       "source_location": "L1",
       "id": "colorpalette_bgcheck",
-      "community": 40,
+      "community": 20,
       "norm_label": "bgcheck.jsx"
     },
     {
@@ -3681,7 +3681,7 @@
       "source_file": "src/tools/ColorPalette/BGCheck.jsx",
       "source_location": "L5",
       "id": "colorpalette_bgcheck_presets",
-      "community": 40,
+      "community": 20,
       "norm_label": "presets"
     },
     {
@@ -3690,7 +3690,7 @@
       "source_file": "src/tools/ColorPalette/BGCheck.jsx",
       "source_location": "L14",
       "id": "colorpalette_bgcheck_findlforcontrast",
-      "community": 40,
+      "community": 20,
       "norm_label": "findlforcontrast()"
     },
     {
@@ -3699,7 +3699,7 @@
       "source_file": "src/tools/ColorPalette/BGCheck.jsx",
       "source_location": "L41",
       "id": "colorpalette_bgcheck_contrastcard",
-      "community": 40,
+      "community": 20,
       "norm_label": "contrastcard()"
     },
     {
@@ -3708,7 +3708,7 @@
       "source_file": "src/tools/ColorPalette/BGCheck.jsx",
       "source_location": "L98",
       "id": "colorpalette_bgcheck_bgcheck",
-      "community": 2,
+      "community": 20,
       "norm_label": "bgcheck()"
     },
     {
@@ -3717,7 +3717,7 @@
       "source_file": "src/tools/ColorPalette/ContrastMatrix.jsx",
       "source_location": "L1",
       "id": "colorpalette_contrastmatrix",
-      "community": 2,
+      "community": 37,
       "norm_label": "contrastmatrix.jsx"
     },
     {
@@ -3726,7 +3726,7 @@
       "source_file": "src/tools/ColorPalette/ContrastMatrix.jsx",
       "source_location": "L4",
       "id": "colorpalette_contrastmatrix_rating_color",
-      "community": 2,
+      "community": 37,
       "norm_label": "rating_color"
     },
     {
@@ -3735,7 +3735,7 @@
       "source_file": "src/tools/ColorPalette/ContrastMatrix.jsx",
       "source_location": "L8",
       "id": "colorpalette_contrastmatrix_contrastmatrix",
-      "community": 2,
+      "community": 37,
       "norm_label": "contrastmatrix()"
     },
     {
@@ -3771,7 +3771,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L1",
       "id": "colorpalette_exportpanel",
-      "community": 6,
+      "community": 41,
       "norm_label": "exportpanel.jsx"
     },
     {
@@ -3780,7 +3780,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L9",
       "id": "colorpalette_exportpanel_c",
-      "community": 6,
+      "community": 41,
       "norm_label": "c"
     },
     {
@@ -3789,7 +3789,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L20",
       "id": "colorpalette_exportpanel_tocssvars",
-      "community": 6,
+      "community": 41,
       "norm_label": "tocssvars()"
     },
     {
@@ -3798,7 +3798,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L28",
       "id": "colorpalette_exportpanel_totailwind",
-      "community": 6,
+      "community": 41,
       "norm_label": "totailwind()"
     },
     {
@@ -3807,7 +3807,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L34",
       "id": "colorpalette_exportpanel_togpl",
-      "community": 6,
+      "community": 41,
       "norm_label": "togpl()"
     },
     {
@@ -3816,7 +3816,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L43",
       "id": "colorpalette_exportpanel_tojson",
-      "community": 6,
+      "community": 41,
       "norm_label": "tojson()"
     },
     {
@@ -3825,7 +3825,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L52",
       "id": "colorpalette_exportpanel_totxt",
-      "community": 6,
+      "community": 41,
       "norm_label": "totxt()"
     },
     {
@@ -3834,7 +3834,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L74",
       "id": "colorpalette_exportpanel_buildase",
-      "community": 6,
+      "community": 41,
       "norm_label": "buildase()"
     },
     {
@@ -3843,7 +3843,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L118",
       "id": "colorpalette_exportpanel_buildaco",
-      "community": 6,
+      "community": 41,
       "norm_label": "buildaco()"
     },
     {
@@ -3852,7 +3852,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L137",
       "id": "colorpalette_exportpanel_buildprocreateswatches",
-      "community": 6,
+      "community": 41,
       "norm_label": "buildprocreateswatches()"
     },
     {
@@ -3861,7 +3861,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L165",
       "id": "colorpalette_exportpanel_escapexml",
-      "community": 6,
+      "community": 41,
       "norm_label": "escapexml()"
     },
     {
@@ -3870,7 +3870,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L169",
       "id": "colorpalette_exportpanel_buildsvgsheet",
-      "community": 6,
+      "community": 41,
       "norm_label": "buildsvgsheet()"
     },
     {
@@ -3879,7 +3879,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L189",
       "id": "colorpalette_exportpanel_downloadtext",
-      "community": 42,
+      "community": 41,
       "norm_label": "downloadtext()"
     },
     {
@@ -3888,7 +3888,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L196",
       "id": "colorpalette_exportpanel_downloadbinary",
-      "community": 42,
+      "community": 41,
       "norm_label": "downloadbinary()"
     },
     {
@@ -3897,7 +3897,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L204",
       "id": "colorpalette_exportpanel_downloadsvgaspng",
-      "community": 42,
+      "community": 41,
       "norm_label": "downloadsvgaspng()"
     },
     {
@@ -3906,7 +3906,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L226",
       "id": "colorpalette_exportpanel_exportpanel",
-      "community": 2,
+      "community": 37,
       "norm_label": "exportpanel()"
     },
     {
@@ -3915,7 +3915,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L314",
       "id": "colorpalette_exportpanel_section",
-      "community": 6,
+      "community": 41,
       "norm_label": "section()"
     },
     {
@@ -3924,7 +3924,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L323",
       "id": "colorpalette_exportpanel_btn",
-      "community": 6,
+      "community": 41,
       "norm_label": "btn()"
     },
     {
@@ -3996,7 +3996,7 @@
       "source_file": "src/tools/ColorPalette/Generators.jsx",
       "source_location": "L67",
       "id": "colorpalette_generators_generators",
-      "community": 2,
+      "community": 30,
       "norm_label": "generators()"
     },
     {
@@ -4158,7 +4158,7 @@
       "source_file": "src/tools/ColorPalette/Gradient.jsx",
       "source_location": "L14",
       "id": "colorpalette_gradient_gradient",
-      "community": 2,
+      "community": 37,
       "norm_label": "gradient()"
     },
     {
@@ -4257,7 +4257,7 @@
       "source_file": "src/tools/ColorPalette/Harmony.jsx",
       "source_location": "L202",
       "id": "colorpalette_harmony_harmony",
-      "community": 2,
+      "community": 37,
       "norm_label": "harmony()"
     },
     {
@@ -4275,7 +4275,7 @@
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L1",
       "id": "colorpalette_illustrationmode",
-      "community": 20,
+      "community": 49,
       "norm_label": "illustrationmode.jsx"
     },
     {
@@ -4284,7 +4284,7 @@
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L6",
       "id": "colorpalette_illustrationmode_ill_panels",
-      "community": 20,
+      "community": 49,
       "norm_label": "ill_panels"
     },
     {
@@ -4293,7 +4293,7 @@
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L8",
       "id": "colorpalette_illustrationmode_illustrationmode",
-      "community": 20,
+      "community": 49,
       "norm_label": "illustrationmode()"
     },
     {
@@ -4320,7 +4320,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L24",
       "id": "colorpalette_imageextract_oklabtohex",
-      "community": 40,
+      "community": 27,
       "norm_label": "oklabtohex()"
     },
     {
@@ -4455,7 +4455,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L1",
       "id": "colorpalette_paintmix",
-      "community": 45,
+      "community": 37,
       "norm_label": "paintmix.jsx"
     },
     {
@@ -4464,7 +4464,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L15",
       "id": "colorpalette_paintmix_loadowned",
-      "community": 45,
+      "community": 37,
       "norm_label": "loadowned()"
     },
     {
@@ -4473,7 +4473,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L23",
       "id": "colorpalette_paintmix_paintmix",
-      "community": 45,
+      "community": 37,
       "norm_label": "paintmix()"
     },
     {
@@ -4482,7 +4482,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L130",
       "id": "colorpalette_paintmix_recipecard",
-      "community": 45,
+      "community": 37,
       "norm_label": "recipecard()"
     },
     {
@@ -4491,7 +4491,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L157",
       "id": "colorpalette_paintmix_pairswatch",
-      "community": 45,
+      "community": 37,
       "norm_label": "pairswatch()"
     },
     {
@@ -4500,7 +4500,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L169",
       "id": "colorpalette_paintmix_verdict",
-      "community": 45,
+      "community": 37,
       "norm_label": "verdict()"
     },
     {
@@ -4509,7 +4509,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L174",
       "id": "colorpalette_paintmix_chipbtn",
-      "community": 45,
+      "community": 37,
       "norm_label": "chipbtn"
     },
     {
@@ -4527,7 +4527,7 @@
       "source_file": "src/tools/ColorPalette/PaletteStrip.jsx",
       "source_location": "L3",
       "id": "colorpalette_palettestrip_palettestrip",
-      "community": 2,
+      "community": 37,
       "norm_label": "palettestrip()"
     },
     {
@@ -4716,7 +4716,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L529",
       "id": "colorpalette_picker_eyedropperbtn",
-      "community": 41,
+      "community": 49,
       "norm_label": "eyedropperbtn()"
     },
     {
@@ -4725,7 +4725,7 @@
       "source_file": "src/tools/ColorPalette/PrintPanel.jsx",
       "source_location": "L1",
       "id": "colorpalette_printpanel",
-      "community": 6,
+      "community": 41,
       "norm_label": "printpanel.jsx"
     },
     {
@@ -4734,7 +4734,7 @@
       "source_file": "src/tools/ColorPalette/PrintPanel.jsx",
       "source_location": "L12",
       "id": "colorpalette_printpanel_matchrow",
-      "community": 6,
+      "community": 41,
       "norm_label": "matchrow()"
     },
     {
@@ -4743,7 +4743,7 @@
       "source_file": "src/tools/ColorPalette/PrintPanel.jsx",
       "source_location": "L24",
       "id": "colorpalette_printpanel_printpanel",
-      "community": 6,
+      "community": 41,
       "norm_label": "printpanel()"
     },
     {
@@ -4752,7 +4752,7 @@
       "source_file": "src/tools/ColorPalette/PrintPanel.jsx",
       "source_location": "L171",
       "id": "colorpalette_printpanel_label",
-      "community": 6,
+      "community": 41,
       "norm_label": "label()"
     },
     {
@@ -4761,7 +4761,7 @@
       "source_file": "src/tools/ColorPalette/PrintPanel.jsx",
       "source_location": "L175",
       "id": "colorpalette_printpanel_toggle",
-      "community": 6,
+      "community": 41,
       "norm_label": "toggle()"
     },
     {
@@ -4869,7 +4869,7 @@
       "source_file": "src/tools/ColorPalette/Recipes.jsx",
       "source_location": "L207",
       "id": "colorpalette_recipes_rendertheme",
-      "community": 40,
+      "community": 6,
       "norm_label": "rendertheme()"
     },
     {
@@ -4905,7 +4905,7 @@
       "source_file": "src/tools/ColorPalette/Recipes.jsx",
       "source_location": "L231",
       "id": "colorpalette_recipes_recipes",
-      "community": 2,
+      "community": 37,
       "norm_label": "recipes()"
     },
     {
@@ -4977,7 +4977,7 @@
       "source_file": "src/tools/ColorPalette/ShadowHighlight.jsx",
       "source_location": "L1",
       "id": "colorpalette_shadowhighlight",
-      "community": 19,
+      "community": 30,
       "norm_label": "shadowhighlight.jsx"
     },
     {
@@ -4986,7 +4986,7 @@
       "source_file": "src/tools/ColorPalette/ShadowHighlight.jsx",
       "source_location": "L8",
       "id": "colorpalette_shadowhighlight_shadowhighlight",
-      "community": 19,
+      "community": 30,
       "norm_label": "shadowhighlight()"
     },
     {
@@ -4995,7 +4995,7 @@
       "source_file": "src/tools/ColorPalette/ShadowHighlight.jsx",
       "source_location": "L78",
       "id": "colorpalette_shadowhighlight_huechip",
-      "community": 19,
+      "community": 30,
       "norm_label": "huechip()"
     },
     {
@@ -5004,7 +5004,7 @@
       "source_file": "src/tools/ColorPalette/Swatch.jsx",
       "source_location": "L1",
       "id": "colorpalette_swatch",
-      "community": 40,
+      "community": 20,
       "norm_label": "swatch.jsx"
     },
     {
@@ -5013,7 +5013,7 @@
       "source_file": "src/tools/ColorPalette/Swatch.jsx",
       "source_location": "L3",
       "id": "colorpalette_swatch_roles",
-      "community": 40,
+      "community": 20,
       "norm_label": "roles"
     },
     {
@@ -5022,7 +5022,7 @@
       "source_file": "src/tools/ColorPalette/Swatch.jsx",
       "source_location": "L5",
       "id": "colorpalette_swatch_role_colors",
-      "community": 40,
+      "community": 20,
       "norm_label": "role_colors"
     },
     {
@@ -5031,7 +5031,7 @@
       "source_file": "src/tools/ColorPalette/Swatch.jsx",
       "source_location": "L10",
       "id": "colorpalette_swatch_swatch",
-      "community": 40,
+      "community": 20,
       "norm_label": "swatch()"
     },
     {
@@ -5040,7 +5040,7 @@
       "source_file": "src/tools/ColorPalette/Swatch.jsx",
       "source_location": "L74",
       "id": "colorpalette_swatch_roleselect",
-      "community": 40,
+      "community": 20,
       "norm_label": "roleselect()"
     },
     {
@@ -5049,7 +5049,7 @@
       "source_file": "src/tools/ColorPalette/Swatch.jsx",
       "source_location": "L90",
       "id": "colorpalette_swatch_ctrlbtn",
-      "community": 40,
+      "community": 20,
       "norm_label": "ctrlbtn()"
     },
     {
@@ -5418,7 +5418,7 @@
       "source_file": "src/tools/ColorPalette/store.js",
       "source_location": "L118",
       "id": "colorpalette_store_usepalette",
-      "community": 2,
+      "community": 37,
       "norm_label": "usepalette()"
     },
     {
@@ -5427,7 +5427,7 @@
       "source_file": "src/tools/ColorPalette/store.js",
       "source_location": "L126",
       "id": "colorpalette_store_addswatch",
-      "community": 1,
+      "community": 49,
       "norm_label": "addswatch()"
     },
     {
@@ -5913,7 +5913,7 @@
       "source_file": "src/tools/DitherTool/index.jsx",
       "source_location": "L1514",
       "id": "dithertool_index_downloadblob",
-      "community": 42,
+      "community": 41,
       "norm_label": "downloadblob()"
     },
     {
@@ -6048,7 +6048,7 @@
       "source_file": "src/tools/DitherTool/presets.js",
       "source_location": "L1",
       "id": "dithertool_presets",
-      "community": 7,
+      "community": 2,
       "norm_label": "presets.js"
     },
     {
@@ -6057,7 +6057,7 @@
       "source_file": "src/tools/DitherTool/presets.js",
       "source_location": "L21",
       "id": "dithertool_presets_neutral",
-      "community": 7,
+      "community": 2,
       "norm_label": "neutral"
     },
     {
@@ -6066,7 +6066,7 @@
       "source_file": "src/tools/DitherTool/presets.js",
       "source_location": "L49",
       "id": "dithertool_presets_mk",
-      "community": 7,
+      "community": 2,
       "norm_label": "mk()"
     },
     {
@@ -6075,7 +6075,7 @@
       "source_file": "src/tools/DitherTool/presets.js",
       "source_location": "L51",
       "id": "dithertool_presets_builtin_presets",
-      "community": 7,
+      "community": 2,
       "norm_label": "builtin_presets"
     },
     {
@@ -6507,7 +6507,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L1",
       "id": "linearttool_store",
-      "community": 29,
+      "community": 53,
       "norm_label": "store.js"
     },
     {
@@ -6516,7 +6516,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L12",
       "id": "linearttool_store_load",
-      "community": 29,
+      "community": 53,
       "norm_label": "load()"
     },
     {
@@ -6525,7 +6525,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L16",
       "id": "linearttool_store_default_state",
-      "community": 29,
+      "community": 53,
       "norm_label": "default_state"
     },
     {
@@ -6534,7 +6534,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L50",
       "id": "linearttool_store_state",
-      "community": 29,
+      "community": 53,
       "norm_label": "_state"
     },
     {
@@ -6543,7 +6543,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L51",
       "id": "linearttool_store_listeners",
-      "community": 29,
+      "community": 53,
       "norm_label": "_listeners"
     },
     {
@@ -6552,7 +6552,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L54",
       "id": "linearttool_store_history",
-      "community": 29,
+      "community": 53,
       "norm_label": "_history"
     },
     {
@@ -6561,7 +6561,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L59",
       "id": "linearttool_store_snap",
-      "community": 29,
+      "community": 53,
       "norm_label": "snap()"
     },
     {
@@ -6570,7 +6570,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L61",
       "id": "linearttool_store_pushhistory",
-      "community": 29,
+      "community": 53,
       "norm_label": "pushhistory()"
     },
     {
@@ -6579,7 +6579,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L75",
       "id": "linearttool_store_undo",
-      "community": 29,
+      "community": 53,
       "norm_label": "undo()"
     },
     {
@@ -6588,7 +6588,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L81",
       "id": "linearttool_store_redo",
-      "community": 29,
+      "community": 53,
       "norm_label": "redo()"
     },
     {
@@ -6597,7 +6597,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L88",
       "id": "linearttool_store_notify",
-      "community": 29,
+      "community": 53,
       "norm_label": "notify()"
     },
     {
@@ -6606,7 +6606,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L93",
       "id": "linearttool_store_getstate",
-      "community": 29,
+      "community": 53,
       "norm_label": "getstate()"
     },
     {
@@ -6615,7 +6615,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L95",
       "id": "linearttool_store_setstate",
-      "community": 29,
+      "community": 53,
       "norm_label": "setstate()"
     },
     {
@@ -6624,7 +6624,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L101",
       "id": "linearttool_store_resetstate",
-      "community": 29,
+      "community": 53,
       "norm_label": "resetstate()"
     },
     {
@@ -6633,7 +6633,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L103",
       "id": "linearttool_store_subscribe",
-      "community": 29,
+      "community": 53,
       "norm_label": "subscribe()"
     },
     {
@@ -6651,7 +6651,7 @@
       "source_file": "src/tools/LogoMaker/BackgroundRow.jsx",
       "source_location": "L1",
       "id": "logomaker_backgroundrow",
-      "community": 0,
+      "community": 20,
       "norm_label": "backgroundrow.jsx"
     },
     {
@@ -6705,7 +6705,7 @@
       "source_file": "src/tools/LogoMaker/ExportPanel.jsx",
       "source_location": "L1",
       "id": "logomaker_exportpanel",
-      "community": 0,
+      "community": 57,
       "norm_label": "exportpanel.jsx"
     },
     {
@@ -6714,7 +6714,7 @@
       "source_file": "src/tools/LogoMaker/ExportPanel.jsx",
       "source_location": "L7",
       "id": "logomaker_exportpanel_faviconexport",
-      "community": 0,
+      "community": 57,
       "norm_label": "faviconexport()"
     },
     {
@@ -6750,7 +6750,7 @@
       "source_file": "src/tools/LogoMaker/FileSlot.jsx",
       "source_location": "L1",
       "id": "logomaker_fileslot",
-      "community": 0,
+      "community": 45,
       "norm_label": "fileslot.jsx"
     },
     {
@@ -6759,7 +6759,7 @@
       "source_file": "src/tools/LogoMaker/FileSlot.jsx",
       "source_location": "L6",
       "id": "logomaker_fileslot_fileslot",
-      "community": 0,
+      "community": 45,
       "norm_label": "fileslot()"
     },
     {
@@ -6939,7 +6939,7 @@
       "source_file": "src/tools/LogoMaker/ui.jsx",
       "source_location": "L16",
       "id": "logomaker_ui_btn",
-      "community": 0,
+      "community": 45,
       "norm_label": "btn()"
     },
     {
@@ -6993,7 +6993,7 @@
       "source_file": "src/tools/LogoMaker/ui.jsx",
       "source_location": "L120",
       "id": "logomaker_ui_segmentedcontrol",
-      "community": 0,
+      "community": 45,
       "norm_label": "segmentedcontrol()"
     },
     {
@@ -7002,7 +7002,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L1",
       "id": "motionmaker_graph",
-      "community": 25,
+      "community": 6,
       "norm_label": "graph.jsx"
     },
     {
@@ -7011,7 +7011,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L13",
       "id": "motionmaker_graph_socketparams",
-      "community": 25,
+      "community": 6,
       "norm_label": "socketparams()"
     },
     {
@@ -7020,7 +7020,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L16",
       "id": "motionmaker_graph_motionnode",
-      "community": 25,
+      "community": 6,
       "norm_label": "motionnode()"
     },
     {
@@ -7029,7 +7029,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L68",
       "id": "motionmaker_graph_round",
-      "community": 25,
+      "community": 6,
       "norm_label": "round()"
     },
     {
@@ -7038,7 +7038,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L70",
       "id": "motionmaker_graph_nodetypes",
-      "community": 25,
+      "community": 6,
       "norm_label": "nodetypes"
     },
     {
@@ -7047,34 +7047,34 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L73",
       "id": "motionmaker_graph_summarize",
-      "community": 25,
+      "community": 6,
       "norm_label": "summarize()"
     },
     {
       "label": "Graph()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/Graph.jsx",
-      "source_location": "L81",
+      "source_location": "L92",
       "id": "motionmaker_graph_graph",
-      "community": 25,
+      "community": 6,
       "norm_label": "graph()"
     },
     {
       "label": "filterNodes()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/Graph.jsx",
-      "source_location": "L207",
+      "source_location": "L218",
       "id": "motionmaker_graph_filternodes",
-      "community": 25,
+      "community": 6,
       "norm_label": "filternodes()"
     },
     {
       "label": "NodePalette()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/Graph.jsx",
-      "source_location": "L218",
+      "source_location": "L229",
       "id": "motionmaker_graph_nodepalette",
-      "community": 25,
+      "community": 6,
       "norm_label": "nodepalette()"
     },
     {
@@ -7083,25 +7083,43 @@
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
       "source_location": "L1",
       "id": "motionmaker_inspector",
-      "community": 0,
+      "community": 45,
       "norm_label": "inspector.jsx"
+    },
+    {
+      "label": "miniInput()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/Inspector.jsx",
+      "source_location": "L14",
+      "id": "motionmaker_inspector_miniinput",
+      "community": 45,
+      "norm_label": "miniinput()"
+    },
+    {
+      "label": "KeyframesEditor()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/Inspector.jsx",
+      "source_location": "L22",
+      "id": "motionmaker_inspector_keyframeseditor",
+      "community": 45,
+      "norm_label": "keyframeseditor()"
     },
     {
       "label": "ImageParam()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
-      "source_location": "L11",
+      "source_location": "L57",
       "id": "motionmaker_inspector_imageparam",
-      "community": 0,
+      "community": 45,
       "norm_label": "imageparam()"
     },
     {
       "label": "Inspector()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
-      "source_location": "L38",
+      "source_location": "L84",
       "id": "motionmaker_inspector_inspector",
-      "community": 0,
+      "community": 45,
       "norm_label": "inspector()"
     },
     {
@@ -7110,7 +7128,7 @@
       "source_file": "src/tools/MotionMaker/Stage.jsx",
       "source_location": "L1",
       "id": "motionmaker_stage",
-      "community": 26,
+      "community": 55,
       "norm_label": "stage.jsx"
     },
     {
@@ -7119,7 +7137,7 @@
       "source_file": "src/tools/MotionMaker/Stage.jsx",
       "source_location": "L12",
       "id": "motionmaker_stage_zoombtn",
-      "community": 26,
+      "community": 55,
       "norm_label": "zoombtn()"
     },
     {
@@ -7128,7 +7146,7 @@
       "source_file": "src/tools/MotionMaker/Stage.jsx",
       "source_location": "L16",
       "id": "motionmaker_stage_stage",
-      "community": 26,
+      "community": 55,
       "norm_label": "stage()"
     },
     {
@@ -7137,7 +7155,7 @@
       "source_file": "src/tools/MotionMaker/Timeline.jsx",
       "source_location": "L1",
       "id": "motionmaker_timeline",
-      "community": 19,
+      "community": 0,
       "norm_label": "timeline.jsx"
     },
     {
@@ -7146,7 +7164,7 @@
       "source_file": "src/tools/MotionMaker/Timeline.jsx",
       "source_location": "L12",
       "id": "motionmaker_timeline_timeline",
-      "community": 19,
+      "community": 0,
       "norm_label": "timeline()"
     },
     {
@@ -7155,7 +7173,7 @@
       "source_file": "src/tools/MotionMaker/engine.js",
       "source_location": "L1",
       "id": "motionmaker_engine",
-      "community": 26,
+      "community": 6,
       "norm_label": "engine.js"
     },
     {
@@ -7164,7 +7182,7 @@
       "source_file": "src/tools/MotionMaker/engine.js",
       "source_location": "L11",
       "id": "motionmaker_engine_clamp",
-      "community": 26,
+      "community": 6,
       "norm_label": "clamp()"
     },
     {
@@ -7173,68 +7191,149 @@
       "source_file": "src/tools/MotionMaker/engine.js",
       "source_location": "L14",
       "id": "motionmaker_engine_eases",
-      "community": 26,
+      "community": 6,
       "norm_label": "eases"
     },
     {
       "label": "WAVES",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L28",
+      "source_location": "L45",
       "id": "motionmaker_engine_waves",
-      "community": 26,
+      "community": 6,
       "norm_label": "waves"
+    },
+    {
+      "label": "hash01()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L56",
+      "id": "motionmaker_engine_hash01",
+      "community": 6,
+      "norm_label": "hash01()"
+    },
+    {
+      "label": "valueNoise()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L61",
+      "id": "motionmaker_engine_valuenoise",
+      "community": 6,
+      "norm_label": "valuenoise()"
+    },
+    {
+      "label": "fbmSigned()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L68",
+      "id": "motionmaker_engine_fbmsigned",
+      "community": 6,
+      "norm_label": "fbmsigned()"
     },
     {
       "label": "evalValueNode()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L36",
+      "source_location": "L78",
       "id": "motionmaker_engine_evalvaluenode",
-      "community": 26,
+      "community": 6,
       "norm_label": "evalvaluenode()"
     },
     {
       "label": "resolveParams()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L68",
+      "source_location": "L226",
       "id": "motionmaker_engine_resolveparams",
-      "community": 26,
+      "community": 6,
       "norm_label": "resolveparams()"
     },
     {
       "label": "sourceObject()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L83",
+      "source_location": "L241",
       "id": "motionmaker_engine_sourceobject",
-      "community": 26,
+      "community": 6,
       "norm_label": "sourceobject()"
     },
     {
       "label": "applyTransform()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L111",
+      "source_location": "L269",
       "id": "motionmaker_engine_applytransform",
-      "community": 26,
+      "community": 6,
       "norm_label": "applytransform()"
+    },
+    {
+      "label": "withFx()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L286",
+      "id": "motionmaker_engine_withfx",
+      "community": 6,
+      "norm_label": "withfx()"
+    },
+    {
+      "label": "applyArray()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L291",
+      "id": "motionmaker_engine_applyarray",
+      "community": 6,
+      "norm_label": "applyarray()"
+    },
+    {
+      "label": "applyMirror()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L322",
+      "id": "motionmaker_engine_applymirror",
+      "community": 6,
+      "norm_label": "applymirror()"
+    },
+    {
+      "label": "applyWiggle()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L337",
+      "id": "motionmaker_engine_applywiggle",
+      "community": 6,
+      "norm_label": "applywiggle()"
+    },
+    {
+      "label": "applyClip()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L349",
+      "id": "motionmaker_engine_applyclip",
+      "community": 6,
+      "norm_label": "applyclip()"
+    },
+    {
+      "label": "applyPhysics()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L376",
+      "id": "motionmaker_engine_applyphysics",
+      "community": 6,
+      "norm_label": "applyphysics()"
     },
     {
       "label": "gatherObjects()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L127",
+      "source_location": "L396",
       "id": "motionmaker_engine_gatherobjects",
-      "community": 26,
+      "community": 6,
       "norm_label": "gatherobjects()"
     },
     {
       "label": "evaluateScene()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L150",
+      "source_location": "L449",
       "id": "motionmaker_engine_evaluatescene",
       "community": 26,
       "norm_label": "evaluatescene()"
@@ -7342,7 +7441,7 @@
       "label": "pctLabel()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/index.jsx",
-      "source_location": "L272",
+      "source_location": "L277",
       "id": "motionmaker_index_pctlabel",
       "community": 26,
       "norm_label": "pctlabel()"
@@ -7351,7 +7450,7 @@
       "label": "StepBtn()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/index.jsx",
-      "source_location": "L274",
+      "source_location": "L279",
       "id": "motionmaker_index_stepbtn",
       "community": 26,
       "norm_label": "stepbtn()"
@@ -7360,9 +7459,9 @@
       "label": "PresetStrip()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/index.jsx",
-      "source_location": "L280",
+      "source_location": "L285",
       "id": "motionmaker_index_presetstrip",
-      "community": 26,
+      "community": 45,
       "norm_label": "presetstrip()"
     },
     {
@@ -7371,7 +7470,7 @@
       "source_file": "src/tools/MotionMaker/nodes.js",
       "source_location": "L1",
       "id": "motionmaker_nodes",
-      "community": 25,
+      "community": 6,
       "norm_label": "nodes.js"
     },
     {
@@ -7380,50 +7479,59 @@
       "source_file": "src/tools/MotionMaker/nodes.js",
       "source_location": "L13",
       "id": "motionmaker_nodes_category_color",
-      "community": 25,
+      "community": 6,
       "norm_label": "category_color"
     },
     {
       "label": "N()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L21",
+      "source_location": "L22",
       "id": "motionmaker_nodes_n",
-      "community": 40,
+      "community": 6,
       "norm_label": "n()"
+    },
+    {
+      "label": "EASE_OPTIONS",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/nodes.js",
+      "source_location": "L26",
+      "id": "motionmaker_nodes_ease_options",
+      "community": 6,
+      "norm_label": "ease_options"
     },
     {
       "label": "NODE_DEFS",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L23",
+      "source_location": "L32",
       "id": "motionmaker_nodes_node_defs",
-      "community": 25,
+      "community": 6,
       "norm_label": "node_defs"
     },
     {
       "label": "NODE_TYPES",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L123",
+      "source_location": "L373",
       "id": "motionmaker_nodes_node_types",
-      "community": 25,
+      "community": 6,
       "norm_label": "node_types"
     },
     {
       "label": "NODE_MENU",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L126",
+      "source_location": "L376",
       "id": "motionmaker_nodes_node_menu",
-      "community": 25,
+      "community": 6,
       "norm_label": "node_menu"
     },
     {
       "label": "defaultParams()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L134",
+      "source_location": "L386",
       "id": "motionmaker_nodes_defaultparams",
       "community": 25,
       "norm_label": "defaultparams()"
@@ -7432,7 +7540,7 @@
       "label": "makeNodeId()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L143",
+      "source_location": "L398",
       "id": "motionmaker_nodes_makenodeid",
       "community": 25,
       "norm_label": "makenodeid()"
@@ -7515,41 +7623,86 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L1",
       "id": "motionmaker_render",
-      "community": 26,
+      "community": 55,
       "norm_label": "render.jsx"
+    },
+    {
+      "label": "clampNum()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L12",
+      "id": "motionmaker_render_clampnum",
+      "community": 55,
+      "norm_label": "clampnum()"
+    },
+    {
+      "label": "sanitizeId()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L15",
+      "id": "motionmaker_render_sanitizeid",
+      "community": 55,
+      "norm_label": "sanitizeid()"
+    },
+    {
+      "label": "hexRgb()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L18",
+      "id": "motionmaker_render_hexrgb",
+      "community": 55,
+      "norm_label": "hexrgb()"
+    },
+    {
+      "label": "fxPrimitive()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L27",
+      "id": "motionmaker_render_fxprimitive",
+      "community": 55,
+      "norm_label": "fxprimitive()"
+    },
+    {
+      "label": "buildFilter()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L103",
+      "id": "motionmaker_render_buildfilter",
+      "community": 55,
+      "norm_label": "buildfilter()"
     },
     {
       "label": "itemSvg()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L10",
+      "source_location": "L116",
       "id": "motionmaker_render_itemsvg",
-      "community": 26,
+      "community": 55,
       "norm_label": "itemsvg()"
     },
     {
       "label": "sceneToSvgString()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L25",
+      "source_location": "L133",
       "id": "motionmaker_render_scenetosvgstring",
-      "community": 26,
+      "community": 55,
       "norm_label": "scenetosvgstring()"
     },
     {
       "label": "SceneSvg()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L34",
+      "source_location": "L149",
       "id": "motionmaker_render_scenesvg",
-      "community": 26,
+      "community": 55,
       "norm_label": "scenesvg()"
     },
     {
       "label": "rasterizeScene()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L65",
+      "source_location": "L189",
       "id": "motionmaker_render_rasterizescene",
       "community": 26,
       "norm_label": "rasterizescene()"
@@ -7756,7 +7909,7 @@
       "label": "setNodes()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L135",
+      "source_location": "L146",
       "id": "motionmaker_store_setnodes",
       "community": 25,
       "norm_label": "setnodes()"
@@ -7765,7 +7918,7 @@
       "label": "setEdges()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L136",
+      "source_location": "L147",
       "id": "motionmaker_store_setedges",
       "community": 25,
       "norm_label": "setedges()"
@@ -7774,7 +7927,7 @@
       "label": "commitHistory()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L137",
+      "source_location": "L148",
       "id": "motionmaker_store_commithistory",
       "community": 25,
       "norm_label": "commithistory()"
@@ -7783,7 +7936,7 @@
       "label": "nodeHeight()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L142",
+      "source_location": "L153",
       "id": "motionmaker_store_nodeheight",
       "community": 25,
       "norm_label": "nodeheight()"
@@ -7792,7 +7945,7 @@
       "label": "computeLayout_()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L157",
+      "source_location": "L168",
       "id": "motionmaker_store_computelayout",
       "community": 25,
       "norm_label": "computelayout_()"
@@ -7801,7 +7954,7 @@
       "label": "laidOut()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L190",
+      "source_location": "L201",
       "id": "motionmaker_store_laidout",
       "community": 25,
       "norm_label": "laidout()"
@@ -7810,7 +7963,7 @@
       "label": "tidyGraph()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L195",
+      "source_location": "L206",
       "id": "motionmaker_store_tidygraph",
       "community": 25,
       "norm_label": "tidygraph()"
@@ -7819,7 +7972,7 @@
       "label": "saveCurrentPreset()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L200",
+      "source_location": "L211",
       "id": "motionmaker_store_savecurrentpreset",
       "community": 25,
       "norm_label": "savecurrentpreset()"
@@ -7828,7 +7981,7 @@
       "label": "removeSavedPreset()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L206",
+      "source_location": "L217",
       "id": "motionmaker_store_removesavedpreset",
       "community": 25,
       "norm_label": "removesavedpreset()"
@@ -7837,7 +7990,7 @@
       "label": "loadDoc()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L212",
+      "source_location": "L223",
       "id": "motionmaker_store_loaddoc",
       "community": 25,
       "norm_label": "loaddoc()"
@@ -7846,7 +7999,7 @@
       "label": "resetDoc()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L216",
+      "source_location": "L227",
       "id": "motionmaker_store_resetdoc",
       "community": 25,
       "norm_label": "resetdoc()"
@@ -7855,7 +8008,7 @@
       "label": "applyPreset()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L221",
+      "source_location": "L232",
       "id": "motionmaker_store_applypreset",
       "community": 25,
       "norm_label": "applypreset()"
@@ -7864,7 +8017,7 @@
       "label": "getIncomingLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L229",
+      "source_location": "L263",
       "id": "motionmaker_store_getincominglogo",
       "community": 25,
       "norm_label": "getincominglogo()"
@@ -7873,7 +8026,7 @@
       "label": "clearIncomingLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L232",
+      "source_location": "L266",
       "id": "motionmaker_store_clearincominglogo",
       "community": 25,
       "norm_label": "clearincominglogo()"
@@ -7882,16 +8035,52 @@
       "label": "sendLogoToMotion()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L237",
+      "source_location": "L271",
       "id": "motionmaker_store_sendlogotomotion",
       "community": 25,
       "norm_label": "sendlogotomotion()"
     },
     {
+      "label": "DEFAULT_LOCKUP",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L281",
+      "id": "motionmaker_store_default_lockup",
+      "community": 25,
+      "norm_label": "default_lockup"
+    },
+    {
+      "label": "lockupPositions()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L283",
+      "id": "motionmaker_store_lockuppositions",
+      "community": 25,
+      "norm_label": "lockuppositions()"
+    },
+    {
+      "label": "applyLockup()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L312",
+      "id": "motionmaker_store_applylockup",
+      "community": 25,
+      "norm_label": "applylockup()"
+    },
+    {
+      "label": "arrangeLockup()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L326",
+      "id": "motionmaker_store_arrangelockup",
+      "community": 25,
+      "norm_label": "arrangelockup()"
+    },
+    {
       "label": "docFromLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L245",
+      "source_location": "L330",
       "id": "motionmaker_store_docfromlogo",
       "community": 25,
       "norm_label": "docfromlogo()"
@@ -7900,7 +8089,7 @@
       "label": "applyIncomingLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L282",
+      "source_location": "L340",
       "id": "motionmaker_store_applyincominglogo",
       "community": 25,
       "norm_label": "applyincominglogo()"
@@ -8914,6 +9103,186 @@
       "norm_label": "open items / risks"
     },
     {
+      "label": "2026-06-15-motion-maker-nodes-spec.md",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L1",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec",
+      "community": 46,
+      "norm_label": "2026-06-15-motion-maker-nodes-spec.md"
+    },
+    {
+      "label": "Motion Maker \u2014 node catalog spec",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L1",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_motion_maker_node_catalog_spec",
+      "community": 46,
+      "norm_label": "motion maker \u2014 node catalog spec"
+    },
+    {
+      "label": "Architecture recap (what every node must respect)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L11",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_architecture_recap_what_every_node_must_respect",
+      "community": 46,
+      "norm_label": "architecture recap (what every node must respect)"
+    },
+    {
+      "label": "Feasibility tiers (marked on every node)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L30",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_feasibility_tiers_marked_on_every_node",
+      "community": 46,
+      "norm_label": "feasibility tiers (marked on every node)"
+    },
+    {
+      "label": "Five architectural unlocks",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L37",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_five_architectural_unlocks",
+      "community": 46,
+      "norm_label": "five architectural unlocks"
+    },
+    {
+      "label": "Group 1 \u2014 Sources (produce objects)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L60",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_group_1_sources_produce_objects",
+      "community": 46,
+      "norm_label": "group 1 \u2014 sources (produce objects)"
+    },
+    {
+      "label": "Group 2 \u2014 Object modifiers",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L91",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_group_2_object_modifiers",
+      "community": 46,
+      "norm_label": "group 2 \u2014 object modifiers"
+    },
+    {
+      "label": "2a \u2014 Transform & copy",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L97",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_2a_transform_copy",
+      "community": 46,
+      "norm_label": "2a \u2014 transform & copy"
+    },
+    {
+      "label": "2b \u2014 Structure & layout",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L106",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_2b_structure_layout",
+      "community": 46,
+      "norm_label": "2b \u2014 structure & layout"
+    },
+    {
+      "label": "2c \u2014 Motion behaviors",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L117",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_2c_motion_behaviors",
+      "community": 46,
+      "norm_label": "2c \u2014 motion behaviors"
+    },
+    {
+      "label": "2d \u2014 Generative & transitions",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L129",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_2d_generative_transitions",
+      "community": 46,
+      "norm_label": "2d \u2014 generative & transitions"
+    },
+    {
+      "label": "2e \u2014 Time-domain modifiers (re-time the upstream subtree)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L139",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_2e_time_domain_modifiers_re_time_the_upstream_subtree",
+      "community": 46,
+      "norm_label": "2e \u2014 time-domain modifiers (re-time the upstream subtree)"
+    },
+    {
+      "label": "Group 3 \u2014 Appearance / effects (per-object)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L222",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_group_3_appearance_effects_per_object",
+      "community": 46,
+      "norm_label": "group 3 \u2014 appearance / effects (per-object)"
+    },
+    {
+      "label": "Group 4 \u2014 Value generators (\u2192 number/color at frame)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L278",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_group_4_value_generators_number_color_at_frame",
+      "community": 46,
+      "norm_label": "group 4 \u2014 value generators (\u2192 number/color at frame)"
+    },
+    {
+      "label": "Group 5 \u2014 Value operators (value \u2192 value)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L335",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_group_5_value_operators_value_value",
+      "community": 46,
+      "norm_label": "group 5 \u2014 value operators (value \u2192 value)"
+    },
+    {
+      "label": "Group 6 \u2014 Layout / composition / output",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L371",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_group_6_layout_composition_output",
+      "community": 46,
+      "norm_label": "group 6 \u2014 layout / composition / output"
+    },
+    {
+      "label": "Group 7 \u2014 Power / meta nodes",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L398",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_group_7_power_meta_nodes",
+      "community": 46,
+      "norm_label": "group 7 \u2014 power / meta nodes"
+    },
+    {
+      "label": "Group 8 \u2014 Graph utilities / QoL",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L442",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_group_8_graph_utilities_qol",
+      "community": 46,
+      "norm_label": "group 8 \u2014 graph utilities / qol"
+    },
+    {
+      "label": "Build-order recommendation",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L469",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_build_order_recommendation",
+      "community": 46,
+      "norm_label": "build-order recommendation"
+    },
+    {
+      "label": "Unlock dependency summary",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L485",
+      "id": "specs_2026_06_15_motion_maker_nodes_spec_unlock_dependency_summary",
+      "community": 46,
+      "norm_label": "unlock dependency summary"
+    },
+    {
       "label": "reflToKS",
       "file_type": "code",
       "source_file": "src/lib/spectral.js",
@@ -8936,7 +9305,7 @@
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L161",
-      "community": 25,
+      "community": 6,
       "norm_label": "addmenu()",
       "id": "motionmaker_graph_addmenu"
     },
@@ -9044,7 +9413,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L10",
-      "community": 20,
+      "community": 49,
       "norm_label": "harmonyoverlay()",
       "id": "colorpalette_illustrationmode_harmonyoverlay"
     },
@@ -9071,7 +9440,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L25",
-      "community": 20,
+      "community": 49,
       "norm_label": "ks8",
       "id": "colorpalette_illustrationmode_ks8"
     },
@@ -9080,7 +9449,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L28",
-      "community": 20,
+      "community": 49,
       "norm_label": "rgbtohex()",
       "id": "colorpalette_illustrationmode_rgbtohex"
     },
@@ -9089,7 +9458,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L32",
-      "community": 20,
+      "community": 49,
       "norm_label": "mixer()",
       "id": "colorpalette_illustrationmode_mixer"
     },
@@ -9098,7 +9467,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L84",
-      "community": 20,
+      "community": 49,
       "norm_label": "colorchip()",
       "id": "colorpalette_illustrationmode_colorchip"
     },
@@ -9107,7 +9476,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/ShadowHighlight.jsx",
       "source_location": "L74",
-      "community": 19,
+      "community": 30,
       "norm_label": "sliderrow()",
       "id": "colorpalette_shadowhighlight_sliderrow"
     }
@@ -26600,6 +26969,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "motionmaker_store",
+      "target": "logomaker_layout_both_layouts"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_store",
       "target": "logomaker_layout_computelayout"
     },
     {
@@ -26611,6 +26991,17 @@
       "source_location": "L234",
       "weight": 1.0,
       "source": "motionmaker_store_docfromlogo",
+      "target": "logomaker_layout_computelayout"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L264",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_store_lockuppositions",
       "target": "logomaker_layout_computelayout"
     },
     {
@@ -26845,6 +27236,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "motionmaker_inspector_imageparam",
+      "target": "logomaker_ui_btn"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/Inspector.jsx",
+      "source_location": "L45",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_inspector_keyframeseditor",
       "target": "logomaker_ui_btn"
     },
     {
@@ -27134,6 +27536,26 @@
       "target": "motionmaker_inspector_inspector"
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/Inspector.jsx",
+      "source_location": "L22",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_inspector",
+      "target": "motionmaker_inspector_keyframeseditor"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/Inspector.jsx",
+      "source_location": "L14",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_inspector",
+      "target": "motionmaker_inspector_miniinput"
+    },
+    {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -27154,6 +27576,17 @@
       "confidence_score": 1.0,
       "source": "motionmaker_inspector",
       "target": "motionmaker_nodes_category_color"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/Inspector.jsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_inspector",
+      "target": "motionmaker_nodes_ease_options"
     },
     {
       "relation": "imports",
@@ -27266,11 +27699,61 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L194",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine",
+      "target": "motionmaker_engine_applyarray"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L252",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine",
+      "target": "motionmaker_engine_applyclip"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L225",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine",
+      "target": "motionmaker_engine_applymirror"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L279",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine",
+      "target": "motionmaker_engine_applyphysics"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
       "source_location": "L111",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "motionmaker_engine",
       "target": "motionmaker_engine_applytransform"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L240",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine",
+      "target": "motionmaker_engine_applywiggle"
     },
     {
       "relation": "contains",
@@ -27316,11 +27799,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L51",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine",
+      "target": "motionmaker_engine_fbmsigned"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
       "source_location": "L127",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "motionmaker_engine",
       "target": "motionmaker_engine_gatherobjects"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L39",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine",
+      "target": "motionmaker_engine_hash01"
     },
     {
       "relation": "contains",
@@ -27346,11 +27849,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L44",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine",
+      "target": "motionmaker_engine_valuenoise"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
       "source_location": "L28",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "motionmaker_engine",
       "target": "motionmaker_engine_waves"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L286",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine",
+      "target": "motionmaker_engine_withfx"
     },
     {
       "relation": "imports_from",
@@ -27390,6 +27913,39 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L217",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine_applyarray",
+      "target": "motionmaker_engine_clamp"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L260",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine_applyclip",
+      "target": "motionmaker_engine_clamp"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L284",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine_applyphysics",
+      "target": "motionmaker_engine_clamp"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
       "source_location": "L121",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -27412,6 +27968,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L439",
+      "weight": 1.0,
+      "source": "motionmaker_engine_gatherobjects",
+      "target": "motionmaker_engine_clamp",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
       "source_location": "L106",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -27423,11 +27990,55 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L76",
+      "source_location": "L438",
+      "weight": 1.0,
+      "source": "motionmaker_engine_gatherobjects",
+      "target": "motionmaker_engine_hash01",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L46",
       "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "motionmaker_engine_resolveparams",
-      "target": "motionmaker_engine_evalvaluenode"
+      "source": "motionmaker_engine_valuenoise",
+      "target": "motionmaker_engine_hash01"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L54",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine_fbmsigned",
+      "target": "motionmaker_engine_valuenoise"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L97",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine_evalvaluenode",
+      "target": "motionmaker_engine_fbmsigned"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L84",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine_evalvaluenode",
+      "target": "motionmaker_engine_resolveparams"
     },
     {
       "relation": "calls",
@@ -27450,6 +28061,61 @@
       "confidence_score": 1.0,
       "source": "motionmaker_engine_gatherobjects",
       "target": "motionmaker_engine_sourceobject"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L319",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine_gatherobjects",
+      "target": "motionmaker_engine_applyarray"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L320",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine_gatherobjects",
+      "target": "motionmaker_engine_applymirror"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L321",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine_gatherobjects",
+      "target": "motionmaker_engine_applywiggle"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L322",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine_gatherobjects",
+      "target": "motionmaker_engine_applyclip"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L323",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_engine_gatherobjects",
+      "target": "motionmaker_engine_applyphysics"
     },
     {
       "relation": "calls",
@@ -27892,6 +28558,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/nodes.js",
+      "source_location": "L25",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_nodes",
+      "target": "motionmaker_nodes_ease_options"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/nodes.js",
       "source_location": "L143",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -28221,6 +28897,46 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L68",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_render",
+      "target": "motionmaker_render_buildfilter"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_render",
+      "target": "motionmaker_render_clampnum"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L27",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_render",
+      "target": "motionmaker_render_fxprimitive"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L18",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_render",
+      "target": "motionmaker_render_hexrgb"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L10",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -28241,6 +28957,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L15",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_render",
+      "target": "motionmaker_render_sanitizeid"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L34",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -28256,6 +28982,39 @@
       "confidence_score": 1.0,
       "source": "motionmaker_render",
       "target": "motionmaker_render_scenetosvgstring"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L39",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_render_fxprimitive",
+      "target": "motionmaker_render_clampnum"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L71",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_render_buildfilter",
+      "target": "motionmaker_render_sanitizeid"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L47",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_render_fxprimitive",
+      "target": "motionmaker_render_hexrgb"
     },
     {
       "relation": "contains",
@@ -28281,11 +29040,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L287",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_store",
+      "target": "motionmaker_store_applylockup"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L201",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "motionmaker_store",
       "target": "motionmaker_store_applypreset"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L300",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_store",
+      "target": "motionmaker_store_arrangelockup"
     },
     {
       "relation": "contains",
@@ -28343,9 +29122,19 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L157",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store",
-      "target": "motionmaker_store_computelayout",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_computelayout"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L258",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_store",
+      "target": "motionmaker_store_default_lockup"
     },
     {
       "relation": "contains",
@@ -28403,9 +29192,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L190",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store",
-      "target": "motionmaker_store_laidout",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_laidout"
     },
     {
       "relation": "contains",
@@ -28436,6 +29225,16 @@
       "confidence_score": 1.0,
       "source": "motionmaker_store",
       "target": "motionmaker_store_loaddoc"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L260",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_store",
+      "target": "motionmaker_store_lockuppositions"
     },
     {
       "relation": "contains",
@@ -28840,6 +29639,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L300",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_store_arrangelockup",
+      "target": "motionmaker_store_patchdoc"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L117",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -28961,11 +29771,22 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L139",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_store_updatenodeparam",
+      "target": "motionmaker_store_applylockup"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L191",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_laidout",
-      "target": "motionmaker_store_computelayout",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_computelayout"
     },
     {
       "relation": "calls",
@@ -28974,9 +29795,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L282",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_applyincominglogo",
-      "target": "motionmaker_store_laidout",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_laidout"
     },
     {
       "relation": "calls",
@@ -28985,9 +29806,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L223",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_applypreset",
-      "target": "motionmaker_store_laidout",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_laidout"
     },
     {
       "relation": "calls",
@@ -28996,9 +29817,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L196",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_tidygraph",
-      "target": "motionmaker_store_laidout",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_laidout"
     },
     {
       "relation": "calls",
@@ -29032,6 +29853,50 @@
       "confidence_score": 1.0,
       "source": "motionmaker_store_resetdoc",
       "target": "motionmaker_store_loaddoc"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L237",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_store_applypreset",
+      "target": "motionmaker_store_applylockup"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L290",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_store_applylockup",
+      "target": "motionmaker_store_lockuppositions"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L300",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_store_arrangelockup",
+      "target": "motionmaker_store_applylockup"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L310",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "motionmaker_store_docfromlogo",
+      "target": "motionmaker_store_applylockup"
     },
     {
       "relation": "calls",
@@ -30768,6 +31633,196 @@
       "target": "specs_2026_06_14_motion_maker_design_ui_layout_3_zones"
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_motion_maker_node_catalog_spec"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_motion_maker_node_catalog_spec",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_architecture_recap_what_every_node_must_respect"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L469",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_motion_maker_node_catalog_spec",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_build_order_recommendation"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L60",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_motion_maker_node_catalog_spec",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_group_1_sources_produce_objects"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L91",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_motion_maker_node_catalog_spec",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_group_2_object_modifiers"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L222",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_motion_maker_node_catalog_spec",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_group_3_appearance_effects_per_object"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L278",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_motion_maker_node_catalog_spec",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_group_4_value_generators_number_color_at_frame"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L335",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_motion_maker_node_catalog_spec",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_group_5_value_operators_value_value"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L371",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_motion_maker_node_catalog_spec",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_group_6_layout_composition_output"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L398",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_motion_maker_node_catalog_spec",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_group_7_power_meta_nodes"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L442",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_motion_maker_node_catalog_spec",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_group_8_graph_utilities_qol"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L485",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_motion_maker_node_catalog_spec",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_unlock_dependency_summary"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L30",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_architecture_recap_what_every_node_must_respect",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_feasibility_tiers_marked_on_every_node"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L37",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_architecture_recap_what_every_node_must_respect",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_five_architectural_unlocks"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L97",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_group_2_object_modifiers",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_2a_transform_copy"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L106",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_group_2_object_modifiers",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_2b_structure_layout"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L117",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_group_2_object_modifiers",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_2c_motion_behaviors"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L129",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_group_2_object_modifiers",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_2d_generative_transitions"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-15-motion-maker-nodes-spec.md",
+      "source_location": "L139",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "specs_2026_06_15_motion_maker_nodes_spec_group_2_object_modifiers",
+      "target": "specs_2026_06_15_motion_maker_nodes_spec_2e_time_domain_modifiers_re_time_the_upstream_subtree"
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -30780,5 +31835,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "70496e7e812203f69d6000e1f825e75ff2aad8ff"
+  "built_at_commit": "3b94cd566d99051637018f80b47576b67474358b"
 }

@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react'
 import { markDirty } from '../../lib/unsavedChanges.js'
 import { defaultParams, makeNodeId, NODE_DEFS } from './nodes.js'
-import { computeLayout } from '../LogoMaker/layout.js'
+import { computeLayout, BOTH_LAYOUTS } from '../LogoMaker/layout.js'
 
 const KEY = 'designtools-motion'
 const SHARED_LOGO_KEY = 'designtools-shared-motion'   // structured Logo hand-off
@@ -126,8 +126,19 @@ export function removeNode(id) {
 
 export function updateNodeParam(id, key, value) {
   diverge()
-  const nodes = _state.doc.nodes.map(n =>
+  let nodes = _state.doc.nodes.map(n =>
     n.id === id ? { ...n, params: { ...n.params, [key]: value } } : n)
+  // When a source image is set and BOTH icon + wordmark now have images while still
+  // at their default transform, auto-arrange them as a lockup (so dropping both in
+  // doesn't leave them overlapping at full size). Won't clobber manual positioning.
+  if (key === 'image') {
+    const icon = nodes.find(n => n.type === 'icon')
+    const wm = nodes.find(n => n.type === 'wordmark')
+    const untouched = n => n && (n.params.x || 0) === 0 && (n.params.y || 0) === 0 && (n.params.scale ?? 1) === 1 && (n.params.rotate || 0) === 0
+    if (icon?.params.image && wm?.params.image && untouched(icon) && untouched(wm)) {
+      nodes = applyLockup(nodes, _state.doc.canvas)
+    }
+  }
   patchDoc({ nodes })
 }
 
@@ -219,8 +230,31 @@ export { starterDoc }
 // Apply a preset: builtins rebuild from the current images; saved presets carry a
 // whole doc. The applied id is tracked so the strip can show position/divergence.
 export function applyPreset(preset, images) {
-  const doc = typeof preset.build === 'function' ? preset.build(images) : preset.doc
-  loadDoc(laidOut(doc), preset.id)   // auto-arrange so presets never start overlapping
+  if (typeof preset.build === 'function') {
+    // built-in: rebuild the animation graph from the current images, but PRESERVE the
+    // existing base composition (the lockup sent from Logo Maker / manually arranged)
+    // by carrying the current icon/wordmark source transforms onto the rebuilt sources.
+    // The preset animates the Transform on top, so proportions are kept exactly.
+    const cur = _state.doc.nodes
+    const doc = preset.build(images)
+    const TRANSFORM_KEYS = ['x', 'y', 'scale', 'rotate', 'opacity']
+    const carry = (type) => {
+      const src = cur.find(n => n.type === type)
+      const dst = doc.nodes.find(n => n.type === type)
+      if (src && dst) for (const k of TRANSFORM_KEYS) if (src.params[k] != null) dst.params[k] = src.params[k]
+    }
+    carry('icon'); carry('wordmark')
+    // Fallback: if both images are present but were never arranged (still centred at
+    // default), lay them out as a lockup so they don't start overlapping.
+    const ic = doc.nodes.find(n => n.type === 'icon'), wm = doc.nodes.find(n => n.type === 'wordmark')
+    const untouched = n => n && (n.params.x || 0) === 0 && (n.params.y || 0) === 0 && (n.params.scale ?? 1) === 1
+    let nodes = doc.nodes
+    if (ic?.params.image && wm?.params.image && untouched(ic) && untouched(wm)) nodes = applyLockup(nodes, doc.canvas)
+    loadDoc(laidOut({ ...doc, nodes }), preset.id)
+  } else {
+    // saved preset already carries its own composition — load it as-is.
+    loadDoc(preset.doc, preset.id)
+  }
 }
 
 // ── Cross-tool hand-off from Logo Maker ───────────────────────────────────────────
@@ -238,44 +272,68 @@ export function sendLogoToMotion(payload) {
   try { localStorage.setItem(SHARED_LOGO_KEY, JSON.stringify(payload)) } catch {}
 }
 
-// Build a fresh doc from an incoming logo payload: Icon + Wordmark sources wired to
-// a Scene. When both are present we reproduce the Logo Maker lockup exactly — same
-// relative scale, gap and alignment — by running its computeLayout and mapping each
-// element's centre + height into canvas space (so it no longer overlaps or varies).
+// ── Lockup arrangement ─────────────────────────────────────────────────────────────
+// Compute params (x/y offset from canvas centre, scale) that place an icon + wordmark
+// as a proper lockup — same relative scale/gap/alignment as the Logo Maker — by
+// running its computeLayout and mapping each element's centre + height into canvas
+// space. Mirrors the engine's source sizing (fit = 55% of min canvas, scaled to fit
+// 70%), so the on-canvas result matches the lockup exactly instead of overlapping.
+const DEFAULT_LOCKUP = { layout: 'h', iconScale: 0.9, gapRatio: 0.28, alignment: 'center' }
+
+function lockupPositions(canvas, L, iconImg, wmImg) {
+  let layout = L.layout || DEFAULT_LOCKUP.layout
+  // both present but a single-element variation was sent → fall back to horizontal
+  if (iconImg && wmImg && !BOTH_LAYOUTS.includes(layout)) layout = 'h'
+  const lyt = computeLayout({
+    layout,
+    iconAspect: iconImg?.aspect || 1,
+    wordmarkAspect: wmImg?.aspect || 1,
+    iconScale: L.iconScale ?? DEFAULT_LOCKUP.iconScale,
+    gapRatio: L.gapRatio ?? DEFAULT_LOCKUP.gapRatio,
+    alignment: L.alignment || DEFAULT_LOCKUP.alignment,
+  })
+  if (!lyt) return null
+  const { w: cw, h: ch } = canvas
+  const fit = Math.min(cw, ch) * 0.55
+  const k = (Math.min(cw, ch) * 0.7) / Math.max(lyt.totalW, lyt.totalH)
+  const cxL = lyt.totalW / 2, cyL = lyt.totalH / 2
+  const calc = (el, img) => {
+    if (!el || !img) return null
+    const aspect = img.aspect || 1
+    const baseH = aspect >= 1 ? fit / aspect : fit          // rendered height at scale 1
+    return { x: (el.x + el.w / 2 - cxL) * k, y: (el.y + el.h / 2 - cyL) * k, scale: (el.h * k) / baseH, rotate: 0 }
+  }
+  return { icon: calc(lyt.icon, iconImg), wordmark: calc(lyt.wordmark, wmImg) }
+}
+
+// Apply lockup positions onto the icon/wordmark source nodes of a node array.
+// Only acts when BOTH an icon and a wordmark image are present — a lone element
+// stays centred at its default transform.
+function applyLockup(nodes, canvas, L = {}) {
+  const icon = nodes.find(n => n.type === 'icon')
+  const wm = nodes.find(n => n.type === 'wordmark')
+  if (!(icon?.params.image && wm?.params.image)) return nodes
+  const pos = lockupPositions(canvas, L, icon.params.image, wm.params.image)
+  if (!pos) return nodes
+  return nodes.map(n => {
+    if (icon && n.id === icon.id && pos.icon) return { ...n, params: { ...n.params, ...pos.icon } }
+    if (wm && n.id === wm.id && pos.wordmark) return { ...n, params: { ...n.params, ...pos.wordmark } }
+    return n
+  })
+}
+
+// Manual "Arrange icon + wordmark as lockup" action.
+export function arrangeLockup() { patchDoc({ nodes: applyLockup(_state.doc.nodes, _state.doc.canvas) }) }
+
+// Build a fresh doc from an incoming logo payload: Icon + Wordmark sources wired to a
+// Scene, arranged as the same lockup that came across (with a horizontal fallback).
 export function docFromLogo(payload) {
   const doc = starterDoc()
   const icon = doc.nodes.find(n => n.type === 'icon')
   const wm = doc.nodes.find(n => n.type === 'wordmark')
   if (payload.icon) icon.params.image = payload.icon
   if (payload.wordmark) wm.params.image = payload.wordmark
-
-  if (payload.icon && payload.wordmark && payload.layout) {
-    const L = payload.layout
-    const lyt = computeLayout({
-      layout: L.layout || 'h',
-      iconAspect: payload.icon.aspect || 1,
-      wordmarkAspect: payload.wordmark.aspect || 1,
-      iconScale: L.iconScale ?? 1,
-      gapRatio: L.gapRatio ?? 0.25,
-      alignment: L.alignment || 'center',
-    })
-    if (lyt) {
-      const { w: cw, h: ch } = doc.canvas
-      const fit = Math.min(cw, ch) * 0.55                       // a source's footprint at scale 1
-      const k = (Math.min(cw, ch) * 0.7) / Math.max(lyt.totalW, lyt.totalH)  // lockup → px
-      const cxL = lyt.totalW / 2, cyL = lyt.totalH / 2
-      const place = (node, el, img) => {
-        if (!el) return
-        node.params.x = (el.x + el.w / 2 - cxL) * k
-        node.params.y = (el.y + el.h / 2 - cyL) * k
-        const aspect = img.aspect || 1
-        const baseH = aspect >= 1 ? fit / aspect : fit          // rendered height at scale 1
-        node.params.scale = (el.h * k) / baseH
-      }
-      place(icon, lyt.icon, payload.icon)
-      place(wm, lyt.wordmark, payload.wordmark)
-    }
-  }
+  if (payload.icon && payload.wordmark) doc.nodes = applyLockup(doc.nodes, doc.canvas, payload.layout || {})
   return doc
 }
 
