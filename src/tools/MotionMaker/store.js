@@ -231,11 +231,26 @@ export { starterDoc }
 // whole doc. The applied id is tracked so the strip can show position/divergence.
 export function applyPreset(preset, images) {
   if (typeof preset.build === 'function') {
-    // built-in: rebuild from current images, set the base lockup composition (so the
-    // icon + wordmark don't overlap at full size), then tidy the graph layout.
+    // built-in: rebuild the animation graph from the current images, but PRESERVE the
+    // existing base composition (the lockup sent from Logo Maker / manually arranged)
+    // by carrying the current icon/wordmark source transforms onto the rebuilt sources.
+    // The preset animates the Transform on top, so proportions are kept exactly.
+    const cur = _state.doc.nodes
     const doc = preset.build(images)
-    const arranged = { ...doc, nodes: applyLockup(doc.nodes, doc.canvas) }
-    loadDoc(laidOut(arranged), preset.id)
+    const TRANSFORM_KEYS = ['x', 'y', 'scale', 'rotate', 'opacity']
+    const carry = (type) => {
+      const src = cur.find(n => n.type === type)
+      const dst = doc.nodes.find(n => n.type === type)
+      if (src && dst) for (const k of TRANSFORM_KEYS) if (src.params[k] != null) dst.params[k] = src.params[k]
+    }
+    carry('icon'); carry('wordmark')
+    // Fallback: if both images are present but were never arranged (still centred at
+    // default), lay them out as a lockup so they don't start overlapping.
+    const ic = doc.nodes.find(n => n.type === 'icon'), wm = doc.nodes.find(n => n.type === 'wordmark')
+    const untouched = n => n && (n.params.x || 0) === 0 && (n.params.y || 0) === 0 && (n.params.scale ?? 1) === 1
+    let nodes = doc.nodes
+    if (ic?.params.image && wm?.params.image && untouched(ic) && untouched(wm)) nodes = applyLockup(nodes, doc.canvas)
+    loadDoc(laidOut({ ...doc, nodes }), preset.id)
   } else {
     // saved preset already carries its own composition — load it as-is.
     loadDoc(preset.doc, preset.id)

@@ -7864,7 +7864,7 @@
       "label": "getIncomingLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L248",
+      "source_location": "L263",
       "id": "motionmaker_store_getincominglogo",
       "community": 25,
       "norm_label": "getincominglogo()"
@@ -7873,7 +7873,7 @@
       "label": "clearIncomingLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L251",
+      "source_location": "L266",
       "id": "motionmaker_store_clearincominglogo",
       "community": 25,
       "norm_label": "clearincominglogo()"
@@ -7882,7 +7882,7 @@
       "label": "sendLogoToMotion()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L256",
+      "source_location": "L271",
       "id": "motionmaker_store_sendlogotomotion",
       "community": 25,
       "norm_label": "sendlogotomotion()"
@@ -7891,7 +7891,7 @@
       "label": "DEFAULT_LOCKUP",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L266",
+      "source_location": "L281",
       "id": "motionmaker_store_default_lockup",
       "community": 25,
       "norm_label": "default_lockup"
@@ -7900,7 +7900,7 @@
       "label": "lockupPositions()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L268",
+      "source_location": "L283",
       "id": "motionmaker_store_lockuppositions",
       "community": 25,
       "norm_label": "lockuppositions()"
@@ -7909,7 +7909,7 @@
       "label": "applyLockup()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L297",
+      "source_location": "L312",
       "id": "motionmaker_store_applylockup",
       "community": 25,
       "norm_label": "applylockup()"
@@ -7918,7 +7918,7 @@
       "label": "arrangeLockup()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L311",
+      "source_location": "L326",
       "id": "motionmaker_store_arrangelockup",
       "community": 25,
       "norm_label": "arrangelockup()"
@@ -7927,7 +7927,7 @@
       "label": "docFromLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L315",
+      "source_location": "L330",
       "id": "motionmaker_store_docfromlogo",
       "community": 25,
       "norm_label": "docfromlogo()"
@@ -7936,7 +7936,7 @@
       "label": "applyIncomingLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L325",
+      "source_location": "L340",
       "id": "motionmaker_store_applyincominglogo",
       "community": 25,
       "norm_label": "applyincominglogo()"
@@ -29160,9 +29160,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L237",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_applypreset",
-      "target": "motionmaker_store_applylockup",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_applylockup"
     },
     {
       "relation": "calls",
@@ -30944,5 +30944,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "10242fe193d4d2ff577edd3962d419384f745551"
+  "built_at_commit": "51a70e048043af18373dcdc155b8885ec8862490"
 }
