@@ -1,16 +1,16 @@
 # Graph Report - designtools  (2026-06-15)
 
 ## Corpus Check
-- 103 files · ~133,587 words
+- 103 files · ~133,917 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1012 nodes · 2052 edges · 47 communities (41 shown, 6 thin omitted)
+- 1016 nodes · 2063 edges · 47 communities (40 shown, 7 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 7 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `70496e7e`
+- Built from commit: `954c7e10`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -77,19 +77,19 @@
 ## Surprising Connections (you probably didn't know these)
 - `TreatmentFilter()` --calls--> `hexToRgb()`  [EXTRACTED]
   src/tools/LogoMaker/LockupSvg.jsx → src/lib/color.js
+- `oklabToHex()` --calls--> `oklchToHex()`  [EXTRACTED]
+  src/tools/ColorPalette/ImageExtract.jsx → src/lib/color.js
 - `MotionMaker()` --calls--> `tabBtn`  [INFERRED]
   src/tools/MotionMaker/index.jsx → src/tools/CobaltTool.jsx
-- `Grade()` --calls--> `usePalette()`  [EXTRACTED]
-  src/tools/ColorPalette/Grade.jsx → src/tools/ColorPalette/store.js
-- `MaterialPanel()` --calls--> `usePalette()`  [EXTRACTED]
-  src/tools/ColorPalette/MaterialPanel.jsx → src/tools/ColorPalette/store.js
-- `PaintMix()` --calls--> `usePalette()`  [EXTRACTED]
-  src/tools/ColorPalette/PaintMix.jsx → src/tools/ColorPalette/store.js
+- `BGCheck()` --calls--> `usePalette()`  [EXTRACTED]
+  src/tools/ColorPalette/BGCheck.jsx → src/tools/ColorPalette/store.js
+- `Generators()` --calls--> `usePalette()`  [EXTRACTED]
+  src/tools/ColorPalette/Generators.jsx → src/tools/ColorPalette/store.js
 
 ## Import Cycles
 - None detected.
 
-## Communities (47 total, 6 thin omitted)
+## Communities (47 total, 7 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.09
@@ -98,10 +98,6 @@ Nodes (33): buildFaviconZip(), buildIco(), svgToPngBlob(), processFile(), readAs
 ### Community 1 - "Community 1"
 Cohesion: 0.07
 Nodes (36): C, parseColorList(), tryParseToHex(), addSwatch(), bulkRemove(), bulkUpdate(), clearSelected(), DEFAULT_STATE (+28 more)
-
-### Community 2 - "Community 2"
-Cohesion: 0.20
-Nodes (10): BGCheck(), ContrastMatrix(), RATING_COLOR, ExportPanel(), Generators(), Gradient(), Harmony(), PaletteStrip() (+2 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.05
@@ -117,7 +113,7 @@ Nodes (18): buildAco(), buildAse(), buildProcreateSwatches(), C, toGpl(), toJson
 
 ### Community 7 - "Community 7"
 Cohesion: 0.07
-Nodes (17): ALGO_GROUPS, applyMaskCpu(), C, cssRgb01(), GradientEditor(), HT_ALGOS, HT_ANGLES, HT_SHAPE_ID (+9 more)
+Nodes (15): ALGO_GROUPS, applyMaskCpu(), C, cssRgb01(), GradientEditor(), HT_ALGOS, HT_ANGLES, HT_SHAPE_ID (+7 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.18
@@ -145,7 +141,7 @@ Nodes (7): HueChip(), ShadowHighlight(), decimalsFor(), EditableNumber(), Number
 
 ### Community 20 - "Community 20"
 Cohesion: 0.11
-Nodes (30): runAutoFix(), HarmonyOverlay(), ILL_PANELS, KS8, Mixer(), rgbToOklab(), autoName(), contrast() (+22 more)
+Nodes (28): runAutoFix(), HarmonyOverlay(), ILL_PANELS, KS8, Mixer(), autoName(), contrast(), CVD_MATRICES (+20 more)
 
 ### Community 21 - "Community 21"
 Cohesion: 0.22
@@ -161,19 +157,19 @@ Nodes (27): addNoise(), ALGO_IDS, ALGORITHMS, applyLevels(), bayer(), blueNoise(
 
 ### Community 24 - "Community 24"
 Cohesion: 0.11
-Nodes (17): DiceBtn(), buildRecipe(), CHROMA_REASON, clamp(), clampC(), combineTags(), computeIdentities(), GROUPS (+9 more)
+Nodes (16): buildRecipe(), CHROMA_REASON, clamp(), clampC(), combineTags(), computeIdentities(), GROUPS, INDUSTRIES (+8 more)
 
 ### Community 25 - "Community 25"
 Cohesion: 0.06
-Nodes (46): MotionNode(), nodeTypes, socketParams(), CATEGORY_COLOR, defaultParams(), makeNodeId(), NODE_DEFS, NODE_MENU (+38 more)
+Nodes (48): MotionNode(), nodeTypes, socketParams(), CATEGORY_COLOR, defaultParams(), makeNodeId(), NODE_DEFS, NODE_MENU (+40 more)
 
 ### Community 26 - "Community 26"
 Cohesion: 0.07
-Nodes (32): ColorPalette(), C, encodeGif(), framesToZip(), globalRedo(), globalUndo(), useGlobalUndo(), LogoMaker() (+24 more)
+Nodes (34): ColorPalette(), C, encodeGif(), framesToZip(), globalRedo(), globalUndo(), useGlobalUndo(), LogoMaker() (+26 more)
 
 ### Community 27 - "Community 27"
-Cohesion: 0.33
-Nodes (9): clusterHues(), critique(), fixBtn, hueDist(), hueName(), mkFix(), nameOf(), pct() (+1 more)
+Cohesion: 0.29
+Nodes (10): clusterHues(), critique(), fixBtn, Harmony(), hueDist(), hueName(), mkFix(), nameOf() (+2 more)
 
 ### Community 28 - "Community 28"
 Cohesion: 0.12
@@ -185,7 +181,7 @@ Nodes (42): adjustWeight(), applyLevels(), autoLevels(), blurH(), blurV(), boxBl
 
 ### Community 30 - "Community 30"
 Cohesion: 0.12
-Nodes (6): generateRandomPalette(), h32(), HARMONY_TYPES, HUE_MODES, lerp(), generateRamp()
+Nodes (7): generateRandomPalette(), Generators(), h32(), HARMONY_TYPES, HUE_MODES, lerp(), generateRamp()
 
 ### Community 31 - "Community 31"
 Cohesion: 0.14
@@ -209,7 +205,7 @@ Nodes (13): Core idea — one deterministic evaluator, Data model, Decisions (lo
 
 ### Community 37 - "Community 37"
 Cohesion: 0.13
-Nodes (11): PANELS, Grade(), SPACES, AddBtn(), FieldLabel(), ModeChip(), Section(), SwatchStrip() (+3 more)
+Nodes (12): Grade(), Gradient(), SPACES, oklabToHex(), rgbToOklab(), AddBtn(), DiceBtn(), FieldLabel() (+4 more)
 
 ### Community 38 - "Community 38"
 Cohesion: 0.50
@@ -221,7 +217,7 @@ Nodes (7): readAsText(), buildSvg(), C, mkRng(), S1, S2, ShapeSlot()
 
 ### Community 40 - "Community 40"
 Cohesion: 0.16
-Nodes (13): ContrastCard(), findLForContrast(), PRESETS, oklabToHex(), renderTheme(), ROLE_COLORS, ROLES, Swatch() (+5 more)
+Nodes (13): BGCheck(), ContrastCard(), findLForContrast(), PRESETS, renderTheme(), ROLE_COLORS, ROLES, Swatch() (+5 more)
 
 ### Community 41 - "Community 41"
 Cohesion: 0.14
@@ -240,8 +236,8 @@ Cohesion: 0.23
 Nodes (6): buildGrain(), lin8(), hexToSpectrum(), ksToRefl(), reflToKS, spectrumToLinearInto()
 
 ### Community 45 - "Community 45"
-Cohesion: 0.29
-Nodes (4): chipBtn, PaintMix(), Verdict(), recipeVerdict()
+Cohesion: 0.12
+Nodes (14): ContrastMatrix(), RATING_COLOR, PANELS, ExportPanel(), chipBtn, PaintMix(), Verdict(), PaletteStrip() (+6 more)
 
 ### Community 47 - "Community 47"
 Cohesion: 0.25
@@ -252,21 +248,21 @@ Cohesion: 0.29
 Nodes (6): Design principles, Frontend Design, Ground it in the subject, More on writing in design, Process: brainstorm, explore, plan, critique, build, critique again, Restraint and self-critique
 
 ## Knowledge Gaps
-- **189 isolated node(s):** `version`, `configurations`, `PreToolUse`, `allow`, `{ app, BrowserWindow, ipcMain, dialog, desktopCapturer, screen, session }` (+184 more)
+- **190 isolated node(s):** `version`, `configurations`, `PreToolUse`, `allow`, `{ app, BrowserWindow, ipcMain, dialog, desktopCapturer, screen, session }` (+185 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `markDirty()` connect `Community 42` to `Community 0`, `Community 1`, `Community 5`, `Community 39`, `Community 18`, `Community 25`, `Community 28`, `Community 29`?**
-  _High betweenness centrality (0.043) - this node is a cross-community bridge._
+  _High betweenness centrality (0.049) - this node is a cross-community bridge._
 - **Why does `markSaved()` connect `Community 42` to `Community 0`, `Community 5`, `Community 6`, `Community 7`, `Community 39`, `Community 18`, `Community 26`, `Community 29`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
-- **Why does `GLEngine` connect `Community 3` to `Community 31`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **Why does `useGlobalUndo()` connect `Community 26` to `Community 0`, `Community 1`, `Community 5`, `Community 7`, `Community 29`, `Community 31`?**
+  _High betweenness centrality (0.035) - this node is a cross-community bridge._
 - **What connects `version`, `configurations`, `PreToolUse` to the rest of the system?**
-  _189 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _190 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.08944793850454227 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**

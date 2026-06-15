@@ -1071,7 +1071,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L132",
       "id": "lib_color_srgbtolinear",
-      "community": 20,
+      "community": 37,
       "norm_label": "srgbtolinear()"
     },
     {
@@ -1143,7 +1143,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L203",
       "id": "lib_color_cvd_types",
-      "community": 37,
+      "community": 45,
       "norm_label": "cvd_types"
     },
     {
@@ -3708,7 +3708,7 @@
       "source_file": "src/tools/ColorPalette/BGCheck.jsx",
       "source_location": "L98",
       "id": "colorpalette_bgcheck_bgcheck",
-      "community": 2,
+      "community": 40,
       "norm_label": "bgcheck()"
     },
     {
@@ -3717,7 +3717,7 @@
       "source_file": "src/tools/ColorPalette/ContrastMatrix.jsx",
       "source_location": "L1",
       "id": "colorpalette_contrastmatrix",
-      "community": 2,
+      "community": 45,
       "norm_label": "contrastmatrix.jsx"
     },
     {
@@ -3726,7 +3726,7 @@
       "source_file": "src/tools/ColorPalette/ContrastMatrix.jsx",
       "source_location": "L4",
       "id": "colorpalette_contrastmatrix_rating_color",
-      "community": 2,
+      "community": 45,
       "norm_label": "rating_color"
     },
     {
@@ -3735,7 +3735,7 @@
       "source_file": "src/tools/ColorPalette/ContrastMatrix.jsx",
       "source_location": "L8",
       "id": "colorpalette_contrastmatrix_contrastmatrix",
-      "community": 2,
+      "community": 45,
       "norm_label": "contrastmatrix()"
     },
     {
@@ -3744,7 +3744,7 @@
       "source_file": "src/tools/ColorPalette/DesignMode.jsx",
       "source_location": "L1",
       "id": "colorpalette_designmode",
-      "community": 37,
+      "community": 45,
       "norm_label": "designmode.jsx"
     },
     {
@@ -3753,7 +3753,7 @@
       "source_file": "src/tools/ColorPalette/DesignMode.jsx",
       "source_location": "L14",
       "id": "colorpalette_designmode_panels",
-      "community": 37,
+      "community": 45,
       "norm_label": "panels"
     },
     {
@@ -3762,7 +3762,7 @@
       "source_file": "src/tools/ColorPalette/DesignMode.jsx",
       "source_location": "L16",
       "id": "colorpalette_designmode_designmode",
-      "community": 37,
+      "community": 45,
       "norm_label": "designmode()"
     },
     {
@@ -3906,7 +3906,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L226",
       "id": "colorpalette_exportpanel_exportpanel",
-      "community": 2,
+      "community": 45,
       "norm_label": "exportpanel()"
     },
     {
@@ -3996,7 +3996,7 @@
       "source_file": "src/tools/ColorPalette/Generators.jsx",
       "source_location": "L67",
       "id": "colorpalette_generators_generators",
-      "community": 2,
+      "community": 30,
       "norm_label": "generators()"
     },
     {
@@ -4158,7 +4158,7 @@
       "source_file": "src/tools/ColorPalette/Gradient.jsx",
       "source_location": "L14",
       "id": "colorpalette_gradient_gradient",
-      "community": 2,
+      "community": 37,
       "norm_label": "gradient()"
     },
     {
@@ -4257,7 +4257,7 @@
       "source_file": "src/tools/ColorPalette/Harmony.jsx",
       "source_location": "L202",
       "id": "colorpalette_harmony_harmony",
-      "community": 2,
+      "community": 27,
       "norm_label": "harmony()"
     },
     {
@@ -4311,7 +4311,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L11",
       "id": "colorpalette_imageextract_rgbtooklab",
-      "community": 20,
+      "community": 37,
       "norm_label": "rgbtooklab()"
     },
     {
@@ -4320,7 +4320,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L24",
       "id": "colorpalette_imageextract_oklabtohex",
-      "community": 40,
+      "community": 37,
       "norm_label": "oklabtohex()"
     },
     {
@@ -4527,7 +4527,7 @@
       "source_file": "src/tools/ColorPalette/PaletteStrip.jsx",
       "source_location": "L3",
       "id": "colorpalette_palettestrip_palettestrip",
-      "community": 2,
+      "community": 45,
       "norm_label": "palettestrip()"
     },
     {
@@ -4905,7 +4905,7 @@
       "source_file": "src/tools/ColorPalette/Recipes.jsx",
       "source_location": "L231",
       "id": "colorpalette_recipes_recipes",
-      "community": 2,
+      "community": 45,
       "norm_label": "recipes()"
     },
     {
@@ -5058,7 +5058,7 @@
       "source_file": "src/tools/ColorPalette/Vision.jsx",
       "source_location": "L1",
       "id": "colorpalette_vision",
-      "community": 37,
+      "community": 45,
       "norm_label": "vision.jsx"
     },
     {
@@ -5067,7 +5067,7 @@
       "source_file": "src/tools/ColorPalette/Vision.jsx",
       "source_location": "L6",
       "id": "colorpalette_vision_vision",
-      "community": 37,
+      "community": 45,
       "norm_label": "vision()"
     },
     {
@@ -5229,7 +5229,7 @@
       "source_file": "src/tools/ColorPalette/panelUi.jsx",
       "source_location": "L29",
       "id": "colorpalette_panelui_modechip",
-      "community": 37,
+      "community": 45,
       "norm_label": "modechip()"
     },
     {
@@ -5247,7 +5247,7 @@
       "source_file": "src/tools/ColorPalette/panelUi.jsx",
       "source_location": "L62",
       "id": "colorpalette_panelui_dicebtn",
-      "community": 24,
+      "community": 37,
       "norm_label": "dicebtn()"
     },
     {
@@ -5418,7 +5418,7 @@
       "source_file": "src/tools/ColorPalette/store.js",
       "source_location": "L118",
       "id": "colorpalette_store_usepalette",
-      "community": 2,
+      "community": 45,
       "norm_label": "usepalette()"
     },
     {
@@ -6048,7 +6048,7 @@
       "source_file": "src/tools/DitherTool/presets.js",
       "source_location": "L1",
       "id": "dithertool_presets",
-      "community": 7,
+      "community": 2,
       "norm_label": "presets.js"
     },
     {
@@ -6057,7 +6057,7 @@
       "source_file": "src/tools/DitherTool/presets.js",
       "source_location": "L21",
       "id": "dithertool_presets_neutral",
-      "community": 7,
+      "community": 2,
       "norm_label": "neutral"
     },
     {
@@ -6066,7 +6066,7 @@
       "source_file": "src/tools/DitherTool/presets.js",
       "source_location": "L49",
       "id": "dithertool_presets_mk",
-      "community": 7,
+      "community": 2,
       "norm_label": "mk()"
     },
     {
@@ -6075,7 +6075,7 @@
       "source_file": "src/tools/DitherTool/presets.js",
       "source_location": "L51",
       "id": "dithertool_presets_builtin_presets",
-      "community": 7,
+      "community": 2,
       "norm_label": "builtin_presets"
     },
     {
@@ -7342,7 +7342,7 @@
       "label": "pctLabel()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/index.jsx",
-      "source_location": "L272",
+      "source_location": "L277",
       "id": "motionmaker_index_pctlabel",
       "community": 26,
       "norm_label": "pctlabel()"
@@ -7351,7 +7351,7 @@
       "label": "StepBtn()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/index.jsx",
-      "source_location": "L274",
+      "source_location": "L279",
       "id": "motionmaker_index_stepbtn",
       "community": 26,
       "norm_label": "stepbtn()"
@@ -7360,7 +7360,7 @@
       "label": "PresetStrip()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/index.jsx",
-      "source_location": "L280",
+      "source_location": "L285",
       "id": "motionmaker_index_presetstrip",
       "community": 26,
       "norm_label": "presetstrip()"
@@ -7497,7 +7497,7 @@
       "source_file": "src/tools/MotionMaker/presets.js",
       "source_location": "L54",
       "id": "motionmaker_presets_presets",
-      "community": 25,
+      "community": 26,
       "norm_label": "presets"
     },
     {
@@ -7506,7 +7506,7 @@
       "source_file": "src/tools/MotionMaker/presets.js",
       "source_location": "L97",
       "id": "motionmaker_presets_imagesfromdoc",
-      "community": 25,
+      "community": 26,
       "norm_label": "imagesfromdoc()"
     },
     {
@@ -7756,7 +7756,7 @@
       "label": "setNodes()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L135",
+      "source_location": "L146",
       "id": "motionmaker_store_setnodes",
       "community": 25,
       "norm_label": "setnodes()"
@@ -7765,7 +7765,7 @@
       "label": "setEdges()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L136",
+      "source_location": "L147",
       "id": "motionmaker_store_setedges",
       "community": 25,
       "norm_label": "setedges()"
@@ -7774,7 +7774,7 @@
       "label": "commitHistory()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L137",
+      "source_location": "L148",
       "id": "motionmaker_store_commithistory",
       "community": 25,
       "norm_label": "commithistory()"
@@ -7783,7 +7783,7 @@
       "label": "nodeHeight()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L142",
+      "source_location": "L153",
       "id": "motionmaker_store_nodeheight",
       "community": 25,
       "norm_label": "nodeheight()"
@@ -7792,7 +7792,7 @@
       "label": "computeLayout_()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L157",
+      "source_location": "L168",
       "id": "motionmaker_store_computelayout",
       "community": 25,
       "norm_label": "computelayout_()"
@@ -7801,7 +7801,7 @@
       "label": "laidOut()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L190",
+      "source_location": "L201",
       "id": "motionmaker_store_laidout",
       "community": 25,
       "norm_label": "laidout()"
@@ -7810,7 +7810,7 @@
       "label": "tidyGraph()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L195",
+      "source_location": "L206",
       "id": "motionmaker_store_tidygraph",
       "community": 25,
       "norm_label": "tidygraph()"
@@ -7819,7 +7819,7 @@
       "label": "saveCurrentPreset()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L200",
+      "source_location": "L211",
       "id": "motionmaker_store_savecurrentpreset",
       "community": 25,
       "norm_label": "savecurrentpreset()"
@@ -7828,7 +7828,7 @@
       "label": "removeSavedPreset()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L206",
+      "source_location": "L217",
       "id": "motionmaker_store_removesavedpreset",
       "community": 25,
       "norm_label": "removesavedpreset()"
@@ -7837,7 +7837,7 @@
       "label": "loadDoc()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L212",
+      "source_location": "L223",
       "id": "motionmaker_store_loaddoc",
       "community": 25,
       "norm_label": "loaddoc()"
@@ -7846,7 +7846,7 @@
       "label": "resetDoc()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L216",
+      "source_location": "L227",
       "id": "motionmaker_store_resetdoc",
       "community": 25,
       "norm_label": "resetdoc()"
@@ -7855,7 +7855,7 @@
       "label": "applyPreset()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L221",
+      "source_location": "L232",
       "id": "motionmaker_store_applypreset",
       "community": 25,
       "norm_label": "applypreset()"
@@ -7864,7 +7864,7 @@
       "label": "getIncomingLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L229",
+      "source_location": "L240",
       "id": "motionmaker_store_getincominglogo",
       "community": 25,
       "norm_label": "getincominglogo()"
@@ -7873,7 +7873,7 @@
       "label": "clearIncomingLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L232",
+      "source_location": "L243",
       "id": "motionmaker_store_clearincominglogo",
       "community": 25,
       "norm_label": "clearincominglogo()"
@@ -7882,16 +7882,52 @@
       "label": "sendLogoToMotion()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L237",
+      "source_location": "L248",
       "id": "motionmaker_store_sendlogotomotion",
       "community": 25,
       "norm_label": "sendlogotomotion()"
     },
     {
+      "label": "DEFAULT_LOCKUP",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L258",
+      "id": "motionmaker_store_default_lockup",
+      "community": 25,
+      "norm_label": "default_lockup"
+    },
+    {
+      "label": "lockupPositions()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L260",
+      "id": "motionmaker_store_lockuppositions",
+      "community": 25,
+      "norm_label": "lockuppositions()"
+    },
+    {
+      "label": "applyLockup()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L287",
+      "id": "motionmaker_store_applylockup",
+      "community": 25,
+      "norm_label": "applylockup()"
+    },
+    {
+      "label": "arrangeLockup()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L300",
+      "id": "motionmaker_store_arrangelockup",
+      "community": 25,
+      "norm_label": "arrangelockup()"
+    },
+    {
       "label": "docFromLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L245",
+      "source_location": "L304",
       "id": "motionmaker_store_docfromlogo",
       "community": 25,
       "norm_label": "docfromlogo()"
@@ -7900,7 +7936,7 @@
       "label": "applyIncomingLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L282",
+      "source_location": "L314",
       "id": "motionmaker_store_applyincominglogo",
       "community": 25,
       "norm_label": "applyincominglogo()"
@@ -26598,6 +26634,17 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L12",
       "weight": 1.0,
+      "source": "motionmaker_store",
+      "target": "logomaker_layout_both_layouts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L12",
+      "weight": 1.0,
       "confidence_score": 1.0,
       "source": "motionmaker_store",
       "target": "logomaker_layout_computelayout"
@@ -26612,6 +26659,17 @@
       "weight": 1.0,
       "source": "motionmaker_store_docfromlogo",
       "target": "logomaker_layout_computelayout"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L264",
+      "weight": 1.0,
+      "source": "motionmaker_store_lockuppositions",
+      "target": "logomaker_layout_computelayout",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -28281,11 +28339,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L287",
+      "weight": 1.0,
+      "source": "motionmaker_store",
+      "target": "motionmaker_store_applylockup",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L201",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "motionmaker_store",
       "target": "motionmaker_store_applypreset"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L300",
+      "weight": 1.0,
+      "source": "motionmaker_store",
+      "target": "motionmaker_store_arrangelockup",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -28343,8 +28421,18 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L157",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store",
-      "target": "motionmaker_store_computelayout",
+      "target": "motionmaker_store_computelayout"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L258",
+      "weight": 1.0,
+      "source": "motionmaker_store",
+      "target": "motionmaker_store_default_lockup",
       "confidence_score": 1.0
     },
     {
@@ -28403,9 +28491,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L190",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store",
-      "target": "motionmaker_store_laidout",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_laidout"
     },
     {
       "relation": "contains",
@@ -28436,6 +28524,16 @@
       "confidence_score": 1.0,
       "source": "motionmaker_store",
       "target": "motionmaker_store_loaddoc"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L260",
+      "weight": 1.0,
+      "source": "motionmaker_store",
+      "target": "motionmaker_store_lockuppositions",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -28840,6 +28938,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L300",
+      "weight": 1.0,
+      "source": "motionmaker_store_arrangelockup",
+      "target": "motionmaker_store_patchdoc",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L117",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -28961,11 +29070,22 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L139",
+      "weight": 1.0,
+      "source": "motionmaker_store_updatenodeparam",
+      "target": "motionmaker_store_applylockup",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L191",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_laidout",
-      "target": "motionmaker_store_computelayout",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_computelayout"
     },
     {
       "relation": "calls",
@@ -28974,9 +29094,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L282",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_applyincominglogo",
-      "target": "motionmaker_store_laidout",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_laidout"
     },
     {
       "relation": "calls",
@@ -28985,9 +29105,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L223",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_applypreset",
-      "target": "motionmaker_store_laidout",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_laidout"
     },
     {
       "relation": "calls",
@@ -28996,9 +29116,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L196",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_tidygraph",
-      "target": "motionmaker_store_laidout",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_laidout"
     },
     {
       "relation": "calls",
@@ -29032,6 +29152,39 @@
       "confidence_score": 1.0,
       "source": "motionmaker_store_resetdoc",
       "target": "motionmaker_store_loaddoc"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L290",
+      "weight": 1.0,
+      "source": "motionmaker_store_applylockup",
+      "target": "motionmaker_store_lockuppositions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L300",
+      "weight": 1.0,
+      "source": "motionmaker_store_arrangelockup",
+      "target": "motionmaker_store_applylockup",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L310",
+      "weight": 1.0,
+      "source": "motionmaker_store_docfromlogo",
+      "target": "motionmaker_store_applylockup",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -30780,5 +30933,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "70496e7e812203f69d6000e1f825e75ff2aad8ff"
+  "built_at_commit": "954c7e10bc50b749decdb5c3ff17531a71d28306"
 }
