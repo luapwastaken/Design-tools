@@ -23,6 +23,16 @@ function hexRgb(hex) {
   return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]
 }
 
+// Backdrop gradient → <linearGradient>/<radialGradient> markup (shared by both render
+// paths). objectBoundingBox units, so coords are 0..1 over the rect.
+function gradientDef(it, gid) {
+  const stops = `<stop offset="0" stop-color="${it.colorA}"/><stop offset="1" stop-color="${it.colorB}"/>`
+  if (it.mode === 'radial') return `<radialGradient id="${gid}" cx="0.5" cy="0.5" r="0.72">${stops}</radialGradient>`
+  const rad = (it.angle || 0) * Math.PI / 180
+  const dx = Math.cos(rad) / 2, dy = Math.sin(rad) / 2
+  return `<linearGradient id="${gid}" x1="${(0.5 - dx).toFixed(3)}" y1="${(0.5 - dy).toFixed(3)}" x2="${(0.5 + dx).toFixed(3)}" y2="${(0.5 + dy).toFixed(3)}">${stops}</linearGradient>`
+}
+
 // One effect → SVG filter-primitive markup reading `IN`, writing `OUT`.
 function fxPrimitive(e, IN, OUT) {
   switch (e.type) {
@@ -126,6 +136,20 @@ function itemSvg(it, filterId) {
       : `<rect x="${(-it.w / 2).toFixed(2)}" y="${(-it.h / 2).toFixed(2)}" width="${it.w.toFixed(2)}" height="${it.h.toFixed(2)}" fill="${it.color}"/>`
     return `<g transform="${t}" opacity="${it.opacity}"${fAttr}${bAttr}>${inner}</g>`
   }
+  if (it.kind === 'backdrop') {
+    const useGrad = it.mode !== 'solid' && it.colorB
+    const gid = 'bg_' + sanitizeId(it.id)
+    const defs = useGrad ? `<defs>${gradientDef(it, gid)}</defs>` : ''
+    const rect = `<rect x="${(-it.w / 2).toFixed(2)}" y="${(-it.h / 2).toFixed(2)}" width="${it.w.toFixed(2)}" height="${it.h.toFixed(2)}" fill="${useGrad ? `url(#${gid})` : it.colorA}"/>`
+    return `<g transform="${t}" opacity="${it.opacity}"${fAttr}${bAttr}>${defs}${rect}</g>`
+  }
+  if (it.kind === 'fragment') {
+    // a shard of an image: clip a full-size image down to this piece's cell
+    const cp = 'cp_' + sanitizeId(it.id)
+    const clip = `<clipPath id="${cp}"><rect x="${(-it.w / 2).toFixed(2)}" y="${(-it.h / 2).toFixed(2)}" width="${it.w.toFixed(2)}" height="${it.h.toFixed(2)}"/></clipPath>`
+    const image = `<image href="${it.href}" x="${(it.imgCX - it.imgW / 2).toFixed(2)}" y="${(it.imgCY - it.imgH / 2).toFixed(2)}" width="${it.imgW.toFixed(2)}" height="${it.imgH.toFixed(2)}" preserveAspectRatio="xMidYMid meet"/>`
+    return `<g transform="${t}" opacity="${it.opacity}"${fAttr}${bAttr}>${clip}<g clip-path="url(#${cp})">${image}</g></g>`
+  }
   return ''
 }
 
@@ -175,6 +199,28 @@ export function SceneSvg({ scene, style }) {
               {it.shape === 'ellipse'
                 ? <ellipse cx={0} cy={0} rx={it.w / 2} ry={it.h / 2} fill={it.color} />
                 : <rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} fill={it.color} />}
+            </g>
+          )
+        }
+        if (it.kind === 'backdrop') {
+          const useGrad = it.mode !== 'solid' && it.colorB
+          const gid = 'bg_' + sanitizeId(it.id)
+          return (
+            <g key={it.id || i} {...gProps}>
+              {useGrad && <defs dangerouslySetInnerHTML={{ __html: gradientDef(it, gid) }} />}
+              <rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} fill={useGrad ? `url(#${gid})` : it.colorA} />
+            </g>
+          )
+        }
+        if (it.kind === 'fragment') {
+          const cp = 'cp_' + sanitizeId(it.id)
+          return (
+            <g key={it.id || i} {...gProps}>
+              <clipPath id={cp}><rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} /></clipPath>
+              <g clipPath={`url(#${cp})`}>
+                <image href={it.href} x={it.imgCX - it.imgW / 2} y={it.imgCY - it.imgH / 2}
+                  width={it.imgW} height={it.imgH} preserveAspectRatio="xMidYMid meet" />
+              </g>
             </g>
           )
         }

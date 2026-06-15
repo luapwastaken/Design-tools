@@ -69,6 +69,17 @@ export const NODE_DEFS = {
       N('opacity', 'Opacity', 0, 1, 0.01, 1),
     ],
   },
+  backdrop: {
+    type: 'backdrop', label: 'Backdrop', category: 'source',
+    obj: { in: false, out: true }, value: false,
+    params: [
+      { key: 'mode', label: 'Mode', type: 'select', options: ['solid', 'linear', 'radial'], default: 'linear' },
+      { key: 'colorA', label: 'Color A', type: 'color', default: '#1a1a22' },
+      { key: 'colorB', label: 'Color B', type: 'color', default: '#0a0a0e' },
+      N('angle', 'Angle', 0, 360, 1, 90),
+      N('opacity', 'Opacity', 0, 1, 0.01, 1),
+    ],
+  },
 
   // ── Modifiers ────────────────────────────────────────────────────────────────
   transform: {
@@ -137,6 +148,109 @@ export const NODE_DEFS = {
       N('bounce', 'Bounce', 0, 1, 0.01, 0.5),
       N('friction', 'Friction', 0, 1, 0.01, 0.98),
       N('floorY', 'Floor Y', -2000, 2000, 1, 400),
+    ],
+  },
+
+  // ── Time-domain modifiers (unlock 4: re-sample upstream at a warped frame) ──────
+  echo: {
+    type: 'echo', label: 'Echo / Trails', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('copies', 'Copies', 1, 30, 1, 5),
+      N('frameDelay', 'Delay f', 1, 60, 1, 3),
+      N('opacityFalloff', 'Opacity ×', 0, 1, 0.01, 0.7),
+      N('scaleFalloff', 'Scale ×', 0.5, 1.2, 0.01, 1),
+      { key: 'mode', label: 'Mode', type: 'select', options: ['echo', 'onion-skin'], default: 'echo' },
+    ],
+  },
+  strobe: {
+    type: 'strobe', label: 'Stop-Motion / Strobe', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('step', 'Step f', 1, 30, 1, 2),
+      N('phase', 'Phase f', 0, 60, 1, 0),
+      N('jitter', 'Jitter f', 0, 20, 1, 0),
+    ],
+  },
+  loop: {
+    type: 'loop', label: 'Loop / Boomerang', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      { key: 'mode', label: 'Mode', type: 'select', options: ['cycle', 'mirror'], default: 'cycle' },
+      N('loopFrames', 'Loop f', 1, 600, 1, 60),
+    ],
+  },
+  timeRemap: {
+    type: 'timeRemap', label: 'Time Remap', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      { key: 'mode', label: 'Mode', type: 'select', options: ['remap', 'freeze', 'reverse', 'speed'], default: 'speed' },
+      N('inFrame', 'In f', 0, 6000, 1, 0),
+      N('outFrame', 'Out f', 0, 6000, 1, 90),
+      N('speed', 'Speed', -4, 4, 0.01, 1),
+      { key: 'ease', label: 'Ease', type: 'select', options: EASE_OPTIONS, default: 'easeInOut' },
+    ],
+  },
+  shatter: {
+    type: 'shatter', label: 'Shatter / Assemble', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('progress', 'Progress', 0, 1, 0.01, 0.5),   // drive with a Ramp
+      N('cols', 'Columns', 1, 24, 1, 5),
+      N('rows', 'Rows', 1, 24, 1, 5),
+      N('spread', 'Spread', 0, 2000, 1, 400),
+      N('rotateChaos', 'Rotate chaos', 0, 360, 1, 60),
+      N('gravity', 'Gravity', -2000, 2000, 10, 0),
+      { key: 'direction', label: 'Direction', type: 'select', options: ['out', 'in'], default: 'out' },
+      N('seed', 'Seed', 0, 9999, 1, 1),
+    ],
+  },
+  sort: {
+    type: 'sort', label: 'Sort / Layer', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      { key: 'mode', label: 'Mode', type: 'select', options: ['by-index', 'reverse', 'by-Y', 'by-Y-desc'], default: 'by-Y' },
+    ],
+  },
+  camera: {
+    type: 'camera', label: 'Camera', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('x', 'Pan X', -2000, 2000, 1, 0),
+      N('y', 'Pan Y', -2000, 2000, 1, 0),
+      N('zoom', 'Zoom', 0.05, 10, 0.01, 1),
+      N('rotate', 'Rotate', -1080, 1080, 1, 0),
+      N('anchorX', 'Anchor X', -2000, 2000, 1, 0),
+      N('anchorY', 'Anchor Y', -2000, 2000, 1, 0),
+    ],
+  },
+  switch: {
+    type: 'switch', label: 'Switch / Selector', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('index', 'Index', 0, 32, 1, 0),
+    ],
+  },
+  particles: {
+    type: 'particles', label: 'Particle System', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('startFrame', 'Start f', 0, 6000, 1, 0),
+      N('rate', 'Rate /s', 0, 200, 1, 30),
+      N('lifespan', 'Lifespan f', 1, 600, 1, 40),
+      { key: 'emitShape', label: 'Emit', type: 'select', options: ['point', 'line', 'circle'], default: 'point' },
+      N('emitSize', 'Emit size', 0, 1000, 1, 0),
+      N('direction', 'Direction °', -360, 360, 1, 0),
+      N('spread', 'Spread °', 0, 360, 1, 40),
+      N('velocity', 'Velocity', 0, 100, 0.5, 8),
+      N('gravity', 'Gravity', -10, 10, 0.1, 0.3),
+      N('rotateVel', 'Spin /f', -60, 60, 1, 0),
+      N('scaleStart', 'Scale start', 0, 5, 0.01, 0.5),
+      N('scaleEnd', 'Scale end', 0, 5, 0.01, 0.1),
+      N('opacityStart', 'Opacity start', 0, 1, 0.01, 1),
+      N('opacityEnd', 'Opacity end', 0, 1, 0.01, 0),
+      N('maxParticles', 'Max', 1, 1000, 1, 200),
+      N('seed', 'Seed', 0, 9999, 1, 1),
     ],
   },
 
@@ -374,8 +488,8 @@ export const NODE_TYPES = Object.keys(NODE_DEFS)
 
 // Convenience groupings for the "add node" menu.
 export const NODE_MENU = [
-  { group: 'Sources',   types: ['icon', 'wordmark', 'shape'] },
-  { group: 'Modifiers', types: ['transform', 'array', 'mirror', 'wiggle', 'clip', 'physics'] },
+  { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'backdrop'] },
+  { group: 'Modifiers', types: ['transform', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch'] },
   { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'blend', 'dither', 'glitch'] },
   { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
   { group: 'Operators', types: ['math', 'mapRange', 'curve', 'mix', 'clamp'] },
