@@ -7864,7 +7864,7 @@
       "label": "getIncomingLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L240",
+      "source_location": "L248",
       "id": "motionmaker_store_getincominglogo",
       "community": 25,
       "norm_label": "getincominglogo()"
@@ -7873,7 +7873,7 @@
       "label": "clearIncomingLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L243",
+      "source_location": "L251",
       "id": "motionmaker_store_clearincominglogo",
       "community": 25,
       "norm_label": "clearincominglogo()"
@@ -7882,7 +7882,7 @@
       "label": "sendLogoToMotion()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L248",
+      "source_location": "L256",
       "id": "motionmaker_store_sendlogotomotion",
       "community": 25,
       "norm_label": "sendlogotomotion()"
@@ -7891,7 +7891,7 @@
       "label": "DEFAULT_LOCKUP",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L258",
+      "source_location": "L266",
       "id": "motionmaker_store_default_lockup",
       "community": 25,
       "norm_label": "default_lockup"
@@ -7900,7 +7900,7 @@
       "label": "lockupPositions()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L260",
+      "source_location": "L268",
       "id": "motionmaker_store_lockuppositions",
       "community": 25,
       "norm_label": "lockuppositions()"
@@ -7909,7 +7909,7 @@
       "label": "applyLockup()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L287",
+      "source_location": "L297",
       "id": "motionmaker_store_applylockup",
       "community": 25,
       "norm_label": "applylockup()"
@@ -7918,7 +7918,7 @@
       "label": "arrangeLockup()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L300",
+      "source_location": "L311",
       "id": "motionmaker_store_arrangelockup",
       "community": 25,
       "norm_label": "arrangelockup()"
@@ -7927,7 +7927,7 @@
       "label": "docFromLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L304",
+      "source_location": "L315",
       "id": "motionmaker_store_docfromlogo",
       "community": 25,
       "norm_label": "docfromlogo()"
@@ -7936,7 +7936,7 @@
       "label": "applyIncomingLogo()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/store.js",
-      "source_location": "L314",
+      "source_location": "L325",
       "id": "motionmaker_store_applyincominglogo",
       "community": 25,
       "norm_label": "applyincominglogo()"
@@ -26634,9 +26634,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store",
-      "target": "logomaker_layout_both_layouts",
-      "confidence_score": 1.0
+      "target": "logomaker_layout_both_layouts"
     },
     {
       "relation": "imports",
@@ -26667,9 +26667,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L264",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_lockuppositions",
-      "target": "logomaker_layout_computelayout",
-      "confidence_score": 1.0
+      "target": "logomaker_layout_computelayout"
     },
     {
       "relation": "contains",
@@ -28341,9 +28341,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L287",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store",
-      "target": "motionmaker_store_applylockup",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_applylockup"
     },
     {
       "relation": "contains",
@@ -28361,9 +28361,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L300",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store",
-      "target": "motionmaker_store_arrangelockup",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_arrangelockup"
     },
     {
       "relation": "contains",
@@ -28431,9 +28431,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L258",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store",
-      "target": "motionmaker_store_default_lockup",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_default_lockup"
     },
     {
       "relation": "contains",
@@ -28531,9 +28531,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L260",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store",
-      "target": "motionmaker_store_lockuppositions",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_lockuppositions"
     },
     {
       "relation": "contains",
@@ -28940,9 +28940,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L300",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_arrangelockup",
-      "target": "motionmaker_store_patchdoc",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_patchdoc"
     },
     {
       "relation": "calls",
@@ -29072,9 +29072,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L139",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_updatenodeparam",
-      "target": "motionmaker_store_applylockup",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_applylockup"
     },
     {
       "relation": "calls",
@@ -29158,11 +29158,22 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/store.js",
+      "source_location": "L237",
+      "weight": 1.0,
+      "source": "motionmaker_store_applypreset",
+      "target": "motionmaker_store_applylockup",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L290",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_applylockup",
-      "target": "motionmaker_store_lockuppositions",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_lockuppositions"
     },
     {
       "relation": "calls",
@@ -29171,9 +29182,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L300",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_arrangelockup",
-      "target": "motionmaker_store_applylockup",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_applylockup"
     },
     {
       "relation": "calls",
@@ -29182,9 +29193,9 @@
       "source_file": "src/tools/MotionMaker/store.js",
       "source_location": "L310",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_store_docfromlogo",
-      "target": "motionmaker_store_applylockup",
-      "confidence_score": 1.0
+      "target": "motionmaker_store_applylockup"
     },
     {
       "relation": "calls",
@@ -30933,5 +30944,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "954c7e10bc50b749decdb5c3ff17531a71d28306"
+  "built_at_commit": "10242fe193d4d2ff577edd3962d419384f745551"
 }

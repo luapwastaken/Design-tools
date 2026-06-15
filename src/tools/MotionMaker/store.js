@@ -230,8 +230,16 @@ export { starterDoc }
 // Apply a preset: builtins rebuild from the current images; saved presets carry a
 // whole doc. The applied id is tracked so the strip can show position/divergence.
 export function applyPreset(preset, images) {
-  const doc = typeof preset.build === 'function' ? preset.build(images) : preset.doc
-  loadDoc(laidOut(doc), preset.id)   // auto-arrange so presets never start overlapping
+  if (typeof preset.build === 'function') {
+    // built-in: rebuild from current images, set the base lockup composition (so the
+    // icon + wordmark don't overlap at full size), then tidy the graph layout.
+    const doc = preset.build(images)
+    const arranged = { ...doc, nodes: applyLockup(doc.nodes, doc.canvas) }
+    loadDoc(laidOut(arranged), preset.id)
+  } else {
+    // saved preset already carries its own composition — load it as-is.
+    loadDoc(preset.doc, preset.id)
+  }
 }
 
 // ── Cross-tool hand-off from Logo Maker ───────────────────────────────────────────
@@ -284,10 +292,13 @@ function lockupPositions(canvas, L, iconImg, wmImg) {
 }
 
 // Apply lockup positions onto the icon/wordmark source nodes of a node array.
+// Only acts when BOTH an icon and a wordmark image are present — a lone element
+// stays centred at its default transform.
 function applyLockup(nodes, canvas, L = {}) {
   const icon = nodes.find(n => n.type === 'icon')
   const wm = nodes.find(n => n.type === 'wordmark')
-  const pos = lockupPositions(canvas, L, icon?.params.image, wm?.params.image)
+  if (!(icon?.params.image && wm?.params.image)) return nodes
+  const pos = lockupPositions(canvas, L, icon.params.image, wm.params.image)
   if (!pos) return nodes
   return nodes.map(n => {
     if (icon && n.id === icon.id && pos.icon) return { ...n, params: { ...n.params, ...pos.icon } }
