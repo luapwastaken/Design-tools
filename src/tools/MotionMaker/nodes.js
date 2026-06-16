@@ -192,6 +192,77 @@ export const NODE_DEFS = {
     ],
   },
 
+  align: {
+    type: 'align', label: 'Align / Distribute', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      { key: 'alignX', label: 'Align X', type: 'select', options: ['off', 'left', 'center', 'right'], default: 'center' },
+      { key: 'alignY', label: 'Align Y', type: 'select', options: ['off', 'top', 'middle', 'bottom'], default: 'off' },
+      { key: 'distribute', label: 'Distribute', type: 'select', options: ['off', 'horizontal', 'vertical'], default: 'off' },
+      { key: 'relativeTo', label: 'Relative to', type: 'select', options: ['canvas', 'selection'], default: 'canvas' },
+      N('padding', 'Padding', 0, 1000, 1, 80),
+    ],
+  },
+  motionPath: {
+    type: 'motionPath', label: 'Motion Path', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      { key: 'pathType', label: 'Path', type: 'select', options: ['line', 'circle', 'arc', 'wave'], default: 'circle' },
+      N('t', 'Progress', 0, 1, 0.01, 0),
+      N('x', 'Center X', -2000, 2000, 1, 0),
+      N('y', 'Center Y', -2000, 2000, 1, 0),
+      N('radius', 'Radius', 0, 2000, 1, 300),
+      N('length', 'Length', 0, 4000, 1, 800),
+      N('amp', 'Wave amp', 0, 2000, 1, 150),
+      N('freq', 'Wave freq', 0.1, 10, 0.1, 2),
+      N('arcDeg', 'Arc °', 0, 360, 1, 180),
+      { key: 'orient', label: 'Orient', type: 'select', options: ['off', 'on'], default: 'off' },
+    ],
+  },
+  magnet: {
+    type: 'magnet', label: 'Magnet / Attractor', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('x', 'X', -2000, 2000, 1, 0),
+      N('y', 'Y', -2000, 2000, 1, 0),
+      N('strength', 'Strength', 0, 1000, 1, 120),
+      N('radius', 'Radius', 0, 3000, 1, 600),
+      { key: 'falloff', label: 'Falloff', type: 'select', options: ['linear', 'smooth', 'inverse-square'], default: 'smooth' },
+      { key: 'mode', label: 'Mode', type: 'select', options: ['attract', 'repel', 'orbit'], default: 'attract' },
+      N('startFrame', 'Start f', 0, 6000, 1, 0),
+    ],
+  },
+  orient: {
+    type: 'orient', label: 'Orient / Look-at', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      { key: 'mode', label: 'Mode', type: 'select', options: ['point', 'velocity'], default: 'velocity' },
+      N('targetX', 'Target X', -2000, 2000, 1, 0),
+      N('targetY', 'Target Y', -2000, 2000, 1, 0),
+      N('offsetAngle', 'Offset °', -360, 360, 1, 0),
+    ],
+  },
+  effector: {
+    type: 'effector', label: 'Effector', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      { key: 'field', label: 'Field', type: 'select', options: ['by-index', 'linear', 'radial', 'noise'], default: 'by-index' },
+      N('phase', 'Phase', 0, 1, 0.01, 0),          // drivable: sweeps the wave (by-index)
+      N('falloff', 'Falloff', 0.01, 2, 0.01, 0.4), // band width for the by-index wave
+      N('centerX', 'Center X', -2000, 2000, 1, 0),
+      N('centerY', 'Center Y', -2000, 2000, 1, 0),
+      N('size', 'Size', 1, 4000, 1, 600),
+      { key: 'falloffCurve', label: 'Curve', type: 'select', options: EASE_OPTIONS, default: 'easeInOut' },
+      N('posX', '+ X', -2000, 2000, 1, 0),
+      N('posY', '+ Y', -2000, 2000, 1, 0),
+      N('scale', '× Scale', 0, 4, 0.01, 1.6),
+      N('rotate', '+ Rotate', -720, 720, 1, 0),
+      N('opacity', '× Opacity', 0, 1, 0.01, 1),
+      N('strength', 'Strength', 0, 2, 0.01, 1),
+      N('seed', 'Seed', 0, 9999, 1, 1),
+    ],
+  },
+
   // ── Time-domain modifiers (unlock 4: re-sample upstream at a warped frame) ──────
   echo: {
     type: 'echo', label: 'Echo / Trails', category: 'modifier',
@@ -561,7 +632,7 @@ export const NODE_TYPES = Object.keys(NODE_DEFS)
 // Convenience groupings for the "add node" menu.
 export const NODE_MENU = [
   { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'text', 'counter', 'backdrop'] },
-  { group: 'Modifiers', types: ['transform', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
+  { group: 'Modifiers', types: ['transform', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'align', 'motionPath', 'magnet', 'orient', 'effector', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
   { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'blend', 'dither', 'glitch'] },
   { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
   { group: 'Color',     types: ['colorSwatch', 'gradientMap'] },
