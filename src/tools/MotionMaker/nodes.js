@@ -362,6 +362,16 @@ export const NODE_DEFS = {
   },
 
   // ── Time-domain modifiers (unlock 4: re-sample upstream at a warped frame) ──────
+  // Motion Blur — sub-frame smear: samples the upstream across the shutter interval
+  // (frame−shutter … frame) and stacks N faint copies along each object's path.
+  motionBlur: {
+    type: 'motionBlur', label: 'Motion Blur', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('samples', 'Samples', 2, 32, 1, 8),
+      N('shutter', 'Shutter f', 0, 4, 0.05, 0.5),
+    ],
+  },
   echo: {
     type: 'echo', label: 'Echo / Trails', category: 'modifier',
     obj: { in: true, out: true }, value: false,
@@ -840,7 +850,7 @@ export const NODE_TYPES = Object.keys(NODE_DEFS)
 // Convenience groupings for the "add node" menu.
 export const NODE_MENU = [
   { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'text', 'counter', 'backdrop', 'path', 'null'] },
-  { group: 'Modifiers', types: ['transform', 'parent', 'stagger', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'roundCorners', 'trimPaths', 'align', 'motionPath', 'magnet', 'orient', 'split', 'effector', 'mask', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
+  { group: 'Modifiers', types: ['transform', 'parent', 'stagger', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'roundCorners', 'trimPaths', 'align', 'motionPath', 'magnet', 'orient', 'split', 'effector', 'mask', 'motionBlur', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
   { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'outline', 'blend', 'dither', 'glitch'] },
   { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'sequencer', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
   { group: 'Color',     types: ['colorSwatch', 'gradientMap', 'brandPalette'] },

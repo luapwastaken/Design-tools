@@ -1015,6 +1015,34 @@ function applyEcho(gather, frame, rp) {
   return out
 }
 
+// Motion Blur — velocity-derived smear. Samples the upstream across the shutter window
+// (sub-frame; the engine is pure on fractional frames) and stacks N faint copies along
+// each object's path, matched by id. Static objects get N coincident copies (≈ original);
+// fast ones streak. Deterministic.
+function applyMotionBlur(gather, frame, rp) {
+  const samples = Math.max(2, Math.round(rp.samples || 2))
+  const shutter = Math.max(0, rp.shutter || 0)
+  if (shutter <= 0) return gather(frame)
+  const out = []
+  // pre-sample each sub-frame once, index objects by id per sample
+  const frames = []
+  for (let i = 0; i < samples; i++) {
+    const f = frame - shutter * (1 - i / (samples - 1))   // oldest … current
+    const map = {}
+    for (const o of gather(f)) map[o.id] = o
+    frames.push(map)
+  }
+  const cur = frames[samples - 1]
+  for (const id in cur) {
+    for (let i = 0; i < samples; i++) {
+      const o = frames[i][id]
+      if (!o) continue
+      out.push({ ...o, id: `${id}~mb${i}`, opacity: clamp(o.opacity / samples, 0, 1) })
+    }
+  }
+  return out
+}
+
 // Stop-Motion / Strobe — hold the upstream on a stepped frame for choppy charm.
 function strobeFrame(frame, rp) {
   const step = Math.max(1, Math.round(rp.step || 1))
@@ -1091,6 +1119,7 @@ function gatherObjects(nodeId, frame, ctx, seen) {
   // ── Time-domain modifiers (re-time the upstream subtree) ───────────────────────
   switch (node.type) {
     case 'echo':      return applyEcho(gather, frame, rp)
+    case 'motionBlur': return applyMotionBlur(gather, frame, rp)
     case 'stagger':   return applyStagger(gather, frame, rp)
     case 'strobe':    return gather(strobeFrame(frame, rp))
     case 'loop':      return gather(loopFrame(frame, rp, ctx))
