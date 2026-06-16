@@ -793,6 +793,18 @@ export const NODE_DEFS = {
     ],
   },
 
+  // Gooey / Metaball — a scene-wide goo filter: blurs then sharpens alpha so nearby
+  // shapes fuse into liquid blobs (feGaussianBlur + alpha threshold). Graph-level — add
+  // it anywhere (no wires); it affects the whole composite. Pairs with Array/Particles.
+  gooey: {
+    type: 'gooey', label: 'Gooey / Metaball', category: 'global',
+    obj: { in: false, out: false }, value: false,
+    params: [
+      N('radius', 'Radius', 0, 60, 0.5, 10),
+      N('sharp', 'Sharpness', 4, 40, 0.5, 18),
+    ],
+  },
+
   // ── Graph utilities / QoL ──────────────────────────────────────────────────────
   reroute: {
     type: 'reroute', label: 'Reroute', category: 'modifier',
@@ -851,7 +863,7 @@ export const NODE_TYPES = Object.keys(NODE_DEFS)
 export const NODE_MENU = [
   { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'text', 'counter', 'backdrop', 'path', 'null'] },
   { group: 'Modifiers', types: ['transform', 'parent', 'stagger', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'roundCorners', 'trimPaths', 'align', 'motionPath', 'magnet', 'orient', 'split', 'effector', 'mask', 'motionBlur', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
-  { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'outline', 'blend', 'dither', 'glitch'] },
+  { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'outline', 'blend', 'dither', 'glitch', 'gooey'] },
   { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'sequencer', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
   { group: 'Color',     types: ['colorSwatch', 'gradientMap', 'brandPalette'] },
   { group: 'Operators', types: ['math', 'mapRange', 'curve', 'mix', 'clamp', 'delay', 'sampleHold', 'expression'] },

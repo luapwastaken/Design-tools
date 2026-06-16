@@ -1219,5 +1219,10 @@ export function evaluateScene(doc, frame) {
 
   const scene = doc.nodes.find(n => n.type === 'scene')
   const items = scene ? gatherObjects(scene.id, frame, ctx, new Set()) : []
-  return { canvas, items }
+
+  // Gooey / Metaball — scene-wide goo applied by the renderer over the whole composite.
+  const gooNode = doc.nodes.find(n => n.type === 'gooey' && !n.bypass)
+  const goo = gooNode ? { radius: gooNode.params?.radius ?? 10, sharp: gooNode.params?.sharp ?? 18 } : null
+
+  return { canvas, items, goo }
 }

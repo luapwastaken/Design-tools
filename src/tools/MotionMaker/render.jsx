@@ -148,6 +148,17 @@ function buildMask(item) {
   return { id, def }
 }
 
+// Scene-wide goo filter (Gooey/Metaball): blur, then sharpen alpha so overlapping
+// shapes fuse into liquid blobs. Applied to the whole composite group.
+function gooFilterDef(goo) {
+  const r = Math.max(0, goo.radius || 0), s = Math.max(1, goo.sharp || 18)
+  const m = `1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${s} ${(-s / 2).toFixed(2)}`
+  return `<filter id="goo_scene" color-interpolation-filters="sRGB">` +
+    `<feGaussianBlur in="SourceGraphic" stdDeviation="${r}" result="b"/>` +
+    `<feColorMatrix in="b" type="matrix" values="${m}" result="g"/>` +
+    `<feComposite in="SourceGraphic" in2="g" operator="atop"/></filter>`
+}
+
 // ── String path (export) ─────────────────────────────────────────────────────────
 // An item → SVG markup, wrapped in an untransformed mask group when it has a clip
 // (the mask is in canvas space, so it must sit outside the item's own transform).
@@ -206,15 +217,17 @@ function itemSvgInner(it, filterId) {
 
 // Full standalone SVG document string for a scene (used for export rasterization).
 export function sceneToSvgString(scene, { bg } = {}) {
-  const { canvas, items } = scene
+  const { canvas, items, goo } = scene
   const bgRect = bg && bg !== 'transparent'
     ? `<rect width="${canvas.w}" height="${canvas.h}" fill="${bg}"/>` : ''
   const defs = []
-  const body = items.map(it => {
+  if (goo) defs.push(gooFilterDef(goo))
+  let body = items.map(it => {
     const f = buildFilter(it); if (f.def) defs.push(f.def)
     const m = buildMask(it); if (m.def) defs.push(m.def)
     return itemSvg(it, f.id, m.id)
   }).join('')
+  if (goo) body = `<g filter="url(#goo_scene)">${body}</g>`
   const defsBlock = defs.length ? `<defs>${defs.join('')}</defs>` : ''
   return `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${canvas.w} ${canvas.h}" width="${canvas.w}" height="${canvas.h}">${bgRect}${defsBlock}${body}</svg>`
 }
@@ -222,14 +235,12 @@ export function sceneToSvgString(scene, { bg } = {}) {
 // ── React path (preview) ─────────────────────────────────────────────────────────
 // Same geometry + identical filter markup (injected as raw defs) as the string path.
 export function SceneSvg({ scene, style }) {
-  const { canvas, items } = scene
+  const { canvas, items, goo } = scene
   const defs = []
+  if (goo) defs.push(gooFilterDef(goo))
   const filterIds = items.map(it => { const f = buildFilter(it); if (f.def) defs.push(f.def); return f.id })
   const maskIds = items.map(it => { const m = buildMask(it); if (m.def) defs.push(m.def); return m.id })
-  return (
-    <svg viewBox={`0 0 ${canvas.w} ${canvas.h}`} style={style} xmlns="http://www.w3.org/2000/svg">
-      {defs.length > 0 && <defs dangerouslySetInnerHTML={{ __html: defs.join('') }} />}
-      {items.map((it, i) => {
+  const body = items.map((it, i) => {
         const t = `translate(${it.x} ${it.y}) rotate(${it.rotate || 0})`
         const filterId = filterIds[i]
         const gProps = {
@@ -272,7 +283,11 @@ export function SceneSvg({ scene, style }) {
         } else return null
         // wrap in an untransformed group carrying the canvas-space mask, if any
         return <g key={it.id || i} mask={maskIds[i] ? `url(#${maskIds[i]})` : undefined}>{el}</g>
-      })}
+  })
+  return (
+    <svg viewBox={`0 0 ${canvas.w} ${canvas.h}`} style={style} xmlns="http://www.w3.org/2000/svg">
+      {defs.length > 0 && <defs dangerouslySetInnerHTML={{ __html: defs.join('') }} />}
+      {goo ? <g filter="url(#goo_scene)">{body}</g> : body}
     </svg>
   )
 }
