@@ -7612,7 +7612,7 @@
       "label": "evaluateScene()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L1149",
+      "source_location": "L1151",
       "id": "motionmaker_engine_evaluatescene",
       "community": 35,
       "norm_label": "evaluatescene()"
@@ -7801,7 +7801,7 @@
       "label": "NODE_TYPES",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L792",
+      "source_location": "L809",
       "id": "motionmaker_nodes_node_types",
       "community": 26,
       "norm_label": "node_types"
@@ -7810,7 +7810,7 @@
       "label": "NODE_MENU",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L795",
+      "source_location": "L812",
       "id": "motionmaker_nodes_node_menu",
       "community": 26,
       "norm_label": "node_menu"
@@ -7819,7 +7819,7 @@
       "label": "defaultParams()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L807",
+      "source_location": "L824",
       "id": "motionmaker_nodes_defaultparams",
       "community": 25,
       "norm_label": "defaultparams()"
@@ -7828,7 +7828,7 @@
       "label": "makeNodeId()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L819",
+      "source_location": "L836",
       "id": "motionmaker_nodes_makenodeid",
       "community": 25,
       "norm_label": "makenodeid()"
@@ -7999,7 +7999,7 @@
       "label": "buildFilter()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L115",
+      "source_location": "L124",
       "id": "motionmaker_render_buildfilter",
       "community": 50,
       "norm_label": "buildfilter()"
@@ -8008,7 +8008,7 @@
       "label": "buildMask()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L127",
+      "source_location": "L136",
       "id": "motionmaker_render_buildmask",
       "community": 50,
       "norm_label": "buildmask()"
@@ -8017,7 +8017,7 @@
       "label": "itemSvg()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L145",
+      "source_location": "L154",
       "id": "motionmaker_render_itemsvg",
       "community": 50,
       "norm_label": "itemsvg()"
@@ -8026,7 +8026,7 @@
       "label": "itemSvgInner()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L151",
+      "source_location": "L160",
       "id": "motionmaker_render_itemsvginner",
       "community": 50,
       "norm_label": "itemsvginner()"
@@ -8035,7 +8035,7 @@
       "label": "sceneToSvgString()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L186",
+      "source_location": "L196",
       "id": "motionmaker_render_scenetosvgstring",
       "community": 50,
       "norm_label": "scenetosvgstring()"
@@ -8044,7 +8044,7 @@
       "label": "SceneSvg()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L202",
+      "source_location": "L212",
       "id": "motionmaker_render_scenesvg",
       "community": 50,
       "norm_label": "scenesvg()"
@@ -8053,7 +8053,7 @@
       "label": "rasterizeScene()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L249",
+      "source_location": "L260",
       "id": "motionmaker_render_rasterizescene",
       "community": 35,
       "norm_label": "rasterizescene()"
@@ -33532,5 +33532,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "2bcf7e3539d07a37a06c910abcfd6969f78557b2"
+  "built_at_commit": "1698399b9409e3b8bee1da33b3fc7749dc3171d3"
 }

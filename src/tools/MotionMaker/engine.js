@@ -1090,6 +1090,7 @@ function gatherObjects(nodeId, frame, ctx, seen) {
 
   switch (node.type) {
     case 'transform': return objs.map(o => applyTransform(o, rp, ctx))
+    case 'roundCorners': return objs.map(o => ({ ...o, corner: Math.max(0, rp.radius || 0) }))
     case 'parent':    return applyParent(objs, rp, ctx)
     case 'array':     return applyArray(objs, rp)
     case 'mirror':    return applyMirror(objs, rp, ctx)
@@ -1123,6 +1124,7 @@ function gatherObjects(nodeId, frame, ctx, seen) {
     case 'blur':       return objs.map(o => withFx(o, { type: 'blur', radius: rp.radius, direction: rp.direction }))
     case 'glow':       return objs.map(o => withFx(o, { type: 'glow', radius: rp.radius, intensity: rp.intensity, color: rp.color }))
     case 'dropShadow': return objs.map(o => withFx(o, { type: 'dropShadow', dx: rp.dx, dy: rp.dy, blur: rp.blur, opacity: rp.opacity, color: rp.color }))
+    case 'outline':    return objs.map(o => withFx(o, { type: 'outline', width: rp.width, color: rp.color }))
     case 'blend':      return objs.map(o => ({ ...o, blend: rp.mode }))
     case 'dither':
       return objs.map(o => withFx(o, {

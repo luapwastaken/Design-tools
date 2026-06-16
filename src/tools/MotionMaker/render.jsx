@@ -71,6 +71,15 @@ function fxPrimitive(e, IN, OUT) {
     }
     case 'dropShadow':
       return `<feDropShadow in="${IN}" dx="${e.dx || 0}" dy="${e.dy || 0}" stdDeviation="${Math.max(0, e.blur || 0)}" flood-color="${e.color || '#000'}" flood-opacity="${clampNum(e.opacity ?? 0.5, 0, 1)}" result="${OUT}"/>`
+    case 'outline': {
+      // dilate the alpha by `width`, flood it with the stroke colour, and lay the
+      // original back on top → a solid outline ring around the shape.
+      const r = Math.max(0, e.width || 0)
+      return `<feMorphology in="${IN}" operator="dilate" radius="${r}" result="${OUT}_d"/>` +
+             `<feFlood flood-color="${e.color || '#fff'}" result="${OUT}_f"/>` +
+             `<feComposite in="${OUT}_f" in2="${OUT}_d" operator="in" result="${OUT}_s"/>` +
+             `<feMerge result="${OUT}"><feMergeNode in="${OUT}_s"/><feMergeNode in="${IN}"/></feMerge>`
+    }
     case 'glitch': {
       // block displacement (horizontal tears) → RGB channel split, recombined by screen.
       const disp = e.displace || 0, split = e.rgbSplit || 0, seed = e.seed || 0
@@ -156,9 +165,10 @@ function itemSvgInner(it, filterId) {
     return `<g transform="${t}" opacity="${it.opacity}"${fAttr}${bAttr}><image href="${it.href}" x="${(-it.w / 2).toFixed(2)}" y="${(-it.h / 2).toFixed(2)}" width="${it.w.toFixed(2)}" height="${it.h.toFixed(2)}" preserveAspectRatio="xMidYMid meet"/></g>`
   }
   if (it.kind === 'shape') {
+    const rx = it.corner ? ` rx="${Math.min(it.corner, it.w / 2).toFixed(2)}" ry="${Math.min(it.corner, it.h / 2).toFixed(2)}"` : ''
     const inner = it.shape === 'ellipse'
       ? `<ellipse cx="0" cy="0" rx="${(it.w / 2).toFixed(2)}" ry="${(it.h / 2).toFixed(2)}" fill="${it.color}"/>`
-      : `<rect x="${(-it.w / 2).toFixed(2)}" y="${(-it.h / 2).toFixed(2)}" width="${it.w.toFixed(2)}" height="${it.h.toFixed(2)}" fill="${it.color}"/>`
+      : `<rect x="${(-it.w / 2).toFixed(2)}" y="${(-it.h / 2).toFixed(2)}" width="${it.w.toFixed(2)}" height="${it.h.toFixed(2)}"${rx} fill="${it.color}"/>`
     return `<g transform="${t}" opacity="${it.opacity}"${fAttr}${bAttr}>${inner}</g>`
   }
   if (it.kind === 'backdrop') {
@@ -221,7 +231,8 @@ export function SceneSvg({ scene, style }) {
         } else if (it.kind === 'shape') {
           el = <g {...gProps}>{it.shape === 'ellipse'
             ? <ellipse cx={0} cy={0} rx={it.w / 2} ry={it.h / 2} fill={it.color} />
-            : <rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} fill={it.color} />}</g>
+            : <rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h}
+                rx={it.corner ? Math.min(it.corner, it.w / 2) : undefined} ry={it.corner ? Math.min(it.corner, it.h / 2) : undefined} fill={it.color} />}</g>
         } else if (it.kind === 'backdrop') {
           const useGrad = it.mode !== 'solid' && it.colorB
           const gid = 'bg_' + sanitizeId(it.id)

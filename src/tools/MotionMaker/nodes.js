@@ -291,6 +291,15 @@ export const NODE_DEFS = {
       N('y', 'Pin Y +', -2000, 2000, 1, 0),
     ],
   },
+  // Round Corners — soften rectangle corners (sets a corner radius the renderer applies
+  // as rx/ry). No-op on ellipses/text/images.
+  roundCorners: {
+    type: 'roundCorners', label: 'Round Corners', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('radius', 'Radius', 0, 1000, 1, 24),
+    ],
+  },
   // Stagger — offset the upstream animation per object by index (delay-based). Simpler
   // than Effector: re-samples the subtree at frame − index·step so copies/children cascade.
   stagger: {
@@ -725,6 +734,14 @@ export const NODE_DEFS = {
       N('seed', 'Seed', 0, 9999, 1, 1),
     ],
   },
+  outline: {
+    type: 'outline', label: 'Stroke / Outline', category: 'appearance',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('width', 'Width', 0, 50, 0.5, 4),
+      { key: 'color', label: 'Color', type: 'color', default: '#ffffff' },
+    ],
+  },
   glitch: {
     type: 'glitch', label: 'Glitch / Datamosh', category: 'appearance',
     obj: { in: true, out: true }, value: false,
@@ -794,8 +811,8 @@ export const NODE_TYPES = Object.keys(NODE_DEFS)
 // Convenience groupings for the "add node" menu.
 export const NODE_MENU = [
   { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'text', 'counter', 'backdrop', 'null'] },
-  { group: 'Modifiers', types: ['transform', 'parent', 'stagger', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'align', 'motionPath', 'magnet', 'orient', 'split', 'effector', 'mask', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
-  { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'blend', 'dither', 'glitch'] },
+  { group: 'Modifiers', types: ['transform', 'parent', 'stagger', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'roundCorners', 'align', 'motionPath', 'magnet', 'orient', 'split', 'effector', 'mask', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
+  { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'outline', 'blend', 'dither', 'glitch'] },
   { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'sequencer', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
   { group: 'Color',     types: ['colorSwatch', 'gradientMap', 'brandPalette'] },
   { group: 'Operators', types: ['math', 'mapRange', 'curve', 'mix', 'clamp', 'delay', 'sampleHold', 'expression'] },
