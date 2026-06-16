@@ -182,6 +182,18 @@ function itemSvgInner(it, filterId) {
     const tx = `<text x="0" y="0" font-family="${it.font || 'system-ui'}" font-size="${it.h}" font-weight="${it.weight || 700}" fill="${it.fill}" text-anchor="${textAnchor(it.align)}" dominant-baseline="central" letter-spacing="${it.tracking || 0}" style="white-space:pre">${xmlEscape(it.string || '')}</text>`
     return `<g transform="${t}" opacity="${it.opacity}"${fAttr}${bAttr}>${tx}</g>`
   }
+  if (it.kind === 'path') {
+    const sc = it.scale ?? 1
+    const fill = it.fillMode === 'fill' ? it.fill : 'none'
+    let dash = ''
+    if (it.trim) {
+      const vis = clampNum((it.trim.end ?? 1) - (it.trim.start ?? 0), 0, 1)
+      const off = -((it.trim.start ?? 0) + (it.trim.offset || 0))
+      dash = ` pathLength="1" stroke-dasharray="${vis.toFixed(4)} ${(1 - vis).toFixed(4)}" stroke-dashoffset="${off.toFixed(4)}"`
+    }
+    const p = `<path d="${it.d}" transform="scale(${sc})" fill="${fill}" stroke="${it.stroke}" stroke-width="${it.strokeWidth || 0}" stroke-linecap="round" stroke-linejoin="round"${dash}/>`
+    return `<g transform="${t}" opacity="${it.opacity}"${fAttr}${bAttr}>${p}</g>`
+  }
   if (it.kind === 'fragment') {
     // a shard of an image: clip a full-size image down to this piece's cell
     const cp = 'cp_' + sanitizeId(it.id)
@@ -242,6 +254,16 @@ export function SceneSvg({ scene, style }) {
           el = <g {...gProps}><text x={0} y={0} fontFamily={it.font || 'system-ui'} fontSize={it.h} fontWeight={it.weight || 700}
             fill={it.fill} textAnchor={textAnchor(it.align)} dominantBaseline="central"
             letterSpacing={it.tracking || 0} style={{ whiteSpace: 'pre' }}>{it.string}</text></g>
+        } else if (it.kind === 'path') {
+          const sc = it.scale ?? 1
+          const fill = it.fillMode === 'fill' ? it.fill : 'none'
+          let dashProps = {}
+          if (it.trim) {
+            const vis = clampNum((it.trim.end ?? 1) - (it.trim.start ?? 0), 0, 1)
+            dashProps = { pathLength: 1, strokeDasharray: `${vis.toFixed(4)} ${(1 - vis).toFixed(4)}`, strokeDashoffset: (-((it.trim.start ?? 0) + (it.trim.offset || 0))).toFixed(4) }
+          }
+          el = <g {...gProps}><path d={it.d} transform={`scale(${sc})`} fill={fill} stroke={it.stroke}
+            strokeWidth={it.strokeWidth || 0} strokeLinecap="round" strokeLinejoin="round" {...dashProps} /></g>
         } else if (it.kind === 'fragment') {
           const cp = 'cp_' + sanitizeId(it.id)
           el = <g {...gProps}><clipPath id={cp}><rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} /></clipPath>

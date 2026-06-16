@@ -123,6 +123,24 @@ export const NODE_DEFS = {
       N('opacity', 'Opacity', 0, 1, 0.01, 1),
     ],
   },
+  // Path — a raw SVG path string as a drawable object. Stroke it (fill 'none') and drive
+  // a Trim Paths modifier for a line draw-on; or fill it for a custom shape.
+  path: {
+    type: 'path', label: 'Path', category: 'source',
+    obj: { in: false, out: true }, value: false,
+    params: [
+      { key: 'd', label: 'Path d', type: 'text', default: 'M -180 0 C -60 -220, 60 220, 180 0' },
+      { key: 'fillMode', label: 'Fill', type: 'select', options: ['none', 'fill'], default: 'none' },
+      { key: 'fill', label: 'Fill col', type: 'color', default: '#ff7849' },
+      { key: 'stroke', label: 'Stroke', type: 'color', default: '#ffffff' },
+      N('strokeWidth', 'Stroke w', 0, 100, 0.5, 6),
+      N('scale', 'Scale', 0.01, 10, 0.01, 1),
+      N('x', 'X', -2000, 2000, 1, 0),
+      N('y', 'Y', -2000, 2000, 1, 0),
+      N('rotate', 'Rotate', -1080, 1080, 1, 0),
+      N('opacity', 'Opacity', 0, 1, 0.01, 1),
+    ],
+  },
   // Null / Anchor — an invisible parent object. Renders nothing; wire it together with
   // children into a Parent/Pin to make the children inherit its transform (rigging
   // backbone). Animate its x/y/scale/rotate to drive a whole rig from one control.
@@ -289,6 +307,17 @@ export const NODE_DEFS = {
       N('influence', 'Influence', 0, 1, 0.01, 1),
       N('x', 'Pin X +', -2000, 2000, 1, 0),
       N('y', 'Pin Y +', -2000, 2000, 1, 0),
+    ],
+  },
+  // Trim Paths — draw a Path on/off by trimming the stroke (stroke-dashoffset). Drive
+  // End 0→1 with a Ramp for a line-draw reveal; Offset chases the visible segment along.
+  trimPaths: {
+    type: 'trimPaths', label: 'Trim Paths', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('start', 'Start', 0, 1, 0.01, 0),
+      N('end', 'End', 0, 1, 0.01, 1),
+      N('offset', 'Offset', -1, 1, 0.01, 0),
     ],
   },
   // Round Corners — soften rectangle corners (sets a corner radius the renderer applies
@@ -810,8 +839,8 @@ export const NODE_TYPES = Object.keys(NODE_DEFS)
 
 // Convenience groupings for the "add node" menu.
 export const NODE_MENU = [
-  { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'text', 'counter', 'backdrop', 'null'] },
-  { group: 'Modifiers', types: ['transform', 'parent', 'stagger', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'roundCorners', 'align', 'motionPath', 'magnet', 'orient', 'split', 'effector', 'mask', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
+  { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'text', 'counter', 'backdrop', 'path', 'null'] },
+  { group: 'Modifiers', types: ['transform', 'parent', 'stagger', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'roundCorners', 'trimPaths', 'align', 'motionPath', 'magnet', 'orient', 'split', 'effector', 'mask', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
   { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'outline', 'blend', 'dither', 'glitch'] },
   { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'sequencer', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
   { group: 'Color',     types: ['colorSwatch', 'gradientMap', 'brandPalette'] },

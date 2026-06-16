@@ -1,16 +1,16 @@
 # Graph Report - designtools  (2026-06-16)
 
 ## Corpus Check
-- 105 files · ~154,216 words
+- 105 files · ~154,702 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1111 nodes · 2230 edges · 54 communities (48 shown, 6 thin omitted)
+- 1111 nodes · 2231 edges · 54 communities (48 shown, 6 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 8 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1698399b`
+- Built from commit: `1ec1f99c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -271,7 +271,7 @@ Cohesion: 0.11
 Nodes (17): Branch state, Conventions, ✅ Easy — registry + engine branch only, Engine (`src/tools/MotionMaker/engine.js`), Graph editor (`src/tools/MotionMaker/Graph.jsx`), Key architecture facts for the next session, Motion Maker — session handoff (2026-06-16), ✅* Needs precompute/analysis design (+9 more)
 
 ### Community 50 - "Community 50"
-Cohesion: 0.29
+Cohesion: 0.30
 Nodes (12): buildFilter(), buildMask(), clampNum(), fxPrimitive(), gradientDef(), hexRgb(), itemSvg(), itemSvgInner() (+4 more)
 
 ### Community 51 - "Community 51"

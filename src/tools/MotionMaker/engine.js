@@ -467,6 +467,17 @@ function sourceObject(node, rp, ctx, frame) {
     }
   }
 
+  // Path — raw SVG path data drawn at the canvas centre, scalable/rotatable like any
+  // source. Bounds are unknown (string path), so w/h are nominal for downstream layout.
+  if (node.type === 'path') {
+    return {
+      id: node.id, kind: 'path', d: rp.d, fillMode: rp.fillMode, fill: rp.fill,
+      stroke: rp.stroke, strokeWidth: rp.strokeWidth, scale: rp.scale ?? 1,
+      w: 300 * (rp.scale ?? 1), h: 300 * (rp.scale ?? 1),
+      x: cx + rp.x, y: cy + rp.y, rotate: rp.rotate || 0, opacity: clamp(rp.opacity ?? 1, 0, 1),
+    }
+  }
+
   // Null / Anchor — an invisible parent carrying a transform. Renders nothing (no render
   // kind 'null'); Parent/Pin reads its transform and consumes it.
   if (node.type === 'null') {
@@ -1091,6 +1102,7 @@ function gatherObjects(nodeId, frame, ctx, seen) {
   switch (node.type) {
     case 'transform': return objs.map(o => applyTransform(o, rp, ctx))
     case 'roundCorners': return objs.map(o => ({ ...o, corner: Math.max(0, rp.radius || 0) }))
+    case 'trimPaths': return objs.map(o => ({ ...o, trim: { start: clamp(rp.start ?? 0, 0, 1), end: clamp(rp.end ?? 1, 0, 1), offset: rp.offset || 0 } }))
     case 'parent':    return applyParent(objs, rp, ctx)
     case 'array':     return applyArray(objs, rp)
     case 'mirror':    return applyMirror(objs, rp, ctx)

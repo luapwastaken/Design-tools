@@ -7387,7 +7387,7 @@
       "label": "applyTransform()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L495",
+      "source_location": "L506",
       "id": "motionmaker_engine_applytransform",
       "community": 6,
       "norm_label": "applytransform()"
@@ -7396,7 +7396,7 @@
       "label": "withFx()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L512",
+      "source_location": "L523",
       "id": "motionmaker_engine_withfx",
       "community": 6,
       "norm_label": "withfx()"
@@ -7405,7 +7405,7 @@
       "label": "applyArray()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L517",
+      "source_location": "L528",
       "id": "motionmaker_engine_applyarray",
       "community": 6,
       "norm_label": "applyarray()"
@@ -7414,7 +7414,7 @@
       "label": "applyMirror()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L548",
+      "source_location": "L559",
       "id": "motionmaker_engine_applymirror",
       "community": 6,
       "norm_label": "applymirror()"
@@ -7423,7 +7423,7 @@
       "label": "applyWiggle()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L563",
+      "source_location": "L574",
       "id": "motionmaker_engine_applywiggle",
       "community": 6,
       "norm_label": "applywiggle()"
@@ -7432,7 +7432,7 @@
       "label": "applyClip()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L575",
+      "source_location": "L586",
       "id": "motionmaker_engine_applyclip",
       "community": 6,
       "norm_label": "applyclip()"
@@ -7441,7 +7441,7 @@
       "label": "applyPhysics()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L602",
+      "source_location": "L613",
       "id": "motionmaker_engine_applyphysics",
       "community": 6,
       "norm_label": "applyphysics()"
@@ -7450,7 +7450,7 @@
       "label": "applyParticles()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L623",
+      "source_location": "L634",
       "id": "motionmaker_engine_applyparticles",
       "community": 6,
       "norm_label": "applyparticles()"
@@ -7459,7 +7459,7 @@
       "label": "SCRAMBLE_CHARS",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L672",
+      "source_location": "L683",
       "id": "motionmaker_engine_scramble_chars",
       "community": 6,
       "norm_label": "scramble_chars"
@@ -7468,7 +7468,7 @@
       "label": "applyScramble()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L679",
+      "source_location": "L690",
       "id": "motionmaker_engine_applyscramble",
       "community": 6,
       "norm_label": "applyscramble()"
@@ -7477,7 +7477,7 @@
       "label": "applySplit()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L710",
+      "source_location": "L721",
       "id": "motionmaker_engine_applysplit",
       "community": 6,
       "norm_label": "applysplit()"
@@ -7486,7 +7486,7 @@
       "label": "applyEffector()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L735",
+      "source_location": "L746",
       "id": "motionmaker_engine_applyeffector",
       "community": 6,
       "norm_label": "applyeffector()"
@@ -7495,7 +7495,7 @@
       "label": "applyParent()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L773",
+      "source_location": "L784",
       "id": "motionmaker_engine_applyparent",
       "community": 6,
       "norm_label": "applyparent()"
@@ -7504,7 +7504,7 @@
       "label": "applyStagger()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L801",
+      "source_location": "L812",
       "id": "motionmaker_engine_applystagger",
       "community": 6,
       "norm_label": "applystagger()"
@@ -7513,7 +7513,7 @@
       "label": "applyAlign()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L823",
+      "source_location": "L834",
       "id": "motionmaker_engine_applyalign",
       "community": 6,
       "norm_label": "applyalign()"
@@ -7522,7 +7522,7 @@
       "label": "applyMotionPath()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L861",
+      "source_location": "L872",
       "id": "motionmaker_engine_applymotionpath",
       "community": 6,
       "norm_label": "applymotionpath()"
@@ -7531,7 +7531,7 @@
       "label": "applyMagnet()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L886",
+      "source_location": "L897",
       "id": "motionmaker_engine_applymagnet",
       "community": 6,
       "norm_label": "applymagnet()"
@@ -7540,7 +7540,7 @@
       "label": "applyOrient()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L912",
+      "source_location": "L923",
       "id": "motionmaker_engine_applyorient",
       "community": 6,
       "norm_label": "applyorient()"
@@ -7549,7 +7549,7 @@
       "label": "applyCamera()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L931",
+      "source_location": "L942",
       "id": "motionmaker_engine_applycamera",
       "community": 6,
       "norm_label": "applycamera()"
@@ -7558,7 +7558,7 @@
       "label": "applyShatter()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L953",
+      "source_location": "L964",
       "id": "motionmaker_engine_applyshatter",
       "community": 6,
       "norm_label": "applyshatter()"
@@ -7567,7 +7567,7 @@
       "label": "applyEcho()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L989",
+      "source_location": "L1000",
       "id": "motionmaker_engine_applyecho",
       "community": 6,
       "norm_label": "applyecho()"
@@ -7576,7 +7576,7 @@
       "label": "strobeFrame()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L1008",
+      "source_location": "L1019",
       "id": "motionmaker_engine_strobeframe",
       "community": 6,
       "norm_label": "strobeframe()"
@@ -7585,7 +7585,7 @@
       "label": "loopFrame()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L1018",
+      "source_location": "L1029",
       "id": "motionmaker_engine_loopframe",
       "community": 6,
       "norm_label": "loopframe()"
@@ -7594,7 +7594,7 @@
       "label": "remapFrame()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L1031",
+      "source_location": "L1042",
       "id": "motionmaker_engine_remapframe",
       "community": 6,
       "norm_label": "remapframe()"
@@ -7603,7 +7603,7 @@
       "label": "gatherObjects()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L1043",
+      "source_location": "L1054",
       "id": "motionmaker_engine_gatherobjects",
       "community": 6,
       "norm_label": "gatherobjects()"
@@ -7612,7 +7612,7 @@
       "label": "evaluateScene()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L1151",
+      "source_location": "L1163",
       "id": "motionmaker_engine_evaluatescene",
       "community": 35,
       "norm_label": "evaluatescene()"
@@ -7801,7 +7801,7 @@
       "label": "NODE_TYPES",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L809",
+      "source_location": "L838",
       "id": "motionmaker_nodes_node_types",
       "community": 26,
       "norm_label": "node_types"
@@ -7810,7 +7810,7 @@
       "label": "NODE_MENU",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L812",
+      "source_location": "L841",
       "id": "motionmaker_nodes_node_menu",
       "community": 26,
       "norm_label": "node_menu"
@@ -7819,7 +7819,7 @@
       "label": "defaultParams()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L824",
+      "source_location": "L853",
       "id": "motionmaker_nodes_defaultparams",
       "community": 25,
       "norm_label": "defaultparams()"
@@ -7828,7 +7828,7 @@
       "label": "makeNodeId()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L836",
+      "source_location": "L865",
       "id": "motionmaker_nodes_makenodeid",
       "community": 25,
       "norm_label": "makenodeid()"
@@ -8035,7 +8035,7 @@
       "label": "sceneToSvgString()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L196",
+      "source_location": "L208",
       "id": "motionmaker_render_scenetosvgstring",
       "community": 50,
       "norm_label": "scenetosvgstring()"
@@ -8044,7 +8044,7 @@
       "label": "SceneSvg()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L212",
+      "source_location": "L224",
       "id": "motionmaker_render_scenesvg",
       "community": 50,
       "norm_label": "scenesvg()"
@@ -8053,7 +8053,7 @@
       "label": "rasterizeScene()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/render.jsx",
-      "source_location": "L260",
+      "source_location": "L282",
       "id": "motionmaker_render_rasterizescene",
       "community": 35,
       "norm_label": "rasterizescene()"
@@ -30384,6 +30384,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/render.jsx",
+      "source_location": "L190",
+      "weight": 1.0,
+      "source": "motionmaker_render_itemsvginner",
+      "target": "motionmaker_render_clampnum",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L71",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -33532,5 +33543,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "1698399b9409e3b8bee1da33b3fc7749dc3171d3"
+  "built_at_commit": "1ec1f99cc9f36c6fd162fdc44cb0675e13d9c73a"
 }
