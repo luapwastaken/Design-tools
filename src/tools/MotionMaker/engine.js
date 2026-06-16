@@ -424,6 +424,16 @@ function sourceObject(node, rp, ctx, frame) {
     }
   }
 
+  // Null / Anchor — an invisible parent carrying a transform. Renders nothing (no render
+  // kind 'null'); Parent/Pin reads its transform and consumes it.
+  if (node.type === 'null') {
+    return {
+      id: node.id, kind: 'null',
+      x: cx + rp.x, y: cy + rp.y, scale: rp.scale ?? 1, rotate: rp.rotate || 0,
+      w: 0, h: 0, opacity: 0,
+    }
+  }
+
   // icon / wordmark — image source
   const img = rp.image
   if (!img || !img.dataUrl) return null
@@ -712,6 +722,58 @@ function applyEffector(objs, rp, ctx) {
   })
 }
 
+// Parent / Pin — make every child inherit the transform of the first Null/Anchor in the
+// stream. The null's pose is read as a delta from canvas centre (translate + scale +
+// rotate about centre); children are transformed by it (blended by `influence`) and the
+// null is consumed (it never renders). 'position' mode pins location only. With no null
+// present it degrades to a plain pin offset.
+function applyParent(objs, rp, ctx) {
+  const cx = ctx.canvas.w / 2, cy = ctx.canvas.h / 2
+  const par = objs.find(o => o.kind === 'null')
+  const kids = objs.filter(o => o.kind !== 'null')
+  const infl = clamp(rp.influence ?? 1, 0, 1)
+  let tx = (rp.x || 0) * infl, ty = (rp.y || 0) * infl, scale = 1, rot = 0
+  if (par) {
+    tx += (par.x - cx) * infl
+    ty += (par.y - cy) * infl
+    scale = 1 + ((par.scale ?? 1) - 1) * infl
+    rot = (par.rotate || 0) * infl
+  }
+  const posOnly = rp.mode === 'position'
+  const rad = rot * Math.PI / 180, c = Math.cos(rad), s = Math.sin(rad)
+  return kids.map(o => {
+    if (posOnly) return { ...o, x: o.x + tx, y: o.y + ty }
+    const rx = ((o.x - cx) * c - (o.y - cy) * s) * scale
+    const ry = ((o.x - cx) * s + (o.y - cy) * c) * scale
+    return {
+      ...o, x: cx + rx + tx, y: cy + ry + ty,
+      w: o.w * scale, h: o.h * scale, rotate: o.rotate + rot,
+    }
+  })
+}
+
+// Stagger — cascade the upstream animation across objects by index. Re-samples the
+// subtree at frame − rank·step per object (rank set by `order`), so Array copies or a
+// rig's children fall into their motion one after another. Time-domain (like Echo).
+function applyStagger(gather, frame, rp) {
+  const base = gather(frame)
+  const n = base.length
+  const step = rp.step || 0
+  if (n <= 1 || !step) return base
+  const rank = (i) => {
+    switch (rp.order) {
+      case 'reverse': return n - 1 - i
+      case 'center':  return Math.abs(i - (n - 1) / 2)
+      case 'random':  return hash01(i, rp.seed || 0) * (n - 1)
+      default:        return i   // forward
+    }
+  }
+  return base.map((o, i) => {
+    const sample = gather(frame - rank(i) * step)
+    return sample[i] || o
+  })
+}
+
 // Align / Distribute — snap objects to the canvas (or their own bounding box) and even
 // out spacing. relativeTo 'canvas' aligns to canvas edges/centre; 'selection' to the
 // group's bbox.
@@ -975,6 +1037,7 @@ function gatherObjects(nodeId, frame, ctx, seen) {
   // ── Time-domain modifiers (re-time the upstream subtree) ───────────────────────
   switch (node.type) {
     case 'echo':      return applyEcho(gather, frame, rp)
+    case 'stagger':   return applyStagger(gather, frame, rp)
     case 'strobe':    return gather(strobeFrame(frame, rp))
     case 'loop':      return gather(loopFrame(frame, rp, ctx))
     case 'timeRemap': return gather(remapFrame(frame, rp))
@@ -984,6 +1047,7 @@ function gatherObjects(nodeId, frame, ctx, seen) {
 
   switch (node.type) {
     case 'transform': return objs.map(o => applyTransform(o, rp, ctx))
+    case 'parent':    return applyParent(objs, rp, ctx)
     case 'array':     return applyArray(objs, rp)
     case 'mirror':    return applyMirror(objs, rp, ctx)
     case 'wiggle':    return applyWiggle(objs, rp, frame)

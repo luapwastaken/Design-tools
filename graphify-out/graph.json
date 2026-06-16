@@ -666,7 +666,7 @@
       "source_file": "src/components/Icon.jsx",
       "source_location": "L1",
       "id": "components_icon",
-      "community": 24,
+      "community": 20,
       "norm_label": "icon.jsx"
     },
     {
@@ -675,7 +675,7 @@
       "source_file": "src/components/Icon.jsx",
       "source_location": "L12",
       "id": "components_icon_icons",
-      "community": 24,
+      "community": 20,
       "norm_label": "icons"
     },
     {
@@ -684,7 +684,7 @@
       "source_file": "src/components/Icon.jsx",
       "source_location": "L60",
       "id": "components_icon_icon",
-      "community": 24,
+      "community": 20,
       "norm_label": "icon()"
     },
     {
@@ -936,7 +936,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L6",
       "id": "lib_color_hextorgb",
-      "community": 43,
+      "community": 44,
       "norm_label": "hextorgb()"
     },
     {
@@ -972,7 +972,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L42",
       "id": "lib_color_parse",
-      "community": 44,
+      "community": 43,
       "norm_label": "_parse()"
     },
     {
@@ -981,7 +981,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L51",
       "id": "lib_color_parsecolor",
-      "community": 43,
+      "community": 8,
       "norm_label": "parsecolor()"
     },
     {
@@ -990,7 +990,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L55",
       "id": "lib_color_tooklch",
-      "community": 44,
+      "community": 43,
       "norm_label": "tooklch()"
     },
     {
@@ -999,7 +999,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L61",
       "id": "lib_color_tohex",
-      "community": 44,
+      "community": 43,
       "norm_label": "tohex()"
     },
     {
@@ -1017,7 +1017,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L78",
       "id": "lib_color_contrast",
-      "community": 44,
+      "community": 43,
       "norm_label": "contrast()"
     },
     {
@@ -1026,7 +1026,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L88",
       "id": "lib_color_deltae",
-      "community": 32,
+      "community": 43,
       "norm_label": "deltae()"
     },
     {
@@ -1035,7 +1035,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L98",
       "id": "lib_color_insrgbgamut",
-      "community": 44,
+      "community": 43,
       "norm_label": "insrgbgamut()"
     },
     {
@@ -1044,7 +1044,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L102",
       "id": "lib_color_gamutmap",
-      "community": 44,
+      "community": 43,
       "norm_label": "gamutmap()"
     },
     {
@@ -1053,7 +1053,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L112",
       "id": "lib_color_interpolate",
-      "community": 43,
+      "community": 44,
       "norm_label": "interpolate()"
     },
     {
@@ -1071,7 +1071,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L132",
       "id": "lib_color_srgbtolinear",
-      "community": 43,
+      "community": 20,
       "norm_label": "srgbtolinear()"
     },
     {
@@ -1080,7 +1080,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L134",
       "id": "lib_color_lineartosrgb8",
-      "community": 43,
+      "community": 44,
       "norm_label": "lineartosrgb8()"
     },
     {
@@ -1098,7 +1098,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L144",
       "id": "lib_color_kstoreflectance",
-      "community": 43,
+      "community": 44,
       "norm_label": "kstoreflectance()"
     },
     {
@@ -1125,7 +1125,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L168",
       "id": "lib_color_oklchtohex",
-      "community": 2,
+      "community": 20,
       "norm_label": "oklchtohex()"
     },
     {
@@ -1179,7 +1179,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L233",
       "id": "lib_color_autoname",
-      "community": 32,
+      "community": 43,
       "norm_label": "autoname()"
     },
     {
@@ -1188,7 +1188,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L245",
       "id": "lib_color_generateharmony",
-      "community": 43,
+      "community": 44,
       "norm_label": "generateharmony()"
     },
     {
@@ -1692,7 +1692,7 @@
       "source_file": "src/lib/eyedropper.js",
       "source_location": "L1",
       "id": "lib_eyedropper",
-      "community": 29,
+      "community": 44,
       "norm_label": "eyedropper.js"
     },
     {
@@ -1701,7 +1701,7 @@
       "source_file": "src/lib/eyedropper.js",
       "source_location": "L11",
       "id": "lib_eyedropper_eyedroppersupported",
-      "community": 29,
+      "community": 44,
       "norm_label": "eyedroppersupported()"
     },
     {
@@ -1710,7 +1710,7 @@
       "source_file": "src/lib/eyedropper.js",
       "source_location": "L16",
       "id": "lib_eyedropper_ispicking",
-      "community": 29,
+      "community": 44,
       "norm_label": "ispicking()"
     },
     {
@@ -1719,7 +1719,7 @@
       "source_file": "src/lib/eyedropper.js",
       "source_location": "L18",
       "id": "lib_eyedropper_pickscreencolor",
-      "community": 29,
+      "community": 44,
       "norm_label": "pickscreencolor()"
     },
     {
@@ -3636,7 +3636,7 @@
       "source_file": "src/tools/ColorPalette/AutoFix.jsx",
       "source_location": "L1",
       "id": "colorpalette_autofix",
-      "community": 44,
+      "community": 43,
       "norm_label": "autofix.jsx"
     },
     {
@@ -3645,7 +3645,7 @@
       "source_file": "src/tools/ColorPalette/AutoFix.jsx",
       "source_location": "L5",
       "id": "colorpalette_autofix_runautofix",
-      "community": 44,
+      "community": 43,
       "norm_label": "runautofix()"
     },
     {
@@ -3654,7 +3654,7 @@
       "source_file": "src/tools/ColorPalette/AutoFix.jsx",
       "source_location": "L76",
       "id": "colorpalette_autofix_autofix",
-      "community": 44,
+      "community": 43,
       "norm_label": "autofix()"
     },
     {
@@ -3663,7 +3663,7 @@
       "source_file": "src/tools/ColorPalette/AutoFix.jsx",
       "source_location": "L155",
       "id": "colorpalette_autofix_btn",
-      "community": 44,
+      "community": 43,
       "norm_label": "btn()"
     },
     {
@@ -3708,7 +3708,7 @@
       "source_file": "src/tools/ColorPalette/BGCheck.jsx",
       "source_location": "L98",
       "id": "colorpalette_bgcheck_bgcheck",
-      "community": 24,
+      "community": 2,
       "norm_label": "bgcheck()"
     },
     {
@@ -4275,7 +4275,7 @@
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L1",
       "id": "colorpalette_illustrationmode",
-      "community": 43,
+      "community": 44,
       "norm_label": "illustrationmode.jsx"
     },
     {
@@ -4284,7 +4284,7 @@
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L6",
       "id": "colorpalette_illustrationmode_ill_panels",
-      "community": 43,
+      "community": 44,
       "norm_label": "ill_panels"
     },
     {
@@ -4293,7 +4293,7 @@
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L8",
       "id": "colorpalette_illustrationmode_illustrationmode",
-      "community": 43,
+      "community": 44,
       "norm_label": "illustrationmode()"
     },
     {
@@ -4302,7 +4302,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L1",
       "id": "colorpalette_imageextract",
-      "community": 24,
+      "community": 20,
       "norm_label": "imageextract.jsx"
     },
     {
@@ -4311,7 +4311,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L11",
       "id": "colorpalette_imageextract_rgbtooklab",
-      "community": 43,
+      "community": 20,
       "norm_label": "rgbtooklab()"
     },
     {
@@ -4320,7 +4320,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L24",
       "id": "colorpalette_imageextract_oklabtohex",
-      "community": 2,
+      "community": 20,
       "norm_label": "oklabtohex()"
     },
     {
@@ -4329,7 +4329,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L32",
       "id": "colorpalette_imageextract_kmeans",
-      "community": 24,
+      "community": 20,
       "norm_label": "kmeans()"
     },
     {
@@ -4338,7 +4338,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L73",
       "id": "colorpalette_imageextract_imageextract",
-      "community": 24,
+      "community": 20,
       "norm_label": "imageextract()"
     },
     {
@@ -4716,7 +4716,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L529",
       "id": "colorpalette_picker_eyedropperbtn",
-      "community": 29,
+      "community": 44,
       "norm_label": "eyedropperbtn()"
     },
     {
@@ -4869,7 +4869,7 @@
       "source_file": "src/tools/ColorPalette/Recipes.jsx",
       "source_location": "L207",
       "id": "colorpalette_recipes_rendertheme",
-      "community": 2,
+      "community": 25,
       "norm_label": "rendertheme()"
     },
     {
@@ -5247,7 +5247,7 @@
       "source_file": "src/tools/ColorPalette/panelUi.jsx",
       "source_location": "L62",
       "id": "colorpalette_panelui_dicebtn",
-      "community": 8,
+      "community": 24,
       "norm_label": "dicebtn()"
     },
     {
@@ -6048,7 +6048,7 @@
       "source_file": "src/tools/DitherTool/presets.js",
       "source_location": "L1",
       "id": "dithertool_presets",
-      "community": 49,
+      "community": 7,
       "norm_label": "presets.js"
     },
     {
@@ -6057,7 +6057,7 @@
       "source_file": "src/tools/DitherTool/presets.js",
       "source_location": "L21",
       "id": "dithertool_presets_neutral",
-      "community": 49,
+      "community": 7,
       "norm_label": "neutral"
     },
     {
@@ -6066,7 +6066,7 @@
       "source_file": "src/tools/DitherTool/presets.js",
       "source_location": "L49",
       "id": "dithertool_presets_mk",
-      "community": 49,
+      "community": 7,
       "norm_label": "mk()"
     },
     {
@@ -6075,7 +6075,7 @@
       "source_file": "src/tools/DitherTool/presets.js",
       "source_location": "L51",
       "id": "dithertool_presets_builtin_presets",
-      "community": 49,
+      "community": 7,
       "norm_label": "builtin_presets"
     },
     {
@@ -6786,7 +6786,7 @@
       "source_file": "src/tools/LogoMaker/LockupSvg.jsx",
       "source_location": "L20",
       "id": "logomaker_lockupsvg_treatmentfilter",
-      "community": 0,
+      "community": 44,
       "norm_label": "treatmentfilter()"
     },
     {
@@ -7002,7 +7002,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L1",
       "id": "motionmaker_graph",
-      "community": 0,
+      "community": 25,
       "norm_label": "graph.jsx"
     },
     {
@@ -7011,7 +7011,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L14",
       "id": "motionmaker_graph_socketparams",
-      "community": 0,
+      "community": 25,
       "norm_label": "socketparams()"
     },
     {
@@ -7020,7 +7020,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L18",
       "id": "motionmaker_graph_motionnode",
-      "community": 0,
+      "community": 25,
       "norm_label": "motionnode()"
     },
     {
@@ -7029,7 +7029,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L82",
       "id": "motionmaker_graph_round",
-      "community": 0,
+      "community": 25,
       "norm_label": "round()"
     },
     {
@@ -7038,7 +7038,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L85",
       "id": "motionmaker_graph_notenode",
-      "community": 0,
+      "community": 25,
       "norm_label": "notenode()"
     },
     {
@@ -7047,7 +7047,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L97",
       "id": "motionmaker_graph_nodetypes",
-      "community": 0,
+      "community": 25,
       "norm_label": "nodetypes"
     },
     {
@@ -7056,7 +7056,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L100",
       "id": "motionmaker_graph_summarize",
-      "community": 0,
+      "community": 25,
       "norm_label": "summarize()"
     },
     {
@@ -7065,7 +7065,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L125",
       "id": "motionmaker_graph_graph",
-      "community": 0,
+      "community": 25,
       "norm_label": "graph()"
     },
     {
@@ -7074,7 +7074,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L275",
       "id": "motionmaker_graph_filternodes",
-      "community": 0,
+      "community": 25,
       "norm_label": "filternodes()"
     },
     {
@@ -7083,7 +7083,7 @@
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L286",
       "id": "motionmaker_graph_nodepalette",
-      "community": 0,
+      "community": 25,
       "norm_label": "nodepalette()"
     },
     {
@@ -7369,7 +7369,7 @@
       "label": "applyTransform()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L442",
+      "source_location": "L452",
       "id": "motionmaker_engine_applytransform",
       "community": 6,
       "norm_label": "applytransform()"
@@ -7378,7 +7378,7 @@
       "label": "withFx()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L459",
+      "source_location": "L469",
       "id": "motionmaker_engine_withfx",
       "community": 6,
       "norm_label": "withfx()"
@@ -7387,7 +7387,7 @@
       "label": "applyArray()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L464",
+      "source_location": "L474",
       "id": "motionmaker_engine_applyarray",
       "community": 6,
       "norm_label": "applyarray()"
@@ -7396,7 +7396,7 @@
       "label": "applyMirror()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L495",
+      "source_location": "L505",
       "id": "motionmaker_engine_applymirror",
       "community": 6,
       "norm_label": "applymirror()"
@@ -7405,7 +7405,7 @@
       "label": "applyWiggle()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L510",
+      "source_location": "L520",
       "id": "motionmaker_engine_applywiggle",
       "community": 6,
       "norm_label": "applywiggle()"
@@ -7414,7 +7414,7 @@
       "label": "applyClip()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L522",
+      "source_location": "L532",
       "id": "motionmaker_engine_applyclip",
       "community": 6,
       "norm_label": "applyclip()"
@@ -7423,7 +7423,7 @@
       "label": "applyPhysics()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L549",
+      "source_location": "L559",
       "id": "motionmaker_engine_applyphysics",
       "community": 6,
       "norm_label": "applyphysics()"
@@ -7432,7 +7432,7 @@
       "label": "applyParticles()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L570",
+      "source_location": "L580",
       "id": "motionmaker_engine_applyparticles",
       "community": 6,
       "norm_label": "applyparticles()"
@@ -7441,7 +7441,7 @@
       "label": "SCRAMBLE_CHARS",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L619",
+      "source_location": "L629",
       "id": "motionmaker_engine_scramble_chars",
       "community": 6,
       "norm_label": "scramble_chars"
@@ -7450,7 +7450,7 @@
       "label": "applyScramble()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L626",
+      "source_location": "L636",
       "id": "motionmaker_engine_applyscramble",
       "community": 6,
       "norm_label": "applyscramble()"
@@ -7459,7 +7459,7 @@
       "label": "applySplit()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L657",
+      "source_location": "L667",
       "id": "motionmaker_engine_applysplit",
       "community": 6,
       "norm_label": "applysplit()"
@@ -7468,16 +7468,34 @@
       "label": "applyEffector()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L682",
+      "source_location": "L692",
       "id": "motionmaker_engine_applyeffector",
       "community": 6,
       "norm_label": "applyeffector()"
     },
     {
+      "label": "applyParent()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L730",
+      "id": "motionmaker_engine_applyparent",
+      "community": 6,
+      "norm_label": "applyparent()"
+    },
+    {
+      "label": "applyStagger()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L758",
+      "id": "motionmaker_engine_applystagger",
+      "community": 6,
+      "norm_label": "applystagger()"
+    },
+    {
       "label": "applyAlign()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L718",
+      "source_location": "L780",
       "id": "motionmaker_engine_applyalign",
       "community": 6,
       "norm_label": "applyalign()"
@@ -7486,7 +7504,7 @@
       "label": "applyMotionPath()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L756",
+      "source_location": "L818",
       "id": "motionmaker_engine_applymotionpath",
       "community": 6,
       "norm_label": "applymotionpath()"
@@ -7495,7 +7513,7 @@
       "label": "applyMagnet()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L781",
+      "source_location": "L843",
       "id": "motionmaker_engine_applymagnet",
       "community": 6,
       "norm_label": "applymagnet()"
@@ -7504,7 +7522,7 @@
       "label": "applyOrient()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L807",
+      "source_location": "L869",
       "id": "motionmaker_engine_applyorient",
       "community": 6,
       "norm_label": "applyorient()"
@@ -7513,7 +7531,7 @@
       "label": "applyCamera()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L826",
+      "source_location": "L888",
       "id": "motionmaker_engine_applycamera",
       "community": 6,
       "norm_label": "applycamera()"
@@ -7522,7 +7540,7 @@
       "label": "applyShatter()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L848",
+      "source_location": "L910",
       "id": "motionmaker_engine_applyshatter",
       "community": 6,
       "norm_label": "applyshatter()"
@@ -7531,7 +7549,7 @@
       "label": "applyEcho()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L884",
+      "source_location": "L946",
       "id": "motionmaker_engine_applyecho",
       "community": 6,
       "norm_label": "applyecho()"
@@ -7540,7 +7558,7 @@
       "label": "strobeFrame()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L903",
+      "source_location": "L965",
       "id": "motionmaker_engine_strobeframe",
       "community": 6,
       "norm_label": "strobeframe()"
@@ -7549,7 +7567,7 @@
       "label": "loopFrame()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L913",
+      "source_location": "L975",
       "id": "motionmaker_engine_loopframe",
       "community": 6,
       "norm_label": "loopframe()"
@@ -7558,7 +7576,7 @@
       "label": "remapFrame()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L926",
+      "source_location": "L988",
       "id": "motionmaker_engine_remapframe",
       "community": 6,
       "norm_label": "remapframe()"
@@ -7567,7 +7585,7 @@
       "label": "gatherObjects()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L938",
+      "source_location": "L1000",
       "id": "motionmaker_engine_gatherobjects",
       "community": 6,
       "norm_label": "gatherobjects()"
@@ -7576,7 +7594,7 @@
       "label": "evaluateScene()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L1042",
+      "source_location": "L1106",
       "id": "motionmaker_engine_evaluatescene",
       "community": 50,
       "norm_label": "evaluatescene()"
@@ -7713,7 +7731,7 @@
       "source_file": "src/tools/MotionMaker/nodes.js",
       "source_location": "L1",
       "id": "motionmaker_nodes",
-      "community": 0,
+      "community": 25,
       "norm_label": "nodes.js"
     },
     {
@@ -7722,7 +7740,7 @@
       "source_file": "src/tools/MotionMaker/nodes.js",
       "source_location": "L13",
       "id": "motionmaker_nodes_category_color",
-      "community": 0,
+      "community": 25,
       "norm_label": "category_color"
     },
     {
@@ -7731,7 +7749,7 @@
       "source_file": "src/tools/MotionMaker/nodes.js",
       "source_location": "L23",
       "id": "motionmaker_nodes_n",
-      "community": 2,
+      "community": 25,
       "norm_label": "n()"
     },
     {
@@ -7740,7 +7758,7 @@
       "source_file": "src/tools/MotionMaker/nodes.js",
       "source_location": "L27",
       "id": "motionmaker_nodes_ease_options",
-      "community": 0,
+      "community": 25,
       "norm_label": "ease_options"
     },
     {
@@ -7749,7 +7767,7 @@
       "source_file": "src/tools/MotionMaker/nodes.js",
       "source_location": "L33",
       "id": "motionmaker_nodes_font_options",
-      "community": 0,
+      "community": 25,
       "norm_label": "font_options"
     },
     {
@@ -7758,32 +7776,32 @@
       "source_file": "src/tools/MotionMaker/nodes.js",
       "source_location": "L35",
       "id": "motionmaker_nodes_node_defs",
-      "community": 0,
+      "community": 25,
       "norm_label": "node_defs"
     },
     {
       "label": "NODE_TYPES",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L710",
+      "source_location": "L747",
       "id": "motionmaker_nodes_node_types",
-      "community": 0,
+      "community": 25,
       "norm_label": "node_types"
     },
     {
       "label": "NODE_MENU",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L713",
+      "source_location": "L750",
       "id": "motionmaker_nodes_node_menu",
-      "community": 0,
+      "community": 25,
       "norm_label": "node_menu"
     },
     {
       "label": "defaultParams()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L725",
+      "source_location": "L762",
       "id": "motionmaker_nodes_defaultparams",
       "community": 25,
       "norm_label": "defaultparams()"
@@ -7792,7 +7810,7 @@
       "label": "makeNodeId()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L737",
+      "source_location": "L774",
       "id": "motionmaker_nodes_makenodeid",
       "community": 25,
       "norm_label": "makenodeid()"
@@ -8541,7 +8559,7 @@
       "source_file": "src/tools/PatternMaker.jsx",
       "source_location": "L256",
       "id": "tools_patternmaker_shapeslot",
-      "community": 19,
+      "community": 0,
       "norm_label": "shapeslot()"
     },
     {
@@ -9171,7 +9189,7 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L202",
       "id": "postfx_store_sendimagetopostfx",
-      "community": 5,
+      "community": 41,
       "norm_label": "sendimagetopostfx()"
     },
     {
@@ -9607,6 +9625,168 @@
       "norm_label": "unlock dependency summary"
     },
     {
+      "label": "2026-06-16-motion-maker-handoff.md",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L1",
+      "id": "specs_2026_06_16_motion_maker_handoff",
+      "community": 49,
+      "norm_label": "2026-06-16-motion-maker-handoff.md"
+    },
+    {
+      "label": "Motion Maker \u2014 session handoff (2026-06-16)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L1",
+      "id": "specs_2026_06_16_motion_maker_handoff_motion_maker_session_handoff_2026_06_16",
+      "community": 49,
+      "norm_label": "motion maker \u2014 session handoff (2026-06-16)"
+    },
+    {
+      "label": "Branch state",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L3",
+      "id": "specs_2026_06_16_motion_maker_handoff_branch_state",
+      "community": 49,
+      "norm_label": "branch state"
+    },
+    {
+      "label": "What's been built (all 18 waves, merged through PRs #8\u201311)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L11",
+      "id": "specs_2026_06_16_motion_maker_handoff_what_s_been_built_all_18_waves_merged_through_prs_8_11",
+      "community": 49,
+      "norm_label": "what's been built (all 18 waves, merged through prs #8\u201311)"
+    },
+    {
+      "label": "What's NOT done (from the spec)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L38",
+      "id": "specs_2026_06_16_motion_maker_handoff_what_s_not_done_from_the_spec",
+      "community": 49,
+      "norm_label": "what's not done (from the spec)"
+    },
+    {
+      "label": "\u2705 Easy \u2014 registry + engine branch only",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L40",
+      "id": "specs_2026_06_16_motion_maker_handoff_easy_registry_engine_branch_only",
+      "community": 49,
+      "norm_label": "\u2705 easy \u2014 registry + engine branch only"
+    },
+    {
+      "label": "\ud83d\udd27 Needs render work",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L51",
+      "id": "specs_2026_06_16_motion_maker_handoff_needs_render_work",
+      "community": 49,
+      "norm_label": "\ud83d\udd27 needs render work"
+    },
+    {
+      "label": "\ud83e\udde9 Needs unlock 5 (subgraph/nesting)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L63",
+      "id": "specs_2026_06_16_motion_maker_handoff_needs_unlock_5_subgraph_nesting",
+      "community": 49,
+      "norm_label": "\ud83e\udde9 needs unlock 5 (subgraph/nesting)"
+    },
+    {
+      "label": "\u2705* Needs precompute/analysis design",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L72",
+      "id": "specs_2026_06_16_motion_maker_handoff_needs_precompute_analysis_design",
+      "community": 49,
+      "norm_label": "\u2705* needs precompute/analysis design"
+    },
+    {
+      "label": "Key architecture facts for the next session",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L78",
+      "id": "specs_2026_06_16_motion_maker_handoff_key_architecture_facts_for_the_next_session",
+      "community": 49,
+      "norm_label": "key architecture facts for the next session"
+    },
+    {
+      "label": "Engine (`src/tools/MotionMaker/engine.js`)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L80",
+      "id": "specs_2026_06_16_motion_maker_handoff_engine_src_tools_motionmaker_engine_js",
+      "community": 49,
+      "norm_label": "engine (`src/tools/motionmaker/engine.js`)"
+    },
+    {
+      "label": "Nodes registry (`src/tools/MotionMaker/nodes.js`)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L91",
+      "id": "specs_2026_06_16_motion_maker_handoff_nodes_registry_src_tools_motionmaker_nodes_js",
+      "community": 49,
+      "norm_label": "nodes registry (`src/tools/motionmaker/nodes.js`)"
+    },
+    {
+      "label": "Render (`src/tools/MotionMaker/render.jsx`)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L99",
+      "id": "specs_2026_06_16_motion_maker_handoff_render_src_tools_motionmaker_render_jsx",
+      "community": 49,
+      "norm_label": "render (`src/tools/motionmaker/render.jsx`)"
+    },
+    {
+      "label": "Graph editor (`src/tools/MotionMaker/Graph.jsx`)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L107",
+      "id": "specs_2026_06_16_motion_maker_handoff_graph_editor_src_tools_motionmaker_graph_jsx",
+      "community": 49,
+      "norm_label": "graph editor (`src/tools/motionmaker/graph.jsx`)"
+    },
+    {
+      "label": "Store (`src/tools/MotionMaker/store.js`)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L115",
+      "id": "specs_2026_06_16_motion_maker_handoff_store_src_tools_motionmaker_store_js",
+      "community": 49,
+      "norm_label": "store (`src/tools/motionmaker/store.js`)"
+    },
+    {
+      "label": "Suggested next wave (Wave 19)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L121",
+      "id": "specs_2026_06_16_motion_maker_handoff_suggested_next_wave_wave_19",
+      "community": 49,
+      "norm_label": "suggested next wave (wave 19)"
+    },
+    {
+      "label": "Conventions",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L131",
+      "id": "specs_2026_06_16_motion_maker_handoff_conventions",
+      "community": 49,
+      "norm_label": "conventions"
+    },
+    {
+      "label": "Troubleshooting notes",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L142",
+      "id": "specs_2026_06_16_motion_maker_handoff_troubleshooting_notes",
+      "community": 49,
+      "norm_label": "troubleshooting notes"
+    },
+    {
       "label": "reflToKS",
       "file_type": "code",
       "source_file": "src/lib/spectral.js",
@@ -9629,7 +9809,7 @@
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/Graph.jsx",
       "source_location": "L161",
-      "community": 0,
+      "community": 25,
       "norm_label": "addmenu()",
       "id": "motionmaker_graph_addmenu"
     },
@@ -9737,7 +9917,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L10",
-      "community": 43,
+      "community": 44,
       "norm_label": "harmonyoverlay()",
       "id": "colorpalette_illustrationmode_harmonyoverlay"
     },
@@ -9764,7 +9944,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L25",
-      "community": 43,
+      "community": 44,
       "norm_label": "ks8",
       "id": "colorpalette_illustrationmode_ks8"
     },
@@ -9773,7 +9953,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L28",
-      "community": 43,
+      "community": 44,
       "norm_label": "rgbtohex()",
       "id": "colorpalette_illustrationmode_rgbtohex"
     },
@@ -9782,7 +9962,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L32",
-      "community": 43,
+      "community": 44,
       "norm_label": "mixer()",
       "id": "colorpalette_illustrationmode_mixer"
     },
@@ -9791,7 +9971,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L84",
-      "community": 43,
+      "community": 44,
       "norm_label": "colorchip()",
       "id": "colorpalette_illustrationmode_colorchip"
     },
@@ -28144,6 +28324,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L730",
+      "weight": 1.0,
+      "source": "motionmaker_engine",
+      "target": "motionmaker_engine_applyparent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
       "source_location": "L397",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -28189,6 +28379,16 @@
       "confidence_score": 1.0,
       "source": "motionmaker_engine",
       "target": "motionmaker_engine_applysplit"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L758",
+      "weight": 1.0,
+      "source": "motionmaker_engine",
+      "target": "motionmaker_engine_applystagger",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -28556,6 +28756,17 @@
       "confidence_score": 1.0,
       "source": "motionmaker_engine_applymotionpath",
       "target": "motionmaker_engine_clamp"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L734",
+      "weight": 1.0,
+      "source": "motionmaker_engine_applyparent",
+      "target": "motionmaker_engine_clamp",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -28963,6 +29174,28 @@
       "confidence_score": 1.0,
       "source": "motionmaker_engine_gatherobjects",
       "target": "motionmaker_engine_applyeffector"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L1050",
+      "weight": 1.0,
+      "source": "motionmaker_engine_gatherobjects",
+      "target": "motionmaker_engine_applyparent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L1040",
+      "weight": 1.0,
+      "source": "motionmaker_engine_gatherobjects",
+      "target": "motionmaker_engine_applystagger",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -29918,9 +30151,9 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L127",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_render",
-      "target": "motionmaker_render_buildmask",
-      "confidence_score": 1.0
+      "target": "motionmaker_render_buildmask"
     },
     {
       "relation": "contains",
@@ -29978,9 +30211,9 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L151",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_render",
-      "target": "motionmaker_render_itemsvginner",
-      "confidence_score": 1.0
+      "target": "motionmaker_render_itemsvginner"
     },
     {
       "relation": "contains",
@@ -30071,9 +30304,9 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L130",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_render_buildmask",
-      "target": "motionmaker_render_sanitizeid",
-      "confidence_score": 1.0
+      "target": "motionmaker_render_sanitizeid"
     },
     {
       "relation": "calls",
@@ -30093,9 +30326,9 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L166",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_render_itemsvginner",
-      "target": "motionmaker_render_sanitizeid",
-      "confidence_score": 1.0
+      "target": "motionmaker_render_sanitizeid"
     },
     {
       "relation": "calls",
@@ -30115,9 +30348,9 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L172",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_render_itemsvginner",
-      "target": "motionmaker_render_xmlescape",
-      "confidence_score": 1.0
+      "target": "motionmaker_render_xmlescape"
     },
     {
       "relation": "calls",
@@ -30137,9 +30370,9 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L172",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_render_itemsvginner",
-      "target": "motionmaker_render_textanchor",
-      "confidence_score": 1.0
+      "target": "motionmaker_render_textanchor"
     },
     {
       "relation": "calls",
@@ -30170,9 +30403,9 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L167",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_render_itemsvginner",
-      "target": "motionmaker_render_gradientdef",
-      "confidence_score": 1.0
+      "target": "motionmaker_render_gradientdef"
     },
     {
       "relation": "calls",
@@ -30181,9 +30414,9 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L146",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_render_itemsvg",
-      "target": "motionmaker_render_itemsvginner",
-      "confidence_score": 1.0
+      "target": "motionmaker_render_itemsvginner"
     },
     {
       "relation": "contains",
@@ -33024,6 +33257,176 @@
       "target": "specs_2026_06_15_motion_maker_nodes_spec_2e_time_domain_modifiers_re_time_the_upstream_subtree"
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff",
+      "target": "specs_2026_06_16_motion_maker_handoff_motion_maker_session_handoff_2026_06_16",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_motion_maker_session_handoff_2026_06_16",
+      "target": "specs_2026_06_16_motion_maker_handoff_branch_state",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L131",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_motion_maker_session_handoff_2026_06_16",
+      "target": "specs_2026_06_16_motion_maker_handoff_conventions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L78",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_motion_maker_session_handoff_2026_06_16",
+      "target": "specs_2026_06_16_motion_maker_handoff_key_architecture_facts_for_the_next_session",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L121",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_motion_maker_session_handoff_2026_06_16",
+      "target": "specs_2026_06_16_motion_maker_handoff_suggested_next_wave_wave_19",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L142",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_motion_maker_session_handoff_2026_06_16",
+      "target": "specs_2026_06_16_motion_maker_handoff_troubleshooting_notes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_motion_maker_session_handoff_2026_06_16",
+      "target": "specs_2026_06_16_motion_maker_handoff_what_s_been_built_all_18_waves_merged_through_prs_8_11",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_motion_maker_session_handoff_2026_06_16",
+      "target": "specs_2026_06_16_motion_maker_handoff_what_s_not_done_from_the_spec",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L40",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_what_s_not_done_from_the_spec",
+      "target": "specs_2026_06_16_motion_maker_handoff_easy_registry_engine_branch_only",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L72",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_what_s_not_done_from_the_spec",
+      "target": "specs_2026_06_16_motion_maker_handoff_needs_precompute_analysis_design",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L51",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_what_s_not_done_from_the_spec",
+      "target": "specs_2026_06_16_motion_maker_handoff_needs_render_work",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L63",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_what_s_not_done_from_the_spec",
+      "target": "specs_2026_06_16_motion_maker_handoff_needs_unlock_5_subgraph_nesting",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L80",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_key_architecture_facts_for_the_next_session",
+      "target": "specs_2026_06_16_motion_maker_handoff_engine_src_tools_motionmaker_engine_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L107",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_key_architecture_facts_for_the_next_session",
+      "target": "specs_2026_06_16_motion_maker_handoff_graph_editor_src_tools_motionmaker_graph_jsx",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L91",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_key_architecture_facts_for_the_next_session",
+      "target": "specs_2026_06_16_motion_maker_handoff_nodes_registry_src_tools_motionmaker_nodes_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L99",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_key_architecture_facts_for_the_next_session",
+      "target": "specs_2026_06_16_motion_maker_handoff_render_src_tools_motionmaker_render_jsx",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L115",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_key_architecture_facts_for_the_next_session",
+      "target": "specs_2026_06_16_motion_maker_handoff_store_src_tools_motionmaker_store_js",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -33036,5 +33439,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "a3f77e39a8402f84963639a156f6ffaf1eff27df"
+  "built_at_commit": "fccbf5b3764ca6d14d43814c73eff3c000d4a63a"
 }

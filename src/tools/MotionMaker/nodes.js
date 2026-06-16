@@ -122,6 +122,19 @@ export const NODE_DEFS = {
       N('opacity', 'Opacity', 0, 1, 0.01, 1),
     ],
   },
+  // Null / Anchor — an invisible parent object. Renders nothing; wire it together with
+  // children into a Parent/Pin to make the children inherit its transform (rigging
+  // backbone). Animate its x/y/scale/rotate to drive a whole rig from one control.
+  null: {
+    type: 'null', label: 'Null / Anchor', category: 'source',
+    obj: { in: false, out: true }, value: false,
+    params: [
+      N('x', 'X', -2000, 2000, 1, 0),
+      N('y', 'Y', -2000, 2000, 1, 0),
+      N('scale', 'Scale', 0.01, 10, 0.01, 1),
+      N('rotate', 'Rotate', -1080, 1080, 1, 0),
+    ],
+  },
 
   // ── Modifiers ────────────────────────────────────────────────────────────────
   transform: {
@@ -262,6 +275,30 @@ export const NODE_DEFS = {
     params: [
       { key: 'by', label: 'By', type: 'select', options: ['letters', 'words'], default: 'letters' },
       N('tracking', 'Tracking', -50, 200, 1, 0),
+    ],
+  },
+  // Parent / Pin — constrain children to a Null/Anchor. Wire the Null and the children
+  // into the same input: children inherit the null's translate/scale/rotate (offset from
+  // canvas centre), the null itself is consumed (invisible). 'position' pins location only.
+  parent: {
+    type: 'parent', label: 'Parent / Pin', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      { key: 'mode', label: 'Mode', type: 'select', options: ['follow', 'position'], default: 'follow' },
+      N('influence', 'Influence', 0, 1, 0.01, 1),
+      N('x', 'Pin X +', -2000, 2000, 1, 0),
+      N('y', 'Pin Y +', -2000, 2000, 1, 0),
+    ],
+  },
+  // Stagger — offset the upstream animation per object by index (delay-based). Simpler
+  // than Effector: re-samples the subtree at frame − index·step so copies/children cascade.
+  stagger: {
+    type: 'stagger', label: 'Stagger', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('step', 'Step f', -60, 60, 1, 3),
+      { key: 'order', label: 'Order', type: 'select', options: ['forward', 'reverse', 'center', 'random'], default: 'forward' },
+      N('seed', 'Seed', 0, 9999, 1, 1),
     ],
   },
   effector: {
@@ -711,8 +748,8 @@ export const NODE_TYPES = Object.keys(NODE_DEFS)
 
 // Convenience groupings for the "add node" menu.
 export const NODE_MENU = [
-  { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'text', 'counter', 'backdrop'] },
-  { group: 'Modifiers', types: ['transform', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'align', 'motionPath', 'magnet', 'orient', 'split', 'effector', 'mask', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
+  { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'text', 'counter', 'backdrop', 'null'] },
+  { group: 'Modifiers', types: ['transform', 'parent', 'stagger', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'align', 'motionPath', 'magnet', 'orient', 'split', 'effector', 'mask', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
   { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'blend', 'dither', 'glitch'] },
   { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
   { group: 'Color',     types: ['colorSwatch', 'gradientMap', 'brandPalette'] },
