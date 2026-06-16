@@ -535,6 +535,21 @@ export const NODE_DEFS = {
     ],
   },
 
+  sequencer: {
+    type: 'sequencer', label: 'Sequencer', category: 'value',
+    obj: { in: false, out: false }, value: true,
+    params: [
+      { key: 'steps', label: 'Triggers', type: 'keyframes', default: [
+        { frame: 0, value: 1, ease: 'linear' },
+        { frame: 30, value: 1, ease: 'linear' },
+        { frame: 60, value: 1, ease: 'linear' },
+      ] },
+      N('attack', 'Attack f', 0, 240, 1, 2),
+      N('decay', 'Decay f', 1, 600, 1, 12),
+      { key: 'mode', label: 'Mode', type: 'select', options: ['sum', 'max', 'latest'], default: 'max' },
+    ],
+  },
+
   // ── Color value nodes (color-value socket unlock) ──────────────────────────────
   colorSwatch: {
     type: 'colorSwatch', label: 'Color Swatch', category: 'value', vtype: 'color',
@@ -781,7 +796,7 @@ export const NODE_MENU = [
   { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'text', 'counter', 'backdrop', 'null'] },
   { group: 'Modifiers', types: ['transform', 'parent', 'stagger', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'align', 'motionPath', 'magnet', 'orient', 'split', 'effector', 'mask', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
   { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'blend', 'dither', 'glitch'] },
-  { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
+  { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'sequencer', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
   { group: 'Color',     types: ['colorSwatch', 'gradientMap', 'brandPalette'] },
   { group: 'Operators', types: ['math', 'mapRange', 'curve', 'mix', 'clamp', 'delay', 'sampleHold', 'expression'] },
   { group: 'Utility',   types: ['reroute', 'note', 'marker', 'feel', 'seed'] },

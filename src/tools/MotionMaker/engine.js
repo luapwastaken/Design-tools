@@ -284,6 +284,24 @@ export function evalValueNode(node, frame, ctx, seen) {
       return last.value
     }
 
+    // Sequencer — fire an attack/decay envelope at each trigger frame and combine the
+    // active ones (sum / max / latest). A multi-event pulse generator: drive scale,
+    // opacity, glitch bursts… off a score of frames.
+    case 'sequencer': {
+      const evs = Array.isArray(p.steps) ? p.steps : []
+      const atk = Math.max(0, p.attack || 0), dec = Math.max(1, p.decay || 1)
+      let sum = 0, mx = 0, latest = 0, fired = false
+      for (const ev of evs) {
+        const age = frame - (ev.frame || 0)
+        if (age < 0 || age >= atk + dec) continue
+        const e = age < atk ? (atk > 0 ? age / atk : 1) : 1 - (age - atk) / dec
+        const v = (ev.value ?? 0) * e
+        sum += v; if (Math.abs(v) >= Math.abs(mx)) mx = v; latest = v; fired = true
+      }
+      if (!fired) return 0
+      return p.mode === 'sum' ? sum : p.mode === 'latest' ? latest : mx
+    }
+
     // ── Value operators (unlock 1: value→value chaining) ───────────────────────────
     case 'math': {
       const a = p.a || 0, b = p.b || 0
