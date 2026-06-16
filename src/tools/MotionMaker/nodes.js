@@ -17,6 +17,7 @@ export const CATEGORY_COLOR = {
   value:      '#a3e635',
   output:     '#8b5cf6',
   note:       '#ffd36b',  // graph annotations (QoL)
+  global:     '#22d3ee',  // graph-level dials (Feel, Seed) — influence the whole eval
 }
 
 // Param types: 'number' | 'image' | 'select' | 'color' | 'keyframes'
@@ -735,6 +736,35 @@ export const NODE_DEFS = {
       { key: 'color', label: 'Color', type: 'color', default: '#ffd36b' },
     ],
   },
+  // Marker — a labelled flag pinned to a timeline frame; navigational only (no eval
+  // effect). The Timeline reads `frame`/`label`/`color` to draw flags on the ruler.
+  marker: {
+    type: 'marker', label: 'Marker', category: 'note',
+    obj: { in: false, out: false }, value: false,
+    params: [
+      { key: 'label', label: 'Label', type: 'text', default: 'Marker' },
+      N('frame', 'Frame', 0, 6000, 1, 0),
+      { key: 'color', label: 'Color', type: 'color', default: '#22d3ee' },
+    ],
+  },
+
+  // ── Graph-level dials (influence the whole evaluation via ctx, not the flow) ────────
+  feel: {
+    type: 'feel', label: 'Feel / Personality', category: 'global',
+    obj: { in: false, out: false }, value: false,
+    params: [
+      { key: 'character', label: 'Character', type: 'select',
+        options: ['snappy', 'smooth', 'bouncy', 'mechanical', 'organic'], default: 'smooth' },
+      N('intensity', 'Intensity', 0, 1, 0.01, 0.6),
+    ],
+  },
+  seed: {
+    type: 'seed', label: 'Seed / Shuffle', category: 'global',
+    obj: { in: false, out: false }, value: false,
+    params: [
+      N('value', 'Seed', 0, 9999, 1, 0),   // scrub to re-roll every seeded node at once
+    ],
+  },
 
   // ── Output ───────────────────────────────────────────────────────────────────
   scene: {
@@ -754,7 +784,7 @@ export const NODE_MENU = [
   { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
   { group: 'Color',     types: ['colorSwatch', 'gradientMap', 'brandPalette'] },
   { group: 'Operators', types: ['math', 'mapRange', 'curve', 'mix', 'clamp', 'delay', 'sampleHold', 'expression'] },
-  { group: 'Utility',   types: ['reroute', 'note'] },
+  { group: 'Utility',   types: ['reroute', 'note', 'marker', 'feel', 'seed'] },
   { group: 'Output',    types: ['scene'] },
 ]
 

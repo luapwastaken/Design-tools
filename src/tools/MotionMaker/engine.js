@@ -41,6 +41,26 @@ export const EASES = {
   },
 }
 
+// Feel / Personality — one graph-level dial retimes every user-chosen ease toward a
+// coherent character. Each character maps to a signature ease; `easeFn` blends the
+// node's own ease toward it by the Feel node's intensity (0 = untouched).
+const FEEL_EASE = {
+  snappy:     'easeOutCubic',
+  smooth:     'easeInOut',
+  bouncy:     'outBack',
+  mechanical: 'linear',
+  organic:    'easeInOutCubic',
+}
+// Resolve an ease name to a function, applying the active Feel character if any.
+function easeFn(name, ctx) {
+  const base = EASES[name] || EASES.linear
+  const feel = ctx && ctx.feel
+  if (!feel || !feel.intensity) return base
+  const charE = EASES[FEEL_EASE[feel.character]] || base
+  const k = clamp(feel.intensity, 0, 1)
+  return t => { const a = base(t); return a + (charE(t) - a) * k }
+}
+
 // ── Waveforms (return -1..1 for a phase in turns) ────────────────────────────────
 const WAVES = {
   sine:     p => Math.sin(2 * Math.PI * p),
@@ -178,7 +198,7 @@ export function evalValueNode(node, frame, ctx, seen) {
     case 'ramp': {
       const span = (p.endFrame - p.startFrame) || 1
       const t = clamp((frame - p.startFrame) / span, 0, 1)
-      const e = (EASES[p.ease] || EASES.linear)(t)
+      const e = easeFn(p.ease, ctx)(t)
       return p.from + (p.to - p.from) * e
     }
     case 'lfo': {
@@ -257,7 +277,7 @@ export function evalValueNode(node, frame, ctx, seen) {
         const k0 = keys[i], k1 = keys[i + 1]
         if (f >= k0.frame && f <= k1.frame) {
           const t = (f - k0.frame) / ((k1.frame - k0.frame) || 1)
-          const e = (EASES[k1.ease] || EASES.linear)(t)
+          const e = easeFn(k1.ease, ctx)(t)
           return k0.value + (k1.value - k0.value) * e
         }
       }
@@ -288,11 +308,11 @@ export function evalValueNode(node, frame, ctx, seen) {
       const denom = (p.inMax - p.inMin) || 1
       let t = (p.input - p.inMin) / denom
       if (p.clamp === 'on') t = clamp(t, 0, 1)
-      const e = (EASES[p.ease] || EASES.linear)(t)
+      const e = easeFn(p.ease, ctx)(t)
       return p.outMin + (p.outMax - p.outMin) * e
     }
     case 'curve':
-      return (EASES[p.ease] || EASES.linear)(clamp(p.input || 0, 0, 1))
+      return easeFn(p.ease, ctx)(clamp(p.input || 0, 0, 1))
     case 'mix': {
       const a = p.a || 0, b = p.b || 0, t = clamp(p.t ?? 0, 0, 1)
       const target = p.mode === 'add' ? a + b : p.mode === 'multiply' ? a * b : b
@@ -365,6 +385,11 @@ function resolveParams(node, frame, ctx, seen) {
       if (srcNode && !srcNode.bypass) out[p.key] = evalValueNode(srcNode, frame, ctx, seen)
     }
   }
+  // Seed/Shuffle — a global seed node offsets every node's `seed` so one dial re-rolls
+  // all randomness coherently. (The seed node has no `seed` param, so it can't self-shift.)
+  if (ctx.seedOffset && typeof out.seed === 'number' && !ctx.valueBindings[`${node.id}::prop:seed`]) {
+    out.seed = out.seed + ctx.seedOffset
+  }
   return out
 }
 
@@ -400,7 +425,7 @@ function sourceObject(node, rp, ctx, frame) {
     let str
     if (node.type === 'counter') {
       const span = (rp.endFrame - rp.startFrame) || 1
-      const e = (EASES[rp.ease] || EASES.linear)(clamp((frame - rp.startFrame) / span, 0, 1))
+      const e = easeFn(rp.ease, ctx)(clamp((frame - rp.startFrame) / span, 0, 1))
       const v = rp.from + (rp.to - rp.from) * e
       str = (rp.prefix || '') + formatNumber(v, rp.decimals, rp.thousands) + (rp.suffix || '')
     } else {
@@ -692,7 +717,7 @@ function applySplit(objs, rp) {
 function applyEffector(objs, rp, ctx) {
   const n = objs.length
   if (!n) return objs
-  const curve = EASES[rp.falloffCurve] || EASES.linear
+  const curve = easeFn(rp.falloffCurve, ctx)
   const cx = ctx.canvas.w / 2 + (rp.centerX || 0), cy = ctx.canvas.h / 2 + (rp.centerY || 0)
   const size = rp.size || 1
   const strength = rp.strength ?? 1
@@ -985,13 +1010,13 @@ function loopFrame(frame, rp, ctx) {
 
 // Time Remap / Time Warp — rewrite the frame fed upstream: freeze, reverse, speed-
 // scale, or ease the timing itself across [inFrame, outFrame].
-function remapFrame(frame, rp) {
+function remapFrame(frame, rp, ctx) {
   const inF = rp.inFrame || 0, outF = rp.outFrame || 0
   if (rp.mode === 'freeze') return inF
   if (rp.mode === 'reverse') return inF + outF - frame
   if (rp.mode === 'speed') return inF + (frame - inF) * (rp.speed ?? 1)
   const span = (outF - inF) || 1
-  const e = (EASES[rp.ease] || EASES.linear)(clamp((frame - inF) / span, 0, 1))
+  const e = easeFn(rp.ease, ctx)(clamp((frame - inF) / span, 0, 1))
   return inF + e * span               // remap: ease the timing
 }
 
@@ -1040,7 +1065,7 @@ function gatherObjects(nodeId, frame, ctx, seen) {
     case 'stagger':   return applyStagger(gather, frame, rp)
     case 'strobe':    return gather(strobeFrame(frame, rp))
     case 'loop':      return gather(loopFrame(frame, rp, ctx))
-    case 'timeRemap': return gather(remapFrame(frame, rp))
+    case 'timeRemap': return gather(remapFrame(frame, rp, ctx))
   }
 
   const objs = gather(frame)
@@ -1119,9 +1144,16 @@ export function evaluateScene(doc, frame) {
     }
   }
 
+  // Graph-level nodes (Feel, Seed/Shuffle) sit anywhere in the graph and influence the
+  // whole evaluation through ctx, rather than the object/value flow.
+  const feelNode = doc.nodes.find(n => n.type === 'feel' && !n.bypass)
+  const feel = feelNode ? { character: feelNode.params?.character || 'smooth', intensity: feelNode.params?.intensity ?? 1 } : null
+  const seedNode = doc.nodes.find(n => n.type === 'seed' && !n.bypass)
+  const seedOffset = seedNode ? Math.round(seedNode.params?.value || 0) : 0
+
   const ctx = {
     canvas, fps: doc.fps, frameStart: doc.frameStart || 0, frameEnd: doc.frameEnd || 90,
-    nodeById, objEdgesByTarget, valueBindings,
+    nodeById, objEdgesByTarget, valueBindings, feel, seedOffset,
   }
 
   const scene = doc.nodes.find(n => n.type === 'scene')

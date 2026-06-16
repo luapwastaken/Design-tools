@@ -268,6 +268,7 @@ export default function MotionMaker() {
           frameStart={doc.frameStart} frameEnd={doc.frameEnd}
           setFrameStart={v => store.patchDoc({ frameStart: v })}
           setFrameEnd={v => store.patchDoc({ frameEnd: v })}
+          markers={doc.nodes.filter(n => n.type === 'marker' && !n.bypass).map(n => ({ id: n.id, frame: n.params?.frame || 0, label: n.params?.label || '', color: n.params?.color || '#22d3ee' }))}
         />
       </div>
     </div>
