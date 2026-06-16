@@ -1,10 +1,26 @@
 # Motion Maker — session handoff (2026-06-16)
 
-## Branch state
+## Branch state (updated end of session)
 
-- **Current branch**: `feat/motion-maker-value-ops` — PR #11 merged to `main`
-- **Version**: `1.33.0`
-- Next branch should be cut from `main` after merging PR #11
+- **Current branch**: `feat/motion-maker-rigging` (cut from the value-ops work; local `main` is stale at 1.8.x — the real history lives on the feature branches)
+- **Version**: `1.41.0`
+- Waves 19-26 added 11 nodes (Null/Anchor, Parent/Pin, Stagger, Feel, Seed/Shuffle, Marker, Sequencer, Stroke/Outline, Round Corners, Path, Trim Paths, Motion Blur, Gooey/Metaball, Timing Check). **64 nodes total.**
+- **All cleanly node-shaped spec items are done.** Remaining work (below) each needs a new subsystem.
+
+## Remaining — each is a feature, not a node
+
+- **unlock 5 / subgraph** — Compound/Subgraph, Field, Data-Driven/List, State Machine, Lockup/Auto-Layout, Overshoot/Follow-through, Inertia/Drag. Needs a nested-graph doc model + Graph.jsx editor that can enter/edit subgraphs with Input/Output proxy nodes. Highest leverage; multi-session.
+- **Aspect/Reframe** — render-viewport / multi-format export (export-pipeline change).
+- **Audio-Reactive** — audio upload + amplitude/FFT precompute → deterministic per-frame values.
+- **Pattern source** — cross-tool integration with Pattern Maker (animated fill).
+- **Post FX Stack / Dither Preset node** — run a saved preset as one node.
+
+---
+
+## Original handoff (waves 1-18) below
+
+- Prior branch: `feat/motion-maker-value-ops` — PR #11 merged to `main`
+- Prior version: `1.33.0`
 
 ---
 
