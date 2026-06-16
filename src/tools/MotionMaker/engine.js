@@ -88,6 +88,84 @@ function lerpColor(a, b, t) {
 }
 function hexToRgba(hex, a) { const [r, g, b] = parseHex(hex); return `rgba(${r},${g},${b},${a})` }
 
+// ── Safe expression evaluator (Expression node) ──────────────────────────────────
+// A tiny shunting-yard parser → RPN → evaluate. NEVER uses eval. Supports numbers,
+// variables (frame/t/a/b/c), constants (pi/e/tau), + - * / % ^, unary minus, parens,
+// and a fixed set of math functions. Compiled forms are cached by source string.
+const EXPR_FUNCS = { sin: Math.sin, cos: Math.cos, tan: Math.tan, abs: Math.abs, sqrt: Math.sqrt, floor: Math.floor, ceil: Math.ceil, round: Math.round, sign: Math.sign, min: Math.min, max: Math.max, pow: Math.pow, exp: Math.exp, log: Math.log }
+const EXPR_CONSTS = { pi: Math.PI, e: Math.E, tau: Math.PI * 2 }
+const _exprCache = new Map()
+
+function tokenizeExpr(s) {
+  const toks = []; let i = 0
+  while (i < s.length) {
+    const c = s[i]
+    if (/\s/.test(c)) { i++; continue }
+    if (/[0-9.]/.test(c)) { let j = i; while (j < s.length && /[0-9.]/.test(s[j])) j++; toks.push({ t: 'num', v: parseFloat(s.slice(i, j)) }); i = j; continue }
+    if (/[a-zA-Z_]/.test(c)) { let j = i; while (j < s.length && /[a-zA-Z0-9_]/.test(s[j])) j++; toks.push({ t: 'name', v: s.slice(i, j) }); i = j; continue }
+    if ('+-*/%^(),'.includes(c)) { toks.push({ t: 'op', v: c }); i++; continue }
+    i++   // skip anything unexpected
+  }
+  return toks
+}
+
+function compileExpr(src) {
+  const toks = tokenizeExpr(src)
+  const out = [], ops = []
+  const prec = { '+': 1, '-': 1, '*': 2, '/': 2, '%': 2, '^': 3, 'u-': 4 }
+  const right = { '^': true, 'u-': true }
+  let prev = null
+  for (let k = 0; k < toks.length; k++) {
+    const tk = toks[k]
+    if (tk.t === 'num') { out.push(tk); prev = 'val' }
+    else if (tk.t === 'name') {
+      if (toks[k + 1] && toks[k + 1].t === 'op' && toks[k + 1].v === '(') { ops.push({ t: 'func', v: tk.v }); prev = 'func' }
+      else { out.push(tk); prev = 'val' }
+    } else if (tk.v === ',') {
+      while (ops.length && !(ops[ops.length - 1].v === '(')) out.push(ops.pop()); prev = 'comma'
+    } else if (tk.v === '(') { ops.push(tk); prev = '(' }
+    else if (tk.v === ')') {
+      while (ops.length && ops[ops.length - 1].v !== '(') out.push(ops.pop())
+      ops.pop()
+      if (ops.length && ops[ops.length - 1].t === 'func') out.push(ops.pop())
+      prev = 'val'
+    } else {
+      let op = tk.v
+      if (op === '-' && (prev === null || prev === 'op' || prev === '(' || prev === 'comma' || prev === 'func')) op = 'u-'
+      while (ops.length) {
+        const top = ops[ops.length - 1]
+        if (top.t === 'op' && top.v !== '(' && (right[op] ? prec[op] < prec[top.v] : prec[op] <= prec[top.v])) out.push(ops.pop())
+        else break
+      }
+      ops.push({ t: 'op', v: op }); prev = 'op'
+    }
+  }
+  while (ops.length) out.push(ops.pop())
+  return (vars) => {
+    const st = []
+    for (const tk of out) {
+      if (tk.t === 'num') st.push(tk.v)
+      else if (tk.t === 'name') st.push(tk.v in vars ? vars[tk.v] : (EXPR_CONSTS[tk.v] ?? 0))
+      else if (tk.t === 'func') {
+        const f = EXPR_FUNCS[tk.v]; if (!f) { st.push(0); continue }
+        const args = []; for (let n = 0; n < Math.max(1, f.length); n++) args.unshift(st.pop())
+        st.push(f(...args))
+      } else if (tk.v === 'u-') st.push(-(st.pop() || 0))
+      else {
+        const b = st.pop(), a = st.pop()
+        st.push(tk.v === '+' ? a + b : tk.v === '-' ? a - b : tk.v === '*' ? a * b
+          : tk.v === '/' ? (b ? a / b : 0) : tk.v === '%' ? (b ? ((a % b) + b) % b : 0)
+          : tk.v === '^' ? Math.pow(a, b) : 0)
+      }
+    }
+    return st.length ? st[st.length - 1] : 0
+  }
+}
+function getExpr(src) {
+  if (!_exprCache.has(src)) { try { _exprCache.set(src, compileExpr(src)) } catch { _exprCache.set(src, () => 0) } }
+  return _exprCache.get(src)
+}
+
 // ── Value node evaluation → a number (or color string) at `frame` ─────────────────
 export function evalValueNode(node, frame, ctx, seen) {
   // value→value chaining (unlock 1): a value node may itself be driven by upstream
@@ -230,6 +308,28 @@ export function evalValueNode(node, frame, ctx, seen) {
       return v
     }
 
+    // Delay / Sample & Hold re-evaluate their bound input source at a shifted/held
+    // frame (the value-domain analogue of multi-frame sampling).
+    case 'delay': {
+      const src = ctx?.valueBindings?.[`${node.id}::prop:input`]
+      if (src && ctx.nodeById?.[src]) return evalValueNode(ctx.nodeById[src], frame - (p.frames || 0), ctx, trail)
+      return p.input || 0
+    }
+    case 'sampleHold': {
+      const src = ctx?.valueBindings?.[`${node.id}::prop:input`]
+      const interval = Math.max(1, p.interval || 1), ph = p.phase || 0
+      const sampleFrame = Math.floor((frame - ph) / interval) * interval + ph
+      if (src && ctx.nodeById?.[src]) return evalValueNode(ctx.nodeById[src], sampleFrame, ctx, trail)
+      return p.input || 0
+    }
+    case 'expression': {
+      const span = ((ctx?.frameEnd ?? 0) - (ctx?.frameStart ?? 0)) || 1
+      const t = clamp((frame - (ctx?.frameStart ?? 0)) / span, 0, 1)
+      let v = 0
+      try { v = getExpr(String(p.expr || ''))({ frame, t, a: p.a || 0, b: p.b || 0, c: p.c || 0 }) } catch { v = 0 }
+      return Number.isFinite(v) ? v : 0
+    }
+
     // ── Color value nodes → a color string ─────────────────────────────────────────
     case 'colorSwatch': {
       const a = clamp(p.alpha ?? 1, 0, 1)
@@ -237,6 +337,15 @@ export function evalValueNode(node, frame, ctx, seen) {
     }
     case 'gradientMap':
       return lerpColor(p.colorA, p.colorB, clamp(p.input ?? 0, 0, 1))
+    case 'brandPalette': {
+      const cols = [p.c1, p.c2, p.c3, p.c4, p.c5].slice(0, Math.max(1, Math.min(5, Math.round(p.count || 5))))
+      const step = Math.max(1, p.cycleFrames || 1)
+      let idx
+      if (p.mode === 'cycle') idx = Math.floor(frame / step)
+      else if (p.mode === 'random') idx = Math.floor(hash01(Math.floor(frame / step), p.seed || 0) * cols.length)
+      else idx = Math.round(p.index || 0)
+      return cols[(((idx % cols.length) + cols.length) % cols.length)]
+    }
     default:
       return 0
   }
@@ -253,7 +362,7 @@ function resolveParams(node, frame, ctx, seen) {
     const src = ctx.valueBindings[`${node.id}::prop:${p.key}`]
     if (src && ctx.nodeById) {
       const srcNode = ctx.nodeById[src]
-      if (srcNode) out[p.key] = evalValueNode(srcNode, frame, ctx, seen)
+      if (srcNode && !srcNode.bypass) out[p.key] = evalValueNode(srcNode, frame, ctx, seen)
     }
   }
   return out
@@ -542,6 +651,30 @@ function applyScramble(objs, rp, frame) {
   })
 }
 
+// Split — break a Text object into per-letter / per-word objects, each centred at its
+// own position so downstream modifiers (Effector, Echo, Transform…) animate per piece.
+// Non-text objects pass through. Whitespace keeps its advance but emits nothing.
+function applySplit(objs, rp) {
+  const out = []
+  for (const o of objs) {
+    if (o.kind !== 'text' || o.string == null) { out.push(o); continue }
+    const s = o.string
+    const units = rp.by === 'words' ? s.split(/(\s+)/) : Array.from(s)
+    const adv = o.h * 0.55 + (rp.tracking || 0)              // per-char advance
+    const widths = units.map(u => Math.max(0, (u.length || 1)) * adv)
+    const total = widths.reduce((a, b) => a + b, 0)
+    let cursor = -total / 2
+    units.forEach((u, i) => {
+      const uw = widths[i]
+      const cxOff = cursor + uw / 2
+      cursor += uw
+      if (u.trim() === '') return                            // skip whitespace (spacing kept)
+      out.push({ ...o, id: `${o.id}~u${i}`, string: u, align: 'center', x: o.x + cxOff, w: uw })
+    })
+  }
+  return out
+}
+
 // Effector — the mograph backbone. Samples a spatial/index falloff field per object and
 // applies weighted transform offsets across them — e.g. "a wave of scale across a grid"
 // when fed Array copies. The field is built in (Field + Effector folded into one node);
@@ -811,6 +944,7 @@ function gatherObjects(nodeId, frame, ctx, seen) {
   const rp = resolveParams(node, frame, ctx)
 
   if (def.category === 'source') {
+    if (node.bypass) return []                 // muted source contributes nothing
     const o = sourceObject(node, rp, ctx, frame)
     return o ? [o] : []
   }
@@ -825,6 +959,9 @@ function gatherObjects(nodeId, frame, ctx, seen) {
     for (const srcId of inputs) out = out.concat(gatherObjects(srcId, f, ctx, new Set(seen)))
     return out
   }
+
+  // Bypass / Mute — pass the upstream through untouched (Reroute does the same).
+  if (node.bypass) return gather(frame)
 
   // Switch / Selector — route between object inputs by a drivable index (wire order =
   // input order). Gathers only the selected branch, so unused branches cost nothing.
@@ -861,6 +998,12 @@ function gatherObjects(nodeId, frame, ctx, seen) {
     case 'magnet':     return applyMagnet(objs, rp, ctx, frame)
     case 'orient':     return applyOrient(objs, rp, ctx, frame, gather)
     case 'effector':   return applyEffector(objs, rp, ctx)
+    case 'split':      return applySplit(objs, rp)
+    case 'mask': {
+      const mcx = ctx.canvas.w / 2 + (rp.x || 0), mcy = ctx.canvas.h / 2 + (rp.y || 0)
+      const clip = { shape: rp.shape, x: mcx, y: mcy, w: rp.w, h: rp.h, feather: rp.feather || 0, invert: rp.invert === 'on', cw: ctx.canvas.w, ch: ctx.canvas.h }
+      return objs.map(o => ({ ...o, clip }))
+    }
     case 'sort': {
       const a = [...objs]
       if (rp.mode === 'reverse') a.reverse()

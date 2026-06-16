@@ -116,6 +116,12 @@ export function addNode(type, pos = { x: 240, y: 200 }) {
   return node.id
 }
 
+export function toggleBypass(id) {
+  diverge()
+  const nodes = _state.doc.nodes.map(n => n.id === id ? { ...n, bypass: !n.bypass } : n)
+  patchDoc({ nodes })
+}
+
 export function removeNode(id) {
   diverge()
   const nodes = _state.doc.nodes.filter(n => n.id !== id)
