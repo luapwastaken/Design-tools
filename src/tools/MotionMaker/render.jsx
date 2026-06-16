@@ -123,9 +123,32 @@ function buildFilter(item) {
   return { id, def }
 }
 
+// Build a canvas-space <mask> for an item's Mask/Reveal clip. Returns { id, def }.
+function buildMask(item) {
+  const c = item.clip
+  if (!c) return { id: null, def: '' }
+  const id = 'm_' + sanitizeId(item.id)
+  const bg = c.invert ? '#fff' : '#000', fg = c.invert ? '#000' : '#fff'
+  const fid = id + '_f'
+  const fdef = c.feather > 0 ? `<filter id="${fid}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${c.feather}"/></filter>` : ''
+  const fattr = c.feather > 0 ? ` filter="url(#${fid})"` : ''
+  const shape = c.shape === 'ellipse'
+    ? `<ellipse cx="${c.x.toFixed(2)}" cy="${c.y.toFixed(2)}" rx="${(c.w / 2).toFixed(2)}" ry="${(c.h / 2).toFixed(2)}" fill="${fg}"${fattr}/>`
+    : `<rect x="${(c.x - c.w / 2).toFixed(2)}" y="${(c.y - c.h / 2).toFixed(2)}" width="${c.w.toFixed(2)}" height="${c.h.toFixed(2)}" fill="${fg}"${fattr}/>`
+  const def = `${fdef}<mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="${c.cw}" height="${c.ch}"><rect x="0" y="0" width="${c.cw}" height="${c.ch}" fill="${bg}"/>${shape}</mask>`
+  return { id, def }
+}
+
 // ── String path (export) ─────────────────────────────────────────────────────────
+// An item → SVG markup, wrapped in an untransformed mask group when it has a clip
+// (the mask is in canvas space, so it must sit outside the item's own transform).
+function itemSvg(it, filterId, maskId) {
+  const inner = itemSvgInner(it, filterId)
+  return maskId ? `<g mask="url(#${maskId})">${inner}</g>` : inner
+}
+
 // One scene item → SVG markup. Objects are positioned by centre, rotated about it.
-function itemSvg(it, filterId) {
+function itemSvgInner(it, filterId) {
   const t = `translate(${it.x.toFixed(2)} ${it.y.toFixed(2)}) rotate(${(it.rotate || 0).toFixed(3)})`
   const fAttr = filterId ? ` filter="url(#${filterId})"` : ''
   const bAttr = it.blend && it.blend !== 'normal' ? ` style="mix-blend-mode:${it.blend}"` : ''
@@ -166,9 +189,9 @@ export function sceneToSvgString(scene, { bg } = {}) {
     ? `<rect width="${canvas.w}" height="${canvas.h}" fill="${bg}"/>` : ''
   const defs = []
   const body = items.map(it => {
-    const { id, def } = buildFilter(it)
-    if (def) defs.push(def)
-    return itemSvg(it, id)
+    const f = buildFilter(it); if (f.def) defs.push(f.def)
+    const m = buildMask(it); if (m.def) defs.push(m.def)
+    return itemSvg(it, f.id, m.id)
   }).join('')
   const defsBlock = defs.length ? `<defs>${defs.join('')}</defs>` : ''
   return `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${canvas.w} ${canvas.h}" width="${canvas.w}" height="${canvas.h}">${bgRect}${defsBlock}${body}</svg>`
@@ -180,6 +203,7 @@ export function SceneSvg({ scene, style }) {
   const { canvas, items } = scene
   const defs = []
   const filterIds = items.map(it => { const f = buildFilter(it); if (f.def) defs.push(f.def); return f.id })
+  const maskIds = items.map(it => { const m = buildMask(it); if (m.def) defs.push(m.def); return m.id })
   return (
     <svg viewBox={`0 0 ${canvas.w} ${canvas.h}`} style={style} xmlns="http://www.w3.org/2000/svg">
       {defs.length > 0 && <defs dangerouslySetInnerHTML={{ __html: defs.join('') }} />}
@@ -191,55 +215,30 @@ export function SceneSvg({ scene, style }) {
           filter: filterId ? `url(#${filterId})` : undefined,
           style: it.blend && it.blend !== 'normal' ? { mixBlendMode: it.blend } : undefined,
         }
+        let el = null
         if (it.kind === 'image') {
-          return (
-            <g key={it.id || i} {...gProps}>
-              <image href={it.href} x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h}
-                preserveAspectRatio="xMidYMid meet" />
-            </g>
-          )
-        }
-        if (it.kind === 'shape') {
-          return (
-            <g key={it.id || i} {...gProps}>
-              {it.shape === 'ellipse'
-                ? <ellipse cx={0} cy={0} rx={it.w / 2} ry={it.h / 2} fill={it.color} />
-                : <rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} fill={it.color} />}
-            </g>
-          )
-        }
-        if (it.kind === 'backdrop') {
+          el = <g {...gProps}><image href={it.href} x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} preserveAspectRatio="xMidYMid meet" /></g>
+        } else if (it.kind === 'shape') {
+          el = <g {...gProps}>{it.shape === 'ellipse'
+            ? <ellipse cx={0} cy={0} rx={it.w / 2} ry={it.h / 2} fill={it.color} />
+            : <rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} fill={it.color} />}</g>
+        } else if (it.kind === 'backdrop') {
           const useGrad = it.mode !== 'solid' && it.colorB
           const gid = 'bg_' + sanitizeId(it.id)
-          return (
-            <g key={it.id || i} {...gProps}>
-              {useGrad && <defs dangerouslySetInnerHTML={{ __html: gradientDef(it, gid) }} />}
-              <rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} fill={useGrad ? `url(#${gid})` : it.colorA} />
-            </g>
-          )
-        }
-        if (it.kind === 'text') {
-          return (
-            <g key={it.id || i} {...gProps}>
-              <text x={0} y={0} fontFamily={it.font || 'system-ui'} fontSize={it.h} fontWeight={it.weight || 700}
-                fill={it.fill} textAnchor={textAnchor(it.align)} dominantBaseline="central"
-                letterSpacing={it.tracking || 0} style={{ whiteSpace: 'pre' }}>{it.string}</text>
-            </g>
-          )
-        }
-        if (it.kind === 'fragment') {
+          el = <g {...gProps}>{useGrad && <defs dangerouslySetInnerHTML={{ __html: gradientDef(it, gid) }} />}
+            <rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} fill={useGrad ? `url(#${gid})` : it.colorA} /></g>
+        } else if (it.kind === 'text') {
+          el = <g {...gProps}><text x={0} y={0} fontFamily={it.font || 'system-ui'} fontSize={it.h} fontWeight={it.weight || 700}
+            fill={it.fill} textAnchor={textAnchor(it.align)} dominantBaseline="central"
+            letterSpacing={it.tracking || 0} style={{ whiteSpace: 'pre' }}>{it.string}</text></g>
+        } else if (it.kind === 'fragment') {
           const cp = 'cp_' + sanitizeId(it.id)
-          return (
-            <g key={it.id || i} {...gProps}>
-              <clipPath id={cp}><rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} /></clipPath>
-              <g clipPath={`url(#${cp})`}>
-                <image href={it.href} x={it.imgCX - it.imgW / 2} y={it.imgCY - it.imgH / 2}
-                  width={it.imgW} height={it.imgH} preserveAspectRatio="xMidYMid meet" />
-              </g>
-            </g>
-          )
-        }
-        return null
+          el = <g {...gProps}><clipPath id={cp}><rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} /></clipPath>
+            <g clipPath={`url(#${cp})`}><image href={it.href} x={it.imgCX - it.imgW / 2} y={it.imgCY - it.imgH / 2}
+              width={it.imgW} height={it.imgH} preserveAspectRatio="xMidYMid meet" /></g></g>
+        } else return null
+        // wrap in an untransformed group carrying the canvas-space mask, if any
+        return <g key={it.id || i} mask={maskIds[i] ? `url(#${maskIds[i]})` : undefined}>{el}</g>
       })}
     </svg>
   )

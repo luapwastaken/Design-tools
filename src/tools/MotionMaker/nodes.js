@@ -16,6 +16,7 @@ export const CATEGORY_COLOR = {
   appearance: '#f472b6',  // per-object SVG-filter effects
   value:      '#a3e635',
   output:     '#8b5cf6',
+  note:       '#ffd36b',  // graph annotations (QoL)
 }
 
 // Param types: 'number' | 'image' | 'select' | 'color' | 'keyframes'
@@ -240,6 +241,27 @@ export const NODE_DEFS = {
       N('targetX', 'Target X', -2000, 2000, 1, 0),
       N('targetY', 'Target Y', -2000, 2000, 1, 0),
       N('offsetAngle', 'Offset °', -360, 360, 1, 0),
+    ],
+  },
+  mask: {
+    type: 'mask', label: 'Mask / Reveal', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      { key: 'shape', label: 'Shape', type: 'select', options: ['rect', 'ellipse'], default: 'ellipse' },
+      N('x', 'X', -2000, 2000, 1, 0),
+      N('y', 'Y', -2000, 2000, 1, 0),
+      N('w', 'Width', 0, 4000, 1, 600),
+      N('h', 'Height', 0, 4000, 1, 600),
+      N('feather', 'Feather', 0, 400, 1, 0),
+      { key: 'invert', label: 'Invert', type: 'select', options: ['off', 'on'], default: 'off' },
+    ],
+  },
+  split: {
+    type: 'split', label: 'Split', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      { key: 'by', label: 'By', type: 'select', options: ['letters', 'words'], default: 'letters' },
+      N('tracking', 'Tracking', -50, 200, 1, 0),
     ],
   },
   effector: {
@@ -493,6 +515,22 @@ export const NODE_DEFS = {
       { key: 'colorB', label: 'Color B', type: 'color', default: '#ff7849' },
     ],
   },
+  brandPalette: {
+    type: 'brandPalette', label: 'Brand Palette', category: 'value', vtype: 'color',
+    obj: { in: false, out: false }, value: true,
+    params: [
+      { key: 'c1', label: 'Color 1', type: 'color', default: '#ff7849' },
+      { key: 'c2', label: 'Color 2', type: 'color', default: '#5ab4ff' },
+      { key: 'c3', label: 'Color 3', type: 'color', default: '#a3e635' },
+      { key: 'c4', label: 'Color 4', type: 'color', default: '#8b5cf6' },
+      { key: 'c5', label: 'Color 5', type: 'color', default: '#ffffff' },
+      N('count', 'Count', 1, 5, 1, 5),
+      { key: 'mode', label: 'Mode', type: 'select', options: ['hold', 'cycle', 'random'], default: 'hold' },
+      N('index', 'Index', 0, 4, 1, 0),
+      N('cycleFrames', 'Cycle f', 1, 600, 1, 30),
+      N('seed', 'Seed', 0, 9999, 1, 1),
+    ],
+  },
 
   // ── Value operators (value → value; unlock 1: value→value chaining) ────────────
   math: {
@@ -545,6 +583,33 @@ export const NODE_DEFS = {
       N('min', 'Min', -5000, 5000, 0.01, 0),
       N('max', 'Max', -5000, 5000, 0.01, 1),
       N('steps', 'Steps', 0, 64, 1, 0),
+    ],
+  },
+  delay: {
+    type: 'delay', label: 'Delay', category: 'value',
+    obj: { in: false, out: false }, value: true,
+    params: [
+      N('input', 'Input', -5000, 5000, 0.01, 0),
+      N('frames', 'Delay f', -600, 600, 1, 6),
+    ],
+  },
+  sampleHold: {
+    type: 'sampleHold', label: 'Sample & Hold', category: 'value',
+    obj: { in: false, out: false }, value: true,
+    params: [
+      N('input', 'Input', -5000, 5000, 0.01, 0),
+      N('interval', 'Interval f', 1, 600, 1, 8),
+      N('phase', 'Phase f', 0, 600, 1, 0),
+    ],
+  },
+  expression: {
+    type: 'expression', label: 'Expression', category: 'value',
+    obj: { in: false, out: false }, value: true,
+    params: [
+      { key: 'expr', label: 'Formula', type: 'text', default: 'sin(t*tau)*40' },
+      N('a', 'a', -5000, 5000, 0.01, 0),
+      N('b', 'b', -5000, 5000, 0.01, 0),
+      N('c', 'c', -5000, 5000, 0.01, 0),
     ],
   },
 
@@ -619,6 +684,21 @@ export const NODE_DEFS = {
     ],
   },
 
+  // ── Graph utilities / QoL ──────────────────────────────────────────────────────
+  reroute: {
+    type: 'reroute', label: 'Reroute', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [],
+  },
+  note: {
+    type: 'note', label: 'Note', category: 'note',
+    obj: { in: false, out: false }, value: false,
+    params: [
+      { key: 'text', label: 'Note', type: 'text', default: 'Note' },
+      { key: 'color', label: 'Color', type: 'color', default: '#ffd36b' },
+    ],
+  },
+
   // ── Output ───────────────────────────────────────────────────────────────────
   scene: {
     type: 'scene', label: 'Scene', category: 'output',
@@ -632,11 +712,12 @@ export const NODE_TYPES = Object.keys(NODE_DEFS)
 // Convenience groupings for the "add node" menu.
 export const NODE_MENU = [
   { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'text', 'counter', 'backdrop'] },
-  { group: 'Modifiers', types: ['transform', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'align', 'motionPath', 'magnet', 'orient', 'effector', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
+  { group: 'Modifiers', types: ['transform', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'align', 'motionPath', 'magnet', 'orient', 'split', 'effector', 'mask', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
   { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'blend', 'dither', 'glitch'] },
   { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
-  { group: 'Color',     types: ['colorSwatch', 'gradientMap'] },
-  { group: 'Operators', types: ['math', 'mapRange', 'curve', 'mix', 'clamp'] },
+  { group: 'Color',     types: ['colorSwatch', 'gradientMap', 'brandPalette'] },
+  { group: 'Operators', types: ['math', 'mapRange', 'curve', 'mix', 'clamp', 'delay', 'sampleHold', 'expression'] },
+  { group: 'Utility',   types: ['reroute', 'note'] },
   { group: 'Output',    types: ['scene'] },
 ]
 

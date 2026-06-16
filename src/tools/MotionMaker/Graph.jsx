@@ -26,13 +26,21 @@ function MotionNode({ id, data, selected }) {
       width: NODE_W, background: C.panel, borderRadius: 6,
       border: `1px solid ${selected ? col : C.border}`,
       boxShadow: selected ? `0 0 0 1px ${col}` : 'none', fontFamily: 'inherit',
+      opacity: data.bypass ? 0.4 : 1,
     }}>
       <div style={{
         height: HEADER_H, display: 'flex', alignItems: 'center', gap: 6, padding: '0 10px',
         borderBottom: `1px solid ${C.border}`, background: C.ctrl, borderRadius: '6px 6px 0 0',
       }}>
         <span style={{ width: 7, height: 7, borderRadius: 2, background: col, flexShrink: 0 }} />
-        <span style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{def.label}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: C.text, textDecoration: data.bypass ? 'line-through' : 'none' }}>{def.label}</span>
+        {data.type !== 'scene' && (
+          <button className="nodrag" onClick={e => { e.stopPropagation(); store.toggleBypass(id) }}
+            title={data.bypass ? 'Un-mute node' : 'Mute (bypass) node'}
+            style={{ marginLeft: 'auto', background: 'transparent', border: 'none', cursor: 'pointer', color: data.bypass ? '#ff6b6b' : C.dim, padding: 0, display: 'flex' }}>
+            <Icon name="block" size={12} />
+          </button>
+        )}
       </div>
 
       {/* object input / output + value output handles (header level) */}
@@ -73,7 +81,20 @@ function MotionNode({ id, data, selected }) {
 
 const round = (v) => Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 100) / 100
 
-const nodeTypes = { motionNode: MotionNode }
+// Sticky comment node — no sockets, just an inline-editable note (QoL).
+function NoteNode({ id, data }) {
+  const p = data.params
+  const col = p.color || '#ffd36b'
+  return (
+    <div style={{ width: 200, background: col + '1f', border: `1px solid ${col}`, borderRadius: 6, padding: 6 }}>
+      <textarea className="nodrag" value={p.text || ''} placeholder="Note…"
+        onChange={e => store.updateNodeParam(id, 'text', e.target.value)}
+        style={{ width: '100%', minHeight: 56, boxSizing: 'border-box', background: 'transparent', border: 'none', outline: 'none', resize: 'vertical', color: '#f0e6c8', fontSize: 11, fontFamily: 'inherit', lineHeight: 1.4 }} />
+    </div>
+  )
+}
+
+const nodeTypes = { motionNode: MotionNode, noteNode: NoteNode }
 
 // ── Value-node one-line summary for the node body ────────────────────────────────
 function summarize(node) {
@@ -94,6 +115,10 @@ function summarize(node) {
   if (node.type === 'clamp') return `[${p.min}, ${p.max}]${p.steps > 1 ? ' /' + p.steps : ''}`
   if (node.type === 'colorSwatch') return `${p.color}`
   if (node.type === 'gradientMap') return `${p.colorA} → ${p.colorB}`
+  if (node.type === 'brandPalette') return `${p.mode} · ${p.count} colors`
+  if (node.type === 'delay') return `${p.frames}f`
+  if (node.type === 'sampleHold') return `every ${p.interval}f`
+  if (node.type === 'expression') return `ƒ ${String(p.expr || '').slice(0, 16)}`
   return ''
 }
 
@@ -110,8 +135,8 @@ export default function Graph({ doc, selectedId }) {
   }, [doc.edges])
 
   const rfNodes = useMemo(() => doc.nodes.map(n => ({
-    id: n.id, type: 'motionNode', position: n.pos, selected: n.id === selectedId,
-    data: { type: n.type, params: n.params, boundKeys: boundByNode[n.id] || new Set(), summary: summarize(n) },
+    id: n.id, type: n.type === 'note' ? 'noteNode' : 'motionNode', position: n.pos, selected: n.id === selectedId,
+    data: { type: n.type, params: n.params, boundKeys: boundByNode[n.id] || new Set(), summary: summarize(n), bypass: n.bypass },
   })), [doc.nodes, selectedId, boundByNode])
 
   const vtypeById = useMemo(() => {
