@@ -1188,6 +1188,60 @@ function gatherObjects(nodeId, frame, ctx, seen) {
   }
 }
 
+// ── Timing / Readability Check ────────────────────────────────────────────────────
+// Walks the comp across its frame range and flags motion-design readability issues:
+// reads that move too fast to track, objects that spend most of the comp off-canvas,
+// and comps with almost no movement. Returns a findings list (like the colour critic).
+export function analyzeTiming(doc, opts = {}) {
+  const start = doc.frameStart || 0, end = doc.frameEnd || 90
+  const dur = Math.max(1, end - start)
+  const { w, h } = doc.canvas
+  const diag = Math.hypot(w, h)
+  const maxSpeed = opts.maxSpeed ?? diag * 0.06        // px/frame considered "too fast"
+  const step = Math.max(1, Math.round(dur / 60))       // ≤ ~60 samples
+  const stats = {}                                     // id -> { peak, off, vis, label }
+  let prev = null, prevF = null
+  for (let f = start; f <= end; f += step) {
+    const items = evaluateScene(doc, f).items
+    const byId = {}
+    for (const it of items) {
+      byId[it.id] = it
+      const s = stats[it.id] || (stats[it.id] = { peak: 0, off: 0, vis: 0, label: it.kind })
+      if (it.opacity > 0.02) {
+        s.vis++
+        const off = it.x < -w * 0.1 || it.x > w * 1.1 || it.y < -h * 0.1 || it.y > h * 1.1
+        if (off) s.off++
+      }
+      if (prev && prev[it.id]) {
+        const p = prev[it.id]
+        const sp = Math.hypot(it.x - p.x, it.y - p.y) / (f - prevF)
+        if (sp > s.peak) s.peak = sp
+      }
+    }
+    prev = byId; prevF = f
+  }
+  const findings = []
+  let movers = 0
+  for (const id in stats) {
+    const s = stats[id]
+    if (s.peak > maxSpeed) {
+      findings.push({ severity: 'warn', text: `A ${s.label} moves ~${Math.round(s.peak)} px/frame — too fast to track cleanly (add Motion Blur or slow it).` })
+    }
+    if (s.vis > 0 && s.off / s.vis > 0.35) {
+      findings.push({ severity: 'warn', text: `A ${s.label} is off-canvas ${Math.round(100 * s.off / s.vis)}% of its visible time.` })
+    }
+    if (s.peak > 0.5) movers++
+  }
+  if (movers === 0 && Object.keys(stats).length > 0) {
+    findings.push({ severity: 'info', text: 'Almost no movement across the comp — it may read as static.' })
+  }
+  // de-dupe identical texts (Array copies produce many)
+  const seen = new Set(), out = []
+  for (const f of findings) { if (!seen.has(f.text)) { seen.add(f.text); out.push(f) } }
+  if (!out.length) out.push({ severity: 'ok', text: 'No timing or readability issues detected.' })
+  return out.slice(0, 12)
+}
+
 // ── Main entry: evaluate the whole document at a frame → render list ──────────────
 export function evaluateScene(doc, frame) {
   const canvas = doc.canvas

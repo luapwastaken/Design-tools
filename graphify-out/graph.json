@@ -639,7 +639,7 @@
       "source_file": "src/App.jsx",
       "source_location": "L1",
       "id": "src_app",
-      "community": 45,
+      "community": 35,
       "norm_label": "app.jsx"
     },
     {
@@ -648,7 +648,7 @@
       "source_file": "src/App.jsx",
       "source_location": "L15",
       "id": "src_app_tools",
-      "community": 45,
+      "community": 35,
       "norm_label": "tools"
     },
     {
@@ -657,7 +657,7 @@
       "source_file": "src/App.jsx",
       "source_location": "L73",
       "id": "src_app_app",
-      "community": 45,
+      "community": 35,
       "norm_label": "app()"
     },
     {
@@ -666,7 +666,7 @@
       "source_file": "src/components/Icon.jsx",
       "source_location": "L1",
       "id": "components_icon",
-      "community": 54,
+      "community": 24,
       "norm_label": "icon.jsx"
     },
     {
@@ -675,16 +675,16 @@
       "source_file": "src/components/Icon.jsx",
       "source_location": "L12",
       "id": "components_icon_icons",
-      "community": 54,
+      "community": 24,
       "norm_label": "icons"
     },
     {
       "label": "Icon()",
       "file_type": "code",
       "source_file": "src/components/Icon.jsx",
-      "source_location": "L60",
+      "source_location": "L62",
       "id": "components_icon_icon",
-      "community": 54,
+      "community": 24,
       "norm_label": "icon()"
     },
     {
@@ -738,7 +738,7 @@
       "source_file": "src/components/Sidebar.jsx",
       "source_location": "L1",
       "id": "components_sidebar",
-      "community": 45,
+      "community": 35,
       "norm_label": "sidebar.jsx"
     },
     {
@@ -747,7 +747,7 @@
       "source_file": "src/components/Sidebar.jsx",
       "source_location": "L1",
       "id": "components_sidebar_c",
-      "community": 45,
+      "community": 35,
       "norm_label": "c"
     },
     {
@@ -756,7 +756,7 @@
       "source_file": "src/components/Sidebar.jsx",
       "source_location": "L11",
       "id": "components_sidebar_sidebar",
-      "community": 45,
+      "community": 35,
       "norm_label": "sidebar()"
     },
     {
@@ -774,7 +774,7 @@
       "source_file": "src/data/hks.json",
       "source_location": "L1",
       "id": "data_hks",
-      "community": 29,
+      "community": 51,
       "norm_label": "hks.json"
     },
     {
@@ -783,7 +783,7 @@
       "source_file": "src/data/iccProfiles.json",
       "source_location": "L1",
       "id": "data_iccprofiles",
-      "community": 29,
+      "community": 51,
       "norm_label": "iccprofiles.json"
     },
     {
@@ -792,7 +792,7 @@
       "source_file": "src/data/ncs.json",
       "source_location": "L1",
       "id": "data_ncs",
-      "community": 29,
+      "community": 51,
       "norm_label": "ncs.json"
     },
     {
@@ -837,7 +837,7 @@
       "source_file": "src/data/ral.json",
       "source_location": "L1",
       "id": "data_ral",
-      "community": 29,
+      "community": 51,
       "norm_label": "ral.json"
     },
     {
@@ -846,7 +846,7 @@
       "source_file": "src/data/riso.json",
       "source_location": "L1",
       "id": "data_riso",
-      "community": 29,
+      "community": 51,
       "norm_label": "riso.json"
     },
     {
@@ -855,7 +855,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L1",
       "id": "lib_cmyk",
-      "community": 29,
+      "community": 51,
       "norm_label": "cmyk.js"
     },
     {
@@ -864,7 +864,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L7",
       "id": "lib_cmyk_getprofile",
-      "community": 29,
+      "community": 51,
       "norm_label": "getprofile()"
     },
     {
@@ -873,7 +873,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L11",
       "id": "lib_cmyk_rgbtocmyk",
-      "community": 29,
+      "community": 50,
       "norm_label": "rgbtocmyk()"
     },
     {
@@ -891,7 +891,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L37",
       "id": "lib_cmyk_tac",
-      "community": 29,
+      "community": 51,
       "norm_label": "tac()"
     },
     {
@@ -900,7 +900,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L41",
       "id": "lib_cmyk_tacwarning",
-      "community": 29,
+      "community": 51,
       "norm_label": "tacwarning()"
     },
     {
@@ -909,7 +909,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L49",
       "id": "lib_cmyk_richblacksuggestion",
-      "community": 29,
+      "community": 51,
       "norm_label": "richblacksuggestion()"
     },
     {
@@ -918,7 +918,7 @@
       "source_file": "src/lib/cmyk.js",
       "source_location": "L57",
       "id": "lib_cmyk_hextocmyk",
-      "community": 29,
+      "community": 50,
       "norm_label": "hextocmyk()"
     },
     {
@@ -927,7 +927,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L1",
       "id": "lib_color",
-      "community": 2,
+      "community": 43,
       "norm_label": "color.js"
     },
     {
@@ -936,7 +936,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L6",
       "id": "lib_color_hextorgb",
-      "community": 2,
+      "community": 44,
       "norm_label": "hextorgb()"
     },
     {
@@ -1008,7 +1008,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L69",
       "id": "lib_color_torgb255",
-      "community": 29,
+      "community": 50,
       "norm_label": "torgb255()"
     },
     {
@@ -1026,7 +1026,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L88",
       "id": "lib_color_deltae",
-      "community": 32,
+      "community": 43,
       "norm_label": "deltae()"
     },
     {
@@ -1062,7 +1062,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L126",
       "id": "lib_color_s2l",
-      "community": 2,
+      "community": 43,
       "norm_label": "_s2l"
     },
     {
@@ -1071,7 +1071,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L132",
       "id": "lib_color_srgbtolinear",
-      "community": 54,
+      "community": 44,
       "norm_label": "srgbtolinear()"
     },
     {
@@ -1116,7 +1116,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L160",
       "id": "lib_color_mixpigments",
-      "community": 54,
+      "community": 44,
       "norm_label": "mixpigments()"
     },
     {
@@ -1125,7 +1125,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L168",
       "id": "lib_color_oklchtohex",
-      "community": 54,
+      "community": 2,
       "norm_label": "oklchtohex()"
     },
     {
@@ -1134,7 +1134,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L185",
       "id": "lib_color_cvd_matrices",
-      "community": 2,
+      "community": 43,
       "norm_label": "cvd_matrices"
     },
     {
@@ -1143,7 +1143,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L203",
       "id": "lib_color_cvd_types",
-      "community": 24,
+      "community": 43,
       "norm_label": "cvd_types"
     },
     {
@@ -1152,7 +1152,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L211",
       "id": "lib_color_clamp8",
-      "community": 2,
+      "community": 43,
       "norm_label": "_clamp8()"
     },
     {
@@ -1161,7 +1161,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L212",
       "id": "lib_color_tohex8",
-      "community": 2,
+      "community": 43,
       "norm_label": "_tohex8()"
     },
     {
@@ -1170,7 +1170,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L216",
       "id": "lib_color_simulatecvd",
-      "community": 2,
+      "community": 43,
       "norm_label": "simulatecvd()"
     },
     {
@@ -1179,7 +1179,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L233",
       "id": "lib_color_autoname",
-      "community": 32,
+      "community": 43,
       "norm_label": "autoname()"
     },
     {
@@ -1215,7 +1215,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L311",
       "id": "lib_color_oklchlinearrgb",
-      "community": 2,
+      "community": 43,
       "norm_label": "oklchlinearrgb()"
     },
     {
@@ -1224,7 +1224,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L328",
       "id": "lib_color_oklchingamut",
-      "community": 2,
+      "community": 43,
       "norm_label": "oklchingamut()"
     },
     {
@@ -1233,7 +1233,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L334",
       "id": "lib_color_maxchromaingamut",
-      "community": 2,
+      "community": 43,
       "norm_label": "maxchromaingamut()"
     },
     {
@@ -1251,7 +1251,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L350",
       "id": "lib_color_lumahex",
-      "community": 2,
+      "community": 43,
       "norm_label": "lumahex()"
     },
     {
@@ -1260,7 +1260,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L362",
       "id": "lib_color_oklchforluma",
-      "community": 2,
+      "community": 43,
       "norm_label": "oklchforluma()"
     },
     {
@@ -1269,7 +1269,7 @@
       "source_file": "src/lib/colorMatch.js",
       "source_location": "L1",
       "id": "lib_colormatch",
-      "community": 29,
+      "community": 52,
       "norm_label": "colormatch.js"
     },
     {
@@ -1278,7 +1278,7 @@
       "source_file": "src/lib/colorMatch.js",
       "source_location": "L7",
       "id": "lib_colormatch_cache",
-      "community": 29,
+      "community": 52,
       "norm_label": "_cache"
     },
     {
@@ -1287,7 +1287,7 @@
       "source_file": "src/lib/colorMatch.js",
       "source_location": "L9",
       "id": "lib_colormatch_cachekey",
-      "community": 29,
+      "community": 52,
       "norm_label": "cachekey()"
     },
     {
@@ -1296,7 +1296,7 @@
       "source_file": "src/lib/colorMatch.js",
       "source_location": "L11",
       "id": "lib_colormatch_nearestmatch",
-      "community": 29,
+      "community": 52,
       "norm_label": "nearestmatch()"
     },
     {
@@ -1305,7 +1305,7 @@
       "source_file": "src/lib/colorMatch.js",
       "source_location": "L27",
       "id": "lib_colormatch_clearmatchcache",
-      "community": 29,
+      "community": 52,
       "norm_label": "clearmatchcache()"
     },
     {
@@ -1314,7 +1314,7 @@
       "source_file": "src/lib/colorMatch.js",
       "source_location": "L30",
       "id": "lib_colormatch_nearestmatches",
-      "community": 29,
+      "community": 52,
       "norm_label": "nearestmatches()"
     },
     {
@@ -1647,7 +1647,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L1",
       "id": "lib_export",
-      "community": 52,
+      "community": 42,
       "norm_label": "export.js"
     },
     {
@@ -1656,7 +1656,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L8",
       "id": "lib_export_svgtopngblob",
-      "community": 52,
+      "community": 42,
       "norm_label": "svgtopngblob()"
     },
     {
@@ -1665,7 +1665,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L34",
       "id": "lib_export_svgtopngbase64",
-      "community": 52,
+      "community": 42,
       "norm_label": "svgtopngbase64()"
     },
     {
@@ -1674,7 +1674,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L58",
       "id": "lib_export_buildico",
-      "community": 52,
+      "community": 42,
       "norm_label": "buildico()"
     },
     {
@@ -1683,7 +1683,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L109",
       "id": "lib_export_buildfaviconzip",
-      "community": 52,
+      "community": 42,
       "norm_label": "buildfaviconzip()"
     },
     {
@@ -1728,7 +1728,7 @@
       "source_file": "src/lib/file.js",
       "source_location": "L1",
       "id": "lib_file",
-      "community": 51,
+      "community": 42,
       "norm_label": "file.js"
     },
     {
@@ -1746,7 +1746,7 @@
       "source_file": "src/lib/file.js",
       "source_location": "L12",
       "id": "lib_file_readasdataurl",
-      "community": 51,
+      "community": 42,
       "norm_label": "readasdataurl()"
     },
     {
@@ -1755,7 +1755,7 @@
       "source_file": "src/lib/file.js",
       "source_location": "L20",
       "id": "lib_file_processfile",
-      "community": 51,
+      "community": 42,
       "norm_label": "processfile()"
     },
     {
@@ -2628,7 +2628,7 @@
       "source_file": "src/lib/paintRecipe.js",
       "source_location": "L17",
       "id": "lib_paintrecipe_deltae",
-      "community": 32,
+      "community": 43,
       "norm_label": "deltae()"
     },
     {
@@ -2754,7 +2754,7 @@
       "source_file": "src/lib/paintRecipe.js",
       "source_location": "L169",
       "id": "lib_paintrecipe_recipeverdict",
-      "community": 24,
+      "community": 45,
       "norm_label": "recipeverdict()"
     },
     {
@@ -3240,7 +3240,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L1",
       "id": "lib_svg",
-      "community": 51,
+      "community": 42,
       "norm_label": "svg.js"
     },
     {
@@ -3249,7 +3249,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L3",
       "id": "lib_svg_svgtodataurl",
-      "community": 51,
+      "community": 42,
       "norm_label": "svgtodataurl()"
     },
     {
@@ -3258,7 +3258,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L11",
       "id": "lib_svg_parsesvgtext",
-      "community": 51,
+      "community": 42,
       "norm_label": "parsesvgtext()"
     },
     {
@@ -3267,7 +3267,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L27",
       "id": "lib_svg_issvglikelyblack",
-      "community": 51,
+      "community": 42,
       "norm_label": "issvglikelyblack()"
     },
     {
@@ -3276,7 +3276,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L42",
       "id": "lib_svg_buildtreatmentfilterstr",
-      "community": 51,
+      "community": 42,
       "norm_label": "buildtreatmentfilterstr()"
     },
     {
@@ -3285,7 +3285,7 @@
       "source_file": "src/lib/undo.js",
       "source_location": "L1",
       "id": "lib_undo",
-      "community": 45,
+      "community": 35,
       "norm_label": "undo.js"
     },
     {
@@ -3294,7 +3294,7 @@
       "source_file": "src/lib/undo.js",
       "source_location": "L12",
       "id": "lib_undo_setundohandlers",
-      "community": 45,
+      "community": 35,
       "norm_label": "setundohandlers()"
     },
     {
@@ -3303,7 +3303,7 @@
       "source_file": "src/lib/undo.js",
       "source_location": "L13",
       "id": "lib_undo_clearundohandlers",
-      "community": 45,
+      "community": 35,
       "norm_label": "clearundohandlers()"
     },
     {
@@ -3312,7 +3312,7 @@
       "source_file": "src/lib/undo.js",
       "source_location": "L15",
       "id": "lib_undo_globalundo",
-      "community": 45,
+      "community": 35,
       "norm_label": "globalundo()"
     },
     {
@@ -3321,7 +3321,7 @@
       "source_file": "src/lib/undo.js",
       "source_location": "L16",
       "id": "lib_undo_globalredo",
-      "community": 45,
+      "community": 35,
       "norm_label": "globalredo()"
     },
     {
@@ -3330,7 +3330,7 @@
       "source_file": "src/lib/undo.js",
       "source_location": "L21",
       "id": "lib_undo_useglobalundo",
-      "community": 45,
+      "community": 35,
       "norm_label": "useglobalundo()"
     },
     {
@@ -3384,7 +3384,7 @@
       "source_file": "src/lib/unsavedChanges.js",
       "source_location": "L24",
       "id": "lib_unsavedchanges_marksaved",
-      "community": 29,
+      "community": 53,
       "norm_label": "marksaved()"
     },
     {
@@ -3420,7 +3420,7 @@
       "source_file": "src/main.jsx",
       "source_location": "L1",
       "id": "src_main",
-      "community": 45,
+      "community": 35,
       "norm_label": "main.jsx"
     },
     {
@@ -3708,7 +3708,7 @@
       "source_file": "src/tools/ColorPalette/BGCheck.jsx",
       "source_location": "L98",
       "id": "colorpalette_bgcheck_bgcheck",
-      "community": 2,
+      "community": 45,
       "norm_label": "bgcheck()"
     },
     {
@@ -3717,7 +3717,7 @@
       "source_file": "src/tools/ColorPalette/ContrastMatrix.jsx",
       "source_location": "L1",
       "id": "colorpalette_contrastmatrix",
-      "community": 24,
+      "community": 45,
       "norm_label": "contrastmatrix.jsx"
     },
     {
@@ -3726,7 +3726,7 @@
       "source_file": "src/tools/ColorPalette/ContrastMatrix.jsx",
       "source_location": "L4",
       "id": "colorpalette_contrastmatrix_rating_color",
-      "community": 24,
+      "community": 45,
       "norm_label": "rating_color"
     },
     {
@@ -3735,7 +3735,7 @@
       "source_file": "src/tools/ColorPalette/ContrastMatrix.jsx",
       "source_location": "L8",
       "id": "colorpalette_contrastmatrix_contrastmatrix",
-      "community": 24,
+      "community": 45,
       "norm_label": "contrastmatrix()"
     },
     {
@@ -3771,7 +3771,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L1",
       "id": "colorpalette_exportpanel",
-      "community": 29,
+      "community": 50,
       "norm_label": "exportpanel.jsx"
     },
     {
@@ -3780,7 +3780,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L9",
       "id": "colorpalette_exportpanel_c",
-      "community": 29,
+      "community": 50,
       "norm_label": "c"
     },
     {
@@ -3789,7 +3789,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L20",
       "id": "colorpalette_exportpanel_tocssvars",
-      "community": 29,
+      "community": 50,
       "norm_label": "tocssvars()"
     },
     {
@@ -3798,7 +3798,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L28",
       "id": "colorpalette_exportpanel_totailwind",
-      "community": 29,
+      "community": 50,
       "norm_label": "totailwind()"
     },
     {
@@ -3807,7 +3807,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L34",
       "id": "colorpalette_exportpanel_togpl",
-      "community": 29,
+      "community": 50,
       "norm_label": "togpl()"
     },
     {
@@ -3816,7 +3816,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L43",
       "id": "colorpalette_exportpanel_tojson",
-      "community": 29,
+      "community": 50,
       "norm_label": "tojson()"
     },
     {
@@ -3825,7 +3825,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L52",
       "id": "colorpalette_exportpanel_totxt",
-      "community": 29,
+      "community": 50,
       "norm_label": "totxt()"
     },
     {
@@ -3834,7 +3834,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L74",
       "id": "colorpalette_exportpanel_buildase",
-      "community": 29,
+      "community": 50,
       "norm_label": "buildase()"
     },
     {
@@ -3843,7 +3843,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L118",
       "id": "colorpalette_exportpanel_buildaco",
-      "community": 29,
+      "community": 50,
       "norm_label": "buildaco()"
     },
     {
@@ -3852,7 +3852,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L137",
       "id": "colorpalette_exportpanel_buildprocreateswatches",
-      "community": 29,
+      "community": 50,
       "norm_label": "buildprocreateswatches()"
     },
     {
@@ -3861,7 +3861,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L165",
       "id": "colorpalette_exportpanel_escapexml",
-      "community": 29,
+      "community": 50,
       "norm_label": "escapexml()"
     },
     {
@@ -3870,7 +3870,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L169",
       "id": "colorpalette_exportpanel_buildsvgsheet",
-      "community": 29,
+      "community": 50,
       "norm_label": "buildsvgsheet()"
     },
     {
@@ -3879,7 +3879,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L189",
       "id": "colorpalette_exportpanel_downloadtext",
-      "community": 29,
+      "community": 53,
       "norm_label": "downloadtext()"
     },
     {
@@ -3888,7 +3888,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L196",
       "id": "colorpalette_exportpanel_downloadbinary",
-      "community": 29,
+      "community": 53,
       "norm_label": "downloadbinary()"
     },
     {
@@ -3897,7 +3897,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L204",
       "id": "colorpalette_exportpanel_downloadsvgaspng",
-      "community": 29,
+      "community": 53,
       "norm_label": "downloadsvgaspng()"
     },
     {
@@ -3906,7 +3906,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L226",
       "id": "colorpalette_exportpanel_exportpanel",
-      "community": 24,
+      "community": 45,
       "norm_label": "exportpanel()"
     },
     {
@@ -3915,7 +3915,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L314",
       "id": "colorpalette_exportpanel_section",
-      "community": 29,
+      "community": 50,
       "norm_label": "section()"
     },
     {
@@ -3924,7 +3924,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L323",
       "id": "colorpalette_exportpanel_btn",
-      "community": 29,
+      "community": 50,
       "norm_label": "btn()"
     },
     {
@@ -3996,7 +3996,7 @@
       "source_file": "src/tools/ColorPalette/Generators.jsx",
       "source_location": "L67",
       "id": "colorpalette_generators_generators",
-      "community": 24,
+      "community": 45,
       "norm_label": "generators()"
     },
     {
@@ -4158,7 +4158,7 @@
       "source_file": "src/tools/ColorPalette/Gradient.jsx",
       "source_location": "L14",
       "id": "colorpalette_gradient_gradient",
-      "community": 24,
+      "community": 45,
       "norm_label": "gradient()"
     },
     {
@@ -4257,7 +4257,7 @@
       "source_file": "src/tools/ColorPalette/Harmony.jsx",
       "source_location": "L202",
       "id": "colorpalette_harmony_harmony",
-      "community": 24,
+      "community": 27,
       "norm_label": "harmony()"
     },
     {
@@ -4302,7 +4302,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L1",
       "id": "colorpalette_imageextract",
-      "community": 54,
+      "community": 24,
       "norm_label": "imageextract.jsx"
     },
     {
@@ -4311,7 +4311,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L11",
       "id": "colorpalette_imageextract_rgbtooklab",
-      "community": 54,
+      "community": 44,
       "norm_label": "rgbtooklab()"
     },
     {
@@ -4320,7 +4320,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L24",
       "id": "colorpalette_imageextract_oklabtohex",
-      "community": 54,
+      "community": 2,
       "norm_label": "oklabtohex()"
     },
     {
@@ -4329,7 +4329,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L32",
       "id": "colorpalette_imageextract_kmeans",
-      "community": 54,
+      "community": 24,
       "norm_label": "kmeans()"
     },
     {
@@ -4338,7 +4338,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L73",
       "id": "colorpalette_imageextract_imageextract",
-      "community": 54,
+      "community": 24,
       "norm_label": "imageextract()"
     },
     {
@@ -4455,7 +4455,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L1",
       "id": "colorpalette_paintmix",
-      "community": 24,
+      "community": 45,
       "norm_label": "paintmix.jsx"
     },
     {
@@ -4464,7 +4464,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L15",
       "id": "colorpalette_paintmix_loadowned",
-      "community": 24,
+      "community": 45,
       "norm_label": "loadowned()"
     },
     {
@@ -4473,7 +4473,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L23",
       "id": "colorpalette_paintmix_paintmix",
-      "community": 24,
+      "community": 45,
       "norm_label": "paintmix()"
     },
     {
@@ -4482,7 +4482,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L130",
       "id": "colorpalette_paintmix_recipecard",
-      "community": 24,
+      "community": 45,
       "norm_label": "recipecard()"
     },
     {
@@ -4491,7 +4491,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L157",
       "id": "colorpalette_paintmix_pairswatch",
-      "community": 24,
+      "community": 45,
       "norm_label": "pairswatch()"
     },
     {
@@ -4500,7 +4500,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L169",
       "id": "colorpalette_paintmix_verdict",
-      "community": 24,
+      "community": 45,
       "norm_label": "verdict()"
     },
     {
@@ -4509,7 +4509,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L174",
       "id": "colorpalette_paintmix_chipbtn",
-      "community": 24,
+      "community": 45,
       "norm_label": "chipbtn"
     },
     {
@@ -4527,7 +4527,7 @@
       "source_file": "src/tools/ColorPalette/PaletteStrip.jsx",
       "source_location": "L3",
       "id": "colorpalette_palettestrip_palettestrip",
-      "community": 24,
+      "community": 45,
       "norm_label": "palettestrip()"
     },
     {
@@ -4725,7 +4725,7 @@
       "source_file": "src/tools/ColorPalette/PrintPanel.jsx",
       "source_location": "L1",
       "id": "colorpalette_printpanel",
-      "community": 29,
+      "community": 51,
       "norm_label": "printpanel.jsx"
     },
     {
@@ -4734,7 +4734,7 @@
       "source_file": "src/tools/ColorPalette/PrintPanel.jsx",
       "source_location": "L12",
       "id": "colorpalette_printpanel_matchrow",
-      "community": 29,
+      "community": 51,
       "norm_label": "matchrow()"
     },
     {
@@ -4743,7 +4743,7 @@
       "source_file": "src/tools/ColorPalette/PrintPanel.jsx",
       "source_location": "L24",
       "id": "colorpalette_printpanel_printpanel",
-      "community": 29,
+      "community": 51,
       "norm_label": "printpanel()"
     },
     {
@@ -4752,7 +4752,7 @@
       "source_file": "src/tools/ColorPalette/PrintPanel.jsx",
       "source_location": "L171",
       "id": "colorpalette_printpanel_label",
-      "community": 29,
+      "community": 51,
       "norm_label": "label()"
     },
     {
@@ -4761,7 +4761,7 @@
       "source_file": "src/tools/ColorPalette/PrintPanel.jsx",
       "source_location": "L175",
       "id": "colorpalette_printpanel_toggle",
-      "community": 29,
+      "community": 51,
       "norm_label": "toggle()"
     },
     {
@@ -4869,7 +4869,7 @@
       "source_file": "src/tools/ColorPalette/Recipes.jsx",
       "source_location": "L207",
       "id": "colorpalette_recipes_rendertheme",
-      "community": 54,
+      "community": 2,
       "norm_label": "rendertheme()"
     },
     {
@@ -4905,7 +4905,7 @@
       "source_file": "src/tools/ColorPalette/Recipes.jsx",
       "source_location": "L231",
       "id": "colorpalette_recipes_recipes",
-      "community": 24,
+      "community": 45,
       "norm_label": "recipes()"
     },
     {
@@ -5067,7 +5067,7 @@
       "source_file": "src/tools/ColorPalette/Vision.jsx",
       "source_location": "L6",
       "id": "colorpalette_vision_vision",
-      "community": 24,
+      "community": 45,
       "norm_label": "vision()"
     },
     {
@@ -5094,7 +5094,7 @@
       "source_file": "src/tools/ColorPalette/index.jsx",
       "source_location": "L34",
       "id": "colorpalette_index_colorpalette",
-      "community": 45,
+      "community": 35,
       "norm_label": "colorpalette()"
     },
     {
@@ -5247,7 +5247,7 @@
       "source_file": "src/tools/ColorPalette/panelUi.jsx",
       "source_location": "L62",
       "id": "colorpalette_panelui_dicebtn",
-      "community": 24,
+      "community": 8,
       "norm_label": "dicebtn()"
     },
     {
@@ -5418,7 +5418,7 @@
       "source_file": "src/tools/ColorPalette/store.js",
       "source_location": "L118",
       "id": "colorpalette_store_usepalette",
-      "community": 24,
+      "community": 45,
       "norm_label": "usepalette()"
     },
     {
@@ -5913,7 +5913,7 @@
       "source_file": "src/tools/DitherTool/index.jsx",
       "source_location": "L1514",
       "id": "dithertool_index_downloadblob",
-      "community": 29,
+      "community": 53,
       "norm_label": "downloadblob()"
     },
     {
@@ -6705,7 +6705,7 @@
       "source_file": "src/tools/LogoMaker/ExportPanel.jsx",
       "source_location": "L1",
       "id": "logomaker_exportpanel",
-      "community": 52,
+      "community": 42,
       "norm_label": "exportpanel.jsx"
     },
     {
@@ -6714,7 +6714,7 @@
       "source_file": "src/tools/LogoMaker/ExportPanel.jsx",
       "source_location": "L7",
       "id": "logomaker_exportpanel_faviconexport",
-      "community": 52,
+      "community": 42,
       "norm_label": "faviconexport()"
     },
     {
@@ -6723,7 +6723,7 @@
       "source_file": "src/tools/LogoMaker/FaviconView.jsx",
       "source_location": "L1",
       "id": "logomaker_faviconview",
-      "community": 52,
+      "community": 42,
       "norm_label": "faviconview.jsx"
     },
     {
@@ -6732,7 +6732,7 @@
       "source_file": "src/tools/LogoMaker/FaviconView.jsx",
       "source_location": "L6",
       "id": "logomaker_faviconview_preview_sizes",
-      "community": 52,
+      "community": 42,
       "norm_label": "preview_sizes"
     },
     {
@@ -6741,7 +6741,7 @@
       "source_file": "src/tools/LogoMaker/FaviconView.jsx",
       "source_location": "L8",
       "id": "logomaker_faviconview_faviconview",
-      "community": 52,
+      "community": 42,
       "norm_label": "faviconview()"
     },
     {
@@ -6750,7 +6750,7 @@
       "source_file": "src/tools/LogoMaker/FileSlot.jsx",
       "source_location": "L1",
       "id": "logomaker_fileslot",
-      "community": 51,
+      "community": 42,
       "norm_label": "fileslot.jsx"
     },
     {
@@ -6759,7 +6759,7 @@
       "source_file": "src/tools/LogoMaker/FileSlot.jsx",
       "source_location": "L6",
       "id": "logomaker_fileslot_fileslot",
-      "community": 51,
+      "community": 42,
       "norm_label": "fileslot()"
     },
     {
@@ -6786,7 +6786,7 @@
       "source_file": "src/tools/LogoMaker/LockupSvg.jsx",
       "source_location": "L20",
       "id": "logomaker_lockupsvg_treatmentfilter",
-      "community": 42,
+      "community": 44,
       "norm_label": "treatmentfilter()"
     },
     {
@@ -6876,7 +6876,7 @@
       "source_file": "src/tools/LogoMaker/index.jsx",
       "source_location": "L24",
       "id": "logomaker_index_logomaker",
-      "community": 45,
+      "community": 35,
       "norm_label": "logomaker()"
     },
     {
@@ -6885,7 +6885,7 @@
       "source_file": "src/tools/LogoMaker/layout.js",
       "source_location": "L1",
       "id": "logomaker_layout",
-      "community": 52,
+      "community": 42,
       "norm_label": "layout.js"
     },
     {
@@ -6894,7 +6894,7 @@
       "source_file": "src/tools/LogoMaker/layout.js",
       "source_location": "L3",
       "id": "logomaker_layout_variations",
-      "community": 52,
+      "community": 42,
       "norm_label": "variations"
     },
     {
@@ -6903,7 +6903,7 @@
       "source_file": "src/tools/LogoMaker/layout.js",
       "source_location": "L20",
       "id": "logomaker_layout_both_layouts",
-      "community": 52,
+      "community": 42,
       "norm_label": "both_layouts"
     },
     {
@@ -6939,7 +6939,7 @@
       "source_file": "src/tools/LogoMaker/ui.jsx",
       "source_location": "L16",
       "id": "logomaker_ui_btn",
-      "community": 51,
+      "community": 42,
       "norm_label": "btn()"
     },
     {
@@ -7092,43 +7092,52 @@
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
       "source_location": "L1",
       "id": "motionmaker_inspector",
-      "community": 51,
+      "community": 42,
       "norm_label": "inspector.jsx"
+    },
+    {
+      "label": "TimingFindings()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/Inspector.jsx",
+      "source_location": "L11",
+      "id": "motionmaker_inspector_timingfindings",
+      "community": 42,
+      "norm_label": "timingfindings()"
     },
     {
       "label": "miniInput()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
-      "source_location": "L14",
+      "source_location": "L37",
       "id": "motionmaker_inspector_miniinput",
-      "community": 51,
+      "community": 42,
       "norm_label": "miniinput()"
     },
     {
       "label": "KeyframesEditor()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
-      "source_location": "L22",
+      "source_location": "L45",
       "id": "motionmaker_inspector_keyframeseditor",
-      "community": 51,
+      "community": 42,
       "norm_label": "keyframeseditor()"
     },
     {
       "label": "ImageParam()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
-      "source_location": "L57",
+      "source_location": "L80",
       "id": "motionmaker_inspector_imageparam",
-      "community": 51,
+      "community": 42,
       "norm_label": "imageparam()"
     },
     {
       "label": "Inspector()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
-      "source_location": "L84",
+      "source_location": "L107",
       "id": "motionmaker_inspector_inspector",
-      "community": 51,
+      "community": 42,
       "norm_label": "inspector()"
     },
     {
@@ -7618,10 +7627,19 @@
       "norm_label": "gatherobjects()"
     },
     {
+      "label": "analyzeTiming()",
+      "file_type": "code",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L1195",
+      "id": "motionmaker_engine_analyzetiming",
+      "community": 42,
+      "norm_label": "analyzetiming()"
+    },
+    {
       "label": "evaluateScene()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/engine.js",
-      "source_location": "L1192",
+      "source_location": "L1246",
       "id": "motionmaker_engine_evaluatescene",
       "community": 35,
       "norm_label": "evaluatescene()"
@@ -7776,7 +7794,7 @@
       "source_file": "src/tools/MotionMaker/nodes.js",
       "source_location": "L24",
       "id": "motionmaker_nodes_n",
-      "community": 54,
+      "community": 2,
       "norm_label": "n()"
     },
     {
@@ -7810,7 +7828,7 @@
       "label": "NODE_TYPES",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L860",
+      "source_location": "L869",
       "id": "motionmaker_nodes_node_types",
       "community": 25,
       "norm_label": "node_types"
@@ -7819,7 +7837,7 @@
       "label": "NODE_MENU",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L863",
+      "source_location": "L872",
       "id": "motionmaker_nodes_node_menu",
       "community": 25,
       "norm_label": "node_menu"
@@ -7828,7 +7846,7 @@
       "label": "defaultParams()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L875",
+      "source_location": "L884",
       "id": "motionmaker_nodes_defaultparams",
       "community": 25,
       "norm_label": "defaultparams()"
@@ -7837,7 +7855,7 @@
       "label": "makeNodeId()",
       "file_type": "code",
       "source_file": "src/tools/MotionMaker/nodes.js",
-      "source_location": "L887",
+      "source_location": "L896",
       "id": "motionmaker_nodes_makenodeid",
       "community": 25,
       "norm_label": "makenodeid()"
@@ -7938,7 +7956,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L1",
       "id": "motionmaker_render",
-      "community": 50,
+      "community": 35,
       "norm_label": "render.jsx"
     },
     {
@@ -7947,7 +7965,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L12",
       "id": "motionmaker_render_clampnum",
-      "community": 50,
+      "community": 35,
       "norm_label": "clampnum()"
     },
     {
@@ -7956,7 +7974,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L15",
       "id": "motionmaker_render_sanitizeid",
-      "community": 50,
+      "community": 35,
       "norm_label": "sanitizeid()"
     },
     {
@@ -7965,7 +7983,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L16",
       "id": "motionmaker_render_xmlescape",
-      "community": 50,
+      "community": 35,
       "norm_label": "xmlescape()"
     },
     {
@@ -7974,7 +7992,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L17",
       "id": "motionmaker_render_textanchor",
-      "community": 50,
+      "community": 35,
       "norm_label": "textanchor()"
     },
     {
@@ -7983,7 +8001,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L20",
       "id": "motionmaker_render_hexrgb",
-      "community": 50,
+      "community": 35,
       "norm_label": "hexrgb()"
     },
     {
@@ -7992,7 +8010,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L30",
       "id": "motionmaker_render_gradientdef",
-      "community": 50,
+      "community": 35,
       "norm_label": "gradientdef()"
     },
     {
@@ -8001,7 +8019,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L39",
       "id": "motionmaker_render_fxprimitive",
-      "community": 50,
+      "community": 35,
       "norm_label": "fxprimitive()"
     },
     {
@@ -8010,7 +8028,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L124",
       "id": "motionmaker_render_buildfilter",
-      "community": 50,
+      "community": 35,
       "norm_label": "buildfilter()"
     },
     {
@@ -8019,7 +8037,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L136",
       "id": "motionmaker_render_buildmask",
-      "community": 50,
+      "community": 35,
       "norm_label": "buildmask()"
     },
     {
@@ -8028,7 +8046,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L153",
       "id": "motionmaker_render_goofilterdef",
-      "community": 50,
+      "community": 35,
       "norm_label": "goofilterdef()"
     },
     {
@@ -8037,7 +8055,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L165",
       "id": "motionmaker_render_itemsvg",
-      "community": 50,
+      "community": 35,
       "norm_label": "itemsvg()"
     },
     {
@@ -8046,7 +8064,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L171",
       "id": "motionmaker_render_itemsvginner",
-      "community": 50,
+      "community": 35,
       "norm_label": "itemsvginner()"
     },
     {
@@ -8055,7 +8073,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L219",
       "id": "motionmaker_render_scenetosvgstring",
-      "community": 50,
+      "community": 35,
       "norm_label": "scenetosvgstring()"
     },
     {
@@ -8064,7 +8082,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L237",
       "id": "motionmaker_render_scenesvg",
-      "community": 50,
+      "community": 35,
       "norm_label": "scenesvg()"
     },
     {
@@ -28077,6 +28095,28 @@
       "target": "motionmaker_inspector"
     },
     {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/Inspector.jsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "motionmaker_inspector",
+      "target": "motionmaker_engine",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/Inspector.jsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "motionmaker_inspector",
+      "target": "motionmaker_engine_analyzetiming",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
@@ -28115,6 +28155,16 @@
       "confidence_score": 1.0,
       "source": "motionmaker_inspector",
       "target": "motionmaker_inspector_miniinput"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/Inspector.jsx",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "motionmaker_inspector",
+      "target": "motionmaker_inspector_timingfindings",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports_from",
@@ -28159,6 +28209,17 @@
       "confidence_score": 1.0,
       "source": "motionmaker_inspector",
       "target": "motionmaker_nodes_node_defs"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/Inspector.jsx",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "motionmaker_inspector_timingfindings",
+      "target": "motionmaker_engine_analyzetiming",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports_from",
@@ -28255,6 +28316,16 @@
       "confidence_score": 1.0,
       "source": "motionmaker_timeline",
       "target": "motionmaker_timeline_timeline"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L1195",
+      "weight": 1.0,
+      "source": "motionmaker_engine",
+      "target": "motionmaker_engine_analyzetiming",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -29462,6 +29533,17 @@
       "target": "motionmaker_engine_gatherobjects"
     },
     {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/MotionMaker/engine.js",
+      "source_location": "L1205",
+      "weight": 1.0,
+      "source": "motionmaker_engine_analyzetiming",
+      "target": "motionmaker_engine_evaluatescene",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -30324,9 +30406,9 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L153",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_render",
-      "target": "motionmaker_render_goofilterdef",
-      "confidence_score": 1.0
+      "target": "motionmaker_render_goofilterdef"
     },
     {
       "relation": "contains",
@@ -30578,9 +30660,9 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L240",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_render_scenesvg",
-      "target": "motionmaker_render_goofilterdef",
-      "confidence_score": 1.0
+      "target": "motionmaker_render_goofilterdef"
     },
     {
       "relation": "calls",
@@ -30589,9 +30671,9 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L224",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_render_scenetosvgstring",
-      "target": "motionmaker_render_goofilterdef",
-      "confidence_score": 1.0
+      "target": "motionmaker_render_goofilterdef"
     },
     {
       "relation": "calls",
@@ -33625,5 +33707,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "230fc523a3f9ddae496522dc6c4ac687f173a46f"
+  "built_at_commit": "07df3a07dfcca459160d4cc9411200de974d4fc0"
 }

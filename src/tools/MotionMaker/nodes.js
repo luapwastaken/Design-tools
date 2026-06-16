@@ -848,6 +848,15 @@ export const NODE_DEFS = {
       N('value', 'Seed', 0, 9999, 1, 0),   // scrub to re-roll every seeded node at once
     ],
   },
+  // Timing / Readability Check — analysis node. Emits findings in the Inspector (too-fast
+  // reads, off-canvas dwell, static comps); no effect on the render.
+  timingCheck: {
+    type: 'timingCheck', label: 'Timing / Readability Check', category: 'global',
+    obj: { in: false, out: false }, value: false,
+    params: [
+      N('maxSpeed', 'Max px/f', 0, 2000, 1, 0),   // 0 = auto (canvas-relative)
+    ],
+  },
 
   // ── Output ───────────────────────────────────────────────────────────────────
   scene: {
@@ -867,7 +876,7 @@ export const NODE_MENU = [
   { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'sequencer', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
   { group: 'Color',     types: ['colorSwatch', 'gradientMap', 'brandPalette'] },
   { group: 'Operators', types: ['math', 'mapRange', 'curve', 'mix', 'clamp', 'delay', 'sampleHold', 'expression'] },
-  { group: 'Utility',   types: ['reroute', 'note', 'marker', 'feel', 'seed'] },
+  { group: 'Utility',   types: ['reroute', 'note', 'marker', 'feel', 'seed', 'timingCheck'] },
   { group: 'Output',    types: ['scene'] },
 ]
 

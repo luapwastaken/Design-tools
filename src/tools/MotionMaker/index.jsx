@@ -210,7 +210,7 @@ export default function MotionMaker() {
           </Section>
 
           <div style={{ borderTop: `1px solid ${C.border}`, margin: '0 -16px' }}>
-            <Inspector node={selectedNode} boundKeys={boundKeys} onParam={store.updateNodeParam} onRemove={store.removeNode} />
+            <Inspector node={selectedNode} boundKeys={boundKeys} doc={doc} onParam={store.updateNodeParam} onRemove={store.removeNode} />
           </div>
 
           <Section title="Export">

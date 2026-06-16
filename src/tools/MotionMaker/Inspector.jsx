@@ -1,10 +1,33 @@
 // ── Motion Maker — Inspector (selected node params) ────────────────────────────
-import { useRef } from 'react'
+import { useRef, useMemo } from 'react'
 import { C, btn, Section, HexInput } from '../LogoMaker/ui.jsx'
 import { NumberSlider } from '../../components/NumberField.jsx'
 import Icon from '../../components/Icon.jsx'
 import { NODE_DEFS, CATEGORY_COLOR, EASE_OPTIONS } from './nodes.js'
+import { analyzeTiming } from './engine.js'
 import { processFile } from '../../lib/file.js'
+
+// Findings list for the Timing/Readability Check node (computed from the whole doc).
+function TimingFindings({ node, doc }) {
+  const findings = useMemo(() => {
+    try { return analyzeTiming(doc, { maxSpeed: node.params?.maxSpeed > 0 ? node.params.maxSpeed : undefined }) }
+    catch { return [{ severity: 'info', text: 'Could not analyze the comp.' }] }
+  }, [doc, node.params?.maxSpeed])
+  const icon = { warn: 'warning', info: 'info', ok: 'check_circle' }
+  const tone = { warn: '#f59e0b', info: C.muted, ok: '#4ade80' }
+  return (
+    <Section title="Findings">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {findings.map((f, i) => (
+          <div key={i} style={{ display: 'flex', gap: 7, fontSize: 11, color: C.text, lineHeight: 1.45 }}>
+            <Icon name={icon[f.severity] || 'info'} size={14} color={tone[f.severity] || C.muted} />
+            <span style={{ flex: 1 }}>{f.text}</span>
+          </div>
+        ))}
+      </div>
+    </Section>
+  )
+}
 
 const ACCENT = '#ff7849'
 
@@ -81,7 +104,7 @@ function ImageParam({ value, onChange }) {
   )
 }
 
-export default function Inspector({ node, boundKeys, onParam, onRemove }) {
+export default function Inspector({ node, boundKeys, doc, onParam, onRemove }) {
   if (!node) {
     return (
       <div style={{ padding: 16, fontSize: 11, color: C.muted, lineHeight: 1.6 }}>
@@ -151,6 +174,7 @@ export default function Inspector({ node, boundKeys, onParam, onRemove }) {
           )
         })}
       </Section>
+      {node.type === 'timingCheck' && doc && <TimingFindings node={node} doc={doc} />}
     </div>
   )
 }
