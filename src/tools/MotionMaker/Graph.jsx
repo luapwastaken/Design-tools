@@ -9,8 +9,10 @@ import * as store from './store.js'
 
 const NODE_W = 190, HEADER_H = 28, ROW_H = 20
 
-// Which params get a wireable socket (numbers are drivable by value nodes).
-const socketParams = (def) => def.params.filter(p => p.type === 'number')
+// Which params get a wireable socket: numbers (driven by value nodes) and colors
+// (driven by color-value nodes — the color-value socket unlock).
+const socketParams = (def) => def.params.filter(p => p.type === 'number' || p.type === 'color')
+const COLOR_SOCKET = '#e879f9'
 
 // ── Generic node component (one component renders every node type) ───────────────
 function MotionNode({ id, data, selected }) {
@@ -36,7 +38,7 @@ function MotionNode({ id, data, selected }) {
       {/* object input / output + value output handles (header level) */}
       {def.obj.in && <Handle type="target" position={Position.Left} id="objin" style={{ top: HEADER_H / 2, width: 9, height: 9, background: '#5ab4ff', border: 'none' }} />}
       {def.obj.out && <Handle type="source" position={Position.Right} id="objout" style={{ top: HEADER_H / 2, width: 9, height: 9, background: '#5ab4ff', border: 'none' }} />}
-      {def.value && <Handle type="source" position={Position.Right} id="valout" style={{ top: HEADER_H / 2, width: 9, height: 9, background: CATEGORY_COLOR.value, border: 'none' }} />}
+      {def.value && <Handle type="source" position={Position.Right} id="valout" style={{ top: HEADER_H / 2, width: 9, height: 9, background: def.vtype === 'color' ? COLOR_SOCKET : CATEGORY_COLOR.value, border: 'none' }} />}
 
       {/* body */}
       <div style={{ padding: '4px 0' }}>
@@ -46,10 +48,14 @@ function MotionNode({ id, data, selected }) {
         {rows.map((p, i) => (
           <div key={p.key} style={{ position: 'relative', height: ROW_H, display: 'flex', alignItems: 'center', gap: 6, padding: '0 10px' }}>
             <Handle type="target" position={Position.Left} id={`prop:${p.key}`}
-              style={{ top: ROW_H / 2, left: -4, width: 7, height: 7, background: data.boundKeys?.has(p.key) ? CATEGORY_COLOR.value : C.dim, border: `1px solid ${C.border}` }} />
-            <span style={{ fontSize: 10, color: data.boundKeys?.has(p.key) ? CATEGORY_COLOR.value : C.muted }}>{p.label}</span>
-            <span style={{ marginLeft: 'auto', fontSize: 10, color: C.dim, fontVariantNumeric: 'tabular-nums' }}>
-              {data.boundKeys?.has(p.key) ? '◆' : (typeof data.params[p.key] === 'number' ? round(data.params[p.key]) : '')}
+              style={{ top: ROW_H / 2, left: -4, width: 7, height: 7, background: data.boundKeys?.has(p.key) ? (p.type === 'color' ? COLOR_SOCKET : CATEGORY_COLOR.value) : C.dim, border: `1px solid ${C.border}` }} />
+            <span style={{ fontSize: 10, color: data.boundKeys?.has(p.key) ? (p.type === 'color' ? COLOR_SOCKET : CATEGORY_COLOR.value) : C.muted }}>{p.label}</span>
+            <span style={{ marginLeft: 'auto', fontSize: 10, color: C.dim, fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center' }}>
+              {data.boundKeys?.has(p.key)
+                ? '◆'
+                : p.type === 'color'
+                  ? <span style={{ width: 10, height: 10, borderRadius: 2, background: data.params[p.key], border: `1px solid ${C.border}` }} />
+                  : (typeof data.params[p.key] === 'number' ? round(data.params[p.key]) : '')}
             </span>
           </div>
         ))}
@@ -86,6 +92,8 @@ function summarize(node) {
   if (node.type === 'curve') return `${p.ease}`
   if (node.type === 'mix') return `${p.mode} · t${p.t}`
   if (node.type === 'clamp') return `[${p.min}, ${p.max}]${p.steps > 1 ? ' /' + p.steps : ''}`
+  if (node.type === 'colorSwatch') return `${p.color}`
+  if (node.type === 'gradientMap') return `${p.colorA} → ${p.colorB}`
   return ''
 }
 
@@ -106,10 +114,21 @@ export default function Graph({ doc, selectedId }) {
     data: { type: n.type, params: n.params, boundKeys: boundByNode[n.id] || new Set(), summary: summarize(n) },
   })), [doc.nodes, selectedId, boundByNode])
 
+  const vtypeById = useMemo(() => {
+    const m = {}
+    for (const n of doc.nodes) m[n.id] = NODE_DEFS[n.type]?.vtype || 'number'
+    return m
+  }, [doc.nodes])
+
   const rfEdges = useMemo(() => doc.edges.map(e => ({
     ...e,
-    style: { stroke: e.sourceHandle === 'valout' ? CATEGORY_COLOR.value : '#5ab4ff', strokeWidth: 1.5 },
-  })), [doc.edges])
+    style: {
+      stroke: e.sourceHandle === 'valout'
+        ? (vtypeById[e.source] === 'color' ? COLOR_SOCKET : CATEGORY_COLOR.value)
+        : '#5ab4ff',
+      strokeWidth: 1.5,
+    },
+  })), [doc.edges, vtypeById])
 
   const onNodesChange = useCallback((changes) => {
     let nodes = store.getState().doc.nodes
@@ -141,12 +160,25 @@ export default function Graph({ doc, selectedId }) {
     store.commitHistory()
   }, [])
 
+  const nodeById = useMemo(() => {
+    const m = {}
+    for (const n of doc.nodes) m[n.id] = n
+    return m
+  }, [doc.nodes])
+
   const isValidConnection = useCallback((conn) => {
     if (conn.source === conn.target) return false
-    const objToObj = conn.sourceHandle === 'objout' && conn.targetHandle === 'objin'
+    if (conn.sourceHandle === 'objout' && conn.targetHandle === 'objin') return true
     const valToProp = conn.sourceHandle === 'valout' && (conn.targetHandle || '').startsWith('prop:')
-    return objToObj || valToProp
-  }, [])
+    if (!valToProp) return false
+    // type-match the value socket: color output → color param, number → number
+    const srcDef = NODE_DEFS[nodeById[conn.source]?.type]
+    const tgtDef = NODE_DEFS[nodeById[conn.target]?.type]
+    const tparam = tgtDef?.params.find(p => p.key === conn.targetHandle.slice(5))
+    const srcType = srcDef?.vtype === 'color' ? 'color' : 'number'
+    const tgtType = tparam?.type === 'color' ? 'color' : 'number'
+    return srcType === tgtType
+  }, [nodeById])
 
   // ── Add-node command palette (Tab to open, like Post FX) ───────────────────────
   const wrapRef = useRef(null)

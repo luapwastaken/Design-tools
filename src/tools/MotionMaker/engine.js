@@ -74,7 +74,21 @@ function fbmSigned(t, seed = 0, octaves = 1) {
   return norm ? sum / norm : 0
 }
 
-// ── Value node evaluation → a number at `frame` ──────────────────────────────────
+// ── Color helpers (color-value socket) ───────────────────────────────────────────
+function parseHex(hex) {
+  let h = String(hex || '#000').replace('#', '')
+  if (h.length === 3) h = h.split('').map(c => c + c).join('')
+  const n = parseInt(h, 16)
+  return Number.isNaN(n) ? [0, 0, 0] : [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+const hex2 = v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')
+function lerpColor(a, b, t) {
+  const A = parseHex(a), B = parseHex(b)
+  return '#' + A.map((v, i) => hex2(v + (B[i] - v) * t)).join('')
+}
+function hexToRgba(hex, a) { const [r, g, b] = parseHex(hex); return `rgba(${r},${g},${b},${a})` }
+
+// ── Value node evaluation → a number (or color string) at `frame` ─────────────────
 export function evalValueNode(node, frame, ctx, seen) {
   // value→value chaining (unlock 1): a value node may itself be driven by upstream
   // value nodes. Resolve its params through the bindings first (with a cycle guard),
@@ -215,6 +229,14 @@ export function evalValueNode(node, frame, ctx, seen) {
       }
       return v
     }
+
+    // ── Color value nodes → a color string ─────────────────────────────────────────
+    case 'colorSwatch': {
+      const a = clamp(p.alpha ?? 1, 0, 1)
+      return a >= 1 ? p.color : hexToRgba(p.color, a)
+    }
+    case 'gradientMap':
+      return lerpColor(p.colorA, p.colorB, clamp(p.input ?? 0, 0, 1))
     default:
       return 0
   }
@@ -237,8 +259,20 @@ function resolveParams(node, frame, ctx, seen) {
   return out
 }
 
+// Format a number with fixed decimals and optional thousands separators.
+function formatNumber(v, decimals, thousands) {
+  let s = (v).toFixed(Math.max(0, Math.round(decimals || 0)))
+  if (thousands === 'on') {
+    const neg = s[0] === '-' ? '-' : ''
+    if (neg) s = s.slice(1)
+    const [int, frac] = s.split('.')
+    s = neg + int.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (frac ? '.' + frac : '')
+  }
+  return s
+}
+
 // ── Build a renderable scene object from a source node ───────────────────────────
-function sourceObject(node, rp, ctx) {
+function sourceObject(node, rp, ctx, frame) {
   const { canvas } = ctx
   const cx = canvas.w / 2, cy = canvas.h / 2
   const fit = Math.min(canvas.w, canvas.h) * 0.55   // base footprint for images
@@ -248,6 +282,29 @@ function sourceObject(node, rp, ctx) {
       id: node.id, kind: 'shape', shape: rp.kind, color: rp.color,
       w: rp.w, h: rp.h,
       x: cx + rp.x, y: cy + rp.y, rotate: rp.rotate, opacity: rp.opacity,
+    }
+  }
+
+  // Text — live type. Render uses `h` as the font size, so every w/h-scaling modifier
+  // (Transform, Echo, Array…) scales the type naturally.
+  if (node.type === 'text' || node.type === 'counter') {
+    let str
+    if (node.type === 'counter') {
+      const span = (rp.endFrame - rp.startFrame) || 1
+      const e = (EASES[rp.ease] || EASES.linear)(clamp((frame - rp.startFrame) / span, 0, 1))
+      const v = rp.from + (rp.to - rp.from) * e
+      str = (rp.prefix || '') + formatNumber(v, rp.decimals, rp.thousands) + (rp.suffix || '')
+    } else {
+      str = String(rp.string ?? '')
+      if (rp.case === 'upper') str = str.toUpperCase()
+      else if (rp.case === 'lower') str = str.toLowerCase()
+    }
+    return {
+      id: node.id, kind: 'text', string: str,
+      font: rp.font, weight: rp.weight || '700', fill: rp.fill,
+      tracking: rp.tracking || 0, align: rp.align || 'center',
+      w: rp.size * Math.max(1, str.length) * 0.6, h: rp.size,
+      x: cx + rp.x, y: cy + rp.y, rotate: rp.rotate || 0, opacity: rp.opacity,
     }
   }
 
@@ -448,6 +505,189 @@ function applyParticles(objs, rp, frame, ctx) {
   return out
 }
 
+// Scramble / Decode — cycle random glyphs that settle into the real text. Operates on
+// text objects' `string`; deterministic per (position, frame, seed).
+const SCRAMBLE_CHARS = {
+  alphanumeric: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+  letters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  symbols: '!@#$%^&*<>/?=+~|',
+  binary: '01',
+  katakana: 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホ',
+}
+function applyScramble(objs, rp, frame) {
+  const chars = SCRAMBLE_CHARS[rp.charset] || SCRAMBLE_CHARS.alphanumeric
+  const start = rp.startFrame || 0, dur = Math.max(1, rp.duration || 1)
+  const t = clamp((frame - start) / dur, 0, 1)
+  const speed = Math.max(1, Math.round(rp.speed || 1))
+  const tick = Math.floor(frame / speed)
+  return objs.map(o => {
+    if (o.kind !== 'text' || o.string == null) return o
+    const s = o.string, n = s.length
+    const revealCount = Math.floor(t * n)
+    const revealed = (i) => {
+      switch (rp.settleOrder) {
+        case 'right-left':  return i >= n - revealCount
+        case 'center-out':  return Math.abs(i - (n - 1) / 2) <= (revealCount - 1) / 2
+        case 'random':      return hash01(i, (rp.seed || 0) + 101) < t   // stable per-char reveal time
+        default:            return i < revealCount   // left-right
+      }
+    }
+    let out = ''
+    for (let i = 0; i < n; i++) {
+      const ch = s[i]
+      if (ch === ' ' || revealed(i)) out += ch
+      else out += chars[Math.floor(hash01(i * 131 + tick * 977, rp.seed || 0) * chars.length)]
+    }
+    return { ...o, string: out }
+  })
+}
+
+// Effector — the mograph backbone. Samples a spatial/index falloff field per object and
+// applies weighted transform offsets across them — e.g. "a wave of scale across a grid"
+// when fed Array copies. The field is built in (Field + Effector folded into one node);
+// drive `phase` with a Ramp/LFO to sweep the wave.
+function applyEffector(objs, rp, ctx) {
+  const n = objs.length
+  if (!n) return objs
+  const curve = EASES[rp.falloffCurve] || EASES.linear
+  const cx = ctx.canvas.w / 2 + (rp.centerX || 0), cy = ctx.canvas.h / 2 + (rp.centerY || 0)
+  const size = rp.size || 1
+  const strength = rp.strength ?? 1
+  const fall = Math.max(0.001, rp.falloff || 1)
+  return objs.map((o, i) => {
+    let f
+    if (rp.field === 'linear') {
+      f = clamp((o.x - (cx - size / 2)) / size, 0, 1)
+    } else if (rp.field === 'radial') {
+      f = clamp(1 - Math.hypot(o.x - cx, o.y - cy) / size, 0, 1)
+    } else if (rp.field === 'noise') {
+      f = (fbmSigned(o.x * 0.01 + o.y * 0.013, rp.seed || 0) + 1) / 2
+    } else { // by-index wave: a bump centred at `phase` across the copies
+      const u = n > 1 ? i / (n - 1) : 0
+      f = clamp(1 - Math.abs(u - clamp(rp.phase ?? 0, 0, 1)) / fall, 0, 1)
+    }
+    const wt = curve(clamp(f, 0, 1)) * strength
+    const sc = 1 + ((rp.scale ?? 1) - 1) * wt
+    const op = 1 + ((rp.opacity ?? 1) - 1) * wt
+    return {
+      ...o,
+      x: o.x + (rp.posX || 0) * wt, y: o.y + (rp.posY || 0) * wt,
+      w: o.w * sc, h: o.h * sc,
+      rotate: o.rotate + (rp.rotate || 0) * wt,
+      opacity: clamp(o.opacity * op, 0, 1),
+    }
+  })
+}
+
+// Align / Distribute — snap objects to the canvas (or their own bounding box) and even
+// out spacing. relativeTo 'canvas' aligns to canvas edges/centre; 'selection' to the
+// group's bbox.
+function applyAlign(objs, rp, ctx) {
+  if (!objs.length) return objs
+  const { w: cw, h: ch } = ctx.canvas
+  const pad = rp.padding || 0
+  const out = objs.map(o => ({ ...o }))
+  const toCanvas = rp.relativeTo !== 'selection'
+  const bb = () => {
+    const xs = out.map(o => o.x), ys = out.map(o => o.y)
+    return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) }
+  }
+  if (rp.alignX && rp.alignX !== 'off') {
+    const b = toCanvas ? null : bb()
+    out.forEach(o => {
+      if (toCanvas) o.x = rp.alignX === 'left' ? pad + o.w / 2 : rp.alignX === 'right' ? cw - pad - o.w / 2 : cw / 2
+      else o.x = rp.alignX === 'left' ? b.minX : rp.alignX === 'right' ? b.maxX : (b.minX + b.maxX) / 2
+    })
+  }
+  if (rp.alignY && rp.alignY !== 'off') {
+    const b = toCanvas ? null : bb()
+    out.forEach(o => {
+      if (toCanvas) o.y = rp.alignY === 'top' ? pad + o.h / 2 : rp.alignY === 'bottom' ? ch - pad - o.h / 2 : ch / 2
+      else o.y = rp.alignY === 'top' ? b.minY : rp.alignY === 'bottom' ? b.maxY : (b.minY + b.maxY) / 2
+    })
+  }
+  if (out.length > 1 && (rp.distribute === 'horizontal' || rp.distribute === 'vertical')) {
+    const horiz = rp.distribute === 'horizontal'
+    const key = horiz ? 'x' : 'y'
+    const sorted = [...out].sort((a, b) => a[key] - b[key])
+    const span = horiz ? cw : ch
+    const lo = toCanvas ? pad : sorted[0][key]
+    const hi = toCanvas ? span - pad : sorted[sorted.length - 1][key]
+    sorted.forEach((o, i) => { o[key] = lo + (hi - lo) * (i / (sorted.length - 1)) })
+  }
+  return out
+}
+
+// Motion Path — drive each object along a parametric path by progress t (drivable).
+// Sets position absolutely; `orient` rotates to the path tangent.
+function applyMotionPath(objs, rp, ctx) {
+  const t = clamp(rp.t ?? 0, 0, 1)
+  const cx = ctx.canvas.w / 2 + (rp.x || 0), cy = ctx.canvas.h / 2 + (rp.y || 0)
+  let px, py, tan
+  if (rp.pathType === 'line') {
+    const L = rp.length || 0; px = cx - L / 2 + t * L; py = cy; tan = 0
+  } else if (rp.pathType === 'wave') {
+    const L = rp.length || 0, f = rp.freq || 1, amp = rp.amp || 0
+    px = cx - L / 2 + t * L; py = cy + Math.sin(t * f * 2 * Math.PI) * amp
+    tan = Math.atan2(amp * f * 2 * Math.PI * Math.cos(t * f * 2 * Math.PI), L || 1)
+  } else if (rp.pathType === 'arc') {
+    const a = (t * (rp.arcDeg || 0)) * Math.PI / 180 - Math.PI / 2
+    px = cx + Math.cos(a) * rp.radius; py = cy + Math.sin(a) * rp.radius; tan = a + Math.PI / 2
+  } else { // circle
+    const a = t * 2 * Math.PI - Math.PI / 2
+    px = cx + Math.cos(a) * rp.radius; py = cy + Math.sin(a) * rp.radius; tan = a + Math.PI / 2
+  }
+  return objs.map(o => ({
+    ...o, x: px, y: py,
+    rotate: rp.orient === 'on' ? o.rotate + tan * 180 / Math.PI : o.rotate,
+  }))
+}
+
+// Magnet / Attractor — pull/repel/orbit objects relative to a point, weighted by a
+// distance falloff. A static displacement field (animate via Strength / Start f).
+function applyMagnet(objs, rp, ctx, frame) {
+  if (frame < (rp.startFrame || 0)) return objs
+  const mx = ctx.canvas.w / 2 + (rp.x || 0), my = ctx.canvas.h / 2 + (rp.y || 0)
+  const radius = rp.radius || 0, strength = rp.strength || 0
+  return objs.map(o => {
+    const dx = o.x - mx, dy = o.y - my
+    const dist = Math.hypot(dx, dy) || 0.0001
+    if (radius > 0 && dist > radius) return o
+    const n = radius > 0 ? clamp(dist / radius, 0, 1) : 0
+    let w = rp.falloff === 'linear' ? (1 - n)
+      : rp.falloff === 'inverse-square' ? 1 / (1 + (dist / 100) * (dist / 100))
+      : (1 - n) * (1 - n) * (3 - 2 * (1 - n))   // smooth
+    const force = strength * w
+    const ux = dx / dist, uy = dy / dist
+    if (rp.mode === 'orbit') {
+      const ang = (force / dist)                       // radians to rotate about the magnet
+      const c = Math.cos(ang), s = Math.sin(ang)
+      return { ...o, x: mx + (dx * c - dy * s), y: my + (dx * s + dy * c) }
+    }
+    const dir = rp.mode === 'repel' ? 1 : -1            // attract pulls inward
+    return { ...o, x: o.x + ux * force * dir, y: o.y + uy * force * dir }
+  })
+}
+
+// Orient / Look-at — rotate each object to face a target point, or its own motion
+// direction (velocity mode re-samples the previous frame — multi-frame unlock).
+function applyOrient(objs, rp, ctx, frame, gather) {
+  const off = rp.offsetAngle || 0
+  if (rp.mode === 'velocity') {
+    const prev = gather(frame - 1)
+    const byId = {}
+    for (const p of prev) byId[p.id] = p
+    return objs.map(o => {
+      const p = byId[o.id]
+      let ang = o.rotate
+      if (p) { const dx = o.x - p.x, dy = o.y - p.y; if (dx || dy) ang = Math.atan2(dy, dx) * 180 / Math.PI }
+      return { ...o, rotate: ang + off }
+    })
+  }
+  const tx = ctx.canvas.w / 2 + (rp.targetX || 0), ty = ctx.canvas.h / 2 + (rp.targetY || 0)
+  return objs.map(o => ({ ...o, rotate: Math.atan2(ty - o.y, tx - o.x) * 180 / Math.PI + off }))
+}
+
 // Camera — global zoom/pan/rotate of the whole comp about an anchor point. Applies to
 // every upstream item, so it's drivable like any node (push-ins, whip-pans).
 function applyCamera(objs, rp, ctx) {
@@ -571,7 +811,7 @@ function gatherObjects(nodeId, frame, ctx, seen) {
   const rp = resolveParams(node, frame, ctx)
 
   if (def.category === 'source') {
-    const o = sourceObject(node, rp, ctx)
+    const o = sourceObject(node, rp, ctx, frame)
     return o ? [o] : []
   }
 
@@ -615,6 +855,12 @@ function gatherObjects(nodeId, frame, ctx, seen) {
     case 'particles': return applyParticles(objs, rp, frame, ctx)
     case 'shatter':   return applyShatter(objs, rp)
     case 'camera':    return applyCamera(objs, rp, ctx)
+    case 'scramble':  return applyScramble(objs, rp, frame)
+    case 'align':      return applyAlign(objs, rp, ctx)
+    case 'motionPath': return applyMotionPath(objs, rp, ctx)
+    case 'magnet':     return applyMagnet(objs, rp, ctx, frame)
+    case 'orient':     return applyOrient(objs, rp, ctx, frame, gather)
+    case 'effector':   return applyEffector(objs, rp, ctx)
     case 'sort': {
       const a = [...objs]
       if (rp.mode === 'reverse') a.reverse()
