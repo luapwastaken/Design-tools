@@ -25,13 +25,13 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\package.json": {
-    "mtime": 1781645682.9045634,
-    "ast_hash": "ff625db79f8fa5546193da806c804180",
+    "mtime": 1782014037.3266368,
+    "ast_hash": "2c44653ae1d5eb548ace503e26ea804a",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\App.jsx": {
-    "mtime": 1781464042.8925838,
-    "ast_hash": "bdd4511ed7f1cf0ba02298f2b490ed33",
+    "mtime": 1782013911.642351,
+    "ast_hash": "36185133acd07269d65dd68f2e37a432",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\components\\Sidebar.jsx": {
@@ -227,11 +227,6 @@
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\LogoMaker\\ui.jsx": {
     "mtime": 1780486052.2466776,
     "ast_hash": "6c5e6a1db161d6cd3f1b59c605cd60cd",
-    "semantic_hash": ""
-  },
-  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\PatternMaker.jsx": {
-    "mtime": 1781218006.0598948,
-    "ast_hash": "326d2e47766762e9725222becc12e757",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\vite.config.js": {
@@ -470,8 +465,8 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\skills-lock.json": {
-    "mtime": 1781216787.5497491,
-    "ast_hash": "c75019dc3c066b17080f38c2e19d439e",
+    "mtime": 1782012096.829252,
+    "ast_hash": "477d534d935505582cb477b48dac78ad",
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\MotionMaker\\Graph.jsx": {
@@ -555,8 +550,98 @@
     "semantic_hash": ""
   },
   "D:\\stuff\\Design tool\\designtools\\designtools\\docs\\superpowers\\specs\\2026-06-16-motion-maker-handoff.md": {
-    "mtime": 1781644492.925102,
-    "ast_hash": "f24718971ae03a11c6abcfa9f3dab0d5",
+    "mtime": 1782011867.4747725,
+    "ast_hash": "bbc8799e7f92366067511d14eb0169aa",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\PatternMaker\\MeteoriteTab.jsx": {
+    "mtime": 1782013938.7158463,
+    "ast_hash": "a29c2c65a6e0434ee6e4b0e31c98cf85",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\PatternMaker\\ShapesTab.jsx": {
+    "mtime": 1782013711.2058344,
+    "ast_hash": "d00a22630147d02f5769322989789973",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\PatternMaker\\index.jsx": {
+    "mtime": 1782013902.5602438,
+    "ast_hash": "1f3b581f061aacff3988326b83cc1046",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\PatternMaker\\meteorite.js": {
+    "mtime": 1782013803.5314324,
+    "ast_hash": "93151e37357cc8b931e177768f1a9829",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\src\\tools\\PatternMaker\\ui.jsx": {
+    "mtime": 1782013608.3355372,
+    "ast_hash": "be75865db74074645ba6f92366e186d3",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.agents\\skills\\ponytail-audit\\SKILL.md": {
+    "mtime": 1782012096.374456,
+    "ast_hash": "741076540e91247a0bace7b89c27ac6b",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.agents\\skills\\ponytail-debt\\SKILL.md": {
+    "mtime": 1782012096.375456,
+    "ast_hash": "19c1eef33c9b109abb5805a762a545c8",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.agents\\skills\\ponytail-gain\\SKILL.md": {
+    "mtime": 1782012096.375456,
+    "ast_hash": "8f9cd980326238785d2fc23a9cfddc96",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.agents\\skills\\ponytail-help\\SKILL.md": {
+    "mtime": 1782012096.376457,
+    "ast_hash": "1249040527776216867a9f422d9f51e4",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.agents\\skills\\ponytail-review\\SKILL.md": {
+    "mtime": 1782012096.3774607,
+    "ast_hash": "52f93e973047baa9a906c6dc5879a4a6",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.agents\\skills\\ponytail\\SKILL.md": {
+    "mtime": 1782012096.3774607,
+    "ast_hash": "d90ff0e1f2e2ff6879dd10f3e3edc755",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.claude\\skills\\ponytail-audit\\SKILL.md": {
+    "mtime": 1782012096.374456,
+    "ast_hash": "741076540e91247a0bace7b89c27ac6b",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.claude\\skills\\ponytail-debt\\SKILL.md": {
+    "mtime": 1782012096.375456,
+    "ast_hash": "19c1eef33c9b109abb5805a762a545c8",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.claude\\skills\\ponytail-gain\\SKILL.md": {
+    "mtime": 1782012096.375456,
+    "ast_hash": "8f9cd980326238785d2fc23a9cfddc96",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.claude\\skills\\ponytail-help\\SKILL.md": {
+    "mtime": 1782012096.376457,
+    "ast_hash": "1249040527776216867a9f422d9f51e4",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.claude\\skills\\ponytail-review\\SKILL.md": {
+    "mtime": 1782012096.3774607,
+    "ast_hash": "52f93e973047baa9a906c6dc5879a4a6",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\.claude\\skills\\ponytail\\SKILL.md": {
+    "mtime": 1782012096.3774607,
+    "ast_hash": "d90ff0e1f2e2ff6879dd10f3e3edc755",
+    "semantic_hash": ""
+  },
+  "D:\\stuff\\Design tool\\designtools\\designtools\\docs\\superpowers\\specs\\2026-06-21-meteorite-pattern-design.md": {
+    "mtime": 1782013367.702364,
+    "ast_hash": "15135cc2fa9ac38ba77f0bad52c40e41",
     "semantic_hash": ""
   }
 }

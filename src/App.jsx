@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import { globalUndo, globalRedo } from './lib/undo.js'
-import PatternMaker from './tools/PatternMaker.jsx'
+import PatternMaker from './tools/PatternMaker/index.jsx'
 import LogoMaker from './tools/LogoMaker/index.jsx'
 import ColorPalette from './tools/ColorPalette/index.jsx'
 import DitherTool from './tools/DitherTool/index.jsx'

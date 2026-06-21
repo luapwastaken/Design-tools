@@ -634,6 +634,276 @@
       "norm_label": "computedhash"
     },
     {
+      "label": "ponytail",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L10",
+      "id": "skills_lock_skills_ponytail",
+      "community": 47,
+      "norm_label": "ponytail"
+    },
+    {
+      "label": "source",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L11",
+      "id": "skills_lock_ponytail_source",
+      "community": 47,
+      "norm_label": "source"
+    },
+    {
+      "label": "sourceType",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L12",
+      "id": "skills_lock_ponytail_sourcetype",
+      "community": 47,
+      "norm_label": "sourcetype"
+    },
+    {
+      "label": "skillPath",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L13",
+      "id": "skills_lock_ponytail_skillpath",
+      "community": 47,
+      "norm_label": "skillpath"
+    },
+    {
+      "label": "computedHash",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L14",
+      "id": "skills_lock_ponytail_computedhash",
+      "community": 47,
+      "norm_label": "computedhash"
+    },
+    {
+      "label": "ponytail-audit",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L16",
+      "id": "skills_lock_skills_ponytail_audit",
+      "community": 47,
+      "norm_label": "ponytail-audit"
+    },
+    {
+      "label": "source",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L17",
+      "id": "skills_lock_ponytail_audit_source",
+      "community": 47,
+      "norm_label": "source"
+    },
+    {
+      "label": "sourceType",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L18",
+      "id": "skills_lock_ponytail_audit_sourcetype",
+      "community": 47,
+      "norm_label": "sourcetype"
+    },
+    {
+      "label": "skillPath",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L19",
+      "id": "skills_lock_ponytail_audit_skillpath",
+      "community": 47,
+      "norm_label": "skillpath"
+    },
+    {
+      "label": "computedHash",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L20",
+      "id": "skills_lock_ponytail_audit_computedhash",
+      "community": 47,
+      "norm_label": "computedhash"
+    },
+    {
+      "label": "ponytail-debt",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L22",
+      "id": "skills_lock_skills_ponytail_debt",
+      "community": 47,
+      "norm_label": "ponytail-debt"
+    },
+    {
+      "label": "source",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L23",
+      "id": "skills_lock_ponytail_debt_source",
+      "community": 47,
+      "norm_label": "source"
+    },
+    {
+      "label": "sourceType",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L24",
+      "id": "skills_lock_ponytail_debt_sourcetype",
+      "community": 47,
+      "norm_label": "sourcetype"
+    },
+    {
+      "label": "skillPath",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L25",
+      "id": "skills_lock_ponytail_debt_skillpath",
+      "community": 47,
+      "norm_label": "skillpath"
+    },
+    {
+      "label": "computedHash",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L26",
+      "id": "skills_lock_ponytail_debt_computedhash",
+      "community": 47,
+      "norm_label": "computedhash"
+    },
+    {
+      "label": "ponytail-gain",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L28",
+      "id": "skills_lock_skills_ponytail_gain",
+      "community": 47,
+      "norm_label": "ponytail-gain"
+    },
+    {
+      "label": "source",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L29",
+      "id": "skills_lock_ponytail_gain_source",
+      "community": 47,
+      "norm_label": "source"
+    },
+    {
+      "label": "sourceType",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L30",
+      "id": "skills_lock_ponytail_gain_sourcetype",
+      "community": 47,
+      "norm_label": "sourcetype"
+    },
+    {
+      "label": "skillPath",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L31",
+      "id": "skills_lock_ponytail_gain_skillpath",
+      "community": 47,
+      "norm_label": "skillpath"
+    },
+    {
+      "label": "computedHash",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L32",
+      "id": "skills_lock_ponytail_gain_computedhash",
+      "community": 47,
+      "norm_label": "computedhash"
+    },
+    {
+      "label": "ponytail-help",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L34",
+      "id": "skills_lock_skills_ponytail_help",
+      "community": 47,
+      "norm_label": "ponytail-help"
+    },
+    {
+      "label": "source",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L35",
+      "id": "skills_lock_ponytail_help_source",
+      "community": 47,
+      "norm_label": "source"
+    },
+    {
+      "label": "sourceType",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L36",
+      "id": "skills_lock_ponytail_help_sourcetype",
+      "community": 47,
+      "norm_label": "sourcetype"
+    },
+    {
+      "label": "skillPath",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L37",
+      "id": "skills_lock_ponytail_help_skillpath",
+      "community": 47,
+      "norm_label": "skillpath"
+    },
+    {
+      "label": "computedHash",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L38",
+      "id": "skills_lock_ponytail_help_computedhash",
+      "community": 47,
+      "norm_label": "computedhash"
+    },
+    {
+      "label": "ponytail-review",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L40",
+      "id": "skills_lock_skills_ponytail_review",
+      "community": 47,
+      "norm_label": "ponytail-review"
+    },
+    {
+      "label": "source",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L41",
+      "id": "skills_lock_ponytail_review_source",
+      "community": 47,
+      "norm_label": "source"
+    },
+    {
+      "label": "sourceType",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L42",
+      "id": "skills_lock_ponytail_review_sourcetype",
+      "community": 47,
+      "norm_label": "sourcetype"
+    },
+    {
+      "label": "skillPath",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L43",
+      "id": "skills_lock_ponytail_review_skillpath",
+      "community": 47,
+      "norm_label": "skillpath"
+    },
+    {
+      "label": "computedHash",
+      "file_type": "code",
+      "source_file": "skills-lock.json",
+      "source_location": "L44",
+      "id": "skills_lock_ponytail_review_computedhash",
+      "community": 47,
+      "norm_label": "computedhash"
+    },
+    {
       "label": "App.jsx",
       "file_type": "code",
       "source_file": "src/App.jsx",
@@ -693,7 +963,7 @@
       "source_file": "src/components/NumberField.jsx",
       "source_location": "L1",
       "id": "components_numberfield",
-      "community": 20,
+      "community": 30,
       "norm_label": "numberfield.jsx"
     },
     {
@@ -702,7 +972,7 @@
       "source_file": "src/components/NumberField.jsx",
       "source_location": "L16",
       "id": "components_numberfield_decimalsfor",
-      "community": 20,
+      "community": 30,
       "norm_label": "decimalsfor()"
     },
     {
@@ -711,7 +981,7 @@
       "source_file": "src/components/NumberField.jsx",
       "source_location": "L23",
       "id": "components_numberfield_clamp",
-      "community": 20,
+      "community": 30,
       "norm_label": "clamp()"
     },
     {
@@ -720,7 +990,7 @@
       "source_file": "src/components/NumberField.jsx",
       "source_location": "L26",
       "id": "components_numberfield_editablenumber",
-      "community": 20,
+      "community": 30,
       "norm_label": "editablenumber()"
     },
     {
@@ -729,7 +999,7 @@
       "source_file": "src/components/NumberField.jsx",
       "source_location": "L81",
       "id": "components_numberfield_numberslider",
-      "community": 20,
+      "community": 30,
       "norm_label": "numberslider()"
     },
     {
@@ -936,7 +1206,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L6",
       "id": "lib_color_hextorgb",
-      "community": 44,
+      "community": 43,
       "norm_label": "hextorgb()"
     },
     {
@@ -1017,7 +1287,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L78",
       "id": "lib_color_contrast",
-      "community": 43,
+      "community": 24,
       "norm_label": "contrast()"
     },
     {
@@ -1026,7 +1296,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L88",
       "id": "lib_color_deltae",
-      "community": 43,
+      "community": 32,
       "norm_label": "deltae()"
     },
     {
@@ -1053,7 +1323,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L112",
       "id": "lib_color_interpolate",
-      "community": 44,
+      "community": 43,
       "norm_label": "interpolate()"
     },
     {
@@ -1071,7 +1341,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L132",
       "id": "lib_color_srgbtolinear",
-      "community": 44,
+      "community": 43,
       "norm_label": "srgbtolinear()"
     },
     {
@@ -1080,7 +1350,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L134",
       "id": "lib_color_lineartosrgb8",
-      "community": 44,
+      "community": 43,
       "norm_label": "lineartosrgb8()"
     },
     {
@@ -1089,7 +1359,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L140",
       "id": "lib_color_reflectancetoks",
-      "community": 44,
+      "community": 43,
       "norm_label": "reflectancetoks()"
     },
     {
@@ -1098,7 +1368,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L144",
       "id": "lib_color_kstoreflectance",
-      "community": 44,
+      "community": 43,
       "norm_label": "kstoreflectance()"
     },
     {
@@ -1107,7 +1377,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L150",
       "id": "lib_color_mixlinearpigment",
-      "community": 44,
+      "community": 43,
       "norm_label": "mixlinearpigment()"
     },
     {
@@ -1116,7 +1386,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L160",
       "id": "lib_color_mixpigments",
-      "community": 44,
+      "community": 43,
       "norm_label": "mixpigments()"
     },
     {
@@ -1179,7 +1449,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L233",
       "id": "lib_color_autoname",
-      "community": 43,
+      "community": 32,
       "norm_label": "autoname()"
     },
     {
@@ -1188,7 +1458,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L245",
       "id": "lib_color_generateharmony",
-      "community": 44,
+      "community": 43,
       "norm_label": "generateharmony()"
     },
     {
@@ -1206,7 +1476,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L272",
       "id": "lib_color_oklchpixel",
-      "community": 20,
+      "community": 30,
       "norm_label": "oklchpixel()"
     },
     {
@@ -1242,7 +1512,7 @@
       "source_file": "src/lib/color.js",
       "source_location": "L345",
       "id": "lib_color_lumaoklch",
-      "community": 20,
+      "community": 30,
       "norm_label": "lumaoklch()"
     },
     {
@@ -1647,7 +1917,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L1",
       "id": "lib_export",
-      "community": 42,
+      "community": 56,
       "norm_label": "export.js"
     },
     {
@@ -1656,7 +1926,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L8",
       "id": "lib_export_svgtopngblob",
-      "community": 42,
+      "community": 56,
       "norm_label": "svgtopngblob()"
     },
     {
@@ -1665,7 +1935,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L34",
       "id": "lib_export_svgtopngbase64",
-      "community": 42,
+      "community": 56,
       "norm_label": "svgtopngbase64()"
     },
     {
@@ -1674,7 +1944,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L58",
       "id": "lib_export_buildico",
-      "community": 42,
+      "community": 56,
       "norm_label": "buildico()"
     },
     {
@@ -1683,7 +1953,7 @@
       "source_file": "src/lib/export.js",
       "source_location": "L109",
       "id": "lib_export_buildfaviconzip",
-      "community": 42,
+      "community": 56,
       "norm_label": "buildfaviconzip()"
     },
     {
@@ -1692,7 +1962,7 @@
       "source_file": "src/lib/eyedropper.js",
       "source_location": "L1",
       "id": "lib_eyedropper",
-      "community": 29,
+      "community": 43,
       "norm_label": "eyedropper.js"
     },
     {
@@ -1701,7 +1971,7 @@
       "source_file": "src/lib/eyedropper.js",
       "source_location": "L11",
       "id": "lib_eyedropper_eyedroppersupported",
-      "community": 29,
+      "community": 43,
       "norm_label": "eyedroppersupported()"
     },
     {
@@ -1710,7 +1980,7 @@
       "source_file": "src/lib/eyedropper.js",
       "source_location": "L16",
       "id": "lib_eyedropper_ispicking",
-      "community": 29,
+      "community": 43,
       "norm_label": "ispicking()"
     },
     {
@@ -1719,7 +1989,7 @@
       "source_file": "src/lib/eyedropper.js",
       "source_location": "L18",
       "id": "lib_eyedropper_pickscreencolor",
-      "community": 29,
+      "community": 43,
       "norm_label": "pickscreencolor()"
     },
     {
@@ -1728,7 +1998,7 @@
       "source_file": "src/lib/file.js",
       "source_location": "L1",
       "id": "lib_file",
-      "community": 42,
+      "community": 44,
       "norm_label": "file.js"
     },
     {
@@ -1746,7 +2016,7 @@
       "source_file": "src/lib/file.js",
       "source_location": "L12",
       "id": "lib_file_readasdataurl",
-      "community": 42,
+      "community": 44,
       "norm_label": "readasdataurl()"
     },
     {
@@ -1755,7 +2025,7 @@
       "source_file": "src/lib/file.js",
       "source_location": "L20",
       "id": "lib_file_processfile",
-      "community": 42,
+      "community": 44,
       "norm_label": "processfile()"
     },
     {
@@ -1800,7 +2070,7 @@
       "source_file": "src/lib/gif.js",
       "source_location": "L66",
       "id": "lib_gif_encodegif",
-      "community": 35,
+      "community": 26,
       "norm_label": "encodegif()"
     },
     {
@@ -1809,7 +2079,7 @@
       "source_file": "src/lib/gif.js",
       "source_location": "L102",
       "id": "lib_gif_framestozip",
-      "community": 35,
+      "community": 26,
       "norm_label": "framestozip()"
     },
     {
@@ -1935,7 +2205,7 @@
       "source_file": "src/lib/glDither.js",
       "source_location": "L607",
       "id": "lib_gldither_glengine_uploadthresh",
-      "community": 31,
+      "community": 3,
       "norm_label": "._uploadthresh()"
     },
     {
@@ -2331,7 +2601,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L33",
       "id": "lib_lineart_boxblurf",
-      "community": 55,
+      "community": 41,
       "norm_label": "boxblurf()"
     },
     {
@@ -2340,7 +2610,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L44",
       "id": "lib_lineart_blurh",
-      "community": 55,
+      "community": 41,
       "norm_label": "blurh()"
     },
     {
@@ -2349,7 +2619,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L57",
       "id": "lib_lineart_blurv",
-      "community": 55,
+      "community": 41,
       "norm_label": "blurv()"
     },
     {
@@ -2358,7 +2628,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L73",
       "id": "lib_lineart_flatten",
-      "community": 55,
+      "community": 41,
       "norm_label": "flatten()"
     },
     {
@@ -2385,7 +2655,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L114",
       "id": "lib_lineart_toink",
-      "community": 55,
+      "community": 41,
       "norm_label": "toink()"
     },
     {
@@ -2403,7 +2673,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L162",
       "id": "lib_lineart_adjustweight",
-      "community": 55,
+      "community": 41,
       "norm_label": "adjustweight()"
     },
     {
@@ -2430,7 +2700,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L242",
       "id": "lib_lineart_smoothmask",
-      "community": 55,
+      "community": 41,
       "norm_label": "smoothmask()"
     },
     {
@@ -2529,7 +2799,7 @@
       "source_file": "src/lib/lineart.js",
       "source_location": "L400",
       "id": "lib_lineart_dist2",
-      "community": 22,
+      "community": 41,
       "norm_label": "dist2()"
     },
     {
@@ -2628,7 +2898,7 @@
       "source_file": "src/lib/paintRecipe.js",
       "source_location": "L17",
       "id": "lib_paintrecipe_deltae",
-      "community": 43,
+      "community": 32,
       "norm_label": "deltae()"
     },
     {
@@ -2754,7 +3024,7 @@
       "source_file": "src/lib/paintRecipe.js",
       "source_location": "L169",
       "id": "lib_paintrecipe_recipeverdict",
-      "community": 45,
+      "community": 24,
       "norm_label": "recipeverdict()"
     },
     {
@@ -3240,7 +3510,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L1",
       "id": "lib_svg",
-      "community": 42,
+      "community": 44,
       "norm_label": "svg.js"
     },
     {
@@ -3249,7 +3519,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L3",
       "id": "lib_svg_svgtodataurl",
-      "community": 42,
+      "community": 44,
       "norm_label": "svgtodataurl()"
     },
     {
@@ -3258,7 +3528,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L11",
       "id": "lib_svg_parsesvgtext",
-      "community": 42,
+      "community": 44,
       "norm_label": "parsesvgtext()"
     },
     {
@@ -3267,7 +3537,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L27",
       "id": "lib_svg_issvglikelyblack",
-      "community": 42,
+      "community": 44,
       "norm_label": "issvglikelyblack()"
     },
     {
@@ -3276,7 +3546,7 @@
       "source_file": "src/lib/svg.js",
       "source_location": "L42",
       "id": "lib_svg_buildtreatmentfilterstr",
-      "community": 42,
+      "community": 44,
       "norm_label": "buildtreatmentfilterstr()"
     },
     {
@@ -3528,7 +3798,7 @@
       "source_file": "src/tools/CobaltTool.jsx",
       "source_location": "L328",
       "id": "tools_cobalttool_tabbtn",
-      "community": 35,
+      "community": 18,
       "norm_label": "tabbtn"
     },
     {
@@ -3708,7 +3978,7 @@
       "source_file": "src/tools/ColorPalette/BGCheck.jsx",
       "source_location": "L98",
       "id": "colorpalette_bgcheck_bgcheck",
-      "community": 45,
+      "community": 2,
       "norm_label": "bgcheck()"
     },
     {
@@ -3717,7 +3987,7 @@
       "source_file": "src/tools/ColorPalette/ContrastMatrix.jsx",
       "source_location": "L1",
       "id": "colorpalette_contrastmatrix",
-      "community": 45,
+      "community": 24,
       "norm_label": "contrastmatrix.jsx"
     },
     {
@@ -3726,7 +3996,7 @@
       "source_file": "src/tools/ColorPalette/ContrastMatrix.jsx",
       "source_location": "L4",
       "id": "colorpalette_contrastmatrix_rating_color",
-      "community": 45,
+      "community": 24,
       "norm_label": "rating_color"
     },
     {
@@ -3735,7 +4005,7 @@
       "source_file": "src/tools/ColorPalette/ContrastMatrix.jsx",
       "source_location": "L8",
       "id": "colorpalette_contrastmatrix_contrastmatrix",
-      "community": 45,
+      "community": 24,
       "norm_label": "contrastmatrix()"
     },
     {
@@ -3906,7 +4176,7 @@
       "source_file": "src/tools/ColorPalette/ExportPanel.jsx",
       "source_location": "L226",
       "id": "colorpalette_exportpanel_exportpanel",
-      "community": 45,
+      "community": 50,
       "norm_label": "exportpanel()"
     },
     {
@@ -3996,7 +4266,7 @@
       "source_file": "src/tools/ColorPalette/Generators.jsx",
       "source_location": "L67",
       "id": "colorpalette_generators_generators",
-      "community": 45,
+      "community": 30,
       "norm_label": "generators()"
     },
     {
@@ -4158,7 +4428,7 @@
       "source_file": "src/tools/ColorPalette/Gradient.jsx",
       "source_location": "L14",
       "id": "colorpalette_gradient_gradient",
-      "community": 45,
+      "community": 24,
       "norm_label": "gradient()"
     },
     {
@@ -4275,7 +4545,7 @@
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L1",
       "id": "colorpalette_illustrationmode",
-      "community": 44,
+      "community": 43,
       "norm_label": "illustrationmode.jsx"
     },
     {
@@ -4284,7 +4554,7 @@
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L6",
       "id": "colorpalette_illustrationmode_ill_panels",
-      "community": 44,
+      "community": 43,
       "norm_label": "ill_panels"
     },
     {
@@ -4293,7 +4563,7 @@
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L8",
       "id": "colorpalette_illustrationmode_illustrationmode",
-      "community": 44,
+      "community": 43,
       "norm_label": "illustrationmode()"
     },
     {
@@ -4311,7 +4581,7 @@
       "source_file": "src/tools/ColorPalette/ImageExtract.jsx",
       "source_location": "L11",
       "id": "colorpalette_imageextract_rgbtooklab",
-      "community": 44,
+      "community": 43,
       "norm_label": "rgbtooklab()"
     },
     {
@@ -4455,7 +4725,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L1",
       "id": "colorpalette_paintmix",
-      "community": 45,
+      "community": 24,
       "norm_label": "paintmix.jsx"
     },
     {
@@ -4464,7 +4734,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L15",
       "id": "colorpalette_paintmix_loadowned",
-      "community": 45,
+      "community": 24,
       "norm_label": "loadowned()"
     },
     {
@@ -4473,7 +4743,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L23",
       "id": "colorpalette_paintmix_paintmix",
-      "community": 45,
+      "community": 24,
       "norm_label": "paintmix()"
     },
     {
@@ -4482,7 +4752,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L130",
       "id": "colorpalette_paintmix_recipecard",
-      "community": 45,
+      "community": 24,
       "norm_label": "recipecard()"
     },
     {
@@ -4491,7 +4761,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L157",
       "id": "colorpalette_paintmix_pairswatch",
-      "community": 45,
+      "community": 24,
       "norm_label": "pairswatch()"
     },
     {
@@ -4500,7 +4770,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L169",
       "id": "colorpalette_paintmix_verdict",
-      "community": 45,
+      "community": 24,
       "norm_label": "verdict()"
     },
     {
@@ -4509,7 +4779,7 @@
       "source_file": "src/tools/ColorPalette/PaintMix.jsx",
       "source_location": "L174",
       "id": "colorpalette_paintmix_chipbtn",
-      "community": 45,
+      "community": 24,
       "norm_label": "chipbtn"
     },
     {
@@ -4527,7 +4797,7 @@
       "source_file": "src/tools/ColorPalette/PaletteStrip.jsx",
       "source_location": "L3",
       "id": "colorpalette_palettestrip_palettestrip",
-      "community": 45,
+      "community": 24,
       "norm_label": "palettestrip()"
     },
     {
@@ -4716,7 +4986,7 @@
       "source_file": "src/tools/ColorPalette/Picker.jsx",
       "source_location": "L529",
       "id": "colorpalette_picker_eyedropperbtn",
-      "community": 29,
+      "community": 43,
       "norm_label": "eyedropperbtn()"
     },
     {
@@ -4869,7 +5139,7 @@
       "source_file": "src/tools/ColorPalette/Recipes.jsx",
       "source_location": "L207",
       "id": "colorpalette_recipes_rendertheme",
-      "community": 2,
+      "community": 25,
       "norm_label": "rendertheme()"
     },
     {
@@ -4905,7 +5175,7 @@
       "source_file": "src/tools/ColorPalette/Recipes.jsx",
       "source_location": "L231",
       "id": "colorpalette_recipes_recipes",
-      "community": 45,
+      "community": 24,
       "norm_label": "recipes()"
     },
     {
@@ -4977,7 +5247,7 @@
       "source_file": "src/tools/ColorPalette/ShadowHighlight.jsx",
       "source_location": "L1",
       "id": "colorpalette_shadowhighlight",
-      "community": 20,
+      "community": 30,
       "norm_label": "shadowhighlight.jsx"
     },
     {
@@ -4986,7 +5256,7 @@
       "source_file": "src/tools/ColorPalette/ShadowHighlight.jsx",
       "source_location": "L8",
       "id": "colorpalette_shadowhighlight_shadowhighlight",
-      "community": 20,
+      "community": 30,
       "norm_label": "shadowhighlight()"
     },
     {
@@ -4995,7 +5265,7 @@
       "source_file": "src/tools/ColorPalette/ShadowHighlight.jsx",
       "source_location": "L78",
       "id": "colorpalette_shadowhighlight_huechip",
-      "community": 20,
+      "community": 30,
       "norm_label": "huechip()"
     },
     {
@@ -5067,7 +5337,7 @@
       "source_file": "src/tools/ColorPalette/Vision.jsx",
       "source_location": "L6",
       "id": "colorpalette_vision_vision",
-      "community": 45,
+      "community": 24,
       "norm_label": "vision()"
     },
     {
@@ -5094,7 +5364,7 @@
       "source_file": "src/tools/ColorPalette/index.jsx",
       "source_location": "L34",
       "id": "colorpalette_index_colorpalette",
-      "community": 35,
+      "community": 43,
       "norm_label": "colorpalette()"
     },
     {
@@ -5400,7 +5670,7 @@
       "source_file": "src/tools/ColorPalette/store.js",
       "source_location": "L111",
       "id": "colorpalette_store_getstate",
-      "community": 1,
+      "community": 43,
       "norm_label": "getstate()"
     },
     {
@@ -5418,7 +5688,7 @@
       "source_file": "src/tools/ColorPalette/store.js",
       "source_location": "L118",
       "id": "colorpalette_store_usepalette",
-      "community": 45,
+      "community": 24,
       "norm_label": "usepalette()"
     },
     {
@@ -6363,7 +6633,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L1",
       "id": "linearttool_index",
-      "community": 19,
+      "community": 41,
       "norm_label": "index.jsx"
     },
     {
@@ -6372,7 +6642,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L11",
       "id": "linearttool_index_c",
-      "community": 19,
+      "community": 41,
       "norm_label": "c"
     },
     {
@@ -6381,7 +6651,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L21",
       "id": "linearttool_index_channels",
-      "community": 19,
+      "community": 41,
       "norm_label": "channels"
     },
     {
@@ -6390,7 +6660,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L27",
       "id": "linearttool_index_modes",
-      "community": 19,
+      "community": 41,
       "norm_label": "modes"
     },
     {
@@ -6399,7 +6669,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L33",
       "id": "linearttool_index_linearttool",
-      "community": 19,
+      "community": 41,
       "norm_label": "linearttool()"
     },
     {
@@ -6408,7 +6678,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L571",
       "id": "linearttool_index_section",
-      "community": 19,
+      "community": 41,
       "norm_label": "section()"
     },
     {
@@ -6417,7 +6687,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L580",
       "id": "linearttool_index_row",
-      "community": 19,
+      "community": 41,
       "norm_label": "row()"
     },
     {
@@ -6426,7 +6696,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L591",
       "id": "linearttool_index_toggle",
-      "community": 19,
+      "community": 41,
       "norm_label": "toggle()"
     },
     {
@@ -6435,7 +6705,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L600",
       "id": "linearttool_index_hint",
-      "community": 19,
+      "community": 41,
       "norm_label": "hint()"
     },
     {
@@ -6444,7 +6714,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L604",
       "id": "linearttool_index_iconbtn",
-      "community": 19,
+      "community": 41,
       "norm_label": "iconbtn()"
     },
     {
@@ -6453,7 +6723,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L615",
       "id": "linearttool_index_btnstyle",
-      "community": 19,
+      "community": 41,
       "norm_label": "btnstyle()"
     },
     {
@@ -6462,7 +6732,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L624",
       "id": "linearttool_index_chipstyle",
-      "community": 19,
+      "community": 41,
       "norm_label": "chipstyle()"
     },
     {
@@ -6471,7 +6741,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L632",
       "id": "linearttool_index_colorstyle",
-      "community": 19,
+      "community": 41,
       "norm_label": "colorstyle"
     },
     {
@@ -6480,7 +6750,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L637",
       "id": "linearttool_index_hextorgb",
-      "community": 19,
+      "community": 41,
       "norm_label": "hextorgb()"
     },
     {
@@ -6489,7 +6759,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L642",
       "id": "linearttool_index_downloadcanvas",
-      "community": 19,
+      "community": 41,
       "norm_label": "downloadcanvas()"
     },
     {
@@ -6498,7 +6768,7 @@
       "source_file": "src/tools/LineartTool/index.jsx",
       "source_location": "L643",
       "id": "linearttool_index_downloadblob",
-      "community": 19,
+      "community": 41,
       "norm_label": "downloadblob()"
     },
     {
@@ -6507,7 +6777,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L1",
       "id": "linearttool_store",
-      "community": 26,
+      "community": 41,
       "norm_label": "store.js"
     },
     {
@@ -6516,7 +6786,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L12",
       "id": "linearttool_store_load",
-      "community": 26,
+      "community": 41,
       "norm_label": "load()"
     },
     {
@@ -6525,7 +6795,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L16",
       "id": "linearttool_store_default_state",
-      "community": 26,
+      "community": 41,
       "norm_label": "default_state"
     },
     {
@@ -6534,7 +6804,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L50",
       "id": "linearttool_store_state",
-      "community": 26,
+      "community": 41,
       "norm_label": "_state"
     },
     {
@@ -6543,7 +6813,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L51",
       "id": "linearttool_store_listeners",
-      "community": 26,
+      "community": 41,
       "norm_label": "_listeners"
     },
     {
@@ -6552,7 +6822,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L54",
       "id": "linearttool_store_history",
-      "community": 26,
+      "community": 41,
       "norm_label": "_history"
     },
     {
@@ -6561,7 +6831,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L59",
       "id": "linearttool_store_snap",
-      "community": 26,
+      "community": 41,
       "norm_label": "snap()"
     },
     {
@@ -6570,7 +6840,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L61",
       "id": "linearttool_store_pushhistory",
-      "community": 26,
+      "community": 41,
       "norm_label": "pushhistory()"
     },
     {
@@ -6579,7 +6849,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L75",
       "id": "linearttool_store_undo",
-      "community": 26,
+      "community": 41,
       "norm_label": "undo()"
     },
     {
@@ -6588,7 +6858,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L81",
       "id": "linearttool_store_redo",
-      "community": 26,
+      "community": 41,
       "norm_label": "redo()"
     },
     {
@@ -6597,7 +6867,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L88",
       "id": "linearttool_store_notify",
-      "community": 26,
+      "community": 41,
       "norm_label": "notify()"
     },
     {
@@ -6606,7 +6876,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L93",
       "id": "linearttool_store_getstate",
-      "community": 26,
+      "community": 41,
       "norm_label": "getstate()"
     },
     {
@@ -6615,7 +6885,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L95",
       "id": "linearttool_store_setstate",
-      "community": 26,
+      "community": 41,
       "norm_label": "setstate()"
     },
     {
@@ -6624,7 +6894,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L101",
       "id": "linearttool_store_resetstate",
-      "community": 26,
+      "community": 41,
       "norm_label": "resetstate()"
     },
     {
@@ -6633,7 +6903,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L103",
       "id": "linearttool_store_subscribe",
-      "community": 26,
+      "community": 41,
       "norm_label": "subscribe()"
     },
     {
@@ -6642,7 +6912,7 @@
       "source_file": "src/tools/LineartTool/store.js",
       "source_location": "L108",
       "id": "linearttool_store_uselineart",
-      "community": 19,
+      "community": 41,
       "norm_label": "uselineart()"
     },
     {
@@ -6705,7 +6975,7 @@
       "source_file": "src/tools/LogoMaker/ExportPanel.jsx",
       "source_location": "L1",
       "id": "logomaker_exportpanel",
-      "community": 42,
+      "community": 56,
       "norm_label": "exportpanel.jsx"
     },
     {
@@ -6714,7 +6984,7 @@
       "source_file": "src/tools/LogoMaker/ExportPanel.jsx",
       "source_location": "L7",
       "id": "logomaker_exportpanel_faviconexport",
-      "community": 42,
+      "community": 56,
       "norm_label": "faviconexport()"
     },
     {
@@ -6750,7 +7020,7 @@
       "source_file": "src/tools/LogoMaker/FileSlot.jsx",
       "source_location": "L1",
       "id": "logomaker_fileslot",
-      "community": 42,
+      "community": 44,
       "norm_label": "fileslot.jsx"
     },
     {
@@ -6759,7 +7029,7 @@
       "source_file": "src/tools/LogoMaker/FileSlot.jsx",
       "source_location": "L6",
       "id": "logomaker_fileslot_fileslot",
-      "community": 42,
+      "community": 44,
       "norm_label": "fileslot()"
     },
     {
@@ -6786,7 +7056,7 @@
       "source_file": "src/tools/LogoMaker/LockupSvg.jsx",
       "source_location": "L20",
       "id": "logomaker_lockupsvg_treatmentfilter",
-      "community": 44,
+      "community": 43,
       "norm_label": "treatmentfilter()"
     },
     {
@@ -6939,7 +7209,7 @@
       "source_file": "src/tools/LogoMaker/ui.jsx",
       "source_location": "L16",
       "id": "logomaker_ui_btn",
-      "community": 42,
+      "community": 45,
       "norm_label": "btn()"
     },
     {
@@ -6993,7 +7263,7 @@
       "source_file": "src/tools/LogoMaker/ui.jsx",
       "source_location": "L120",
       "id": "logomaker_ui_segmentedcontrol",
-      "community": 42,
+      "community": 45,
       "norm_label": "segmentedcontrol()"
     },
     {
@@ -7092,7 +7362,7 @@
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
       "source_location": "L1",
       "id": "motionmaker_inspector",
-      "community": 42,
+      "community": 45,
       "norm_label": "inspector.jsx"
     },
     {
@@ -7101,7 +7371,7 @@
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
       "source_location": "L11",
       "id": "motionmaker_inspector_timingfindings",
-      "community": 42,
+      "community": 45,
       "norm_label": "timingfindings()"
     },
     {
@@ -7110,7 +7380,7 @@
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
       "source_location": "L37",
       "id": "motionmaker_inspector_miniinput",
-      "community": 42,
+      "community": 45,
       "norm_label": "miniinput()"
     },
     {
@@ -7119,7 +7389,7 @@
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
       "source_location": "L45",
       "id": "motionmaker_inspector_keyframeseditor",
-      "community": 42,
+      "community": 45,
       "norm_label": "keyframeseditor()"
     },
     {
@@ -7128,7 +7398,7 @@
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
       "source_location": "L80",
       "id": "motionmaker_inspector_imageparam",
-      "community": 42,
+      "community": 45,
       "norm_label": "imageparam()"
     },
     {
@@ -7137,7 +7407,7 @@
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
       "source_location": "L107",
       "id": "motionmaker_inspector_inspector",
-      "community": 42,
+      "community": 45,
       "norm_label": "inspector()"
     },
     {
@@ -7146,7 +7416,7 @@
       "source_file": "src/tools/MotionMaker/Stage.jsx",
       "source_location": "L1",
       "id": "motionmaker_stage",
-      "community": 35,
+      "community": 26,
       "norm_label": "stage.jsx"
     },
     {
@@ -7155,7 +7425,7 @@
       "source_file": "src/tools/MotionMaker/Stage.jsx",
       "source_location": "L12",
       "id": "motionmaker_stage_zoombtn",
-      "community": 35,
+      "community": 26,
       "norm_label": "zoombtn()"
     },
     {
@@ -7164,7 +7434,7 @@
       "source_file": "src/tools/MotionMaker/Stage.jsx",
       "source_location": "L16",
       "id": "motionmaker_stage_stage",
-      "community": 35,
+      "community": 26,
       "norm_label": "stage()"
     },
     {
@@ -7173,7 +7443,7 @@
       "source_file": "src/tools/MotionMaker/Timeline.jsx",
       "source_location": "L1",
       "id": "motionmaker_timeline",
-      "community": 42,
+      "community": 30,
       "norm_label": "timeline.jsx"
     },
     {
@@ -7182,7 +7452,7 @@
       "source_file": "src/tools/MotionMaker/Timeline.jsx",
       "source_location": "L12",
       "id": "motionmaker_timeline_timeline",
-      "community": 42,
+      "community": 30,
       "norm_label": "timeline()"
     },
     {
@@ -7632,7 +7902,7 @@
       "source_file": "src/tools/MotionMaker/engine.js",
       "source_location": "L1195",
       "id": "motionmaker_engine_analyzetiming",
-      "community": 42,
+      "community": 45,
       "norm_label": "analyzetiming()"
     },
     {
@@ -7641,7 +7911,7 @@
       "source_file": "src/tools/MotionMaker/engine.js",
       "source_location": "L1246",
       "id": "motionmaker_engine_evaluatescene",
-      "community": 35,
+      "community": 26,
       "norm_label": "evaluatescene()"
     },
     {
@@ -7650,7 +7920,7 @@
       "source_file": "src/tools/MotionMaker/exporters.js",
       "source_location": "L1",
       "id": "motionmaker_exporters",
-      "community": 35,
+      "community": 26,
       "norm_label": "exporters.js"
     },
     {
@@ -7659,7 +7929,7 @@
       "source_file": "src/tools/MotionMaker/exporters.js",
       "source_location": "L12",
       "id": "motionmaker_exporters_framelist",
-      "community": 35,
+      "community": 26,
       "norm_label": "framelist()"
     },
     {
@@ -7668,7 +7938,7 @@
       "source_file": "src/tools/MotionMaker/exporters.js",
       "source_location": "L19",
       "id": "motionmaker_exporters_renderframes",
-      "community": 35,
+      "community": 26,
       "norm_label": "renderframes()"
     },
     {
@@ -7686,7 +7956,7 @@
       "source_file": "src/tools/MotionMaker/exporters.js",
       "source_location": "L39",
       "id": "motionmaker_exporters_exportgif",
-      "community": 35,
+      "community": 26,
       "norm_label": "exportgif()"
     },
     {
@@ -7695,7 +7965,7 @@
       "source_file": "src/tools/MotionMaker/exporters.js",
       "source_location": "L47",
       "id": "motionmaker_exporters_exportframeszip",
-      "community": 35,
+      "community": 26,
       "norm_label": "exportframeszip()"
     },
     {
@@ -7704,7 +7974,7 @@
       "source_file": "src/tools/MotionMaker/exporters.js",
       "source_location": "L55",
       "id": "motionmaker_exporters_pickvideomime",
-      "community": 35,
+      "community": 26,
       "norm_label": "pickvideomime()"
     },
     {
@@ -7722,7 +7992,7 @@
       "source_file": "src/tools/MotionMaker/exporters.js",
       "source_location": "L66",
       "id": "motionmaker_exporters_exportvideo",
-      "community": 35,
+      "community": 26,
       "norm_label": "exportvideo()"
     },
     {
@@ -7767,7 +8037,7 @@
       "source_file": "src/tools/MotionMaker/index.jsx",
       "source_location": "L286",
       "id": "motionmaker_index_presetstrip",
-      "community": 35,
+      "community": 45,
       "norm_label": "presetstrip()"
     },
     {
@@ -7794,7 +8064,7 @@
       "source_file": "src/tools/MotionMaker/nodes.js",
       "source_location": "L24",
       "id": "motionmaker_nodes_n",
-      "community": 2,
+      "community": 25,
       "norm_label": "n()"
     },
     {
@@ -7956,7 +8226,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L1",
       "id": "motionmaker_render",
-      "community": 35,
+      "community": 20,
       "norm_label": "render.jsx"
     },
     {
@@ -7965,7 +8235,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L12",
       "id": "motionmaker_render_clampnum",
-      "community": 35,
+      "community": 20,
       "norm_label": "clampnum()"
     },
     {
@@ -7974,7 +8244,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L15",
       "id": "motionmaker_render_sanitizeid",
-      "community": 35,
+      "community": 20,
       "norm_label": "sanitizeid()"
     },
     {
@@ -7983,7 +8253,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L16",
       "id": "motionmaker_render_xmlescape",
-      "community": 35,
+      "community": 20,
       "norm_label": "xmlescape()"
     },
     {
@@ -7992,7 +8262,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L17",
       "id": "motionmaker_render_textanchor",
-      "community": 35,
+      "community": 20,
       "norm_label": "textanchor()"
     },
     {
@@ -8001,7 +8271,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L20",
       "id": "motionmaker_render_hexrgb",
-      "community": 35,
+      "community": 20,
       "norm_label": "hexrgb()"
     },
     {
@@ -8010,7 +8280,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L30",
       "id": "motionmaker_render_gradientdef",
-      "community": 35,
+      "community": 20,
       "norm_label": "gradientdef()"
     },
     {
@@ -8019,7 +8289,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L39",
       "id": "motionmaker_render_fxprimitive",
-      "community": 35,
+      "community": 20,
       "norm_label": "fxprimitive()"
     },
     {
@@ -8028,7 +8298,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L124",
       "id": "motionmaker_render_buildfilter",
-      "community": 35,
+      "community": 20,
       "norm_label": "buildfilter()"
     },
     {
@@ -8037,7 +8307,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L136",
       "id": "motionmaker_render_buildmask",
-      "community": 35,
+      "community": 20,
       "norm_label": "buildmask()"
     },
     {
@@ -8046,7 +8316,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L153",
       "id": "motionmaker_render_goofilterdef",
-      "community": 35,
+      "community": 20,
       "norm_label": "goofilterdef()"
     },
     {
@@ -8055,7 +8325,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L165",
       "id": "motionmaker_render_itemsvg",
-      "community": 35,
+      "community": 20,
       "norm_label": "itemsvg()"
     },
     {
@@ -8064,7 +8334,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L171",
       "id": "motionmaker_render_itemsvginner",
-      "community": 35,
+      "community": 20,
       "norm_label": "itemsvginner()"
     },
     {
@@ -8073,7 +8343,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L219",
       "id": "motionmaker_render_scenetosvgstring",
-      "community": 35,
+      "community": 20,
       "norm_label": "scenetosvgstring()"
     },
     {
@@ -8082,7 +8352,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L237",
       "id": "motionmaker_render_scenesvg",
-      "community": 35,
+      "community": 20,
       "norm_label": "scenesvg()"
     },
     {
@@ -8091,7 +8361,7 @@
       "source_file": "src/tools/MotionMaker/render.jsx",
       "source_location": "L297",
       "id": "motionmaker_render_rasterizescene",
-      "community": 35,
+      "community": 26,
       "norm_label": "rasterizescene()"
     },
     {
@@ -8491,148 +8761,319 @@
       "norm_label": "applyincominglogo()"
     },
     {
-      "label": "PatternMaker.jsx",
+      "label": "MeteoriteTab.jsx",
       "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
       "source_location": "L1",
-      "id": "tools_patternmaker",
+      "id": "patternmaker_meteoritetab",
       "community": 0,
-      "norm_label": "patternmaker.jsx"
+      "norm_label": "meteoritetab.jsx"
     },
     {
-      "label": "mkRng()",
+      "label": "mtLoad()",
       "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L6",
-      "id": "tools_patternmaker_mkrng",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L10",
+      "id": "patternmaker_meteoritetab_mtload",
       "community": 0,
-      "norm_label": "mkrng()"
+      "norm_label": "mtload()"
     },
     {
-      "label": "parseSvg()",
+      "label": "DEFAULTS",
       "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L15",
-      "id": "tools_patternmaker_parsesvg",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L14",
+      "id": "patternmaker_meteoritetab_defaults",
       "community": 0,
-      "norm_label": "parsesvg()"
+      "norm_label": "defaults"
+    },
+    {
+      "label": "MeteoriteTab()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L30",
+      "id": "patternmaker_meteoritetab_meteoritetab",
+      "community": 0,
+      "norm_label": "meteoritetab()"
+    },
+    {
+      "label": "ShapesTab.jsx",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L1",
+      "id": "patternmaker_shapestab",
+      "community": 0,
+      "norm_label": "shapestab.jsx"
     },
     {
       "label": "S1",
       "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L33",
-      "id": "tools_patternmaker_s1",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L10",
+      "id": "patternmaker_shapestab_s1",
       "community": 0,
       "norm_label": "s1"
     },
     {
       "label": "S2",
       "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L38",
-      "id": "tools_patternmaker_s2",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L15",
+      "id": "patternmaker_shapestab_s2",
       "community": 0,
       "norm_label": "s2"
     },
     {
       "label": "buildSvg()",
       "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L44",
-      "id": "tools_patternmaker_buildsvg",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L21",
+      "id": "patternmaker_shapestab_buildsvg",
       "community": 0,
       "norm_label": "buildsvg()"
     },
     {
-      "label": "C",
-      "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L114",
-      "id": "tools_patternmaker_c",
-      "community": 0,
-      "norm_label": "c"
-    },
-    {
-      "label": "Section()",
-      "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L120",
-      "id": "tools_patternmaker_section",
-      "community": 0,
-      "norm_label": "section()"
-    },
-    {
-      "label": "CtrlRow()",
-      "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L131",
-      "id": "tools_patternmaker_ctrlrow",
-      "community": 0,
-      "norm_label": "ctrlrow()"
-    },
-    {
-      "label": "Slider()",
-      "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L141",
-      "id": "tools_patternmaker_slider",
-      "community": 0,
-      "norm_label": "slider()"
-    },
-    {
-      "label": "SliderRow()",
-      "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L147",
-      "id": "tools_patternmaker_sliderrow",
-      "community": 0,
-      "norm_label": "sliderrow()"
-    },
-    {
-      "label": "HexInput()",
-      "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L212",
-      "id": "tools_patternmaker_hexinput",
-      "community": 0,
-      "norm_label": "hexinput()"
-    },
-    {
-      "label": "Toggle()",
-      "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L245",
-      "id": "tools_patternmaker_toggle",
-      "community": 0,
-      "norm_label": "toggle()"
-    },
-    {
       "label": "ShapeSlot()",
       "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L256",
-      "id": "tools_patternmaker_shapeslot",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L91",
+      "id": "patternmaker_shapestab_shapeslot",
       "community": 0,
       "norm_label": "shapeslot()"
     },
     {
       "label": "pmLoad()",
       "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L297",
-      "id": "tools_patternmaker_pmload",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L129",
+      "id": "patternmaker_shapestab_pmload",
       "community": 0,
       "norm_label": "pmload()"
     },
     {
+      "label": "ShapesTab()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L133",
+      "id": "patternmaker_shapestab_shapestab",
+      "community": 0,
+      "norm_label": "shapestab()"
+    },
+    {
+      "label": "index.jsx",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/index.jsx",
+      "source_location": "L1",
+      "id": "patternmaker_index",
+      "community": 0,
+      "norm_label": "index.jsx"
+    },
+    {
+      "label": "shellLoad()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/index.jsx",
+      "source_location": "L10",
+      "id": "patternmaker_index_shellload",
+      "community": 0,
+      "norm_label": "shellload()"
+    },
+    {
+      "label": "TABS",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/index.jsx",
+      "source_location": "L14",
+      "id": "patternmaker_index_tabs",
+      "community": 0,
+      "norm_label": "tabs"
+    },
+    {
       "label": "PatternMaker()",
       "file_type": "code",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L301",
-      "id": "tools_patternmaker_patternmaker",
+      "source_file": "src/tools/PatternMaker/index.jsx",
+      "source_location": "L16",
+      "id": "patternmaker_index_patternmaker",
       "community": 0,
       "norm_label": "patternmaker()"
+    },
+    {
+      "label": "meteorite.js",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L1",
+      "id": "patternmaker_meteorite",
+      "community": 0,
+      "norm_label": "meteorite.js"
+    },
+    {
+      "label": "ramp()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L14",
+      "id": "patternmaker_meteorite_ramp",
+      "community": 0,
+      "norm_label": "ramp()"
+    },
+    {
+      "label": "meteoriteSize()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L21",
+      "id": "patternmaker_meteorite_meteoritesize",
+      "community": 0,
+      "norm_label": "meteoritesize()"
+    },
+    {
+      "label": "buildMeteorite()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L31",
+      "id": "patternmaker_meteorite_buildmeteorite",
+      "community": 0,
+      "norm_label": "buildmeteorite()"
+    },
+    {
+      "label": "PRESETS",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L133",
+      "id": "patternmaker_meteorite_presets",
+      "community": 0,
+      "norm_label": "presets"
+    },
+    {
+      "label": "anglesFor()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L142",
+      "id": "patternmaker_meteorite_anglesfor",
+      "community": 0,
+      "norm_label": "anglesfor()"
+    },
+    {
+      "label": "ui.jsx",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L1",
+      "id": "patternmaker_ui",
+      "community": 0,
+      "norm_label": "ui.jsx"
+    },
+    {
+      "label": "mkRng()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L7",
+      "id": "patternmaker_ui_mkrng",
+      "community": 0,
+      "norm_label": "mkrng()"
+    },
+    {
+      "label": "parseSvg()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L16",
+      "id": "patternmaker_ui_parsesvg",
+      "community": 0,
+      "norm_label": "parsesvg()"
+    },
+    {
+      "label": "C",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L34",
+      "id": "patternmaker_ui_c",
+      "community": 0,
+      "norm_label": "c"
+    },
+    {
+      "label": "Section()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L43",
+      "id": "patternmaker_ui_section",
+      "community": 0,
+      "norm_label": "section()"
+    },
+    {
+      "label": "CtrlRow()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L54",
+      "id": "patternmaker_ui_ctrlrow",
+      "community": 0,
+      "norm_label": "ctrlrow()"
+    },
+    {
+      "label": "Slider()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L64",
+      "id": "patternmaker_ui_slider",
+      "community": 0,
+      "norm_label": "slider()"
+    },
+    {
+      "label": "SliderRow()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L70",
+      "id": "patternmaker_ui_sliderrow",
+      "community": 0,
+      "norm_label": "sliderrow()"
+    },
+    {
+      "label": "HexInput()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L135",
+      "id": "patternmaker_ui_hexinput",
+      "community": 0,
+      "norm_label": "hexinput()"
+    },
+    {
+      "label": "Toggle()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L168",
+      "id": "patternmaker_ui_toggle",
+      "community": 0,
+      "norm_label": "toggle()"
+    },
+    {
+      "label": "ColorRow()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L180",
+      "id": "patternmaker_ui_colorrow",
+      "community": 0,
+      "norm_label": "colorrow()"
+    },
+    {
+      "label": "btn()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L188",
+      "id": "patternmaker_ui_btn",
+      "community": 0,
+      "norm_label": "btn()"
+    },
+    {
+      "label": "Segmented()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L197",
+      "id": "patternmaker_ui_segmented",
+      "community": 0,
+      "norm_label": "segmented()"
+    },
+    {
+      "label": "ResizeHandle()",
+      "file_type": "code",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L212",
+      "id": "patternmaker_ui_resizehandle",
+      "community": 0,
+      "norm_label": "resizehandle()"
     },
     {
       "label": "effects.js",
@@ -9243,7 +9684,7 @@
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L202",
       "id": "postfx_store_sendimagetopostfx",
-      "community": 5,
+      "community": 7,
       "norm_label": "sendimagetopostfx()"
     },
     {
@@ -9254,6 +9695,330 @@
       "id": "vite_config",
       "community": 15,
       "norm_label": "vite.config.js"
+    },
+    {
+      "label": "SKILL.md",
+      "file_type": "document",
+      "source_file": ".agents/skills/ponytail-audit/SKILL.md",
+      "source_location": "L1",
+      "id": "ponytail_audit_skill",
+      "community": 57,
+      "norm_label": "skill.md"
+    },
+    {
+      "label": "Tags",
+      "file_type": "document",
+      "source_file": ".agents/skills/ponytail-audit/SKILL.md",
+      "source_location": "L15",
+      "id": "ponytail_audit_skill_tags",
+      "community": 57,
+      "norm_label": "tags"
+    },
+    {
+      "label": "Hunt",
+      "file_type": "document",
+      "source_file": ".agents/skills/ponytail-audit/SKILL.md",
+      "source_location": "L25",
+      "id": "ponytail_audit_skill_hunt",
+      "community": 57,
+      "norm_label": "hunt"
+    },
+    {
+      "label": "Output",
+      "file_type": "document",
+      "source_file": ".agents/skills/ponytail-audit/SKILL.md",
+      "source_location": "L31",
+      "id": "ponytail_audit_skill_output",
+      "community": 57,
+      "norm_label": "output"
+    },
+    {
+      "label": "Boundaries",
+      "file_type": "document",
+      "source_file": ".agents/skills/ponytail-audit/SKILL.md",
+      "source_location": "L36",
+      "id": "ponytail_audit_skill_boundaries",
+      "community": 57,
+      "norm_label": "boundaries"
+    },
+    {
+      "label": "SKILL.md",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-debt/SKILL.md",
+      "source_location": "L1",
+      "id": "ponytail_debt_skill",
+      "community": 60,
+      "norm_label": "skill.md"
+    },
+    {
+      "label": "Scan",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-debt/SKILL.md",
+      "source_location": "L15",
+      "id": "ponytail_debt_skill_scan",
+      "community": 60,
+      "norm_label": "scan"
+    },
+    {
+      "label": "Output",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-debt/SKILL.md",
+      "source_location": "L25",
+      "id": "ponytail_debt_skill_output",
+      "community": 60,
+      "norm_label": "output"
+    },
+    {
+      "label": "Boundaries",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-debt/SKILL.md",
+      "source_location": "L40",
+      "id": "ponytail_debt_skill_boundaries",
+      "community": 60,
+      "norm_label": "boundaries"
+    },
+    {
+      "label": "SKILL.md",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-gain/SKILL.md",
+      "source_location": "L1",
+      "id": "ponytail_gain_skill",
+      "community": 58,
+      "norm_label": "skill.md"
+    },
+    {
+      "label": "Ponytail Gain",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-gain/SKILL.md",
+      "source_location": "L11",
+      "id": "ponytail_gain_skill_ponytail_gain",
+      "community": 58,
+      "norm_label": "ponytail gain"
+    },
+    {
+      "label": "Scoreboard",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-gain/SKILL.md",
+      "source_location": "L21",
+      "id": "ponytail_gain_skill_scoreboard",
+      "community": 58,
+      "norm_label": "scoreboard"
+    },
+    {
+      "label": "Honesty boundary",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-gain/SKILL.md",
+      "source_location": "L39",
+      "id": "ponytail_gain_skill_honesty_boundary",
+      "community": 58,
+      "norm_label": "honesty boundary"
+    },
+    {
+      "label": "Boundaries",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-gain/SKILL.md",
+      "source_location": "L47",
+      "id": "ponytail_gain_skill_boundaries",
+      "community": 58,
+      "norm_label": "boundaries"
+    },
+    {
+      "label": "SKILL.md",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L1",
+      "id": "ponytail_help_skill",
+      "community": 55,
+      "norm_label": "skill.md"
+    },
+    {
+      "label": "Ponytail Help",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L9",
+      "id": "ponytail_help_skill_ponytail_help",
+      "community": 55,
+      "norm_label": "ponytail help"
+    },
+    {
+      "label": "Levels",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L14",
+      "id": "ponytail_help_skill_levels",
+      "community": 55,
+      "norm_label": "levels"
+    },
+    {
+      "label": "Skills",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L24",
+      "id": "ponytail_help_skill_skills",
+      "community": 55,
+      "norm_label": "skills"
+    },
+    {
+      "label": "Deactivate",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L37",
+      "id": "ponytail_help_skill_deactivate",
+      "community": 55,
+      "norm_label": "deactivate"
+    },
+    {
+      "label": "Configure Default Mode",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L42",
+      "id": "ponytail_help_skill_configure_default_mode",
+      "community": 55,
+      "norm_label": "configure default mode"
+    },
+    {
+      "label": "Update",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L61",
+      "id": "ponytail_help_skill_update",
+      "community": 55,
+      "norm_label": "update"
+    },
+    {
+      "label": "More",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L67",
+      "id": "ponytail_help_skill_more",
+      "community": 55,
+      "norm_label": "more"
+    },
+    {
+      "label": "SKILL.md",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-review/SKILL.md",
+      "source_location": "L1",
+      "id": "ponytail_review_skill",
+      "community": 59,
+      "norm_label": "skill.md"
+    },
+    {
+      "label": "Format",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-review/SKILL.md",
+      "source_location": "L16",
+      "id": "ponytail_review_skill_format",
+      "community": 59,
+      "norm_label": "format"
+    },
+    {
+      "label": "Examples",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-review/SKILL.md",
+      "source_location": "L29",
+      "id": "ponytail_review_skill_examples",
+      "community": 59,
+      "norm_label": "examples"
+    },
+    {
+      "label": "Scoring",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-review/SKILL.md",
+      "source_location": "L44",
+      "id": "ponytail_review_skill_scoring",
+      "community": 59,
+      "norm_label": "scoring"
+    },
+    {
+      "label": "Boundaries",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail-review/SKILL.md",
+      "source_location": "L50",
+      "id": "ponytail_review_skill_boundaries",
+      "community": 59,
+      "norm_label": "boundaries"
+    },
+    {
+      "label": "SKILL.md",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L1",
+      "id": "ponytail_skill",
+      "community": 54,
+      "norm_label": "skill.md"
+    },
+    {
+      "label": "Ponytail",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L17",
+      "id": "ponytail_skill_ponytail",
+      "community": 54,
+      "norm_label": "ponytail"
+    },
+    {
+      "label": "Persistence",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L23",
+      "id": "ponytail_skill_persistence",
+      "community": 54,
+      "norm_label": "persistence"
+    },
+    {
+      "label": "The ladder",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L29",
+      "id": "ponytail_skill_the_ladder",
+      "community": 54,
+      "norm_label": "the ladder"
+    },
+    {
+      "label": "Rules",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L43",
+      "id": "ponytail_skill_rules",
+      "community": 54,
+      "norm_label": "rules"
+    },
+    {
+      "label": "Output",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L53",
+      "id": "ponytail_skill_output",
+      "community": 54,
+      "norm_label": "output"
+    },
+    {
+      "label": "Intensity",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L64",
+      "id": "ponytail_skill_intensity",
+      "community": 54,
+      "norm_label": "intensity"
+    },
+    {
+      "label": "When NOT to be lazy",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L77",
+      "id": "ponytail_skill_when_not_to_be_lazy",
+      "community": 54,
+      "norm_label": "when not to be lazy"
+    },
+    {
+      "label": "Boundaries",
+      "file_type": "document",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L95",
+      "id": "ponytail_skill_boundaries",
+      "community": 54,
+      "norm_label": "boundaries"
     },
     {
       "label": "SKILL.md",
@@ -9697,19 +10462,37 @@
       "norm_label": "motion maker \u2014 session handoff (2026-06-16)"
     },
     {
-      "label": "Branch state",
+      "label": "Branch state (updated 2026-06-21)",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
       "source_location": "L3",
-      "id": "specs_2026_06_16_motion_maker_handoff_branch_state",
+      "id": "specs_2026_06_16_motion_maker_handoff_branch_state_updated_2026_06_21",
       "community": 49,
-      "norm_label": "branch state"
+      "norm_label": "branch state (updated 2026-06-21)"
+    },
+    {
+      "label": "Remaining \u2014 each is a feature, not a node",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L11",
+      "id": "specs_2026_06_16_motion_maker_handoff_remaining_each_is_a_feature_not_a_node",
+      "community": 49,
+      "norm_label": "remaining \u2014 each is a feature, not a node"
+    },
+    {
+      "label": "Original handoff (waves 1-18) below",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L21",
+      "id": "specs_2026_06_16_motion_maker_handoff_original_handoff_waves_1_18_below",
+      "community": 49,
+      "norm_label": "original handoff (waves 1-18) below"
     },
     {
       "label": "What's been built (all 18 waves, merged through PRs #8\u201311)",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L11",
+      "source_location": "L28",
       "id": "specs_2026_06_16_motion_maker_handoff_what_s_been_built_all_18_waves_merged_through_prs_8_11",
       "community": 49,
       "norm_label": "what's been built (all 18 waves, merged through prs #8\u201311)"
@@ -9718,7 +10501,7 @@
       "label": "What's NOT done (from the spec)",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L38",
+      "source_location": "L55",
       "id": "specs_2026_06_16_motion_maker_handoff_what_s_not_done_from_the_spec",
       "community": 49,
       "norm_label": "what's not done (from the spec)"
@@ -9727,7 +10510,7 @@
       "label": "\u2705 Easy \u2014 registry + engine branch only",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L40",
+      "source_location": "L57",
       "id": "specs_2026_06_16_motion_maker_handoff_easy_registry_engine_branch_only",
       "community": 49,
       "norm_label": "\u2705 easy \u2014 registry + engine branch only"
@@ -9736,7 +10519,7 @@
       "label": "\ud83d\udd27 Needs render work",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L51",
+      "source_location": "L68",
       "id": "specs_2026_06_16_motion_maker_handoff_needs_render_work",
       "community": 49,
       "norm_label": "\ud83d\udd27 needs render work"
@@ -9745,7 +10528,7 @@
       "label": "\ud83e\udde9 Needs unlock 5 (subgraph/nesting)",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L63",
+      "source_location": "L80",
       "id": "specs_2026_06_16_motion_maker_handoff_needs_unlock_5_subgraph_nesting",
       "community": 49,
       "norm_label": "\ud83e\udde9 needs unlock 5 (subgraph/nesting)"
@@ -9754,7 +10537,7 @@
       "label": "\u2705* Needs precompute/analysis design",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L72",
+      "source_location": "L89",
       "id": "specs_2026_06_16_motion_maker_handoff_needs_precompute_analysis_design",
       "community": 49,
       "norm_label": "\u2705* needs precompute/analysis design"
@@ -9763,7 +10546,7 @@
       "label": "Key architecture facts for the next session",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L78",
+      "source_location": "L95",
       "id": "specs_2026_06_16_motion_maker_handoff_key_architecture_facts_for_the_next_session",
       "community": 49,
       "norm_label": "key architecture facts for the next session"
@@ -9772,7 +10555,7 @@
       "label": "Engine (`src/tools/MotionMaker/engine.js`)",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L80",
+      "source_location": "L97",
       "id": "specs_2026_06_16_motion_maker_handoff_engine_src_tools_motionmaker_engine_js",
       "community": 49,
       "norm_label": "engine (`src/tools/motionmaker/engine.js`)"
@@ -9781,7 +10564,7 @@
       "label": "Nodes registry (`src/tools/MotionMaker/nodes.js`)",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L91",
+      "source_location": "L108",
       "id": "specs_2026_06_16_motion_maker_handoff_nodes_registry_src_tools_motionmaker_nodes_js",
       "community": 49,
       "norm_label": "nodes registry (`src/tools/motionmaker/nodes.js`)"
@@ -9790,7 +10573,7 @@
       "label": "Render (`src/tools/MotionMaker/render.jsx`)",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L99",
+      "source_location": "L116",
       "id": "specs_2026_06_16_motion_maker_handoff_render_src_tools_motionmaker_render_jsx",
       "community": 49,
       "norm_label": "render (`src/tools/motionmaker/render.jsx`)"
@@ -9799,7 +10582,7 @@
       "label": "Graph editor (`src/tools/MotionMaker/Graph.jsx`)",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L107",
+      "source_location": "L124",
       "id": "specs_2026_06_16_motion_maker_handoff_graph_editor_src_tools_motionmaker_graph_jsx",
       "community": 49,
       "norm_label": "graph editor (`src/tools/motionmaker/graph.jsx`)"
@@ -9808,7 +10591,7 @@
       "label": "Store (`src/tools/MotionMaker/store.js`)",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L115",
+      "source_location": "L132",
       "id": "specs_2026_06_16_motion_maker_handoff_store_src_tools_motionmaker_store_js",
       "community": 49,
       "norm_label": "store (`src/tools/motionmaker/store.js`)"
@@ -9817,7 +10600,7 @@
       "label": "Suggested next wave (Wave 19)",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L121",
+      "source_location": "L138",
       "id": "specs_2026_06_16_motion_maker_handoff_suggested_next_wave_wave_19",
       "community": 49,
       "norm_label": "suggested next wave (wave 19)"
@@ -9826,7 +10609,7 @@
       "label": "Conventions",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L131",
+      "source_location": "L148",
       "id": "specs_2026_06_16_motion_maker_handoff_conventions",
       "community": 49,
       "norm_label": "conventions"
@@ -9835,10 +10618,172 @@
       "label": "Troubleshooting notes",
       "file_type": "document",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
-      "source_location": "L142",
+      "source_location": "L159",
       "id": "specs_2026_06_16_motion_maker_handoff_troubleshooting_notes",
       "community": 49,
       "norm_label": "troubleshooting notes"
+    },
+    {
+      "label": "2026-06-21-meteorite-pattern-design.md",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L1",
+      "id": "specs_2026_06_21_meteorite_pattern_design",
+      "community": 19,
+      "norm_label": "2026-06-21-meteorite-pattern-design.md"
+    },
+    {
+      "label": "Meteorite Pattern \u2014 Design Spec",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L1",
+      "id": "specs_2026_06_21_meteorite_pattern_design_meteorite_pattern_design_spec",
+      "community": 19,
+      "norm_label": "meteorite pattern \u2014 design spec"
+    },
+    {
+      "label": "Summary",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L7",
+      "id": "specs_2026_06_21_meteorite_pattern_design_summary",
+      "community": 19,
+      "norm_label": "summary"
+    },
+    {
+      "label": "Goals",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L15",
+      "id": "specs_2026_06_21_meteorite_pattern_design_goals",
+      "community": 19,
+      "norm_label": "goals"
+    },
+    {
+      "label": "Non-goals",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L24",
+      "id": "specs_2026_06_21_meteorite_pattern_design_non_goals",
+      "community": 19,
+      "norm_label": "non-goals"
+    },
+    {
+      "label": "Decisions (locked)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L30",
+      "id": "specs_2026_06_21_meteorite_pattern_design_decisions_locked",
+      "community": 19,
+      "norm_label": "decisions (locked)"
+    },
+    {
+      "label": "Architecture",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L42",
+      "id": "specs_2026_06_21_meteorite_pattern_design_architecture",
+      "community": 19,
+      "norm_label": "architecture"
+    },
+    {
+      "label": "The engine \u2014 `meteorite.js`",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L69",
+      "id": "specs_2026_06_21_meteorite_pattern_design_the_engine_meteorite_js",
+      "community": 19,
+      "norm_label": "the engine \u2014 `meteorite.js`"
+    },
+    {
+      "label": "Canvas sizing",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L79",
+      "id": "specs_2026_06_21_meteorite_pattern_design_canvas_sizing",
+      "community": 19,
+      "norm_label": "canvas sizing"
+    },
+    {
+      "label": "Generation algorithm (crossing line-families)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L84",
+      "id": "specs_2026_06_21_meteorite_pattern_design_generation_algorithm_crossing_line_families",
+      "community": 19,
+      "norm_label": "generation algorithm (crossing line-families)"
+    },
+    {
+      "label": "Reach control (coverage)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L97",
+      "id": "specs_2026_06_21_meteorite_pattern_design_reach_control_coverage",
+      "community": 19,
+      "norm_label": "reach control (coverage)"
+    },
+    {
+      "label": "Opacity",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L122",
+      "id": "specs_2026_06_21_meteorite_pattern_design_opacity",
+      "community": 19,
+      "norm_label": "opacity"
+    },
+    {
+      "label": "Tile vs Fit",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L127",
+      "id": "specs_2026_06_21_meteorite_pattern_design_tile_vs_fit",
+      "community": 19,
+      "norm_label": "tile vs fit"
+    },
+    {
+      "label": "Output",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L134",
+      "id": "specs_2026_06_21_meteorite_pattern_design_output",
+      "community": 19,
+      "norm_label": "output"
+    },
+    {
+      "label": "Controls \u2014 `MeteoriteTab.jsx`",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L139",
+      "id": "specs_2026_06_21_meteorite_pattern_design_controls_meteoritetab_jsx",
+      "community": 19,
+      "norm_label": "controls \u2014 `meteoritetab.jsx`"
+    },
+    {
+      "label": "Print considerations",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L162",
+      "id": "specs_2026_06_21_meteorite_pattern_design_print_considerations",
+      "community": 19,
+      "norm_label": "print considerations"
+    },
+    {
+      "label": "Testing",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L170",
+      "id": "specs_2026_06_21_meteorite_pattern_design_testing",
+      "community": 19,
+      "norm_label": "testing"
+    },
+    {
+      "label": "Open items for planning",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L182",
+      "id": "specs_2026_06_21_meteorite_pattern_design_open_items_for_planning",
+      "community": 19,
+      "norm_label": "open items for planning"
     },
     {
       "label": "reflToKS",
@@ -9857,6 +10802,15 @@
       "id": "postfx_effects_effect_list",
       "community": 5,
       "norm_label": "effect_list"
+    },
+    {
+      "label": "Branch state",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L3",
+      "community": 49,
+      "norm_label": "branch state",
+      "id": "specs_2026_06_16_motion_maker_handoff_branch_state"
     },
     {
       "label": "AddMenu()",
@@ -9971,7 +10925,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L10",
-      "community": 44,
+      "community": 43,
       "norm_label": "harmonyoverlay()",
       "id": "colorpalette_illustrationmode_harmonyoverlay"
     },
@@ -9998,7 +10952,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L25",
-      "community": 44,
+      "community": 43,
       "norm_label": "ks8",
       "id": "colorpalette_illustrationmode_ks8"
     },
@@ -10007,7 +10961,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L28",
-      "community": 44,
+      "community": 43,
       "norm_label": "rgbtohex()",
       "id": "colorpalette_illustrationmode_rgbtohex"
     },
@@ -10016,7 +10970,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L32",
-      "community": 44,
+      "community": 43,
       "norm_label": "mixer()",
       "id": "colorpalette_illustrationmode_mixer"
     },
@@ -10025,7 +10979,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/IllustrationMode.jsx",
       "source_location": "L84",
-      "community": 44,
+      "community": 43,
       "norm_label": "colorchip()",
       "id": "colorpalette_illustrationmode_colorchip"
     },
@@ -10034,7 +10988,7 @@
       "file_type": "code",
       "source_file": "src/tools/ColorPalette/ShadowHighlight.jsx",
       "source_location": "L74",
-      "community": 20,
+      "community": 30,
       "norm_label": "sliderrow()",
       "id": "colorpalette_shadowhighlight_sliderrow"
     }
@@ -10644,6 +11598,66 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "skills-lock.json",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "skills_lock_skills",
+      "target": "skills_lock_skills_ponytail",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "skills_lock_skills",
+      "target": "skills_lock_skills_ponytail_audit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L22",
+      "weight": 1.0,
+      "source": "skills_lock_skills",
+      "target": "skills_lock_skills_ponytail_debt",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L28",
+      "weight": 1.0,
+      "source": "skills_lock_skills",
+      "target": "skills_lock_skills_ponytail_gain",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L34",
+      "weight": 1.0,
+      "source": "skills_lock_skills",
+      "target": "skills_lock_skills_ponytail_help",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L40",
+      "weight": 1.0,
+      "source": "skills_lock_skills",
+      "target": "skills_lock_skills_ponytail_review",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
       "source_location": "L8",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -10679,6 +11693,246 @@
       "confidence_score": 1.0,
       "source": "skills_lock_skills_frontend_design",
       "target": "skills_lock_frontend_design_sourcetype"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail",
+      "target": "skills_lock_ponytail_computedhash",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail",
+      "target": "skills_lock_ponytail_skillpath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail",
+      "target": "skills_lock_ponytail_source",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail",
+      "target": "skills_lock_ponytail_sourcetype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_audit",
+      "target": "skills_lock_ponytail_audit_computedhash",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_audit",
+      "target": "skills_lock_ponytail_audit_skillpath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_audit",
+      "target": "skills_lock_ponytail_audit_source",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_audit",
+      "target": "skills_lock_ponytail_audit_sourcetype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_debt",
+      "target": "skills_lock_ponytail_debt_computedhash",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_debt",
+      "target": "skills_lock_ponytail_debt_skillpath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_debt",
+      "target": "skills_lock_ponytail_debt_source",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_debt",
+      "target": "skills_lock_ponytail_debt_sourcetype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L32",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_gain",
+      "target": "skills_lock_ponytail_gain_computedhash",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L31",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_gain",
+      "target": "skills_lock_ponytail_gain_skillpath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_gain",
+      "target": "skills_lock_ponytail_gain_source",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_gain",
+      "target": "skills_lock_ponytail_gain_sourcetype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_help",
+      "target": "skills_lock_ponytail_help_computedhash",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L37",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_help",
+      "target": "skills_lock_ponytail_help_skillpath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L35",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_help",
+      "target": "skills_lock_ponytail_help_source",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L36",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_help",
+      "target": "skills_lock_ponytail_help_sourcetype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L44",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_review",
+      "target": "skills_lock_ponytail_review_computedhash",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_review",
+      "target": "skills_lock_ponytail_review_skillpath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L41",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_review",
+      "target": "skills_lock_ponytail_review_source",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skills-lock.json",
+      "source_location": "L42",
+      "weight": 1.0,
+      "source": "skills_lock_skills_ponytail_review",
+      "target": "skills_lock_ponytail_review_sourcetype",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports_from",
@@ -10795,6 +12049,17 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "src_app",
+      "target": "patternmaker_index",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
       "source_location": "L7",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -10831,17 +12096,6 @@
       "confidence_score": 1.0,
       "source": "src_app",
       "target": "tools_cobalttool"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/App.jsx",
-      "source_location": "L3",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "src_app",
-      "target": "tools_patternmaker"
     },
     {
       "relation": "imports_from",
@@ -11021,6 +12275,28 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "components_icon",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab",
+      "target": "components_icon",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L3",
       "weight": 1.0,
@@ -11037,17 +12313,6 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "tools_cobalttool",
-      "target": "components_icon"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L4",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
       "target": "components_icon"
     },
     {
@@ -15264,22 +16529,22 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PostFX/index.jsx",
-      "source_location": "L5",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L2",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "postfx_index",
-      "target": "lib_file"
+      "source": "patternmaker_shapestab",
+      "target": "lib_file",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L2",
+      "source_file": "src/tools/PostFX/index.jsx",
+      "source_location": "L5",
       "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "tools_patternmaker",
+      "source": "postfx_index",
       "target": "lib_file"
     },
     {
@@ -15297,23 +16562,23 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
       "source_location": "L2",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "lib_file_readastext"
+      "source": "patternmaker_shapestab",
+      "target": "lib_file_readastext",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L237",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L101",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker_shapeslot",
-      "target": "lib_file_readastext"
+      "source": "patternmaker_shapestab_shapeslot",
+      "target": "lib_file_readastext",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -19618,6 +20883,28 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "lib_unsavedchanges",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab",
+      "target": "lib_unsavedchanges",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L6",
       "weight": 1.0,
@@ -19645,17 +20932,6 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "tools_cobalttool",
-      "target": "lib_unsavedchanges"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L3",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
       "target": "lib_unsavedchanges"
     },
     {
@@ -19772,6 +21048,28 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "lib_unsavedchanges_markdirty",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab",
+      "target": "lib_unsavedchanges_markdirty",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/tools/PostFX/store.js",
       "source_location": "L9",
       "weight": 1.0,
@@ -19810,17 +21108,6 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "tools_cobalttool_batchpanel",
-      "target": "lib_unsavedchanges_markdirty"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L3",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
       "target": "lib_unsavedchanges_markdirty"
     },
     {
@@ -19926,6 +21213,28 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "lib_unsavedchanges_marksaved",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab",
+      "target": "lib_unsavedchanges_marksaved",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/tools/PostFX/index.jsx",
       "source_location": "L6",
       "weight": 1.0,
@@ -19953,17 +21262,6 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "tools_cobalttool_batchpanel",
-      "target": "lib_unsavedchanges_marksaved"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L3",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
       "target": "lib_unsavedchanges_marksaved"
     },
     {
@@ -28101,9 +29399,9 @@
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_inspector",
-      "target": "motionmaker_engine",
-      "confidence_score": 1.0
+      "target": "motionmaker_engine"
     },
     {
       "relation": "imports",
@@ -28112,9 +29410,9 @@
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_inspector",
-      "target": "motionmaker_engine_analyzetiming",
-      "confidence_score": 1.0
+      "target": "motionmaker_engine_analyzetiming"
     },
     {
       "relation": "contains",
@@ -28162,9 +29460,9 @@
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_inspector",
-      "target": "motionmaker_inspector_timingfindings",
-      "confidence_score": 1.0
+      "target": "motionmaker_inspector_timingfindings"
     },
     {
       "relation": "imports_from",
@@ -28217,9 +29515,9 @@
       "source_file": "src/tools/MotionMaker/Inspector.jsx",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_inspector_timingfindings",
-      "target": "motionmaker_engine_analyzetiming",
-      "confidence_score": 1.0
+      "target": "motionmaker_engine_analyzetiming"
     },
     {
       "relation": "imports_from",
@@ -28323,9 +29621,9 @@
       "source_file": "src/tools/MotionMaker/engine.js",
       "source_location": "L1195",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_engine",
-      "target": "motionmaker_engine_analyzetiming",
-      "confidence_score": 1.0
+      "target": "motionmaker_engine_analyzetiming"
     },
     {
       "relation": "contains",
@@ -29539,9 +30837,9 @@
       "source_file": "src/tools/MotionMaker/engine.js",
       "source_location": "L1205",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "motionmaker_engine_analyzetiming",
-      "target": "motionmaker_engine_evaluatescene",
-      "confidence_score": 1.0
+      "target": "motionmaker_engine_evaluatescene"
     },
     {
       "relation": "imports",
@@ -31612,165 +32910,722 @@
       "target": "motionmaker_store_docfromlogo"
     },
     {
-      "relation": "contains",
+      "relation": "imports_from",
+      "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L42",
+      "source_file": "src/tools/PatternMaker/index.jsx",
+      "source_location": "L3",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_buildsvg"
+      "source": "patternmaker_index",
+      "target": "patternmaker_meteoritetab",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_meteorite",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_meteorite_anglesfor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_meteorite_buildmeteorite",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_meteorite_presets",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L112",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L14",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_c"
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_meteoritetab_defaults",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L129",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L30",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_ctrlrow"
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_meteoritetab_meteoritetab",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L183",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L10",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_hexinput"
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_meteoritetab_mtload",
+      "confidence_score": 1.0
     },
     {
-      "relation": "contains",
+      "relation": "imports_from",
+      "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
       "source_location": "L4",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_mkrng"
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_ui",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_ui_btn",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_ui_c",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_ui_colorrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_ui_ctrlrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_ui_resizehandle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_ui_section",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_ui_segmented",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_ui_sliderrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/MeteoriteTab.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "patternmaker_meteoritetab",
+      "target": "patternmaker_ui_toggle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/index.jsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "patternmaker_index",
+      "target": "patternmaker_shapestab",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L13",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L21",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_parsesvg"
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_shapestab_buildsvg",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L272",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L129",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_patternmaker"
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_shapestab_pmload",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L268",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L10",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_pmload"
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_shapestab_s1",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L31",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L15",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_s1"
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_shapestab_s2",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L36",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L91",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_s2"
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_shapestab_shapeslot",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L118",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L133",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_section"
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_shapestab_shapestab",
+      "confidence_score": 1.0
     },
     {
-      "relation": "contains",
+      "relation": "imports_from",
+      "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L227",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L5",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_shapeslot"
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_ui",
+      "confidence_score": 1.0
     },
     {
-      "relation": "contains",
+      "relation": "imports",
+      "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L139",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L5",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_slider"
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_ui_btn",
+      "confidence_score": 1.0
     },
     {
-      "relation": "contains",
+      "relation": "imports",
+      "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L145",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L5",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_sliderrow"
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_ui_c",
+      "confidence_score": 1.0
     },
     {
-      "relation": "contains",
+      "relation": "imports",
+      "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L216",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L5",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tools_patternmaker",
-      "target": "tools_patternmaker_toggle"
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_ui_colorrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_ui_ctrlrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_ui_hexinput",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_ui_mkrng",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_ui_parsesvg",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_ui_resizehandle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_ui_section",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_ui_segmented",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_ui_sliderrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab",
+      "target": "patternmaker_ui_toggle",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
-      "source_file": "src/tools/PatternMaker.jsx",
-      "source_location": "L44",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L23",
       "weight": 1.0,
+      "source": "patternmaker_shapestab_buildsvg",
+      "target": "patternmaker_ui_mkrng",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ShapesTab.jsx",
+      "source_location": "L102",
+      "weight": 1.0,
+      "source": "patternmaker_shapestab_shapeslot",
+      "target": "patternmaker_ui_parsesvg",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/index.jsx",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "patternmaker_index",
+      "target": "patternmaker_index_patternmaker",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/index.jsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "patternmaker_index",
+      "target": "patternmaker_index_shellload",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/index.jsx",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "patternmaker_index",
+      "target": "patternmaker_index_tabs",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "patternmaker_index",
+      "target": "patternmaker_ui",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/index.jsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "patternmaker_index",
+      "target": "patternmaker_ui_c",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L142",
+      "weight": 1.0,
+      "source": "patternmaker_meteorite",
+      "target": "patternmaker_meteorite_anglesfor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L31",
+      "weight": 1.0,
+      "source": "patternmaker_meteorite",
+      "target": "patternmaker_meteorite_buildmeteorite",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "patternmaker_meteorite",
+      "target": "patternmaker_meteorite_meteoritesize",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L133",
+      "weight": 1.0,
+      "source": "patternmaker_meteorite",
+      "target": "patternmaker_meteorite_presets",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "patternmaker_meteorite",
+      "target": "patternmaker_meteorite_ramp",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "patternmaker_meteorite",
+      "target": "patternmaker_ui",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "patternmaker_meteorite",
+      "target": "patternmaker_ui_mkrng",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L87",
+      "weight": 1.0,
+      "source": "patternmaker_meteorite_buildmeteorite",
+      "target": "patternmaker_meteorite_ramp",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L49",
+      "weight": 1.0,
+      "source": "patternmaker_meteorite_buildmeteorite",
+      "target": "patternmaker_meteorite_meteoritesize",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source": "tools_patternmaker_buildsvg",
-      "target": "tools_patternmaker_mkrng"
+      "source_file": "src/tools/PatternMaker/meteorite.js",
+      "source_location": "L50",
+      "weight": 1.0,
+      "source": "patternmaker_meteorite_buildmeteorite",
+      "target": "patternmaker_ui_mkrng"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L188",
+      "weight": 1.0,
+      "source": "patternmaker_ui",
+      "target": "patternmaker_ui_btn",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L34",
+      "weight": 1.0,
+      "source": "patternmaker_ui",
+      "target": "patternmaker_ui_c",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L180",
+      "weight": 1.0,
+      "source": "patternmaker_ui",
+      "target": "patternmaker_ui_colorrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L54",
+      "weight": 1.0,
+      "source": "patternmaker_ui",
+      "target": "patternmaker_ui_ctrlrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L135",
+      "weight": 1.0,
+      "source": "patternmaker_ui",
+      "target": "patternmaker_ui_hexinput",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "patternmaker_ui",
+      "target": "patternmaker_ui_mkrng",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "patternmaker_ui",
+      "target": "patternmaker_ui_parsesvg",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L212",
+      "weight": 1.0,
+      "source": "patternmaker_ui",
+      "target": "patternmaker_ui_resizehandle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "patternmaker_ui",
+      "target": "patternmaker_ui_section",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L197",
+      "weight": 1.0,
+      "source": "patternmaker_ui",
+      "target": "patternmaker_ui_segmented",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L64",
+      "weight": 1.0,
+      "source": "patternmaker_ui",
+      "target": "patternmaker_ui_slider",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L70",
+      "weight": 1.0,
+      "source": "patternmaker_ui",
+      "target": "patternmaker_ui_sliderrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/tools/PatternMaker/ui.jsx",
+      "source_location": "L168",
+      "weight": 1.0,
+      "source": "patternmaker_ui",
+      "target": "patternmaker_ui_toggle",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -33107,6 +34962,306 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/ponytail-audit/SKILL.md",
+      "source_location": "L36",
+      "weight": 1.0,
+      "source": "ponytail_audit_skill",
+      "target": "ponytail_audit_skill_boundaries",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/ponytail-audit/SKILL.md",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "ponytail_audit_skill",
+      "target": "ponytail_audit_skill_hunt",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/ponytail-audit/SKILL.md",
+      "source_location": "L31",
+      "weight": 1.0,
+      "source": "ponytail_audit_skill",
+      "target": "ponytail_audit_skill_output",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/ponytail-audit/SKILL.md",
+      "source_location": "L15",
+      "weight": 1.0,
+      "source": "ponytail_audit_skill",
+      "target": "ponytail_audit_skill_tags",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-debt/SKILL.md",
+      "source_location": "L40",
+      "weight": 1.0,
+      "source": "ponytail_debt_skill",
+      "target": "ponytail_debt_skill_boundaries",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-debt/SKILL.md",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "ponytail_debt_skill",
+      "target": "ponytail_debt_skill_output",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-debt/SKILL.md",
+      "source_location": "L15",
+      "weight": 1.0,
+      "source": "ponytail_debt_skill",
+      "target": "ponytail_debt_skill_scan",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-gain/SKILL.md",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "ponytail_gain_skill",
+      "target": "ponytail_gain_skill_ponytail_gain",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-gain/SKILL.md",
+      "source_location": "L47",
+      "weight": 1.0,
+      "source": "ponytail_gain_skill_ponytail_gain",
+      "target": "ponytail_gain_skill_boundaries",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-gain/SKILL.md",
+      "source_location": "L39",
+      "weight": 1.0,
+      "source": "ponytail_gain_skill_ponytail_gain",
+      "target": "ponytail_gain_skill_honesty_boundary",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-gain/SKILL.md",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "ponytail_gain_skill_ponytail_gain",
+      "target": "ponytail_gain_skill_scoreboard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "ponytail_help_skill",
+      "target": "ponytail_help_skill_ponytail_help",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L42",
+      "weight": 1.0,
+      "source": "ponytail_help_skill_ponytail_help",
+      "target": "ponytail_help_skill_configure_default_mode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L37",
+      "weight": 1.0,
+      "source": "ponytail_help_skill_ponytail_help",
+      "target": "ponytail_help_skill_deactivate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "ponytail_help_skill_ponytail_help",
+      "target": "ponytail_help_skill_levels",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L67",
+      "weight": 1.0,
+      "source": "ponytail_help_skill_ponytail_help",
+      "target": "ponytail_help_skill_more",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "ponytail_help_skill_ponytail_help",
+      "target": "ponytail_help_skill_skills",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-help/SKILL.md",
+      "source_location": "L61",
+      "weight": 1.0,
+      "source": "ponytail_help_skill_ponytail_help",
+      "target": "ponytail_help_skill_update",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-review/SKILL.md",
+      "source_location": "L50",
+      "weight": 1.0,
+      "source": "ponytail_review_skill",
+      "target": "ponytail_review_skill_boundaries",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-review/SKILL.md",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "ponytail_review_skill",
+      "target": "ponytail_review_skill_examples",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-review/SKILL.md",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "ponytail_review_skill",
+      "target": "ponytail_review_skill_format",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail-review/SKILL.md",
+      "source_location": "L44",
+      "weight": 1.0,
+      "source": "ponytail_review_skill",
+      "target": "ponytail_review_skill_scoring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "ponytail_skill",
+      "target": "ponytail_skill_ponytail",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L95",
+      "weight": 1.0,
+      "source": "ponytail_skill_ponytail",
+      "target": "ponytail_skill_boundaries",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L64",
+      "weight": 1.0,
+      "source": "ponytail_skill_ponytail",
+      "target": "ponytail_skill_intensity",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L53",
+      "weight": 1.0,
+      "source": "ponytail_skill_ponytail",
+      "target": "ponytail_skill_output",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "ponytail_skill_ponytail",
+      "target": "ponytail_skill_persistence",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "ponytail_skill_ponytail",
+      "target": "ponytail_skill_rules",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "ponytail_skill_ponytail",
+      "target": "ponytail_skill_the_ladder",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/ponytail/SKILL.md",
+      "source_location": "L77",
+      "weight": 1.0,
+      "source": "ponytail_skill_ponytail",
+      "target": "ponytail_skill_when_not_to_be_lazy",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": ".claude/skills/frontend-design/SKILL.md",
       "source_location": "L7",
       "weight": 1.0,
@@ -33548,6 +35703,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_motion_maker_session_handoff_2026_06_16",
+      "target": "specs_2026_06_16_motion_maker_handoff_branch_state_updated_2026_06_21",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
       "source_location": "L131",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -33563,6 +35728,26 @@
       "confidence_score": 1.0,
       "source": "specs_2026_06_16_motion_maker_handoff_motion_maker_session_handoff_2026_06_16",
       "target": "specs_2026_06_16_motion_maker_handoff_key_architecture_facts_for_the_next_session"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_motion_maker_session_handoff_2026_06_16",
+      "target": "specs_2026_06_16_motion_maker_handoff_original_handoff_waves_1_18_below",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-16-motion-maker-handoff.md",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "specs_2026_06_16_motion_maker_handoff_motion_maker_session_handoff_2026_06_16",
+      "target": "specs_2026_06_16_motion_maker_handoff_remaining_each_is_a_feature_not_a_node",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -33695,6 +35880,176 @@
       "target": "specs_2026_06_16_motion_maker_handoff_store_src_tools_motionmaker_store_js"
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design",
+      "target": "specs_2026_06_21_meteorite_pattern_design_meteorite_pattern_design_spec",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L42",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_meteorite_pattern_design_spec",
+      "target": "specs_2026_06_21_meteorite_pattern_design_architecture",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L139",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_meteorite_pattern_design_spec",
+      "target": "specs_2026_06_21_meteorite_pattern_design_controls_meteoritetab_jsx",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_meteorite_pattern_design_spec",
+      "target": "specs_2026_06_21_meteorite_pattern_design_decisions_locked",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L15",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_meteorite_pattern_design_spec",
+      "target": "specs_2026_06_21_meteorite_pattern_design_goals",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_meteorite_pattern_design_spec",
+      "target": "specs_2026_06_21_meteorite_pattern_design_non_goals",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L182",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_meteorite_pattern_design_spec",
+      "target": "specs_2026_06_21_meteorite_pattern_design_open_items_for_planning",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L162",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_meteorite_pattern_design_spec",
+      "target": "specs_2026_06_21_meteorite_pattern_design_print_considerations",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_meteorite_pattern_design_spec",
+      "target": "specs_2026_06_21_meteorite_pattern_design_summary",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L170",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_meteorite_pattern_design_spec",
+      "target": "specs_2026_06_21_meteorite_pattern_design_testing",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L69",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_meteorite_pattern_design_spec",
+      "target": "specs_2026_06_21_meteorite_pattern_design_the_engine_meteorite_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L79",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_the_engine_meteorite_js",
+      "target": "specs_2026_06_21_meteorite_pattern_design_canvas_sizing",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L84",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_the_engine_meteorite_js",
+      "target": "specs_2026_06_21_meteorite_pattern_design_generation_algorithm_crossing_line_families",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L122",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_the_engine_meteorite_js",
+      "target": "specs_2026_06_21_meteorite_pattern_design_opacity",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L134",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_the_engine_meteorite_js",
+      "target": "specs_2026_06_21_meteorite_pattern_design_output",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L97",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_the_engine_meteorite_js",
+      "target": "specs_2026_06_21_meteorite_pattern_design_reach_control_coverage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-21-meteorite-pattern-design.md",
+      "source_location": "L127",
+      "weight": 1.0,
+      "source": "specs_2026_06_21_meteorite_pattern_design_the_engine_meteorite_js",
+      "target": "specs_2026_06_21_meteorite_pattern_design_tile_vs_fit",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -33707,5 +36062,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "07df3a07dfcca459160d4cc9411200de974d4fc0"
+  "built_at_commit": "f7887eb47c99c6931743e8c57118fb74d655f0b4"
 }
