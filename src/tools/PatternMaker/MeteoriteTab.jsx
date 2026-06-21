@@ -1,10 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { markDirty, markSaved } from '../../lib/unsavedChanges.js'
+import { readAsDataUrl } from '../../lib/file.js'
 import Icon from '../../components/Icon.jsx'
 import {
   C, Section, CtrlRow, SliderRow, Toggle, ColorRow, btn, Segmented, ResizeHandle,
 } from './ui.jsx'
-import { buildMeteorite, anglesFor, PRESETS } from './meteorite.js'
+import { buildMeteorite, buildDuotone, anglesFor, PRESETS, PANELS } from './meteorite.js'
 
 const MT_KEY = 'designtools-meteorite'
 function mtLoad() {
@@ -12,6 +13,7 @@ function mtLoad() {
 }
 
 const DEFAULTS = {
+  source: 'generated', style: 'lamellae',
   count: 2, baseAngle: 30,
   spacing: 40, spacingJit: 40,
   bandMin: 6, bandMax: 16,
@@ -22,6 +24,8 @@ const DEFAULTS = {
   vOn: false, vReach: 100, vSoft: 25, vAnchor: 'bottom',
   hOn: false, hReach: 100, hSoft: 25, hAnchor: 'left',
   opacityVar: false,
+  deboss: false, debossDepth: 2,
+  duoContrast: 100,
   mode: 'tile', widthMm: 120, heightMm: 120, dpi: 300,
   tileW: 800, tileH: 800,
   seed: 4242,
@@ -29,6 +33,8 @@ const DEFAULTS = {
 
 export default function MeteoriteTab({ panelW, onResizeStart, tabBar }) {
   const init = (k) => mtLoad()[k] ?? DEFAULTS[k]
+  const [source, setSource] = useState(() => init('source'))
+  const [style, setStyle] = useState(() => init('style'))
   const [count, setCount] = useState(() => init('count'))
   const [baseAngle, setBaseAngle] = useState(() => init('baseAngle'))
   const [spacing, setSpacing] = useState(() => init('spacing'))
@@ -53,6 +59,14 @@ export default function MeteoriteTab({ panelW, onResizeStart, tabBar }) {
   const [hSoft, setHSoft] = useState(() => init('hSoft'))
   const [hAnchor, setHAnchor] = useState(() => init('hAnchor'))
   const [opacityVar, setOpacityVar] = useState(() => init('opacityVar'))
+  const [deboss, setDeboss] = useState(() => init('deboss'))
+  const [debossDepth, setDebossDepth] = useState(() => init('debossDepth'))
+  const [duoContrast, setDuoContrast] = useState(() => init('duoContrast'))
+  // Image (real-etch duotone) source — kept in state only; the data URL is too
+  // large to persist to localStorage, so it is re-uploaded each session.
+  const [imageHref, setImageHref] = useState(null)
+  const [imageName, setImageName] = useState('')
+  const fileRef = useRef(null)
   const [mode, setMode] = useState(() => init('mode'))
   const [widthMm, setWidthMm] = useState(() => init('widthMm'))
   const [heightMm, setHeightMm] = useState(() => init('heightMm'))
@@ -62,7 +76,7 @@ export default function MeteoriteTab({ panelW, onResizeStart, tabBar }) {
   const [seed, setSeed] = useState(() => init('seed'))
 
   const engineParams = useMemo(() => ({
-    seed, mode,
+    seed, mode, style,
     angles: anglesFor(count, baseAngle),
     spacing, spacingJit: spacingJit / 100,
     bandMin, bandMax: Math.max(bandMin, bandMax),
@@ -72,37 +86,61 @@ export default function MeteoriteTab({ panelW, onResizeStart, tabBar }) {
     matrixCol, bandCol, rimCol,
     vOn, vReach: vReach / 100, vSoft: vSoft / 100, vAnchor,
     hOn, hReach: hReach / 100, hSoft: hSoft / 100, hAnchor,
-    opacityVar,
+    opacityVar, deboss, debossDepth,
     seamless: true,
     widthMm, heightMm, dpi, tileW, tileH,
-  }), [seed, mode, count, baseAngle, spacing, spacingJit, bandMin, bandMax, segMin, segMax,
+  }), [seed, mode, style, count, baseAngle, spacing, spacingJit, bandMin, bandMax, segMin, segMax,
        gapMin, gapMax, rimOn, rimW, matrixCol, bandCol, rimCol, vOn, vReach, vSoft, vAnchor,
-       hOn, hReach, hSoft, hAnchor, opacityVar, widthMm, heightMm, dpi, tileW, tileH])
+       hOn, hReach, hSoft, hAnchor, opacityVar, deboss, debossDepth, widthMm, heightMm, dpi, tileW, tileH])
 
-  const { svg, W, H } = useMemo(() => buildMeteorite(engineParams), [engineParams])
+  const duoParams = useMemo(() => ({
+    href: imageHref, matrixCol, bandCol, contrast: duoContrast / 100,
+    mode, widthMm, heightMm, dpi, tileW, tileH,
+  }), [imageHref, matrixCol, bandCol, duoContrast, mode, widthMm, heightMm, dpi, tileW, tileH])
+
+  const isImage = source === 'image'
+  const { svg, W, H } = useMemo(
+    () => isImage ? buildDuotone(duoParams) : buildMeteorite(engineParams),
+    [isImage, duoParams, engineParams])
   const dataUrl = useMemo(() =>
     `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, [svg])
 
   const applyPreset = (name) => {
     const p = PRESETS[name]
     if (!p) return
+    setSource('generated')
     setCount(p.angles2); setBaseAngle(p.baseAngle)
     setSpacing(p.spacing); setSpacingJit(Math.round(p.spacingJit * 100))
     setBandMin(p.bandMin); setBandMax(p.bandMax)
     setSegMin(p.segMin); setSegMax(p.segMax)
     setGapMin(p.gapMin); setGapMax(p.gapMax)
     setRimOn(p.rimOn); if (p.rimW != null) setRimW(p.rimW)
+    if (p.matrixCol) setMatrixCol(p.matrixCol)
+    if (p.bandCol) setBandCol(p.bandCol)
+  }
+
+  const loadPanel = (mm, hh) => { setMode('fit'); setWidthMm(mm); setHeightMm(hh) }
+
+  const handleImage = async e => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    const url = await readAsDataUrl(f)
+    setImageHref(url); setImageName(f.name); setSource('image')
+    e.target.value = ''
   }
 
   // Setter map shared by Reset and Load.
   const SETTERS = {
+    source: setSource, style: setStyle,
     count: setCount, baseAngle: setBaseAngle, spacing: setSpacing, spacingJit: setSpacingJit,
     bandMin: setBandMin, bandMax: setBandMax, segMin: setSegMin, segMax: setSegMax,
     gapMin: setGapMin, gapMax: setGapMax, rimOn: setRimOn, rimW: setRimW,
     matrixCol: setMatrixCol, bandCol: setBandCol, rimCol: setRimCol,
     vOn: setVOn, vReach: setVReach, vSoft: setVSoft, vAnchor: setVAnchor,
     hOn: setHOn, hReach: setHReach, hSoft: setHSoft, hAnchor: setHAnchor,
-    opacityVar: setOpacityVar, mode: setMode, widthMm: setWidthMm, heightMm: setHeightMm,
+    opacityVar: setOpacityVar, deboss: setDeboss, debossDepth: setDebossDepth,
+    duoContrast: setDuoContrast,
+    mode: setMode, widthMm: setWidthMm, heightMm: setHeightMm,
     dpi: setDpi, tileW: setTileW, tileH: setTileH, seed: setSeed,
   }
 
@@ -121,6 +159,7 @@ export default function MeteoriteTab({ panelW, onResizeStart, tabBar }) {
 
   const download = () => dl(svg, `meteorite_${W}x${H}.svg`)
   const downloadSwatch = () => {
+    if (isImage) { dl(svg, `meteorite_duotone_${W}x${H}.svg`); return }
     const { svg: sw } = buildMeteorite({ ...engineParams, seamless: false })
     dl(sw, `meteorite_swatch_${W}x${H}.svg`)
   }
@@ -133,31 +172,26 @@ export default function MeteoriteTab({ panelW, onResizeStart, tabBar }) {
     })
   }
 
+  // All persisted (and session-saved) fields. The uploaded image is intentionally
+  // excluded — too large for localStorage and re-uploaded each session.
+  const fields = {
+    source, style, count, baseAngle, spacing, spacingJit, bandMin, bandMax, segMin, segMax,
+    gapMin, gapMax, rimOn, rimW, matrixCol, bandCol, rimCol,
+    vOn, vReach, vSoft, vAnchor, hOn, hReach, hSoft, hAnchor, opacityVar,
+    deboss, debossDepth, duoContrast,
+    mode, widthMm, heightMm, dpi, tileW, tileH, seed,
+  }
+
   // Auto-save + dirty tracking
   const firstRun = useRef(true)
   useEffect(() => {
-    try {
-      localStorage.setItem(MT_KEY, JSON.stringify({
-        count, baseAngle, spacing, spacingJit, bandMin, bandMax, segMin, segMax,
-        gapMin, gapMax, rimOn, rimW, matrixCol, bandCol, rimCol,
-        vOn, vReach, vSoft, vAnchor, hOn, hReach, hSoft, hAnchor, opacityVar,
-        mode, widthMm, heightMm, dpi, tileW, tileH, seed,
-      }))
-    } catch {}
+    try { localStorage.setItem(MT_KEY, JSON.stringify(fields)) } catch {}
     if (firstRun.current) firstRun.current = false
     else markDirty('meteorite')
-  }, [count, baseAngle, spacing, spacingJit, bandMin, bandMax, segMin, segMax,
-      gapMin, gapMax, rimOn, rimW, matrixCol, bandCol, rimCol,
-      vOn, vReach, vSoft, vAnchor, hOn, hReach, hSoft, hAnchor, opacityVar,
-      mode, widthMm, heightMm, dpi, tileW, tileH, seed])
+  }, Object.values(fields))
 
   const [saved, setSaved] = useState(false)
-  const sessionState = () => ({
-    count, baseAngle, spacing, spacingJit, bandMin, bandMax, segMin, segMax,
-    gapMin, gapMax, rimOn, rimW, matrixCol, bandCol, rimCol,
-    vOn, vReach, vSoft, vAnchor, hOn, hReach, hSoft, hAnchor, opacityVar,
-    mode, widthMm, heightMm, dpi, tileW, tileH, seed,
-  })
+  const sessionState = () => fields
   const applySession = (s) => {
     if (!s) return
     for (const [k, fn] of Object.entries(SETTERS)) if (s[k] != null) fn(s[k])
@@ -188,10 +222,29 @@ export default function MeteoriteTab({ panelW, onResizeStart, tabBar }) {
         {tabBar}
         <ResizeHandle onResizeStart={onResizeStart} />
 
+        <Section title="Source">
+          <Segmented value={source} options={[['generated','Generated'],['image','Real-etch image']]} onChange={setSource} />
+        </Section>
+
+        {isImage && (
+          <Section title="Duotone">
+            <button onClick={() => fileRef.current?.click()} style={{ ...btn(false), width: '100%', marginBottom: 6 }}>
+              <Icon name="upload" size={13} />{imageHref ? 'Replace image' : 'Upload meteorite scan'}
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImage} />
+            {imageName && <div style={{ fontSize: 10, color: C.muted, marginBottom: 8, overflow: 'hidden',
+              textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{imageName}</div>}
+            <SliderRow label="Contrast" min={20} max={300} value={duoContrast} onChange={setDuoContrast} suffix="%" />
+            <div style={{ fontSize: 10, color: C.dim }}>Maps the photo's luminance between the two ink colours below.</div>
+          </Section>
+        )}
+
+        {!isImage && <>
         <Section title="Presets">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 8 }}>
             {presetNames.map(n => (
-              <button key={n} onClick={() => applyPreset(n)} style={{ ...btn(false), padding: '5px 0', fontWeight: 400 }}>{n}</button>
+              <button key={n} onClick={() => applyPreset(n)} style={{ ...btn(false), padding: '5px 0', fontWeight: 400,
+                ...(n === 'Monolith' ? { border: `1px solid ${C.accent}`, color: C.accent } : {}) }}>{n}</button>
             ))}
           </div>
           <button onClick={() => setSeed(Math.floor(Math.random() * 99999))} style={{ ...btn(false), width: '100%' }}>
@@ -200,16 +253,21 @@ export default function MeteoriteTab({ panelW, onResizeStart, tabBar }) {
         </Section>
 
         <Section title="Structure">
+          <div style={{ marginBottom: 8 }}>
+            <Segmented value={style} options={[['lamellae','Lamellae'],['hairline','Hairline']]} onChange={setStyle} />
+          </div>
           <SliderRow label="Families" min={2} max={4} value={count} onChange={setCount} />
           <SliderRow label="Angle" min={0} max={180} value={baseAngle} onChange={setBaseAngle} suffix="°" />
           <SliderRow label="Spacing" min={8} max={160} value={spacing} onChange={setSpacing} suffix="px" />
           <SliderRow label="Spc jit" min={0} max={100} value={spacingJit} onChange={setSpacingJit} suffix="%" />
-          <SliderRow label="Band min" min={1} max={60} value={bandMin} onChange={v => setBandMin(Math.min(v, bandMax))} suffix="px" />
-          <SliderRow label="Band max" min={1} max={60} value={bandMax} onChange={v => { setBandMax(v); if (v < bandMin) setBandMin(v) }} suffix="px" />
-          <SliderRow label="Seg min" min={10} max={500} value={segMin} onChange={v => setSegMin(Math.min(v, segMax))} suffix="px" />
-          <SliderRow label="Seg max" min={10} max={500} value={segMax} onChange={v => { setSegMax(v); if (v < segMin) setSegMin(v) }} suffix="px" />
-          <SliderRow label="Gap min" min={0} max={300} value={gapMin} onChange={v => setGapMin(Math.min(v, gapMax))} suffix="px" />
-          <SliderRow label="Gap max" min={0} max={300} value={gapMax} onChange={v => { setGapMax(v); if (v < gapMin) setGapMin(v) }} suffix="px" />
+          <SliderRow label={style === 'hairline' ? 'Line w' : 'Band min'} min={1} max={60} value={bandMin} onChange={v => setBandMin(Math.min(v, bandMax))} suffix="px" />
+          {style !== 'hairline' && <>
+            <SliderRow label="Band max" min={1} max={60} value={bandMax} onChange={v => { setBandMax(v); if (v < bandMin) setBandMin(v) }} suffix="px" />
+            <SliderRow label="Seg min" min={10} max={500} value={segMin} onChange={v => setSegMin(Math.min(v, segMax))} suffix="px" />
+            <SliderRow label="Seg max" min={10} max={500} value={segMax} onChange={v => { setSegMax(v); if (v < segMin) setSegMin(v) }} suffix="px" />
+            <SliderRow label="Gap min" min={0} max={300} value={gapMin} onChange={v => setGapMin(Math.min(v, gapMax))} suffix="px" />
+            <SliderRow label="Gap max" min={0} max={300} value={gapMax} onChange={v => { setGapMax(v); if (v < gapMin) setGapMin(v) }} suffix="px" />
+          </>}
         </Section>
 
         <Section title="Reach — vertical">
@@ -246,13 +304,26 @@ export default function MeteoriteTab({ panelW, onResizeStart, tabBar }) {
 
         <Section title="Appearance">
           <Toggle value={opacityVar} onChange={setOpacityVar} label="Opacity variation" />
+          <Toggle value={deboss} onChange={setDeboss} label="Deboss preview (bevel)" />
+          {deboss && <>
+            <SliderRow label="Depth" min={1} max={8} value={debossDepth} onChange={setDebossDepth} step={0.5} suffix="px" />
+            <div style={{ fontSize: 10, color: C.dim }}>Tip: set Band = Matrix for a true blind tone-on-tone emboss.</div>
+          </>}
         </Section>
+        </>}
 
         <Section title="Output">
           <div style={{ marginBottom: 8 }}>
             <Segmented value={mode} options={[['fit','Fit to size'],['tile','Seamless tile']]} onChange={setMode} />
           </div>
           {mode === 'fit' ? <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 8 }}>
+              {PANELS.map(([label, mm, hh]) => (
+                <button key={label} onClick={() => loadPanel(mm, hh)} title={`${mm}×${hh} mm`}
+                  style={{ ...btn(false), padding: '5px 2px', fontWeight: 400, fontSize: 10,
+                    ...(widthMm === mm && heightMm === hh ? { border: `1px solid ${C.accent}`, color: C.accent } : {}) }}>{label}</button>
+              ))}
+            </div>
             <SliderRow label="Width" min={10} max={1000} value={widthMm} onChange={setWidthMm} suffix="mm" />
             <SliderRow label="Height" min={10} max={1000} value={heightMm} onChange={setHeightMm} suffix="mm" />
             <SliderRow label="DPI" min={72} max={1200} value={dpi} onChange={setDpi} />

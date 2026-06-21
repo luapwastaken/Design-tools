@@ -17,6 +17,12 @@ const S2 = {
   content: '<path d="M172.11,216.11c-69.47,73.47-79.54,70.27-102.87-27.56-91.19-43.27-91.53-53.88-5.57-106.25,13.23-100.34,22.33-103.76,99.37-38.21,99.23-17.99,105.92-11.44,67.03,82.72,47.97,88.27,43.02,97.49-57.96,89.3Z"/>',
   vbW: 259.49, vbH: 267.09,
 }
+// Monolith bracket logomark — for brand-mark tessellation patterns.
+const BRACKET = {
+  name: 'Monolith bracket',
+  content: '<path d="M.09,0l47.4.05,71.05,42.73-71.14,42.58-47.4-.05,71.14-42.58L.09,0Z"/><path d="M65.39,96.32l71.14-42.58,47.4.05-71.14,42.58,71.05,42.73-47.4-.05-71.05-42.73Z"/>',
+  vbW: 183.92, vbH: 139.1,
+}
 
 function buildSvg({ sA, sB, mode, cols, rows, hGap, vGap, szMn, szMx, rotOn, rotFixed, rotMn, rotMx,
   seamless, bgCol, fColA, fColB, paletteOn, palette, jitter, offsetOn, offsetAmt, offsetAxis, seed }) {
@@ -359,6 +365,10 @@ export default function ShapesTab({ panelW, onResizeStart, tabBar }) {
           <ShapeSlot shape={sB} label="B" onUpload={setSB} />
           <div style={{ marginTop: 4 }}>
             <Segmented value={mode} options={modeOpts} onChange={setMode} />
+          </div>
+          <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+            <button onClick={() => setSA(BRACKET)} style={{ ...btn(false), flex: 1, padding: '4px 0', fontWeight: 400, fontSize: 10 }}>Bracket → A</button>
+            <button onClick={() => setSB(BRACKET)} style={{ ...btn(false), flex: 1, padding: '4px 0', fontWeight: 400, fontSize: 10 }}>Bracket → B</button>
           </div>
         </Section>
 
