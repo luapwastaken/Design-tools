@@ -17,6 +17,7 @@ export const CATEGORY_COLOR = {
   value:      '#a3e635',
   output:     '#8b5cf6',
   note:       '#ffd36b',  // graph annotations (QoL)
+  global:     '#22d3ee',  // graph-level dials (Feel, Seed) — influence the whole eval
 }
 
 // Param types: 'number' | 'image' | 'select' | 'color' | 'keyframes'
@@ -120,6 +121,37 @@ export const NODE_DEFS = {
       { key: 'colorB', label: 'Color B', type: 'color', default: '#0a0a0e' },
       N('angle', 'Angle', 0, 360, 1, 90),
       N('opacity', 'Opacity', 0, 1, 0.01, 1),
+    ],
+  },
+  // Path — a raw SVG path string as a drawable object. Stroke it (fill 'none') and drive
+  // a Trim Paths modifier for a line draw-on; or fill it for a custom shape.
+  path: {
+    type: 'path', label: 'Path', category: 'source',
+    obj: { in: false, out: true }, value: false,
+    params: [
+      { key: 'd', label: 'Path d', type: 'text', default: 'M -180 0 C -60 -220, 60 220, 180 0' },
+      { key: 'fillMode', label: 'Fill', type: 'select', options: ['none', 'fill'], default: 'none' },
+      { key: 'fill', label: 'Fill col', type: 'color', default: '#ff7849' },
+      { key: 'stroke', label: 'Stroke', type: 'color', default: '#ffffff' },
+      N('strokeWidth', 'Stroke w', 0, 100, 0.5, 6),
+      N('scale', 'Scale', 0.01, 10, 0.01, 1),
+      N('x', 'X', -2000, 2000, 1, 0),
+      N('y', 'Y', -2000, 2000, 1, 0),
+      N('rotate', 'Rotate', -1080, 1080, 1, 0),
+      N('opacity', 'Opacity', 0, 1, 0.01, 1),
+    ],
+  },
+  // Null / Anchor — an invisible parent object. Renders nothing; wire it together with
+  // children into a Parent/Pin to make the children inherit its transform (rigging
+  // backbone). Animate its x/y/scale/rotate to drive a whole rig from one control.
+  null: {
+    type: 'null', label: 'Null / Anchor', category: 'source',
+    obj: { in: false, out: true }, value: false,
+    params: [
+      N('x', 'X', -2000, 2000, 1, 0),
+      N('y', 'Y', -2000, 2000, 1, 0),
+      N('scale', 'Scale', 0.01, 10, 0.01, 1),
+      N('rotate', 'Rotate', -1080, 1080, 1, 0),
     ],
   },
 
@@ -264,6 +296,50 @@ export const NODE_DEFS = {
       N('tracking', 'Tracking', -50, 200, 1, 0),
     ],
   },
+  // Parent / Pin — constrain children to a Null/Anchor. Wire the Null and the children
+  // into the same input: children inherit the null's translate/scale/rotate (offset from
+  // canvas centre), the null itself is consumed (invisible). 'position' pins location only.
+  parent: {
+    type: 'parent', label: 'Parent / Pin', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      { key: 'mode', label: 'Mode', type: 'select', options: ['follow', 'position'], default: 'follow' },
+      N('influence', 'Influence', 0, 1, 0.01, 1),
+      N('x', 'Pin X +', -2000, 2000, 1, 0),
+      N('y', 'Pin Y +', -2000, 2000, 1, 0),
+    ],
+  },
+  // Trim Paths — draw a Path on/off by trimming the stroke (stroke-dashoffset). Drive
+  // End 0→1 with a Ramp for a line-draw reveal; Offset chases the visible segment along.
+  trimPaths: {
+    type: 'trimPaths', label: 'Trim Paths', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('start', 'Start', 0, 1, 0.01, 0),
+      N('end', 'End', 0, 1, 0.01, 1),
+      N('offset', 'Offset', -1, 1, 0.01, 0),
+    ],
+  },
+  // Round Corners — soften rectangle corners (sets a corner radius the renderer applies
+  // as rx/ry). No-op on ellipses/text/images.
+  roundCorners: {
+    type: 'roundCorners', label: 'Round Corners', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('radius', 'Radius', 0, 1000, 1, 24),
+    ],
+  },
+  // Stagger — offset the upstream animation per object by index (delay-based). Simpler
+  // than Effector: re-samples the subtree at frame − index·step so copies/children cascade.
+  stagger: {
+    type: 'stagger', label: 'Stagger', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('step', 'Step f', -60, 60, 1, 3),
+      { key: 'order', label: 'Order', type: 'select', options: ['forward', 'reverse', 'center', 'random'], default: 'forward' },
+      N('seed', 'Seed', 0, 9999, 1, 1),
+    ],
+  },
   effector: {
     type: 'effector', label: 'Effector', category: 'modifier',
     obj: { in: true, out: true }, value: false,
@@ -286,6 +362,16 @@ export const NODE_DEFS = {
   },
 
   // ── Time-domain modifiers (unlock 4: re-sample upstream at a warped frame) ──────
+  // Motion Blur — sub-frame smear: samples the upstream across the shutter interval
+  // (frame−shutter … frame) and stacks N faint copies along each object's path.
+  motionBlur: {
+    type: 'motionBlur', label: 'Motion Blur', category: 'modifier',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('samples', 'Samples', 2, 32, 1, 8),
+      N('shutter', 'Shutter f', 0, 4, 0.05, 0.5),
+    ],
+  },
   echo: {
     type: 'echo', label: 'Echo / Trails', category: 'modifier',
     obj: { in: true, out: true }, value: false,
@@ -497,6 +583,21 @@ export const NODE_DEFS = {
     ],
   },
 
+  sequencer: {
+    type: 'sequencer', label: 'Sequencer', category: 'value',
+    obj: { in: false, out: false }, value: true,
+    params: [
+      { key: 'steps', label: 'Triggers', type: 'keyframes', default: [
+        { frame: 0, value: 1, ease: 'linear' },
+        { frame: 30, value: 1, ease: 'linear' },
+        { frame: 60, value: 1, ease: 'linear' },
+      ] },
+      N('attack', 'Attack f', 0, 240, 1, 2),
+      N('decay', 'Decay f', 1, 600, 1, 12),
+      { key: 'mode', label: 'Mode', type: 'select', options: ['sum', 'max', 'latest'], default: 'max' },
+    ],
+  },
+
   // ── Color value nodes (color-value socket unlock) ──────────────────────────────
   colorSwatch: {
     type: 'colorSwatch', label: 'Color Swatch', category: 'value', vtype: 'color',
@@ -672,6 +773,14 @@ export const NODE_DEFS = {
       N('seed', 'Seed', 0, 9999, 1, 1),
     ],
   },
+  outline: {
+    type: 'outline', label: 'Stroke / Outline', category: 'appearance',
+    obj: { in: true, out: true }, value: false,
+    params: [
+      N('width', 'Width', 0, 50, 0.5, 4),
+      { key: 'color', label: 'Color', type: 'color', default: '#ffffff' },
+    ],
+  },
   glitch: {
     type: 'glitch', label: 'Glitch / Datamosh', category: 'appearance',
     obj: { in: true, out: true }, value: false,
@@ -681,6 +790,18 @@ export const NODE_DEFS = {
       N('rgbSplit', 'RGB split', 0, 40, 0.5, 10),
       N('interval', 'Interval f', 1, 600, 1, 30),
       N('seed', 'Seed', 0, 9999, 1, 1),
+    ],
+  },
+
+  // Gooey / Metaball — a scene-wide goo filter: blurs then sharpens alpha so nearby
+  // shapes fuse into liquid blobs (feGaussianBlur + alpha threshold). Graph-level — add
+  // it anywhere (no wires); it affects the whole composite. Pairs with Array/Particles.
+  gooey: {
+    type: 'gooey', label: 'Gooey / Metaball', category: 'global',
+    obj: { in: false, out: false }, value: false,
+    params: [
+      N('radius', 'Radius', 0, 60, 0.5, 10),
+      N('sharp', 'Sharpness', 4, 40, 0.5, 18),
     ],
   },
 
@@ -698,6 +819,44 @@ export const NODE_DEFS = {
       { key: 'color', label: 'Color', type: 'color', default: '#ffd36b' },
     ],
   },
+  // Marker — a labelled flag pinned to a timeline frame; navigational only (no eval
+  // effect). The Timeline reads `frame`/`label`/`color` to draw flags on the ruler.
+  marker: {
+    type: 'marker', label: 'Marker', category: 'note',
+    obj: { in: false, out: false }, value: false,
+    params: [
+      { key: 'label', label: 'Label', type: 'text', default: 'Marker' },
+      N('frame', 'Frame', 0, 6000, 1, 0),
+      { key: 'color', label: 'Color', type: 'color', default: '#22d3ee' },
+    ],
+  },
+
+  // ── Graph-level dials (influence the whole evaluation via ctx, not the flow) ────────
+  feel: {
+    type: 'feel', label: 'Feel / Personality', category: 'global',
+    obj: { in: false, out: false }, value: false,
+    params: [
+      { key: 'character', label: 'Character', type: 'select',
+        options: ['snappy', 'smooth', 'bouncy', 'mechanical', 'organic'], default: 'smooth' },
+      N('intensity', 'Intensity', 0, 1, 0.01, 0.6),
+    ],
+  },
+  seed: {
+    type: 'seed', label: 'Seed / Shuffle', category: 'global',
+    obj: { in: false, out: false }, value: false,
+    params: [
+      N('value', 'Seed', 0, 9999, 1, 0),   // scrub to re-roll every seeded node at once
+    ],
+  },
+  // Timing / Readability Check — analysis node. Emits findings in the Inspector (too-fast
+  // reads, off-canvas dwell, static comps); no effect on the render.
+  timingCheck: {
+    type: 'timingCheck', label: 'Timing / Readability Check', category: 'global',
+    obj: { in: false, out: false }, value: false,
+    params: [
+      N('maxSpeed', 'Max px/f', 0, 2000, 1, 0),   // 0 = auto (canvas-relative)
+    ],
+  },
 
   // ── Output ───────────────────────────────────────────────────────────────────
   scene: {
@@ -711,13 +870,13 @@ export const NODE_TYPES = Object.keys(NODE_DEFS)
 
 // Convenience groupings for the "add node" menu.
 export const NODE_MENU = [
-  { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'text', 'counter', 'backdrop'] },
-  { group: 'Modifiers', types: ['transform', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'align', 'motionPath', 'magnet', 'orient', 'split', 'effector', 'mask', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
-  { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'blend', 'dither', 'glitch'] },
-  { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
+  { group: 'Sources',   types: ['icon', 'wordmark', 'shape', 'text', 'counter', 'backdrop', 'path', 'null'] },
+  { group: 'Modifiers', types: ['transform', 'parent', 'stagger', 'array', 'mirror', 'wiggle', 'clip', 'physics', 'roundCorners', 'trimPaths', 'align', 'motionPath', 'magnet', 'orient', 'split', 'effector', 'mask', 'motionBlur', 'echo', 'strobe', 'loop', 'timeRemap', 'particles', 'shatter', 'sort', 'camera', 'switch', 'scramble'] },
+  { group: 'Appearance', types: ['tint', 'blur', 'glow', 'dropShadow', 'outline', 'blend', 'dither', 'glitch', 'gooey'] },
+  { group: 'Values',    types: ['ramp', 'lfo', 'spring', 'keyframes', 'sequencer', 'constant', 'time', 'noise', 'pulse', 'randomHold'] },
   { group: 'Color',     types: ['colorSwatch', 'gradientMap', 'brandPalette'] },
   { group: 'Operators', types: ['math', 'mapRange', 'curve', 'mix', 'clamp', 'delay', 'sampleHold', 'expression'] },
-  { group: 'Utility',   types: ['reroute', 'note'] },
+  { group: 'Utility',   types: ['reroute', 'note', 'marker', 'feel', 'seed', 'timingCheck'] },
   { group: 'Output',    types: ['scene'] },
 ]
 

@@ -210,7 +210,7 @@ export default function MotionMaker() {
           </Section>
 
           <div style={{ borderTop: `1px solid ${C.border}`, margin: '0 -16px' }}>
-            <Inspector node={selectedNode} boundKeys={boundKeys} onParam={store.updateNodeParam} onRemove={store.removeNode} />
+            <Inspector node={selectedNode} boundKeys={boundKeys} doc={doc} onParam={store.updateNodeParam} onRemove={store.removeNode} />
           </div>
 
           <Section title="Export">
@@ -268,6 +268,7 @@ export default function MotionMaker() {
           frameStart={doc.frameStart} frameEnd={doc.frameEnd}
           setFrameStart={v => store.patchDoc({ frameStart: v })}
           setFrameEnd={v => store.patchDoc({ frameEnd: v })}
+          markers={doc.nodes.filter(n => n.type === 'marker' && !n.bypass).map(n => ({ id: n.id, frame: n.params?.frame || 0, label: n.params?.label || '', color: n.params?.color || '#22d3ee' }))}
         />
       </div>
     </div>

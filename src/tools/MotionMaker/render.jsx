@@ -71,6 +71,15 @@ function fxPrimitive(e, IN, OUT) {
     }
     case 'dropShadow':
       return `<feDropShadow in="${IN}" dx="${e.dx || 0}" dy="${e.dy || 0}" stdDeviation="${Math.max(0, e.blur || 0)}" flood-color="${e.color || '#000'}" flood-opacity="${clampNum(e.opacity ?? 0.5, 0, 1)}" result="${OUT}"/>`
+    case 'outline': {
+      // dilate the alpha by `width`, flood it with the stroke colour, and lay the
+      // original back on top → a solid outline ring around the shape.
+      const r = Math.max(0, e.width || 0)
+      return `<feMorphology in="${IN}" operator="dilate" radius="${r}" result="${OUT}_d"/>` +
+             `<feFlood flood-color="${e.color || '#fff'}" result="${OUT}_f"/>` +
+             `<feComposite in="${OUT}_f" in2="${OUT}_d" operator="in" result="${OUT}_s"/>` +
+             `<feMerge result="${OUT}"><feMergeNode in="${OUT}_s"/><feMergeNode in="${IN}"/></feMerge>`
+    }
     case 'glitch': {
       // block displacement (horizontal tears) → RGB channel split, recombined by screen.
       const disp = e.displace || 0, split = e.rgbSplit || 0, seed = e.seed || 0
@@ -139,6 +148,17 @@ function buildMask(item) {
   return { id, def }
 }
 
+// Scene-wide goo filter (Gooey/Metaball): blur, then sharpen alpha so overlapping
+// shapes fuse into liquid blobs. Applied to the whole composite group.
+function gooFilterDef(goo) {
+  const r = Math.max(0, goo.radius || 0), s = Math.max(1, goo.sharp || 18)
+  const m = `1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${s} ${(-s / 2).toFixed(2)}`
+  return `<filter id="goo_scene" color-interpolation-filters="sRGB">` +
+    `<feGaussianBlur in="SourceGraphic" stdDeviation="${r}" result="b"/>` +
+    `<feColorMatrix in="b" type="matrix" values="${m}" result="g"/>` +
+    `<feComposite in="SourceGraphic" in2="g" operator="atop"/></filter>`
+}
+
 // ── String path (export) ─────────────────────────────────────────────────────────
 // An item → SVG markup, wrapped in an untransformed mask group when it has a clip
 // (the mask is in canvas space, so it must sit outside the item's own transform).
@@ -156,9 +176,10 @@ function itemSvgInner(it, filterId) {
     return `<g transform="${t}" opacity="${it.opacity}"${fAttr}${bAttr}><image href="${it.href}" x="${(-it.w / 2).toFixed(2)}" y="${(-it.h / 2).toFixed(2)}" width="${it.w.toFixed(2)}" height="${it.h.toFixed(2)}" preserveAspectRatio="xMidYMid meet"/></g>`
   }
   if (it.kind === 'shape') {
+    const rx = it.corner ? ` rx="${Math.min(it.corner, it.w / 2).toFixed(2)}" ry="${Math.min(it.corner, it.h / 2).toFixed(2)}"` : ''
     const inner = it.shape === 'ellipse'
       ? `<ellipse cx="0" cy="0" rx="${(it.w / 2).toFixed(2)}" ry="${(it.h / 2).toFixed(2)}" fill="${it.color}"/>`
-      : `<rect x="${(-it.w / 2).toFixed(2)}" y="${(-it.h / 2).toFixed(2)}" width="${it.w.toFixed(2)}" height="${it.h.toFixed(2)}" fill="${it.color}"/>`
+      : `<rect x="${(-it.w / 2).toFixed(2)}" y="${(-it.h / 2).toFixed(2)}" width="${it.w.toFixed(2)}" height="${it.h.toFixed(2)}"${rx} fill="${it.color}"/>`
     return `<g transform="${t}" opacity="${it.opacity}"${fAttr}${bAttr}>${inner}</g>`
   }
   if (it.kind === 'backdrop') {
@@ -172,6 +193,18 @@ function itemSvgInner(it, filterId) {
     const tx = `<text x="0" y="0" font-family="${it.font || 'system-ui'}" font-size="${it.h}" font-weight="${it.weight || 700}" fill="${it.fill}" text-anchor="${textAnchor(it.align)}" dominant-baseline="central" letter-spacing="${it.tracking || 0}" style="white-space:pre">${xmlEscape(it.string || '')}</text>`
     return `<g transform="${t}" opacity="${it.opacity}"${fAttr}${bAttr}>${tx}</g>`
   }
+  if (it.kind === 'path') {
+    const sc = it.scale ?? 1
+    const fill = it.fillMode === 'fill' ? it.fill : 'none'
+    let dash = ''
+    if (it.trim) {
+      const vis = clampNum((it.trim.end ?? 1) - (it.trim.start ?? 0), 0, 1)
+      const off = -((it.trim.start ?? 0) + (it.trim.offset || 0))
+      dash = ` pathLength="1" stroke-dasharray="${vis.toFixed(4)} ${(1 - vis).toFixed(4)}" stroke-dashoffset="${off.toFixed(4)}"`
+    }
+    const p = `<path d="${it.d}" transform="scale(${sc})" fill="${fill}" stroke="${it.stroke}" stroke-width="${it.strokeWidth || 0}" stroke-linecap="round" stroke-linejoin="round"${dash}/>`
+    return `<g transform="${t}" opacity="${it.opacity}"${fAttr}${bAttr}>${p}</g>`
+  }
   if (it.kind === 'fragment') {
     // a shard of an image: clip a full-size image down to this piece's cell
     const cp = 'cp_' + sanitizeId(it.id)
@@ -184,15 +217,17 @@ function itemSvgInner(it, filterId) {
 
 // Full standalone SVG document string for a scene (used for export rasterization).
 export function sceneToSvgString(scene, { bg } = {}) {
-  const { canvas, items } = scene
+  const { canvas, items, goo } = scene
   const bgRect = bg && bg !== 'transparent'
     ? `<rect width="${canvas.w}" height="${canvas.h}" fill="${bg}"/>` : ''
   const defs = []
-  const body = items.map(it => {
+  if (goo) defs.push(gooFilterDef(goo))
+  let body = items.map(it => {
     const f = buildFilter(it); if (f.def) defs.push(f.def)
     const m = buildMask(it); if (m.def) defs.push(m.def)
     return itemSvg(it, f.id, m.id)
   }).join('')
+  if (goo) body = `<g filter="url(#goo_scene)">${body}</g>`
   const defsBlock = defs.length ? `<defs>${defs.join('')}</defs>` : ''
   return `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${canvas.w} ${canvas.h}" width="${canvas.w}" height="${canvas.h}">${bgRect}${defsBlock}${body}</svg>`
 }
@@ -200,14 +235,12 @@ export function sceneToSvgString(scene, { bg } = {}) {
 // ── React path (preview) ─────────────────────────────────────────────────────────
 // Same geometry + identical filter markup (injected as raw defs) as the string path.
 export function SceneSvg({ scene, style }) {
-  const { canvas, items } = scene
+  const { canvas, items, goo } = scene
   const defs = []
+  if (goo) defs.push(gooFilterDef(goo))
   const filterIds = items.map(it => { const f = buildFilter(it); if (f.def) defs.push(f.def); return f.id })
   const maskIds = items.map(it => { const m = buildMask(it); if (m.def) defs.push(m.def); return m.id })
-  return (
-    <svg viewBox={`0 0 ${canvas.w} ${canvas.h}`} style={style} xmlns="http://www.w3.org/2000/svg">
-      {defs.length > 0 && <defs dangerouslySetInnerHTML={{ __html: defs.join('') }} />}
-      {items.map((it, i) => {
+  const body = items.map((it, i) => {
         const t = `translate(${it.x} ${it.y}) rotate(${it.rotate || 0})`
         const filterId = filterIds[i]
         const gProps = {
@@ -221,7 +254,8 @@ export function SceneSvg({ scene, style }) {
         } else if (it.kind === 'shape') {
           el = <g {...gProps}>{it.shape === 'ellipse'
             ? <ellipse cx={0} cy={0} rx={it.w / 2} ry={it.h / 2} fill={it.color} />
-            : <rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} fill={it.color} />}</g>
+            : <rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h}
+                rx={it.corner ? Math.min(it.corner, it.w / 2) : undefined} ry={it.corner ? Math.min(it.corner, it.h / 2) : undefined} fill={it.color} />}</g>
         } else if (it.kind === 'backdrop') {
           const useGrad = it.mode !== 'solid' && it.colorB
           const gid = 'bg_' + sanitizeId(it.id)
@@ -231,6 +265,16 @@ export function SceneSvg({ scene, style }) {
           el = <g {...gProps}><text x={0} y={0} fontFamily={it.font || 'system-ui'} fontSize={it.h} fontWeight={it.weight || 700}
             fill={it.fill} textAnchor={textAnchor(it.align)} dominantBaseline="central"
             letterSpacing={it.tracking || 0} style={{ whiteSpace: 'pre' }}>{it.string}</text></g>
+        } else if (it.kind === 'path') {
+          const sc = it.scale ?? 1
+          const fill = it.fillMode === 'fill' ? it.fill : 'none'
+          let dashProps = {}
+          if (it.trim) {
+            const vis = clampNum((it.trim.end ?? 1) - (it.trim.start ?? 0), 0, 1)
+            dashProps = { pathLength: 1, strokeDasharray: `${vis.toFixed(4)} ${(1 - vis).toFixed(4)}`, strokeDashoffset: (-((it.trim.start ?? 0) + (it.trim.offset || 0))).toFixed(4) }
+          }
+          el = <g {...gProps}><path d={it.d} transform={`scale(${sc})`} fill={fill} stroke={it.stroke}
+            strokeWidth={it.strokeWidth || 0} strokeLinecap="round" strokeLinejoin="round" {...dashProps} /></g>
         } else if (it.kind === 'fragment') {
           const cp = 'cp_' + sanitizeId(it.id)
           el = <g {...gProps}><clipPath id={cp}><rect x={-it.w / 2} y={-it.h / 2} width={it.w} height={it.h} /></clipPath>
@@ -239,7 +283,11 @@ export function SceneSvg({ scene, style }) {
         } else return null
         // wrap in an untransformed group carrying the canvas-space mask, if any
         return <g key={it.id || i} mask={maskIds[i] ? `url(#${maskIds[i]})` : undefined}>{el}</g>
-      })}
+  })
+  return (
+    <svg viewBox={`0 0 ${canvas.w} ${canvas.h}`} style={style} xmlns="http://www.w3.org/2000/svg">
+      {defs.length > 0 && <defs dangerouslySetInnerHTML={{ __html: defs.join('') }} />}
+      {goo ? <g filter="url(#goo_scene)">{body}</g> : body}
     </svg>
   )
 }

@@ -41,6 +41,26 @@ export const EASES = {
   },
 }
 
+// Feel / Personality — one graph-level dial retimes every user-chosen ease toward a
+// coherent character. Each character maps to a signature ease; `easeFn` blends the
+// node's own ease toward it by the Feel node's intensity (0 = untouched).
+const FEEL_EASE = {
+  snappy:     'easeOutCubic',
+  smooth:     'easeInOut',
+  bouncy:     'outBack',
+  mechanical: 'linear',
+  organic:    'easeInOutCubic',
+}
+// Resolve an ease name to a function, applying the active Feel character if any.
+function easeFn(name, ctx) {
+  const base = EASES[name] || EASES.linear
+  const feel = ctx && ctx.feel
+  if (!feel || !feel.intensity) return base
+  const charE = EASES[FEEL_EASE[feel.character]] || base
+  const k = clamp(feel.intensity, 0, 1)
+  return t => { const a = base(t); return a + (charE(t) - a) * k }
+}
+
 // ── Waveforms (return -1..1 for a phase in turns) ────────────────────────────────
 const WAVES = {
   sine:     p => Math.sin(2 * Math.PI * p),
@@ -178,7 +198,7 @@ export function evalValueNode(node, frame, ctx, seen) {
     case 'ramp': {
       const span = (p.endFrame - p.startFrame) || 1
       const t = clamp((frame - p.startFrame) / span, 0, 1)
-      const e = (EASES[p.ease] || EASES.linear)(t)
+      const e = easeFn(p.ease, ctx)(t)
       return p.from + (p.to - p.from) * e
     }
     case 'lfo': {
@@ -257,11 +277,29 @@ export function evalValueNode(node, frame, ctx, seen) {
         const k0 = keys[i], k1 = keys[i + 1]
         if (f >= k0.frame && f <= k1.frame) {
           const t = (f - k0.frame) / ((k1.frame - k0.frame) || 1)
-          const e = (EASES[k1.ease] || EASES.linear)(t)
+          const e = easeFn(k1.ease, ctx)(t)
           return k0.value + (k1.value - k0.value) * e
         }
       }
       return last.value
+    }
+
+    // Sequencer — fire an attack/decay envelope at each trigger frame and combine the
+    // active ones (sum / max / latest). A multi-event pulse generator: drive scale,
+    // opacity, glitch bursts… off a score of frames.
+    case 'sequencer': {
+      const evs = Array.isArray(p.steps) ? p.steps : []
+      const atk = Math.max(0, p.attack || 0), dec = Math.max(1, p.decay || 1)
+      let sum = 0, mx = 0, latest = 0, fired = false
+      for (const ev of evs) {
+        const age = frame - (ev.frame || 0)
+        if (age < 0 || age >= atk + dec) continue
+        const e = age < atk ? (atk > 0 ? age / atk : 1) : 1 - (age - atk) / dec
+        const v = (ev.value ?? 0) * e
+        sum += v; if (Math.abs(v) >= Math.abs(mx)) mx = v; latest = v; fired = true
+      }
+      if (!fired) return 0
+      return p.mode === 'sum' ? sum : p.mode === 'latest' ? latest : mx
     }
 
     // ── Value operators (unlock 1: value→value chaining) ───────────────────────────
@@ -288,11 +326,11 @@ export function evalValueNode(node, frame, ctx, seen) {
       const denom = (p.inMax - p.inMin) || 1
       let t = (p.input - p.inMin) / denom
       if (p.clamp === 'on') t = clamp(t, 0, 1)
-      const e = (EASES[p.ease] || EASES.linear)(t)
+      const e = easeFn(p.ease, ctx)(t)
       return p.outMin + (p.outMax - p.outMin) * e
     }
     case 'curve':
-      return (EASES[p.ease] || EASES.linear)(clamp(p.input || 0, 0, 1))
+      return easeFn(p.ease, ctx)(clamp(p.input || 0, 0, 1))
     case 'mix': {
       const a = p.a || 0, b = p.b || 0, t = clamp(p.t ?? 0, 0, 1)
       const target = p.mode === 'add' ? a + b : p.mode === 'multiply' ? a * b : b
@@ -365,6 +403,11 @@ function resolveParams(node, frame, ctx, seen) {
       if (srcNode && !srcNode.bypass) out[p.key] = evalValueNode(srcNode, frame, ctx, seen)
     }
   }
+  // Seed/Shuffle — a global seed node offsets every node's `seed` so one dial re-rolls
+  // all randomness coherently. (The seed node has no `seed` param, so it can't self-shift.)
+  if (ctx.seedOffset && typeof out.seed === 'number' && !ctx.valueBindings[`${node.id}::prop:seed`]) {
+    out.seed = out.seed + ctx.seedOffset
+  }
   return out
 }
 
@@ -400,7 +443,7 @@ function sourceObject(node, rp, ctx, frame) {
     let str
     if (node.type === 'counter') {
       const span = (rp.endFrame - rp.startFrame) || 1
-      const e = (EASES[rp.ease] || EASES.linear)(clamp((frame - rp.startFrame) / span, 0, 1))
+      const e = easeFn(rp.ease, ctx)(clamp((frame - rp.startFrame) / span, 0, 1))
       const v = rp.from + (rp.to - rp.from) * e
       str = (rp.prefix || '') + formatNumber(v, rp.decimals, rp.thousands) + (rp.suffix || '')
     } else {
@@ -421,6 +464,27 @@ function sourceObject(node, rp, ctx, frame) {
     return {
       id: node.id, kind: 'backdrop', mode: rp.mode, colorA: rp.colorA, colorB: rp.colorB, angle: rp.angle,
       w: canvas.w, h: canvas.h, x: cx, y: cy, rotate: 0, opacity: rp.opacity,
+    }
+  }
+
+  // Path — raw SVG path data drawn at the canvas centre, scalable/rotatable like any
+  // source. Bounds are unknown (string path), so w/h are nominal for downstream layout.
+  if (node.type === 'path') {
+    return {
+      id: node.id, kind: 'path', d: rp.d, fillMode: rp.fillMode, fill: rp.fill,
+      stroke: rp.stroke, strokeWidth: rp.strokeWidth, scale: rp.scale ?? 1,
+      w: 300 * (rp.scale ?? 1), h: 300 * (rp.scale ?? 1),
+      x: cx + rp.x, y: cy + rp.y, rotate: rp.rotate || 0, opacity: clamp(rp.opacity ?? 1, 0, 1),
+    }
+  }
+
+  // Null / Anchor — an invisible parent carrying a transform. Renders nothing (no render
+  // kind 'null'); Parent/Pin reads its transform and consumes it.
+  if (node.type === 'null') {
+    return {
+      id: node.id, kind: 'null',
+      x: cx + rp.x, y: cy + rp.y, scale: rp.scale ?? 1, rotate: rp.rotate || 0,
+      w: 0, h: 0, opacity: 0,
     }
   }
 
@@ -682,7 +746,7 @@ function applySplit(objs, rp) {
 function applyEffector(objs, rp, ctx) {
   const n = objs.length
   if (!n) return objs
-  const curve = EASES[rp.falloffCurve] || EASES.linear
+  const curve = easeFn(rp.falloffCurve, ctx)
   const cx = ctx.canvas.w / 2 + (rp.centerX || 0), cy = ctx.canvas.h / 2 + (rp.centerY || 0)
   const size = rp.size || 1
   const strength = rp.strength ?? 1
@@ -709,6 +773,58 @@ function applyEffector(objs, rp, ctx) {
       rotate: o.rotate + (rp.rotate || 0) * wt,
       opacity: clamp(o.opacity * op, 0, 1),
     }
+  })
+}
+
+// Parent / Pin — make every child inherit the transform of the first Null/Anchor in the
+// stream. The null's pose is read as a delta from canvas centre (translate + scale +
+// rotate about centre); children are transformed by it (blended by `influence`) and the
+// null is consumed (it never renders). 'position' mode pins location only. With no null
+// present it degrades to a plain pin offset.
+function applyParent(objs, rp, ctx) {
+  const cx = ctx.canvas.w / 2, cy = ctx.canvas.h / 2
+  const par = objs.find(o => o.kind === 'null')
+  const kids = objs.filter(o => o.kind !== 'null')
+  const infl = clamp(rp.influence ?? 1, 0, 1)
+  let tx = (rp.x || 0) * infl, ty = (rp.y || 0) * infl, scale = 1, rot = 0
+  if (par) {
+    tx += (par.x - cx) * infl
+    ty += (par.y - cy) * infl
+    scale = 1 + ((par.scale ?? 1) - 1) * infl
+    rot = (par.rotate || 0) * infl
+  }
+  const posOnly = rp.mode === 'position'
+  const rad = rot * Math.PI / 180, c = Math.cos(rad), s = Math.sin(rad)
+  return kids.map(o => {
+    if (posOnly) return { ...o, x: o.x + tx, y: o.y + ty }
+    const rx = ((o.x - cx) * c - (o.y - cy) * s) * scale
+    const ry = ((o.x - cx) * s + (o.y - cy) * c) * scale
+    return {
+      ...o, x: cx + rx + tx, y: cy + ry + ty,
+      w: o.w * scale, h: o.h * scale, rotate: o.rotate + rot,
+    }
+  })
+}
+
+// Stagger — cascade the upstream animation across objects by index. Re-samples the
+// subtree at frame − rank·step per object (rank set by `order`), so Array copies or a
+// rig's children fall into their motion one after another. Time-domain (like Echo).
+function applyStagger(gather, frame, rp) {
+  const base = gather(frame)
+  const n = base.length
+  const step = rp.step || 0
+  if (n <= 1 || !step) return base
+  const rank = (i) => {
+    switch (rp.order) {
+      case 'reverse': return n - 1 - i
+      case 'center':  return Math.abs(i - (n - 1) / 2)
+      case 'random':  return hash01(i, rp.seed || 0) * (n - 1)
+      default:        return i   // forward
+    }
+  }
+  return base.map((o, i) => {
+    const sample = gather(frame - rank(i) * step)
+    return sample[i] || o
   })
 }
 
@@ -899,6 +1015,34 @@ function applyEcho(gather, frame, rp) {
   return out
 }
 
+// Motion Blur — velocity-derived smear. Samples the upstream across the shutter window
+// (sub-frame; the engine is pure on fractional frames) and stacks N faint copies along
+// each object's path, matched by id. Static objects get N coincident copies (≈ original);
+// fast ones streak. Deterministic.
+function applyMotionBlur(gather, frame, rp) {
+  const samples = Math.max(2, Math.round(rp.samples || 2))
+  const shutter = Math.max(0, rp.shutter || 0)
+  if (shutter <= 0) return gather(frame)
+  const out = []
+  // pre-sample each sub-frame once, index objects by id per sample
+  const frames = []
+  for (let i = 0; i < samples; i++) {
+    const f = frame - shutter * (1 - i / (samples - 1))   // oldest … current
+    const map = {}
+    for (const o of gather(f)) map[o.id] = o
+    frames.push(map)
+  }
+  const cur = frames[samples - 1]
+  for (const id in cur) {
+    for (let i = 0; i < samples; i++) {
+      const o = frames[i][id]
+      if (!o) continue
+      out.push({ ...o, id: `${id}~mb${i}`, opacity: clamp(o.opacity / samples, 0, 1) })
+    }
+  }
+  return out
+}
+
 // Stop-Motion / Strobe — hold the upstream on a stepped frame for choppy charm.
 function strobeFrame(frame, rp) {
   const step = Math.max(1, Math.round(rp.step || 1))
@@ -923,13 +1067,13 @@ function loopFrame(frame, rp, ctx) {
 
 // Time Remap / Time Warp — rewrite the frame fed upstream: freeze, reverse, speed-
 // scale, or ease the timing itself across [inFrame, outFrame].
-function remapFrame(frame, rp) {
+function remapFrame(frame, rp, ctx) {
   const inF = rp.inFrame || 0, outF = rp.outFrame || 0
   if (rp.mode === 'freeze') return inF
   if (rp.mode === 'reverse') return inF + outF - frame
   if (rp.mode === 'speed') return inF + (frame - inF) * (rp.speed ?? 1)
   const span = (outF - inF) || 1
-  const e = (EASES[rp.ease] || EASES.linear)(clamp((frame - inF) / span, 0, 1))
+  const e = easeFn(rp.ease, ctx)(clamp((frame - inF) / span, 0, 1))
   return inF + e * span               // remap: ease the timing
 }
 
@@ -975,15 +1119,20 @@ function gatherObjects(nodeId, frame, ctx, seen) {
   // ── Time-domain modifiers (re-time the upstream subtree) ───────────────────────
   switch (node.type) {
     case 'echo':      return applyEcho(gather, frame, rp)
+    case 'motionBlur': return applyMotionBlur(gather, frame, rp)
+    case 'stagger':   return applyStagger(gather, frame, rp)
     case 'strobe':    return gather(strobeFrame(frame, rp))
     case 'loop':      return gather(loopFrame(frame, rp, ctx))
-    case 'timeRemap': return gather(remapFrame(frame, rp))
+    case 'timeRemap': return gather(remapFrame(frame, rp, ctx))
   }
 
   const objs = gather(frame)
 
   switch (node.type) {
     case 'transform': return objs.map(o => applyTransform(o, rp, ctx))
+    case 'roundCorners': return objs.map(o => ({ ...o, corner: Math.max(0, rp.radius || 0) }))
+    case 'trimPaths': return objs.map(o => ({ ...o, trim: { start: clamp(rp.start ?? 0, 0, 1), end: clamp(rp.end ?? 1, 0, 1), offset: rp.offset || 0 } }))
+    case 'parent':    return applyParent(objs, rp, ctx)
     case 'array':     return applyArray(objs, rp)
     case 'mirror':    return applyMirror(objs, rp, ctx)
     case 'wiggle':    return applyWiggle(objs, rp, frame)
@@ -1016,6 +1165,7 @@ function gatherObjects(nodeId, frame, ctx, seen) {
     case 'blur':       return objs.map(o => withFx(o, { type: 'blur', radius: rp.radius, direction: rp.direction }))
     case 'glow':       return objs.map(o => withFx(o, { type: 'glow', radius: rp.radius, intensity: rp.intensity, color: rp.color }))
     case 'dropShadow': return objs.map(o => withFx(o, { type: 'dropShadow', dx: rp.dx, dy: rp.dy, blur: rp.blur, opacity: rp.opacity, color: rp.color }))
+    case 'outline':    return objs.map(o => withFx(o, { type: 'outline', width: rp.width, color: rp.color }))
     case 'blend':      return objs.map(o => ({ ...o, blend: rp.mode }))
     case 'dither':
       return objs.map(o => withFx(o, {
@@ -1038,6 +1188,60 @@ function gatherObjects(nodeId, frame, ctx, seen) {
   }
 }
 
+// ── Timing / Readability Check ────────────────────────────────────────────────────
+// Walks the comp across its frame range and flags motion-design readability issues:
+// reads that move too fast to track, objects that spend most of the comp off-canvas,
+// and comps with almost no movement. Returns a findings list (like the colour critic).
+export function analyzeTiming(doc, opts = {}) {
+  const start = doc.frameStart || 0, end = doc.frameEnd || 90
+  const dur = Math.max(1, end - start)
+  const { w, h } = doc.canvas
+  const diag = Math.hypot(w, h)
+  const maxSpeed = opts.maxSpeed ?? diag * 0.06        // px/frame considered "too fast"
+  const step = Math.max(1, Math.round(dur / 60))       // ≤ ~60 samples
+  const stats = {}                                     // id -> { peak, off, vis, label }
+  let prev = null, prevF = null
+  for (let f = start; f <= end; f += step) {
+    const items = evaluateScene(doc, f).items
+    const byId = {}
+    for (const it of items) {
+      byId[it.id] = it
+      const s = stats[it.id] || (stats[it.id] = { peak: 0, off: 0, vis: 0, label: it.kind })
+      if (it.opacity > 0.02) {
+        s.vis++
+        const off = it.x < -w * 0.1 || it.x > w * 1.1 || it.y < -h * 0.1 || it.y > h * 1.1
+        if (off) s.off++
+      }
+      if (prev && prev[it.id]) {
+        const p = prev[it.id]
+        const sp = Math.hypot(it.x - p.x, it.y - p.y) / (f - prevF)
+        if (sp > s.peak) s.peak = sp
+      }
+    }
+    prev = byId; prevF = f
+  }
+  const findings = []
+  let movers = 0
+  for (const id in stats) {
+    const s = stats[id]
+    if (s.peak > maxSpeed) {
+      findings.push({ severity: 'warn', text: `A ${s.label} moves ~${Math.round(s.peak)} px/frame — too fast to track cleanly (add Motion Blur or slow it).` })
+    }
+    if (s.vis > 0 && s.off / s.vis > 0.35) {
+      findings.push({ severity: 'warn', text: `A ${s.label} is off-canvas ${Math.round(100 * s.off / s.vis)}% of its visible time.` })
+    }
+    if (s.peak > 0.5) movers++
+  }
+  if (movers === 0 && Object.keys(stats).length > 0) {
+    findings.push({ severity: 'info', text: 'Almost no movement across the comp — it may read as static.' })
+  }
+  // de-dupe identical texts (Array copies produce many)
+  const seen = new Set(), out = []
+  for (const f of findings) { if (!seen.has(f.text)) { seen.add(f.text); out.push(f) } }
+  if (!out.length) out.push({ severity: 'ok', text: 'No timing or readability issues detected.' })
+  return out.slice(0, 12)
+}
+
 // ── Main entry: evaluate the whole document at a frame → render list ──────────────
 export function evaluateScene(doc, frame) {
   const canvas = doc.canvas
@@ -1055,12 +1259,24 @@ export function evaluateScene(doc, frame) {
     }
   }
 
+  // Graph-level nodes (Feel, Seed/Shuffle) sit anywhere in the graph and influence the
+  // whole evaluation through ctx, rather than the object/value flow.
+  const feelNode = doc.nodes.find(n => n.type === 'feel' && !n.bypass)
+  const feel = feelNode ? { character: feelNode.params?.character || 'smooth', intensity: feelNode.params?.intensity ?? 1 } : null
+  const seedNode = doc.nodes.find(n => n.type === 'seed' && !n.bypass)
+  const seedOffset = seedNode ? Math.round(seedNode.params?.value || 0) : 0
+
   const ctx = {
     canvas, fps: doc.fps, frameStart: doc.frameStart || 0, frameEnd: doc.frameEnd || 90,
-    nodeById, objEdgesByTarget, valueBindings,
+    nodeById, objEdgesByTarget, valueBindings, feel, seedOffset,
   }
 
   const scene = doc.nodes.find(n => n.type === 'scene')
   const items = scene ? gatherObjects(scene.id, frame, ctx, new Set()) : []
-  return { canvas, items }
+
+  // Gooey / Metaball — scene-wide goo applied by the renderer over the whole composite.
+  const gooNode = doc.nodes.find(n => n.type === 'gooey' && !n.bypass)
+  const goo = gooNode ? { radius: gooNode.params?.radius ?? 10, sharp: gooNode.params?.sharp ?? 18 } : null
+
+  return { canvas, items, goo }
 }

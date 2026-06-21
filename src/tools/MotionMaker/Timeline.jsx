@@ -11,7 +11,7 @@ const ACCENT = '#ff7849'
 
 export default function Timeline({
   frame, setFrame, playing, setPlaying, loop, setLoop,
-  fps, setFps, frameStart, frameEnd, setFrameStart, setFrameEnd,
+  fps, setFps, frameStart, frameEnd, setFrameStart, setFrameEnd, markers = [],
 }) {
   const dur = frameEnd - frameStart
   const secs = (f) => (f / (fps || 1)).toFixed(2)
@@ -50,6 +50,17 @@ export default function Timeline({
       <div onMouseDown={scrub} style={{ flex: 1, height: 22, position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
         <div style={{ position: 'absolute', left: 0, right: 0, height: 4, background: C.ctrl, borderRadius: 2 }} />
         <div style={{ position: 'absolute', left: 0, width: `${pct}%`, height: 4, background: ACCENT, borderRadius: 2, opacity: 0.5 }} />
+        {markers.map(m => {
+          const mp = dur > 0 ? ((m.frame - frameStart) / dur) * 100 : 0
+          if (mp < 0 || mp > 100) return null
+          return (
+            <div key={m.id} title={`${m.label} · f${m.frame}`} onMouseDown={e => { e.stopPropagation(); setFrame(m.frame) }}
+              style={{ position: 'absolute', left: `${mp}%`, top: 0, transform: 'translateX(-3px)', cursor: 'pointer' }}>
+              <div style={{ width: 0, height: 0, borderLeft: '3px solid transparent', borderRight: '3px solid transparent', borderTop: `5px solid ${m.color}` }} />
+              <div style={{ position: 'absolute', top: 4, left: 2, width: 1, height: 14, background: m.color, opacity: 0.6 }} />
+            </div>
+          )
+        })}
         <div style={{ position: 'absolute', left: `${pct}%`, width: 2, height: 18, background: ACCENT, transform: 'translateX(-1px)', borderRadius: 1 }} />
       </div>
 

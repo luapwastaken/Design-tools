@@ -1,34 +1,11 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { readAsText } from '../lib/file.js'
-import { markDirty, markSaved } from '../lib/unsavedChanges.js'
-import Icon from '../components/Icon.jsx'
-
-function mkRng(s) {
-  return () => {
-    s |= 0; s = (s + 0x6D2B79F5) | 0
-    let t = Math.imul(s ^ (s >>> 15), 1 | s)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-function parseSvg(text) {
-  try {
-    const doc = new DOMParser().parseFromString(text, 'image/svg+xml')
-    if (doc.querySelector('parsererror')) return null
-    const el = doc.querySelector('svg')
-    if (!el) return null
-    const vb = (el.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number)
-    const W = vb[2] || +el.getAttribute('width') || 100
-    const H = vb[3] || +el.getAttribute('height') || 100
-    const inner = el.innerHTML
-      .replace(/<(style|title|desc)[\s\S]*?<\/\1>/gi, '')
-      .replace(/\s+(id|data-name|class)="[^"]*"/g, '')
-      .replace(/\sfill="[^"]*"/g, '')
-      .replace(/fill\s*:[^;}"']+/g, '')
-    return { content: inner, vbW: W, vbH: H }
-  } catch { return null }
-}
+import { readAsText } from '../../lib/file.js'
+import { markDirty, markSaved } from '../../lib/unsavedChanges.js'
+import Icon from '../../components/Icon.jsx'
+import {
+  mkRng, parseSvg, C, Section, CtrlRow, SliderRow, HexInput, Toggle,
+  ColorRow, btn, Segmented, ResizeHandle,
+} from './ui.jsx'
 
 const S1 = {
   name: 'Star 1 — geometric',
@@ -39,6 +16,12 @@ const S2 = {
   name: 'Star 2 — blobby',
   content: '<path d="M172.11,216.11c-69.47,73.47-79.54,70.27-102.87-27.56-91.19-43.27-91.53-53.88-5.57-106.25,13.23-100.34,22.33-103.76,99.37-38.21,99.23-17.99,105.92-11.44,67.03,82.72,47.97,88.27,43.02,97.49-57.96,89.3Z"/>',
   vbW: 259.49, vbH: 267.09,
+}
+// Monolith bracket logomark — for brand-mark tessellation patterns.
+const BRACKET = {
+  name: 'Monolith bracket',
+  content: '<path d="M.09,0l47.4.05,71.05,42.73-71.14,42.58-47.4-.05,71.14-42.58L.09,0Z"/><path d="M65.39,96.32l71.14-42.58,47.4.05-71.14,42.58,71.05,42.73-47.4-.05-71.05-42.73Z"/>',
+  vbW: 183.92, vbH: 139.1,
 }
 
 function buildSvg({ sA, sB, mode, cols, rows, hGap, vGap, szMn, szMx, rotOn, rotFixed, rotMn, rotMx,
@@ -111,148 +94,6 @@ function buildSvg({ sA, sB, mode, cols, rows, hGap, vGap, szMn, szMx, rotOn, rot
   return { svg, tW, tH }
 }
 
-const C = {
-  bg: '#0b0b0d', panel: '#111114', ctrl: '#18181c',
-  border: '#252528', accent: '#e8a838', text: '#f0ede7',
-  muted: '#595960', dim: '#2e2e33',
-}
-
-const Section = ({ title, children }) => (
-  <div style={{ marginBottom: 18 }}>
-    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: C.muted,
-      textTransform: 'uppercase', marginBottom: 10, paddingBottom: 5,
-      borderBottom: `1px solid ${C.border}` }}>
-      {title}
-    </div>
-    {children}
-  </div>
-)
-
-const CtrlRow = ({ label, val, children }) => (
-  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 7, gap: 8 }}>
-    <div style={{ fontSize: 11, color: C.muted, width: 72, flexShrink: 0 }}>{label}</div>
-    {children}
-    {val !== undefined && (
-      <div style={{ fontSize: 11, color: C.accent, width: 40, textAlign: 'right', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{val}</div>
-    )}
-  </div>
-)
-
-const Slider = ({ min, max, value, onChange, step = 1 }) => (
-  <input type="range" min={min} max={max} value={value} step={step}
-    onChange={e => onChange(+e.target.value)}
-    style={{ flex: 1, accentColor: C.accent }} />
-)
-
-const SliderRow = ({ label, min, max, value, onChange, step = 1, suffix = '' }) => {
-  const [draft, setDraft] = useState(null)
-  const [scrubbing, setScrubbing] = useState(false)
-  const commit = raw => {
-    const n = parseFloat(raw)
-    if (!isNaN(n)) onChange(Math.min(max, Math.max(min, n)))
-    setDraft(null)
-  }
-  const active = draft !== null
-
-  // Drag the label horizontally to scrub the value (full range over ~200px).
-  const onScrubStart = e => {
-    e.preventDefault()
-    const startX = e.clientX
-    const startVal = value
-    const perPx = (max - min) / 200
-    setScrubbing(true)
-    document.body.style.cursor = 'ew-resize'
-    const move = ev => {
-      const raw = startVal + (ev.clientX - startX) * perPx
-      const snapped = Math.round(raw / step) * step
-      onChange(Math.min(max, Math.max(min, snapped)))
-    }
-    const up = () => {
-      setScrubbing(false)
-      document.body.style.cursor = ''
-      window.removeEventListener('mousemove', move)
-      window.removeEventListener('mouseup', up)
-    }
-    window.addEventListener('mousemove', move)
-    window.addEventListener('mouseup', up)
-  }
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 7, gap: 8 }}>
-      <div onMouseDown={onScrubStart} title="Drag to scrub"
-        style={{ fontSize: 11, color: scrubbing ? C.accent : C.muted, width: 72, flexShrink: 0,
-          cursor: 'ew-resize', userSelect: 'none' }}>{label}</div>
-      <input type="range" min={min} max={max} value={value} step={step}
-        onChange={e => onChange(+e.target.value)}
-        style={{ flex: 1, accentColor: C.accent }} />
-      <input
-        type="text"
-        value={active ? draft : String(value)}
-        onFocus={e => { setDraft(String(value)); e.target.select() }}
-        onChange={e => setDraft(e.target.value)}
-        onBlur={e => commit(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === 'Enter') { commit(e.target.value); e.target.blur() }
-          if (e.key === 'Escape') { setDraft(null); e.target.blur() }
-        }}
-        style={{
-          fontSize: 11, color: C.accent, width: 38, textAlign: 'right', flexShrink: 0,
-          background: active ? C.ctrl : 'transparent',
-          border: active ? `1px solid ${C.accent}` : 'none',
-          borderRadius: 3, outline: 'none', fontFamily: 'inherit',
-          padding: active ? '1px 3px' : '0',
-          fontVariantNumeric: 'tabular-nums', cursor: 'text',
-        }}
-      />
-      {suffix && <span style={{ fontSize: 11, color: C.muted, flexShrink: 0 }}>{suffix}</span>}
-    </div>
-  )
-}
-
-const HexInput = ({ value, onChange }) => {
-  const [draft, setDraft] = useState(null)
-  const valid = v => /^#[0-9a-fA-F]{6}$/.test(v)
-  const commit = raw => {
-    const v = raw.startsWith('#') ? raw : `#${raw}`
-    if (valid(v)) onChange(v)
-    setDraft(null)
-  }
-  const active = draft !== null
-  return (
-    <input
-      type="text"
-      value={active ? draft : value}
-      onFocus={e => { setDraft(value); e.target.select() }}
-      onChange={e => {
-        const v = e.target.value
-        setDraft(v)
-        const c = v.startsWith('#') ? v : `#${v}`
-        if (valid(c)) onChange(c)
-      }}
-      onBlur={e => commit(e.target.value)}
-      onKeyDown={e => { if (e.key === 'Enter') commit(e.target.value); if (e.key === 'Escape') setDraft(null) }}
-      style={{
-        fontSize: 11, color: active ? C.text : C.muted, flex: 1,
-        background: 'transparent', border: 'none',
-        borderBottom: `1px solid ${active ? C.accent : 'transparent'}`,
-        outline: 'none', fontFamily: 'inherit', padding: '0 2px', letterSpacing: '0.05em',
-        cursor: 'text',
-      }}
-    />
-  )
-}
-
-const Toggle = ({ value, onChange, label }) => (
-  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none', marginBottom: 7 }}>
-    <div onClick={() => onChange(!value)} style={{ width: 28, height: 15, borderRadius: 8,
-      background: value ? C.accent : C.dim, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
-      <div style={{ position: 'absolute', top: 2, left: value ? 13 : 2, width: 11, height: 11,
-        borderRadius: '50%', background: value ? '#000' : C.muted, transition: 'left .15s' }} />
-    </div>
-    <span style={{ fontSize: 11, color: value ? C.text : C.muted }}>{label}</span>
-  </label>
-)
-
 function ShapeSlot({ shape, label, onUpload }) {
   const ref = useRef()
   const mini = useMemo(() =>
@@ -290,34 +131,14 @@ function ShapeSlot({ shape, label, onUpload }) {
   )
 }
 
-const MIN_PANEL = 200
-const MAX_PANEL = 480
-
 const PM_KEY = 'designtools-patternmaker'
 function pmLoad() {
   try { return JSON.parse(localStorage.getItem(PM_KEY) || '{}') } catch { return {} }
 }
 
-export default function PatternMaker() {
+export default function ShapesTab({ panelW, onResizeStart, tabBar }) {
   const [sA, setSA] = useState(() => pmLoad().sA ?? S1)
   const [sB, setSB] = useState(() => pmLoad().sB ?? S2)
-  const [panelW, setPanelW] = useState(() => pmLoad().panelW ?? 268)
-  const dragging = useRef(false)
-  const startX = useRef(0)
-  const startW = useRef(0)
-  const pmLoadRef = useRef(null)
-
-  useEffect(() => {
-    const onMove = e => {
-      if (!dragging.current) return
-      const delta = e.clientX - startX.current
-      setPanelW(Math.min(MAX_PANEL, Math.max(MIN_PANEL, startW.current + delta)))
-    }
-    const onUp = () => { dragging.current = false; document.body.style.cursor = '' }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-  }, [])
   const [mode, setMode] = useState(() => pmLoad().mode ?? 'check')
   const [cols, setCols] = useState(() => pmLoad().cols ?? 4)
   const [rows, setRows] = useState(() => pmLoad().rows ?? 4)
@@ -362,6 +183,8 @@ export default function PatternMaker() {
   const handleRows = v => { setRows(v); if (linkGrid) setCols(v) }
   const handleHGap = v => { setHGap(v); if (linkGap) setVGap(v) }
   const handleVGap = v => { setVGap(v); if (linkGap) setHGap(v) }
+
+  const modeOpts = [['A','A'],['B','B'],['check','Checker'],['rand','Random']]
 
   // Randomize the layout/geometry within sane ranges — leaves the user's shapes,
   // colors and palette untouched so it explores composition, not brand.
@@ -456,7 +279,7 @@ export default function PatternMaker() {
         sA, sB, mode, cols, rows, linkGrid, hGap, vGap, linkGap, szMn, szMx,
         rotOn, rotFixed, rotMn, rotMx, seed, seamless, bgOn, bgCol, fColA, fColB,
         paletteOn, palette, jitter, offsetOn, offsetAmt, offsetAxis,
-        exportW, exportH, linkExport, panelW,
+        exportW, exportH, linkExport,
       }))
     } catch {}
     if (pmFirstRun.current) pmFirstRun.current = false
@@ -464,12 +287,12 @@ export default function PatternMaker() {
   }, [sA, sB, mode, cols, rows, linkGrid, hGap, vGap, linkGap, szMn, szMx,
       rotOn, rotFixed, rotMn, rotMx, seed, seamless, bgOn, bgCol, fColA, fColB,
       paletteOn, palette, jitter, offsetOn, offsetAmt, offsetAxis,
-      exportW, exportH, linkExport, panelW])
+      exportW, exportH, linkExport])
 
   const [saved, setSaved] = useState(false)
 
   function getSessionState() {
-    return { sA, sB, mode, cols, rows, linkGrid, hGap, vGap, linkGap, szMn, szMx, rotOn, rotFixed, rotMn, rotMx, seed, seamless, bgOn, bgCol, fColA, fColB, paletteOn, palette, jitter, offsetOn, offsetAmt, offsetAxis, exportW, exportH, linkExport, panelW }
+    return { sA, sB, mode, cols, rows, linkGrid, hGap, vGap, linkGap, szMn, szMx, rotOn, rotFixed, rotMn, rotMx, seed, seamless, bgOn, bgCol, fColA, fColB, paletteOn, palette, jitter, offsetOn, offsetAmt, offsetAxis, exportW, exportH, linkExport }
   }
 
   function applySessionState(s) {
@@ -519,25 +342,14 @@ export default function PatternMaker() {
     if (data) { try { applySessionState(JSON.parse(data)) } catch {} }
   }
 
-  const modeOpts = [['A','A'],['B','B'],['check','Checker'],['rand','Random']]
-
-  const btn = (accent) => ({
-    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-    padding: '6px 14px', borderRadius: 4, border: 'none', cursor: 'pointer',
-    fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
-    background: accent ? C.accent : C.ctrl,
-    color: accent ? '#000' : C.muted,
-  })
-
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: C.bg }}>
 
       {/* ── Controls ── */}
       <div style={{ width: panelW, background: C.panel, borderRight: `1px solid ${C.border}`,
-        overflowY: 'auto', padding: '48px 22px 14px 14px', flexShrink: 0, position: 'relative' }}>
+        overflowY: 'auto', padding: '14px 22px 14px 14px', flexShrink: 0, position: 'relative' }}>
 
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: C.accent,
-          marginBottom: 12 }}>PATTERN MAKER</div>
+        {tabBar}
 
         <button onClick={surpriseMe} title="Randomize the layout (keeps your shapes & colors)"
           style={{ ...btn(true), width: '100%', marginBottom: 18, padding: '8px 14px' }}
@@ -546,36 +358,17 @@ export default function PatternMaker() {
           <Icon name="casino" size={15} color="#000" />Surprise me
         </button>
 
-        {/* resize handle */}
-        <div
-          onMouseDown={e => {
-            dragging.current = true
-            startX.current = e.clientX
-            startW.current = panelW
-            document.body.style.cursor = 'col-resize'
-            e.preventDefault()
-          }}
-          style={{
-            position: 'absolute', top: 0, right: 0, width: 5, height: '100%',
-            cursor: 'col-resize', zIndex: 10,
-            background: 'transparent',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = C.accent + '44'}
-          onMouseLeave={e => { if (!dragging.current) e.currentTarget.style.background = 'transparent' }}
-        />
+        <ResizeHandle onResizeStart={onResizeStart} />
 
         <Section title="Shapes">
           <ShapeSlot shape={sA} label="A" onUpload={setSA} />
           <ShapeSlot shape={sB} label="B" onUpload={setSB} />
-          <div style={{ display: 'flex', gap: 3, marginTop: 4 }}>
-            {modeOpts.map(([v, l]) => (
-              <button key={v} onClick={() => setMode(v)} style={{
-                flex: 1, padding: '5px 0', border: `1px solid ${mode===v ? C.accent : C.border}`,
-                borderRadius: 3, background: mode===v ? C.accent : 'transparent',
-                color: mode===v ? '#000' : C.muted, cursor: 'pointer', fontSize: 10,
-                fontWeight: mode===v ? 700 : 400, fontFamily: 'inherit', letterSpacing: '0.04em'
-              }}>{l}</button>
-            ))}
+          <div style={{ marginTop: 4 }}>
+            <Segmented value={mode} options={modeOpts} onChange={setMode} />
+          </div>
+          <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+            <button onClick={() => setSA(BRACKET)} style={{ ...btn(false), flex: 1, padding: '4px 0', fontWeight: 400, fontSize: 10 }}>Bracket → A</button>
+            <button onClick={() => setSB(BRACKET)} style={{ ...btn(false), flex: 1, padding: '4px 0', fontWeight: 400, fontSize: 10 }}>Bracket → B</button>
           </div>
         </Section>
 
@@ -585,15 +378,8 @@ export default function PatternMaker() {
           <Toggle value={linkGrid} onChange={setLinkGrid} label="Link cols & rows" />
           <Toggle value={offsetOn} onChange={setOffsetOn} label="Half-drop offset" />
           {offsetOn && <>
-            <div style={{ display: 'flex', gap: 3, marginBottom: 7 }}>
-              {[['row','Row'],['col','Col']].map(([v,l]) => (
-                <button key={v} onClick={() => setOffsetAxis(v)} style={{
-                  flex: 1, padding: '4px 0', border: `1px solid ${offsetAxis===v ? C.accent : C.border}`,
-                  borderRadius: 3, background: offsetAxis===v ? C.accent : 'transparent',
-                  color: offsetAxis===v ? '#000' : C.muted, cursor: 'pointer', fontSize: 10,
-                  fontWeight: offsetAxis===v ? 700 : 400, fontFamily: 'inherit'
-                }}>{l}</button>
-              ))}
+            <div style={{ marginBottom: 7 }}>
+              <Segmented value={offsetAxis} options={[['row','Row'],['col','Col']]} onChange={setOffsetAxis} small />
             </div>
             <SliderRow label="Amount" min={0} max={100} value={offsetAmt} onChange={setOffsetAmt} suffix="%" />
           </>}
@@ -627,23 +413,9 @@ export default function PatternMaker() {
         <Section title="Options">
           <Toggle value={seamless} onChange={setSeamless} label="Seamless edge wrapping" />
           <Toggle value={bgOn}     onChange={setBgOn}     label="Background fill" />
-          {bgOn && (
-            <CtrlRow label="BG">
-              <input type="color" value={bgCol} onChange={e => setBgCol(e.target.value)}
-                style={{ width: 36, height: 24, border: `1px solid ${C.border}`, borderRadius: 3, background: 'none', cursor: 'pointer', flexShrink: 0 }} />
-              <HexInput value={bgCol} onChange={setBgCol} />
-            </CtrlRow>
-          )}
-          <CtrlRow label="Color A">
-            <input type="color" value={fColA} onChange={e => setFColA(e.target.value)}
-              style={{ width: 36, height: 24, border: `1px solid ${C.border}`, borderRadius: 3, background: 'none', cursor: 'pointer', flexShrink: 0 }} />
-            <HexInput value={fColA} onChange={setFColA} />
-          </CtrlRow>
-          <CtrlRow label="Color B">
-            <input type="color" value={fColB} onChange={e => setFColB(e.target.value)}
-              style={{ width: 36, height: 24, border: `1px solid ${C.border}`, borderRadius: 3, background: 'none', cursor: 'pointer', flexShrink: 0 }} />
-            <HexInput value={fColB} onChange={setFColB} />
-          </CtrlRow>
+          {bgOn && <ColorRow label="BG" value={bgCol} onChange={setBgCol} />}
+          <ColorRow label="Color A" value={fColA} onChange={setFColA} />
+          <ColorRow label="Color B" value={fColB} onChange={setFColB} />
         </Section>
 
         <Section title="Palette">
