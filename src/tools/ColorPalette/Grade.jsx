@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { contrast } from '../../lib/color.js'
 import { usePalette } from './store.js'
-import { Section, FieldLabel } from './panelUi.jsx'
+import { Section, FieldLabel, Stat, Badge, T } from './panelUi.jsx'
 
 // WCAG 2.1 thresholds
 function gradePair(ratio) {
@@ -40,10 +40,14 @@ export default function Grade() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <FieldLabel>Background</FieldLabel>
         {swatches.map(s => (
-          <button key={s.id} onClick={() => setBgId(s.id)} title={s.hex} style={{
-            width: 22, height: 22, borderRadius: 5, background: s.hex,
-            border: `2px solid ${s.id === bg.id ? '#8b5cf6' : '#2a2a38'}`, cursor: 'pointer', padding: 0,
-          }} />
+          <button key={s.id} type="button" onClick={() => setBgId(s.id)}
+            title={`Grade against ${s.name || s.hex}`}
+            aria-label={`Grade against ${s.name || s.hex}`}
+            aria-pressed={s.id === bg.id}
+            style={{
+              width: 26, height: 26, borderRadius: 5, background: s.hex,
+              border: `2px solid ${s.id === bg.id ? T.accent : T.line}`, cursor: 'pointer', padding: 0,
+            }} />
         ))}
       </div>
 
@@ -55,58 +59,49 @@ export default function Grade() {
         <Stat label="Best" value={best ? best.toFixed(1) : '—'} good />
       </div>
 
-      {/* per-swatch rows */}
+      {/* Per-swatch rows.
+          The row used to be one block of the background colour with the swatch
+          name written on it in the swatch's own colour — so the worse a colour
+          scored, the harder its own row was to read, and the colours the report
+          existed to flag were the ones you couldn't make out. The demonstration
+          is worth keeping, so it stays as a fixed sample panel on the left; the
+          name, ratio and badges moved onto the panel background where they are
+          always legible. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {rows.map(({ s, g }) => (
           <div key={s.id} style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: bg.hex, borderRadius: 6, padding: '6px 8px', border: '1px solid #222230',
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: T.raised, borderRadius: T.rLg, border: `1px solid ${T.line}`,
+            padding: 4, paddingRight: 10,
           }}>
-            <span style={{ color: s.hex, fontSize: 13, fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span aria-hidden style={{
+              background: bg.hex, color: s.hex,
+              width: 62, flexShrink: 0, textAlign: 'center',
+              borderRadius: 5, padding: '6px 0',
+              fontSize: T.body, fontWeight: 600, lineHeight: 1.2,
+            }}>Aa</span>
+            <span style={{
+              color: T.text, fontSize: T.body, fontWeight: 500,
+              flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
               {s.name || s.hex}
             </span>
-            <span style={{ color: s.hex, fontSize: 10, opacity: 0.8, fontVariantNumeric: 'tabular-nums' }}>
+            <span className="cp-num" style={{
+              color: g.aaNormal ? T.ok : g.aaLarge ? T.warn : T.bad,
+              fontSize: T.body, fontWeight: 600,
+            }}>
               {g.ratio.toFixed(2)}
             </span>
-            <Badge ok={g.aaNormal} alt={g.aaLarge}>AA</Badge>
-            <Badge ok={g.aaaNormal} alt={g.aaaLarge}>AAA</Badge>
+            <Badge tone={g.aaNormal ? 'pass' : g.aaLarge ? 'partial' : 'fail'}
+              title={`${g.ratio.toFixed(2)}:1 — AA needs 4.5:1 for normal text, 3:1 for large`}>AA</Badge>
+            <Badge tone={g.aaaNormal ? 'pass' : g.aaaLarge ? 'partial' : 'fail'}
+              title={`${g.ratio.toFixed(2)}:1 — AAA needs 7:1 for normal text, 4.5:1 for large`}>AAA</Badge>
           </div>
         ))}
       </div>
-      <FieldLabel style={{ color: '#3d3d4a' }}>
-        Filled = passes normal text · outline = large/UI only · empty = fails
+      <FieldLabel style={{ color: T.faint }}>
+        Green = passes for normal text · amber = large or UI text only · red = fails
       </FieldLabel>
     </Section>
-  )
-}
-
-function Stat({ label, value, good }) {
-  return (
-    <div style={{
-      flex: 1, background: '#131318', border: '1px solid #222230', borderRadius: 6,
-      padding: '6px 4px', textAlign: 'center',
-    }}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: good ? '#7ee787' : '#e0a060', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-      <div style={{ fontSize: 8, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
-    </div>
-  )
-}
-
-function Badge({ ok, alt, children }) {
-  // ok = passes for normal text, alt = passes for large/UI only
-  const state = ok ? 'full' : alt ? 'alt' : 'none'
-  const styles = {
-    full: { background: '#16331f', border: '#2e7d44', color: '#7ee787' },
-    alt:  { background: 'transparent', border: '#5a4a20', color: '#e0a060' },
-    none: { background: 'transparent', border: '#3a2024', color: '#7a4048' },
-  }[state]
-  return (
-    <span style={{
-      fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-      background: styles.background, border: `1px solid ${styles.border}`, color: styles.color,
-      letterSpacing: 0.5,
-    }}>
-      {children}
-    </span>
   )
 }

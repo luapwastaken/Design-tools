@@ -12,8 +12,8 @@ import { PIGMENTS, pigmentTraits } from '../../data/pigments.js'
 import { usePalette, addSwatch } from './store.js'
 import { NumberSlider } from '../../components/NumberField.jsx'
 import Icon from '../../components/Icon.jsx'
+import { T, ACCENT, MiniBtn, ModeChip, FieldLabel, Hint } from './panelUi.jsx'
 
-const ACCENT = '#8b5cf6'
 const GRID = 256          // paint-canvas sim resolution (smoothly upscaled to fit)
 const WELL = 150          // mixing-well sim resolution
 const FLOW_MS = 33        // watercolor flow tick budget (~30fps) to cap CPU
@@ -152,7 +152,7 @@ function PaintCanvas({ paintRef, mediumRef, toolRef, settingsRef, onPick }) {
       onPointerDown={onDown} onPointerMove={onMove}
       style={{
         width: '100%', aspectRatio: '1 / 1', display: 'block', borderRadius: 8,
-        border: '1px solid #2a2a35', cursor: toolRef.current === 'pick' ? 'crosshair' : 'cell',
+        border: `1px solid ${T.line}`, cursor: toolRef.current === 'pick' ? 'crosshair' : 'cell',
         touchAction: 'none', background: '#fff',
       }}
     />
@@ -225,15 +225,12 @@ function useMixingWell({ onColor }) {
 // ── Pigment chip ──────────────────────────────────────────────────────────────
 function Chip({ hex, label, active, onClick, title }) {
   return (
-    <button onClick={onClick} title={title || label} style={{
-      display: 'flex', alignItems: 'center', gap: 5, padding: '3px 6px',
-      background: active ? '#2d1a5e' : '#15151c',
-      border: `1px solid ${active ? ACCENT : '#2a2a35'}`,
-      borderRadius: 5, cursor: 'pointer', color: active ? '#c4b5fd' : '#aaa', fontSize: 10,
-    }}>
-      <span style={{ width: 14, height: 14, borderRadius: 3, background: hex, border: '1px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
-      {label && <span style={{ whiteSpace: 'nowrap' }}>{label}</span>}
-    </button>
+    <ModeChip active={active} onClick={onClick} title={title || label} grow={false}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+        <span style={{ width: 14, height: 14, borderRadius: 3, background: hex, border: '1px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
+        {label && <span style={{ whiteSpace: 'nowrap' }}>{label}</span>}
+      </span>
+    </ModeChip>
   )
 }
 
@@ -295,30 +292,30 @@ export default function Mixer() {
 
         {/* Mixing well column */}
         <div style={{ width: 150, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>Mixing well</div>
+          <div className="cp-micro">Mixing well</div>
           <canvas ref={well.canvasRef} width={WELL} height={WELL}
             onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); well.drawing.current = true; well.last.current = well.gridXY(e) }}
             onPointerMove={well.onMove}
             title="Drag to knead the paint together"
-            style={{ width: 150, height: 150, borderRadius: 8, border: '1px solid #2a2a35', background: '#fff', cursor: 'grab', touchAction: 'none' }} />
+            style={{ width: 150, height: 150, borderRadius: 8, border: `1px solid ${T.line}`, background: '#fff', cursor: 'grab', touchAction: 'none' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 18, height: 18, borderRadius: 4, background: wellHex, border: '1px solid #333' }} />
-            <span style={{ fontSize: 10, color: '#aaa', fontFamily: 'monospace' }}>{wellHex}</span>
+            <span style={{ width: 18, height: 18, borderRadius: 4, background: wellHex, border: `1px solid ${T.line}` }} />
+            <span className="cp-num" style={{ fontSize: T.label, color: T.muted }}>{wellHex}</span>
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
-            <MiniBtn onClick={well.loadBrush}>To brush</MiniBtn>
-            <MiniBtn onClick={() => addSwatch(wellHex)}>+ Palette</MiniBtn>
-            <MiniBtn onClick={well.clear}>Clear</MiniBtn>
+            <MiniBtn onClick={well.loadBrush} style={{ flex: 1 }}>To brush</MiniBtn>
+            <MiniBtn onClick={() => addSwatch(wellHex)} style={{ flex: 1 }}>+ Palette</MiniBtn>
+            <MiniBtn onClick={well.clear} style={{ flex: 1 }}>Clear</MiniBtn>
           </div>
-          <div style={{ fontSize: 9, color: '#555', lineHeight: 1.4 }}>Click pigments below to drop them in, then drag to knead.</div>
+          <Hint>Click pigments below to drop them in, then drag to knead.</Hint>
         </div>
       </div>
 
       {/* Brush colour readout */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <span style={{ fontSize: 10, color: '#888' }}>Brush</span>
-        <span style={{ width: 22, height: 22, borderRadius: 6, background: brushHex, border: '1px solid #333' }} />
-        <span style={{ fontSize: 11, color: '#aaa', fontFamily: 'monospace' }}>{brushHex}</span>
+        <FieldLabel>Brush</FieldLabel>
+        <span style={{ width: 22, height: 22, borderRadius: 6, background: brushHex, border: `1px solid ${T.line}` }} />
+        <span className="cp-num" style={{ fontSize: T.body, color: T.muted }}>{brushHex}</span>
         {activeHex && (
           <MiniBtn onClick={() => selectHex(activeHex)}>Use selected</MiniBtn>
         )}
@@ -326,7 +323,7 @@ export default function Mixer() {
 
       {/* Pigment tray */}
       <div>
-        <div style={{ fontSize: 9, color: '#666', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Pigments — click to load brush · double-click to drop in well</div>
+        <div className="cp-micro" style={{ marginBottom: 5 }}>Pigments — click to load brush · double-click to drop in well</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
           {PIGMENTS.map(p => (
             <span key={p.id} onDoubleClick={() => addToWell(makePaint(p.hex, pigmentTraits(p)), p.hex)}>
@@ -340,7 +337,7 @@ export default function Mixer() {
       {/* Palette colours as paints */}
       {swatches.length > 0 && (
         <div>
-          <div style={{ fontSize: 9, color: '#666', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Your palette</div>
+          <div className="cp-micro" style={{ marginBottom: 5 }}>Your palette</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {swatches.map(sw => (
               <span key={sw.id} onDoubleClick={() => addToWell(makePaint(sw.hex), sw.hex)}>
@@ -352,8 +349,8 @@ export default function Mixer() {
       )}
 
       {/* Brush settings */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, borderTop: '1px solid #1e1e24', paddingTop: 10 }}>
-        <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>Brush</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, borderTop: `1px solid ${T.line}`, paddingTop: 10 }}>
+        <div className="cp-micro">Brush</div>
         <NumberSlider label="Size" min={3} max={70} step={1} value={size} onChange={setSize} accent={ACCENT} suffix="px" labelWidth={70} />
         <NumberSlider label="Flow" min={0.05} max={1} step={0.01} value={flow} onChange={setFlow} accent={ACCENT} labelWidth={70} />
         <NumberSlider label="Pigment load" min={0.2} max={3} step={0.05} value={load} onChange={setLoad} accent={ACCENT} labelWidth={70} />
@@ -368,10 +365,10 @@ export default function Mixer() {
         )}
       </div>
 
-      <div style={{ fontSize: 10, color: '#555', lineHeight: 1.5 }}>
-        <b style={{ color: '#888' }}>Watercolor</b> flows and blooms while wet; <b style={{ color: '#888' }}>Oil</b> stays put and builds up.
-        Alt-click or <b style={{ color: '#888' }}>Pick</b> samples a colour into your palette.
-      </div>
+      <Hint style={{ margin: 0 }}>
+        <b style={{ color: T.muted }}>Watercolor</b> flows and blooms while wet; <b style={{ color: T.muted }}>Oil</b> stays put and builds up.
+        Alt-click or <b style={{ color: T.muted }}>Pick</b> samples a colour into your palette.
+      </Hint>
     </div>
   )
 }
@@ -381,42 +378,26 @@ function ToolBar({ tool, setTool, medium, setMedium, onClear }) {
     <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
       <Seg options={[['watercolor', 'Watercolor'], ['oil', 'Oil']]} value={medium} onChange={setMedium} />
       <Seg options={[['paint', 'brush', 'Paint'], ['smudge', 'gesture', 'Smudge'], ['pick', 'colorize', 'Pick']]} value={tool} onChange={setTool} icons />
-      <button onClick={onClear} title="Clear the canvas" style={{
-        display: 'flex', alignItems: 'center', gap: 5, background: '#15151c', border: '1px solid #2a2a35',
-        borderRadius: 5, color: '#888', padding: '4px 9px', fontSize: 11, cursor: 'pointer',
-      }}><Icon name="delete" size={13} /> Clear</button>
+      <MiniBtn onClick={onClear} title="Clear the canvas"><Icon name="delete" size={13} /> Clear</MiniBtn>
     </div>
   )
 }
 
 function Seg({ options, value, onChange, icons }) {
   return (
-    <div style={{ display: 'flex', gap: 2, background: '#0a0a0c', borderRadius: 6, padding: 2 }}>
+    <div style={{ display: 'flex', gap: 2, background: T.panel, borderRadius: 6, padding: 2 }}>
       {options.map(opt => {
         const [val, a, b] = opt
         const label = icons ? b : a
         const icon = icons ? a : null
-        const on = value === val
         return (
-          <button key={val} onClick={() => onChange(val)} style={{
-            display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px',
-            background: on ? '#2d1a5e' : 'transparent', border: `1px solid ${on ? ACCENT : 'transparent'}`,
-            borderRadius: 4, color: on ? '#c4b5fd' : '#777', fontSize: 11, cursor: 'pointer',
-          }}>{icon && <Icon name={icon} size={13} />}{label}</button>
+          <ModeChip key={val} active={value === val} onClick={() => onChange(val)} grow={false}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              {icon && <Icon name={icon} size={13} />}{label}
+            </span>
+          </ModeChip>
         )
       })}
     </div>
-  )
-}
-
-function MiniBtn({ children, onClick }) {
-  return (
-    <button onClick={onClick} style={{
-      flex: 1, background: '#1a1a22', border: '1px solid #2a2a35', borderRadius: 4,
-      color: '#999', padding: '4px 6px', fontSize: 10, cursor: 'pointer', whiteSpace: 'nowrap',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.color = '#c4b5fd' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a35'; e.currentTarget.style.color = '#999' }}
-    >{children}</button>
   )
 }

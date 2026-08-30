@@ -1,9 +1,16 @@
 import { useState } from 'react'
 import { deltaE, contrast, inSrgbGamut, gamutMap, toHex, toOklch, oklchToHex } from '../../lib/color.js'
 import { getState, updateSwatch } from './store.js'
+import { T, Btn, MiniBtn, Card, Body, Hint, Badge } from './panelUi.jsx'
 
+// Returns the fixes it found AND the checks it could not run. The second half
+// matters: the contrast pass needs a swatch tagged `white` or `black` to grade
+// against, and when the palette has neither it used to skip that pass in silence
+// and still report "✓ No issues found" — a green tick for work that never
+// happened. A check that didn't run is now reported as not having run.
 function runAutoFix(swatches) {
   const fixes = []
+  const skipped = []
   const processed = new Set()
 
   // 1. Snap near-duplicates (ΔE < 1)
@@ -36,12 +43,17 @@ function runAutoFix(swatches) {
     }
   }
 
-  // 3. Check contrast against designated background (role 'white' or 'black')
+  // 3. Check contrast against the designated background
   const bg = swatches.find(s => s.role === 'white') ?? swatches.find(s => s.role === 'black')
-  if (bg) {
-    for (const sw of swatches) {
+  const graded = swatches.filter(s => s.role === 'accent' || s.role === 'main' || s.role === 'pop')
+
+  if (!bg) {
+    skipped.push('Contrast was not checked — no swatch is tagged with the "white" or "black" role, so there is no background to grade against. Set a role on the swatch that acts as your background.')
+  } else if (!graded.length) {
+    skipped.push('Contrast was not checked — no swatch is tagged "main", "accent" or "pop", so nothing was treated as foreground.')
+  } else {
+    for (const sw of graded) {
       if (sw.id === bg.id || processed.has(sw.id)) continue
-      if (sw.role !== 'accent' && sw.role !== 'main' && sw.role !== 'pop') continue
       const ratio = contrast(sw.hex, bg.hex)
       if (ratio < 4.5) {
         // Nudge L until contrast passes or we hit a limit
@@ -52,17 +64,14 @@ function runAutoFix(swatches) {
           const dir = bgL > 0.5 ? -1 : 1
           const testL = Math.max(0, Math.min(1, l + dir * step * 0.05))
           const testHex = oklchToHex(testL, c, h)
-          if (contrast(testHex, bg.hex) >= 4.5) {
-            bestL = testL
-            break
-          }
+          if (contrast(testHex, bg.hex) >= 4.5) { bestL = testL; break }
         }
         const newHex = oklchToHex(bestL, c, h)
         if (newHex !== sw.hex) {
           fixes.push({
             id: sw.id,
             type: 'contrast',
-            description: `"${sw.name || sw.hex}" has low contrast (${ratio.toFixed(1)}:1) against background — adjusted lightness`,
+            description: `"${sw.name || sw.hex}" has low contrast (${ratio.toFixed(1)}:1) against "${bg.name || bg.hex}" — adjusted lightness`,
             newHex,
           })
         }
@@ -70,16 +79,17 @@ function runAutoFix(swatches) {
     }
   }
 
-  return fixes
+  const ran = ['near-duplicates', 'sRGB gamut', ...(skipped.length ? [] : ['contrast'])]
+  return { fixes, skipped, ran }
 }
 
 export default function AutoFix() {
-  const [fixes, setFixes] = useState(null)
+  const [result, setResult] = useState(null)
   const [accepted, setAccepted] = useState(new Set())
 
   function analyze() {
     const { swatches } = getState()
-    setFixes(runAutoFix(swatches))
+    setResult(runAutoFix(swatches))
     setAccepted(new Set())
   }
 
@@ -92,75 +102,83 @@ export default function AutoFix() {
   }
 
   function applySelected() {
-    for (const fix of fixes) {
-      if (accepted.has(fix.id)) {
-        updateSwatch(fix.id, { hex: fix.newHex })
-      }
+    for (const fix of result.fixes) {
+      if (accepted.has(fix.id)) updateSwatch(fix.id, { hex: fix.newHex })
     }
-    setFixes(null)
+    setResult(null)
   }
 
-  if (!fixes) {
+  if (!result) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <p style={{ fontSize: 11, color: '#888', margin: 0 }}>
-          Runs a pass over the palette: snap near-duplicates, gamut-map out-of-sRGB colors, nudge low-contrast swatches.
-        </p>
-        <Btn onClick={analyze}>Analyze palette</Btn>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 620 }}>
+        <Body>
+          Runs three passes over the palette: snap near-duplicates, gamut-map colours
+          outside sRGB, and nudge low-contrast swatches until they reach AA.
+        </Body>
+        <Hint>
+          The contrast pass grades against whichever swatch you've tagged
+          "white" or "black". Without one it can't run, and will say so.
+        </Hint>
+        <Btn variant="primary" onClick={analyze} style={{ alignSelf: 'flex-start' }}>
+          Analyse palette
+        </Btn>
       </div>
     )
   }
 
-  if (!fixes.length) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ fontSize: 12, color: '#22c55e' }}>✓ No issues found.</div>
-        <Btn onClick={() => setFixes(null)} secondary>Done</Btn>
-      </div>
-    )
-  }
+  const { fixes, skipped, ran } = result
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ fontSize: 11, color: '#888' }}>{fixes.length} suggestion{fixes.length !== 1 ? 's' : ''}</div>
-      {fixes.map(fix => (
-        <div key={fix.id} style={{
-          display: 'flex', gap: 8, alignItems: 'flex-start',
-          background: '#151520', borderRadius: 6, padding: 8,
-          border: `1px solid ${accepted.has(fix.id) ? '#2a5a8f' : '#2a2a35'}`,
-        }}>
-          <input type="checkbox" checked={accepted.has(fix.id)} onChange={() => toggle(fix.id)}
-            style={{ marginTop: 2, accentColor: '#5ab4ff' }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 10, color: '#5ab4ff', textTransform: 'uppercase', marginBottom: 2 }}>
-              {fix.type}
-            </div>
-            <div style={{ fontSize: 11, color: '#ccc' }}>{fix.description}</div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
-              <div style={{ fontSize: 10, color: '#888' }}>→</div>
-              <div style={{ width: 16, height: 16, borderRadius: 3, background: fix.newHex, border: '1px solid #333' }} />
-              <div style={{ fontSize: 10, color: '#888', fontFamily: 'monospace' }}>{fix.newHex}</div>
-            </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 620 }}>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <Badge tone={fixes.length ? 'partial' : skipped.length ? 'neutral' : 'pass'}>
+          {fixes.length
+            ? `${fixes.length} suggestion${fixes.length === 1 ? '' : 's'}`
+            : 'Nothing to fix'}
+        </Badge>
+        <Hint>Checked: {ran.join(' · ')}</Hint>
+      </div>
+
+      {/* An unrun check is stated plainly rather than folded into a pass. */}
+      {skipped.map((note, i) => (
+        <Card key={i} style={{ borderColor: 'rgba(251,191,36,0.4)' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <Badge tone="partial">Not checked</Badge>
+            <Body style={{ flex: 1 }}>{note}</Body>
           </div>
-        </div>
+        </Card>
       ))}
-      <div style={{ display: 'flex', gap: 6 }}>
-        <Btn onClick={applySelected} disabled={!accepted.size}>Apply selected ({accepted.size})</Btn>
-        <Btn onClick={() => setFixes(null)} secondary>Cancel</Btn>
+
+      {fixes.map(fix => (
+        <Card key={fix.id} tone={accepted.has(fix.id) ? 'accent' : undefined}>
+          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer' }}>
+            <input type="checkbox" checked={accepted.has(fix.id)} onChange={() => toggle(fix.id)}
+              style={{ marginTop: 3, flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="cp-micro" style={{ color: T.accentText, marginBottom: 3 }}>{fix.type}</div>
+              <Body>{fix.description}</Body>
+              <div style={{ display: 'flex', gap: 7, marginTop: 6, alignItems: 'center' }}>
+                <span style={{ fontSize: T.label, color: T.muted }}>→</span>
+                <span style={{ width: 18, height: 18, borderRadius: 4, background: fix.newHex, border: `1px solid ${T.line}` }} />
+                <span className="cp-num" style={{ fontSize: T.label, color: T.muted }}>{fix.newHex}</span>
+              </div>
+            </div>
+          </label>
+        </Card>
+      ))}
+
+      <div style={{ display: 'flex', gap: 8 }}>
+        {fixes.length > 0 && (
+          <>
+            <Btn variant="primary" onClick={applySelected} disabled={!accepted.size}>
+              Apply selected ({accepted.size})
+            </Btn>
+            <MiniBtn onClick={() => setAccepted(new Set(fixes.map(f => f.id)))}>Select all</MiniBtn>
+          </>
+        )}
+        <MiniBtn onClick={() => setResult(null)}>{fixes.length ? 'Cancel' : 'Done'}</MiniBtn>
       </div>
     </div>
-  )
-}
-
-function Btn({ children, onClick, secondary, disabled }) {
-  return (
-    <button onClick={onClick} disabled={disabled} style={{
-      background: secondary || disabled ? 'transparent' : '#1e3a5f',
-      border: `1px solid ${secondary || disabled ? '#333' : '#2a5a8f'}`,
-      borderRadius: 5, color: disabled ? '#444' : secondary ? '#888' : '#5ab4ff',
-      padding: '5px 12px', fontSize: 11, cursor: disabled ? 'default' : 'pointer',
-    }}>
-      {children}
-    </button>
   )
 }

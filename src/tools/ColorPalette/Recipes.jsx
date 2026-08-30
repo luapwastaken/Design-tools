@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { oklchToHex, contrast, toOklch, parseColor } from '../../lib/color.js'
 import { addSwatch, usePalette } from './store.js'
 import Icon from '../../components/Icon.jsx'
-import { Section, ACCENT } from './panelUi.jsx'
+import { Section, ACCENT, T, MONO, Btn } from './panelUi.jsx'
 
 // ── Grounded colour strategy, not guesswork ───────────────────────────────────
 //
@@ -293,53 +293,56 @@ export default function Recipes() {
 
       {/* ── Pickers ──────────────────────────────────────────────────────────── */}
       <Picker label="Industry" hint={`${indIdx + 1} / ${INDUSTRIES.length} · ${industry.group}`}>
-        <button onClick={() => stepIndustry(-1)} style={stepStyle} title="Previous">‹</button>
-        <select value={indId} onChange={e => setIndId(e.target.value)} onWheel={e => stepIndustry(e.deltaY > 0 ? 1 : -1)} style={{ ...selectStyle, flex: 1 }}>
+        <button onClick={() => stepIndustry(-1)} className="cp-btn" style={stepBox} title="Previous">‹</button>
+        {/* No onWheel here. Scrolling the panel with the pointer over this select
+            used to change the industry and regenerate the whole brief — you lost
+            your work by scrolling past it. The ‹ › buttons step it deliberately. */}
+        <select value={indId} onChange={e => setIndId(e.target.value)} className="cp-select" style={{ flex: 1 }}>
           {Object.entries(GROUPS).map(([g, items]) => (
             <optgroup key={g} label={g}>{items.map(i => <option key={i.id} value={i.id}>{i.label}</option>)}</optgroup>
           ))}
         </select>
-        <button onClick={() => stepIndustry(1)} style={stepStyle} title="Next">›</button>
+        <button onClick={() => stepIndustry(1)} className="cp-btn" style={stepBox} title="Next">›</button>
       </Picker>
 
       <Picker label="Style" hint={`${style.group}`}>
-        <button onClick={() => stepStyleSel(-1)} style={stepStyle} title="Previous">‹</button>
-        <select value={styleId} onChange={e => setStyleId(e.target.value)} onWheel={e => stepStyleSel(e.deltaY > 0 ? 1 : -1)} style={{ ...selectStyle, flex: 1 }}>
+        <button onClick={() => stepStyleSel(-1)} className="cp-btn" style={stepBox} title="Previous">‹</button>
+        <select value={styleId} onChange={e => setStyleId(e.target.value)} className="cp-select" style={{ flex: 1 }}>
           {Object.entries(STYLE_GROUPS).map(([g, items]) => (
             <optgroup key={g} label={g}>{items.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</optgroup>
           ))}
         </select>
-        <button onClick={() => stepStyleSel(1)} style={stepStyle} title="Next">›</button>
+        <button onClick={() => stepStyleSel(1)} className="cp-btn" style={stepBox} title="Next">›</button>
       </Picker>
 
       {/* ── Brand-colour seed ────────────────────────────────────────────────── */}
       <div>
-        <div style={labelRow}>Brand color <span style={{ color: '#3d3d4a' }}>{brand ? 'anchored' : 'optional'}</span></div>
+        <div style={labelRow}>Brand color <span style={{ color: T.faint }}>{brand ? 'anchored' : 'optional'}</span></div>
         <div style={{ display: 'flex', gap: 5, alignItems: 'stretch' }}>
-          <span style={{ width: 28, borderRadius: 5, border: '1px solid #2a2a38', background: brand ? brandHex : 'transparent', flexShrink: 0 }} />
-          <input value={brandHex} onChange={e => setBrandHex(e.target.value)} placeholder="#3a7bff" style={{ ...selectStyle, flex: 1, fontFamily: 'monospace' }} />
-          <button onClick={useActive} disabled={!activeHex} style={{ ...stepStyle, width: 'auto', padding: '0 8px', fontSize: 10, color: activeHex ? '#9d7dea' : '#444' }} title="Use active swatch">Active</button>
-          {brandHex && <button onClick={() => setBrandHex('')} style={{ ...stepStyle, width: 28 }} title="Clear"><Icon name="close" size={12} /></button>}
+          <span style={{ width: 28, borderRadius: 5, border: `1px solid ${T.line}`, background: brand ? brandHex : 'transparent', flexShrink: 0 }} />
+          <input value={brandHex} onChange={e => setBrandHex(e.target.value)} placeholder="#3a7bff" className="cp-input cp-input--mono" style={{ flex: 1 }} />
+          <button onClick={useActive} disabled={!activeHex} className="cp-btn" style={{ ...stepBox, width: 'auto', padding: '0 10px', fontSize: 12 }} title="Use active swatch">Active</button>
+          {brandHex && <button onClick={() => setBrandHex('')} className="cp-btn" style={{ ...stepBox, width: 30 }} title="Clear"><Icon name="close" size={12} /></button>}
         </div>
       </div>
 
       {/* ── Keyword tags ─────────────────────────────────────────────────────── */}
       <div>
-        <div style={labelRow}>Keywords {tags.length > 0 && <span style={{ color: '#3d3d4a' }}>{tags.length} active</span>}</div>
+        <div style={labelRow}>Keywords {tags.length > 0 && <span style={{ color: T.faint }}>{tags.length} active</span>}</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
           {TAGS.map(t => {
             const on = tags.includes(t.id)
             return (
-              <button key={t.id} onClick={() => toggleTag(t.id)} style={{
-                background: on ? '#2d1a5e' : '#131318', border: `1px solid ${on ? '#6d3fbe' : '#222230'}`,
-                borderRadius: 12, color: on ? '#c4b5fd' : '#666', padding: '3px 9px', fontSize: 10, cursor: 'pointer',
-              }}>{t.label}</button>
+              <button key={t.id} type="button" onClick={() => toggleTag(t.id)}
+                aria-pressed={on}
+                className={on ? 'cp-chip is-active' : 'cp-chip'}
+                style={{ borderRadius: 12 }}>{t.label}</button>
             )
           })}
         </div>
       </div>
 
-      <div style={{ fontSize: 10, color: '#7a7a8a', lineHeight: 1.5 }}>{industry.why} <span style={{ color: '#555' }}>· {style.why}</span></div>
+      <div style={{ fontSize: 13, color: T.textDim, lineHeight: 1.5 }}>{industry.why} <span style={{ color: T.muted }}>· {style.why}</span></div>
 
       {/* ── Variation buttons ────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 6 }}>
@@ -350,7 +353,7 @@ export default function Recipes() {
       {/* ── Matched light + dark palettes (colours are the focus) ─────────────── */}
       <ThemeStrip title="Light" roles={light} locks={locks} onLock={toggleLock} />
       <ThemeStrip title="Dark"  roles={dark}  locks={locks} onLock={toggleLock} />
-      <div style={{ fontSize: 9, color: '#3d3d4a' }}>Click Primary / Secondary / Accent to lock — Vary keeps locked colors.</div>
+      <div style={{ fontSize: 12, color: T.faint }}>Click Primary / Secondary / Accent to lock — Vary keeps locked colors.</div>
 
       <div style={{ display: 'flex', gap: 6 }}>
         <AddBtn onClick={() => addSystem(light, 'Light')}>+ Add light</AddBtn>
@@ -362,12 +365,12 @@ export default function Recipes() {
         <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
           {['light', 'dark'].map(p => (
             <button key={p} onClick={() => setPreview(p)} style={{
-              flex: 1, background: preview === p ? '#2d1a5e' : '#131318', border: `1px solid ${preview === p ? '#6d3fbe' : '#222230'}`,
-              borderRadius: 5, color: preview === p ? '#c4b5fd' : '#666', padding: '4px 0', fontSize: 10, cursor: 'pointer', textTransform: 'capitalize',
+              flex: 1, background: preview === p ? T.accentSoft : T.control, border: `1px solid ${preview === p ? T.accentLine : T.line}`,
+              borderRadius: 5, color: preview === p ? T.accentText : T.muted, padding: '5px 0', fontSize: 12, cursor: 'pointer', textTransform: 'capitalize',
             }}>{p}</button>
           ))}
         </div>
-        <div style={{ background: bg, borderRadius: 8, padding: 16, border: '1px solid #222230' }}>
+        <div style={{ background: bg, borderRadius: 8, padding: 16, border: `1px solid ${T.line}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <span style={{ width: 22, height: 22, borderRadius: 6, background: role('primary').hex }} />
             <span style={{ color: textHex, fontSize: 14, fontWeight: 700, flex: 1 }}>Aa Brand</span>
@@ -393,7 +396,7 @@ function ThemeStrip({ title, roles, locks, onLock }) {
   return (
     <div>
       <div style={labelRow}>{title}</div>
-      <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', height: 84, border: '1px solid #222230' }}>
+      <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', height: 92, border: `1px solid ${T.line}` }}>
         {roles.map(r => {
           const light = isLightHex(r.hex)
           const fg = light ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)'
@@ -403,8 +406,8 @@ function ThemeStrip({ title, roles, locks, onLock }) {
               style={{ flex: 1, background: r.hex, position: 'relative', cursor: r.chromatic ? 'pointer' : 'default' }}>
               {locked && <div style={{ position: 'absolute', top: 5, left: '50%', transform: 'translateX(-50%)' }}><Icon name="lock" size={11} color={fg} /></div>}
               <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, textAlign: 'center', color: fg }}>
-                <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 0.3 }}>{r.name}</div>
-                <div style={{ fontSize: 7.5, fontFamily: 'monospace', opacity: 0.85 }}>{r.hex}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.3 }}>{r.name}</div>
+                <div style={{ fontSize: 11, fontFamily: MONO, opacity: 0.85 }}>{r.hex}</div>
               </div>
             </div>
           )
@@ -417,7 +420,7 @@ function ThemeStrip({ title, roles, locks, onLock }) {
 function Picker({ label, hint, children }) {
   return (
     <div>
-      <div style={labelRow}>{label}{hint && <span style={{ color: '#3d3d4a' }}>{hint}</span>}</div>
+      <div style={labelRow}>{label}{hint && <span style={{ color: T.faint }}>{hint}</span>}</div>
       <div style={{ display: 'flex', gap: 5, alignItems: 'stretch' }}>{children}</div>
     </div>
   )
@@ -425,28 +428,17 @@ function Picker({ label, hint, children }) {
 
 function VaryBtn({ onClick, children, primary }) {
   return (
-    <button onClick={onClick} style={{
-      flex: 1, background: primary ? '#1a1030' : '#131318', border: `1px solid ${primary ? '#3d2a7a' : '#222230'}`,
-      borderRadius: 6, color: primary ? '#9d7dea' : '#888', padding: '7px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = '#6d3fbe'; e.currentTarget.style.color = '#c4b5fd' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = primary ? '#3d2a7a' : '#222230'; e.currentTarget.style.color = primary ? '#9d7dea' : '#888' }}
-    >{children}</button>
+    <Btn variant={primary ? 'primary' : 'default'} onClick={onClick}
+      style={{ flex: 1, padding: '9px 0', fontWeight: 600 }}>{children}</Btn>
   )
 }
 
 function AddBtn({ onClick, children }) {
   return (
-    <button onClick={onClick} style={{
-      flex: 1, background: '#1a1030', border: '1px solid #3d2a7a', borderRadius: 6,
-      color: '#9d7dea', padding: '8px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.background = '#2d1a5e'; e.currentTarget.style.color = '#c4b5fd' }}
-      onMouseLeave={e => { e.currentTarget.style.background = '#1a1030'; e.currentTarget.style.color = '#9d7dea' }}
-    >{children}</button>
+    <Btn variant="primary" onClick={onClick}
+      style={{ flex: 1, padding: '10px 0', fontWeight: 600 }}>{children}</Btn>
   )
 }
 
-const labelRow = { display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1 }
-const selectStyle = { background: '#111118', border: '1px solid #2a2a38', borderRadius: 5, color: '#b0a8d8', padding: '6px 8px', fontSize: 11, outline: 'none', cursor: 'pointer', minWidth: 0 }
-const stepStyle = { width: 30, background: '#131318', border: '1px solid #222230', borderRadius: 5, color: '#888', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
+const labelRow = { display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 11, color: T.muted, textTransform: 'uppercase', letterSpacing: 1 }
+const stepBox = { width: 30, padding: 0, fontSize: 15, flexShrink: 0 }

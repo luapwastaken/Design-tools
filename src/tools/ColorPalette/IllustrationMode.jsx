@@ -1,29 +1,45 @@
-import { useState } from 'react'
 import ShadowHighlight from './ShadowHighlight.jsx'
 import Mixer from './Mixer.jsx'
 import MaterialPanel from './MaterialPanel.jsx'
+import { ModeChip, T } from './panelUi.jsx'
+import { useUi, setUi } from './uiState.js'
 
-const ILL_PANELS = ['Shadow/Highlight', 'Materials', 'Mixer']
+const PANELS = [
+  { id: 'Shadow/Highlight', El: ShadowHighlight },
+  { id: 'Materials',        El: MaterialPanel },
+  { id: 'Mixer',            El: Mixer },
+]
 
 export default function IllustrationMode() {
-  const [panel, setPanel] = useState('Shadow/Highlight')
+  const { illPanel } = useUi()
+  const current = PANELS.some(p => p.id === illPanel) ? illPanel : PANELS[0].id
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', padding: '6px 10px', gap: 4, borderBottom: '1px solid #1e1e24', flexShrink: 0 }}>
-        {ILL_PANELS.map(p => (
-          <button key={p} onClick={() => setPanel(p)} style={{
-            background: panel === p ? '#1e1e2e' : 'transparent',
-            border: `1px solid ${panel === p ? '#3d2a7a' : 'transparent'}`,
-            borderRadius: 4, color: panel === p ? '#e0d8ff' : '#555',
-            padding: '3px 10px', fontSize: 10, cursor: 'pointer',
-          }}>{p}</button>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      <nav aria-label="Illustration panels" style={{
+        display: 'flex', padding: '8px 12px', gap: 6,
+        borderBottom: `1px solid ${T.line}`, flexShrink: 0,
+      }}>
+        {PANELS.map(p => (
+          <ModeChip key={p.id} active={current === p.id}
+            onClick={() => setUi({ illPanel: p.id })} grow={false}>{p.id}</ModeChip>
         ))}
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
-        {panel === 'Shadow/Highlight' && <ShadowHighlight />}
-        {panel === 'Materials' && <MaterialPanel />}
-        {panel === 'Mixer' && <Mixer />}
+      </nav>
+
+      {/* Kept mounted, hidden when inactive — same reason as DesignMode. Mixer
+          alone holds 13 pieces of state that used to evaporate on every tab
+          click, and the panel choice now survives leaving the tool entirely. */}
+      <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
+        {PANELS.map(p => (
+          <div key={p.id}
+            hidden={current !== p.id}
+            style={current === p.id
+              ? { height: '100%', overflowY: 'auto', padding: '12px 14px' }
+              : undefined}
+          >
+            <p.El />
+          </div>
+        ))}
       </div>
     </div>
   )

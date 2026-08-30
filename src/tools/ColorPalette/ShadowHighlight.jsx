@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { oklchToHex, toOklch, oklchPixel } from '../../lib/color.js'
 import { usePalette, addSwatch } from './store.js'
 import { NumberSlider, EditableNumber } from '../../components/NumberField.jsx'
-
-const ACCENT = '#5ab4ff'
+import { AddBtn, ACCENT, T } from './panelUi.jsx'
 
 export default function ShadowHighlight() {
   const { swatches, active } = usePalette()
@@ -16,7 +15,7 @@ export default function ShadowHighlight() {
   const [hueShift, setHueShift] = useState(0.25)   // how much to shift toward ambient hue
 
   if (!sw) {
-    return <div style={{ color: '#666', fontSize: 12 }}>Select a swatch to generate shadow/highlight ramp.</div>
+    return <div style={{ color: T.faint, fontSize: T.body }}>Select a swatch to generate shadow/highlight ramp.</div>
   }
 
   const { l, c, h } = sw.oklch
@@ -46,9 +45,9 @@ export default function ShadowHighlight() {
           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
             <div style={{
               width: '100%', aspectRatio: '1 / 1.2', borderRadius: 5, background: hex,
-              border: i === 2 ? '2px solid #5ab4ff' : '1px solid #333',
+              border: i === 2 ? `2px solid ${T.accent}` : `1px solid ${T.line}`,
             }} />
-            <div style={{ fontSize: 8, color: '#666', fontFamily: 'monospace' }}>{hex.slice(1)}</div>
+            <div className="cp-num" style={{ fontSize: T.micro, color: T.faint }}>{hex.slice(1)}</div>
           </div>
         ))}
       </div>
@@ -62,15 +61,9 @@ export default function ShadowHighlight() {
         <HueChip label="Light hue" value={lightHue} onChange={setLightHue} />
       </div>
 
-      <button
-        onClick={() => hexes.forEach((hex, i) => { if (i !== 2) addSwatch(hex, 'freeform', { name: stopNames[i] }) })}
-        style={{
-          background: '#1e3a5f', border: '1px solid #2a5a8f', borderRadius: 5,
-          color: '#5ab4ff', padding: '5px 12px', fontSize: 11, cursor: 'pointer',
-        }}
-      >
+      <AddBtn onClick={() => hexes.forEach((hex, i) => { if (i !== 2) addSwatch(hex, 'freeform', { name: stopNames[i] }) })}>
         Add ramp to palette
-      </button>
+      </AddBtn>
     </div>
   )
 }
@@ -80,12 +73,12 @@ function HueChip({ label, value, onChange }) {
   const chipColor = `rgb(${r},${g},${b})`
   return (
     <div style={{ flex: 1 }}>
-      <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: T.label, color: T.muted, marginBottom: 4 }}>{label}</div>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <div style={{ width: 16, height: 16, borderRadius: 3, background: chipColor, border: '1px solid #333', flexShrink: 0 }} />
+        <div style={{ width: 16, height: 16, borderRadius: 3, background: chipColor, border: `1px solid ${T.line}`, flexShrink: 0 }} />
         <input type="range" min={0} max={359} value={value} onChange={e => onChange(+e.target.value)}
           style={{ flex: 1, accentColor: chipColor }} />
-        <EditableNumber value={value} onChange={onChange} min={0} max={359} step={1} accent={ACCENT} suffix="°" width={32} color="#ccc" />
+        <EditableNumber value={value} onChange={onChange} min={0} max={359} step={1} accent={ACCENT} suffix="°" width={32} color={T.textDim} />
       </div>
     </div>
   )
