@@ -71,7 +71,9 @@ export default function InContext() {
   const toggleScene = id => setScenes({ ...live, [id]: !live[id] })
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 780 }}>
+    <div className="cp-incontext">
+      <div className="cp-incontext-grid">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
 
       {/* ── Controls ─────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -103,6 +105,10 @@ export default function InContext() {
         <Mockup slots={dark.slots} series={seriesColors(swatches, dark.slots)} scenes={live}
           label="Dark" />
       )}
+        </div>
+
+        {/* ── Assignment and coverage, alongside the layout ──────────────── */}
+        <aside className="cp-incontext-aside" style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
 
       {/* ── Coverage ─────────────────────────────────────────────────────── */}
       <Section label="Palette coverage"
@@ -120,9 +126,8 @@ export default function InContext() {
                   background: used ? T.raised : 'transparent',
                   opacity: used ? 1 : 0.45,
                 }}>
-                <span style={{
+                <span className="cp-sw" style={{
                   width: 13, height: 13, borderRadius: '50%', background: sw.hex,
-                  border: `1px solid ${T.line}`,
                 }} />
                 <span className="cp-label" style={{ color: used ? T.textDim : T.faint }}>
                   {sw.name || sw.hex}
@@ -148,36 +153,43 @@ export default function InContext() {
           {SLOTS.map(key => {
             const s = light.slots[key]
             const isDerived = light.derived[key]
+            // Label above rather than beside: the column is narrow, and a
+            // fixed label gutter left the select too cramped to read a name in.
             return (
-              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <FieldLabel style={{ width: 82, flexShrink: 0 }}>{SLOT_LABELS[key]}</FieldLabel>
-                <span style={{
-                  width: 18, height: 18, borderRadius: 4, flexShrink: 0,
-                  background: s.hex, border: `1px solid ${T.line}`,
-                }} />
-                <Select
-                  value={overrides[key] ?? ''}
-                  aria-label={`${SLOT_LABELS[key]} colour`}
-                  onChange={e => setOverrides(o => {
-                    const next = { ...o }
-                    if (e.target.value) next[key] = e.target.value
-                    else delete next[key]
-                    return next
-                  })}
-                  style={{ flex: 1 }}>
-                  <option value="">
-                    {isDerived ? `Worked out — ${s.hex}` : `Chosen for you — ${s.name || s.hex}`}
-                  </option>
-                  {swatches.map(sw => (
-                    <option key={sw.id} value={sw.id}>{sw.name || sw.hex}</option>
-                  ))}
-                </Select>
-                {isDerived && <Badge tone="neutral" title="Not one of your swatches — derived from the background and text so it always reads">derived</Badge>}
+              <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                  <FieldLabel>{SLOT_LABELS[key]}</FieldLabel>
+                  <span className="cp-hint" style={{ fontSize: T.micro }}>
+                    {isDerived ? 'derived' : overrides[key] ? 'pinned' : 'chosen'}
+                  </span>
+                  <span style={{ flex: 1 }} />
+                  <span className="cp-num" style={{ fontSize: T.micro, color: T.faint }}>{s.hex}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="cp-sw" style={{ width: 22, height: 22, background: s.hex }} />
+                  <Select
+                    value={overrides[key] ?? ''}
+                    aria-label={`${SLOT_LABELS[key]} colour`}
+                    onChange={e => setOverrides(o => {
+                      const next = { ...o }
+                      if (e.target.value) next[key] = e.target.value
+                      else delete next[key]
+                      return next
+                    })}
+                    style={{ flex: 1, minWidth: 0, padding: '5px 6px', fontSize: T.label }}>
+                    <option value="">{isDerived ? 'Work it out for me' : 'Choose for me'}</option>
+                    {swatches.map(sw => (
+                      <option key={sw.id} value={sw.id}>{sw.name || sw.hex}</option>
+                    ))}
+                  </Select>
+                </div>
               </div>
             )
           })}
         </div>
       </Section>
+        </aside>
+      </div>
     </div>
   )
 }

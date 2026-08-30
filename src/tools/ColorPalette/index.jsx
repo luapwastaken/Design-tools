@@ -127,7 +127,7 @@ export default function ColorPalette() {
       }}>
         {activeSwatch && (
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <div style={{
+            <div className="cp-sw" style={{
               width: 44, height: 44, borderRadius: T.rLg, background: activeSwatch.hex,
               border: `2px solid ${T.accent}`, flexShrink: 0, ...colorFilter,
             }} />
@@ -436,7 +436,7 @@ function SwatchCard({ swatch, isActive, isSelected, colorFilter, onClick, onDrag
       title={`${swatch.name || 'Unnamed'} — ${swatch.hex}`}
       style={{ display: 'flex', flexDirection: 'column', gap: 5, cursor: 'pointer', flexShrink: 0, width: SWATCH_SZ }}
     >
-      <div style={{
+      <div className="cp-sw" style={{
         width: SWATCH_SZ, height: SWATCH_SZ,
         borderRadius: 10, background: swatch.hex,
         border, boxSizing: 'border-box', position: 'relative',

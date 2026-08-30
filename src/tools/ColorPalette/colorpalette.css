@@ -213,6 +213,58 @@
 .cp-hint  { font-size: 12px; color: var(--cp-faint); line-height: 1.5; }
 .cp-num   { font-family: var(--cp-mono); font-variant-numeric: tabular-nums; }
 
+/* ── Colour chips ─────────────────────────────────────────────────────────────
+ * A near-black swatch on a near-black panel disappears: the old 1px #26262f
+ * border is barely lighter than the fill, so #0d0d12 read as an empty box
+ * rather than as a colour. An inset translucent-white ring is visible against a
+ * dark fill and invisible against a light one, which is exactly the asymmetry
+ * this needs. Inset, so it never fights a border used to show selection. */
+.cp-sw {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* ── In-context two-column ────────────────────────────────────────────────────
+ * The mockup is tall and the assignment controls are short, so stacking them
+ * pushed the controls off the bottom of the drawer while a third of the panel
+ * sat empty. A container query rather than a media query: what matters is how
+ * wide the drawer is, which is the user's splitter, not the window. */
+.cp-incontext { container-type: inline-size; }
+
+.cp-incontext-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@container (min-width: 880px) {
+  .cp-incontext-grid { grid-template-columns: minmax(0, 1fr) 296px; }
+  /* Keeps the assignment reachable while scrolling a long stack of scenes. */
+  .cp-incontext-aside { position: sticky; top: 0; }
+}
+
+/* ── Finding columns ──────────────────────────────────────────────────────────
+ * Findings are prose, so widening them past a comfortable measure makes them
+ * harder to read, not easier — but a single column left a third of a wide
+ * drawer empty and pushed everything into a long scroll. Two columns keep the
+ * measure around 450px and halve the height. Container query again: the drawer
+ * width is the user's splitter, not the window. */
+.cp-cols { container-type: inline-size; }
+
+.cp-cols-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+@container (min-width: 1000px) {
+  .cp-cols-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* ── Range inputs ─────────────────────────────────────────────────────────── */
 .cp input[type="range"] { accent-color: var(--cp-accent); }
 .cp input[type="checkbox"] { accent-color: var(--cp-accent); width: 14px; height: 14px; }
