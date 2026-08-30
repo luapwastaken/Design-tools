@@ -30,8 +30,10 @@ export default function Report() {
       : { tone: 'pass', head: 'Sound, with refinements', body: `No structural problems. ${notes.length} thing${notes.length === 1 ? '' : 's'} worth a look, none of them blocking.` }
     : { tone: 'fail', head: `${issues.length} problem${issues.length === 1 ? '' : 's'} to fix`, body: 'These will show up in use — in greyscale, on press, or for anyone who has trouble with contrast.' }
 
+  // Findings are prose, so filling a wide drawer with them would hurt the
+  // measure. Two columns keep each around 450px and halve the scroll.
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 760 }}>
+    <div className="cp-cols" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       <div style={{
         display: 'flex', gap: 14, alignItems: 'flex-start',
@@ -47,15 +49,16 @@ export default function Report() {
           <Body>{verdict.body}</Body>
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          <Stat label="Colours" value={swatches.length} good />
-          <Stat label="Issues" value={issues.length} good={issues.length === 0} />
-          <Stat label="Notes" value={notes.length} good={notes.length === 0} />
+          <Stat label={swatches.length === 1 ? 'Colour' : 'Colours'} value={swatches.length} good />
+          <Stat label={issues.length === 1 ? 'Issue' : 'Issues'} value={issues.length} good={issues.length === 0} />
+          <Stat label={notes.length === 1 ? 'Note' : 'Notes'} value={notes.length} good={notes.length === 0} />
         </div>
       </div>
 
       {/* Every section reports, including the clean ones. A check that stays
           silent when it passes is indistinguishable from a check that never ran —
           which is exactly the failure AutoFix used to have. */}
+      <div className="cp-cols-inner" style={{ gap: 16 }}>
       {sections.map(sec => {
         const secIssues = sec.findings.filter(f => f.sev === 'issue')
         const secNotes = sec.findings.filter(f => f.sev === 'note')
@@ -82,10 +85,11 @@ export default function Report() {
           </Section>
         )
       })}
+      </div>
 
       <Hint>
         Reproduction is measured against the print profile set in the Reproduction
-        panel, matched to Riso inks. Harmony and the full accessibility breakdown
+        panel, matched to Riso inks. The critique in Structure and the full accessibility breakdown
         have their own panels — this only reports whether there's something there
         worth opening them for.
       </Hint>

@@ -34,9 +34,9 @@ export default function ValueStructure() {
 
       <Section label="The ramp" hint={`${rows.length} colours · ${Math.round(range * 100)}-point spread`}>
         <div style={{ display: 'flex', gap: 4 }}>
-          <ModeChip active={mode === 'both'} onClick={() => setMode('both')}>Side by side</ModeChip>
-          <ModeChip active={mode === 'grey'} onClick={() => setMode('grey')}>Greyscale only</ModeChip>
-          <ModeChip active={mode === 'colour'} onClick={() => setMode('colour')}>Colour only</ModeChip>
+          <ModeChip active={mode === 'both'} onClick={() => setMode('both')} grow={false}>Side by side</ModeChip>
+          <ModeChip active={mode === 'grey'} onClick={() => setMode('grey')} grow={false}>Greyscale only</ModeChip>
+          <ModeChip active={mode === 'colour'} onClick={() => setMode('colour')} grow={false}>Colour only</ModeChip>
         </div>
 
         {/* Sorted darkest to lightest, so uneven spacing and doubled-up values
@@ -91,10 +91,11 @@ export default function ValueStructure() {
 function Chip({ hex, grey }) {
   return (
     <span
+      className="cp-sw"
       title={grey ? `${hex} — value only` : hex}
       style={{
-        width: 30, height: 22, borderRadius: 4, flexShrink: 0,
-        background: hex, border: `1px solid ${T.line}`,
+        width: 30, height: 22,
+        background: hex,
         filter: grey ? 'grayscale(1)' : undefined,
       }}
     />

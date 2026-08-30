@@ -75,9 +75,8 @@ export default function Reproduction() {
               {rows.map(({ sw, cmyk, tac: t, rich, srgb, ink }) => (
                 <tr key={sw.id}>
                   <td style={cell}>
-                    <span style={{
-                      width: 24, height: 24, borderRadius: 4, display: 'block',
-                      background: sw.hex, border: `1px solid ${T.line}`,
+                    <span className="cp-sw" style={{
+                      width: 24, height: 24, display: 'block', background: sw.hex,
                     }} />
                   </td>
                   <td style={{ ...cell, maxWidth: 150 }}>
@@ -103,9 +102,8 @@ export default function Reproduction() {
                   <td style={{ ...cell, maxWidth: 160 }}>
                     {ink ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{
-                          width: 16, height: 16, borderRadius: 3, flexShrink: 0,
-                          background: ink.hex, border: `1px solid ${T.line}`,
+                        <span className="cp-sw" style={{
+                          width: 16, height: 16, background: ink.hex,
                         }} />
                         <span style={{
                           fontSize: T.label, color: T.textDim,

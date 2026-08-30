@@ -44,6 +44,7 @@ export default function Grade() {
             title={`Grade against ${s.name || s.hex}`}
             aria-label={`Grade against ${s.name || s.hex}`}
             aria-pressed={s.id === bg.id}
+            className="cp-sw"
             style={{
               width: 26, height: 26, borderRadius: 5, background: s.hex,
               border: `2px solid ${s.id === bg.id ? T.accent : T.line}`, cursor: 'pointer', padding: 0,
@@ -55,8 +56,8 @@ export default function Grade() {
       <div style={{ display: 'flex', gap: 8 }}>
         <Stat label="Pass AA" value={`${passAA}/${rows.length}`} good={passAA === rows.length} />
         <Stat label="Pass AA Large" value={`${passLarge}/${rows.length}`} good={passLarge === rows.length} />
-        <Stat label="Worst" value={isFinite(worst) ? worst.toFixed(1) : '—'} good={worst >= 4.5} />
-        <Stat label="Best" value={best ? best.toFixed(1) : '—'} good />
+        <Stat label="Worst" value={isFinite(worst) ? `${worst.toFixed(1)}:1` : '—'} good={worst >= 4.5} />
+        <Stat label="Best" value={best ? `${best.toFixed(1)}:1` : '—'} good />
       </div>
 
       {/* Per-swatch rows.
@@ -90,7 +91,7 @@ export default function Grade() {
               color: g.aaNormal ? T.ok : g.aaLarge ? T.warn : T.bad,
               fontSize: T.body, fontWeight: 600,
             }}>
-              {g.ratio.toFixed(2)}
+              {g.ratio.toFixed(2)}:1
             </span>
             <Badge tone={g.aaNormal ? 'pass' : g.aaLarge ? 'partial' : 'fail'}
               title={`${g.ratio.toFixed(2)}:1 — AA needs 4.5:1 for normal text, 3:1 for large`}>AA</Badge>

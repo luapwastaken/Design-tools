@@ -26,6 +26,13 @@ export const INK_LIBRARIES = [
 const pct = v => `${Math.round(v * 100)}%`
 const nameOf = sw => sw.name || sw.hex
 
+// Findings come out in the order the checks happen to run, which put "Good:
+// value range is fine" above three issues about colours colliding. Whatever is
+// wrong goes first — a reader who stops after one line should have read the
+// worst news, not the best.
+const RANK = { issue: 0, note: 1, good: 2 }
+const bySeverity = fs => [...fs].sort((a, b) => RANK[a.sev] - RANK[b.sev])
+
 // ── Value structure ───────────────────────────────────────────────────────────
 //
 // The squint test, made arithmetic. A palette lives or dies on its value
@@ -102,7 +109,7 @@ export function valueStructure(swatches) {
     })
   }
 
-  return { findings, rows, range, gaps, collisions }
+  return { findings: bySeverity(findings), rows, range, gaps, collisions }
 }
 
 // ── Reproduction ──────────────────────────────────────────────────────────────
@@ -138,7 +145,7 @@ export function reproduction(swatches, profileId, libraryId = 'riso') {
   if (overTac.length) {
     findings.push({
       sev: 'issue',
-      text: `${overTac.length} colour${overTac.length === 1 ? '' : 's'} exceed ${profile.name}'s ${profile.tac}% ink limit (${overTac.map(r => `${nameOf(r.sw)} at ${tac(r.cmyk)}%`).join(', ')}). Over the limit the sheet won't dry properly and ink offsets onto the next one.`,
+      text: `${overTac.length} colour${overTac.length === 1 ? '' : 's'} exceed${overTac.length === 1 ? 's' : ''} ${profile.name}'s ${profile.tac}% ink limit (${overTac.map(r => `${nameOf(r.sw)} at ${tac(r.cmyk)}%`).join(', ')}). Over the limit the sheet won't dry properly and ink offsets onto the next one.`,
     })
   } else {
     findings.push({ sev: 'good', text: `All colours sit within ${profile.name}'s ${profile.tac}% ink limit.` })
@@ -147,7 +154,7 @@ export function reproduction(swatches, profileId, libraryId = 'riso') {
   if (outOfSrgb.length) {
     findings.push({
       sev: 'issue',
-      text: `${outOfSrgb.map(r => nameOf(r.sw)).join(', ')} fall outside sRGB — they'll clip on most screens before they ever reach a press.`,
+      text: `${outOfSrgb.map(r => nameOf(r.sw)).join(', ')} ${outOfSrgb.length === 1 ? 'falls' : 'fall'} outside sRGB — ${outOfSrgb.length === 1 ? "it'll" : "they'll"} clip on most screens before ever reaching a press.`,
     })
   }
 
@@ -162,7 +169,7 @@ export function reproduction(swatches, profileId, libraryId = 'riso') {
   if (farFromInk.length) {
     findings.push({
       sev: 'note',
-      text: `${farFromInk.map(r => nameOf(r.sw)).join(', ')} have no close match in ${library.label} (nearest is ΔE ${farFromInk.map(r => r.ink.deltaE).join(', ')}). Reproducing them as spot colours means a custom mix.`,
+      text: `${farFromInk.map(r => nameOf(r.sw)).join(', ')} ${farFromInk.length === 1 ? 'has' : 'have'} no close match in ${library.label} (nearest is ΔE ${farFromInk.map(r => r.ink.deltaE).join(', ')}). Reproducing ${farFromInk.length === 1 ? 'it' : 'them'} as spot colours means a custom mix.`,
     })
   }
   if (closeToInk.length === rows.length && rows.length) {
@@ -172,7 +179,7 @@ export function reproduction(swatches, profileId, libraryId = 'riso') {
     })
   }
 
-  return { findings, rows, profile, library }
+  return { findings: bySeverity(findings), rows, profile, library }
 }
 
 // ── Role coverage ─────────────────────────────────────────────────────────────
@@ -217,7 +224,7 @@ export function roleCoverage(swatches) {
     findings.push({ sev: 'good', text: 'Roles cover a background, a primary and a restrained set of accents.' })
   }
 
-  return { findings, counts }
+  return { findings: bySeverity(findings), counts }
 }
 
 // ── Accessibility roll-up ─────────────────────────────────────────────────────
@@ -245,7 +252,7 @@ export function accessibilityRollup(swatches) {
   if (failing.length) {
     findings.push({
       sev: failing.length === rows.length ? 'issue' : 'note',
-      text: `${failing.length} of ${rows.length} colours fall below AA (4.5:1) against ${nameOf(bg)} — worst is ${nameOf(worst.sw)} at ${worst.ratio.toFixed(2)}:1.`,
+      text: `${failing.length} of ${rows.length} colour${rows.length === 1 ? '' : 's'} fall${failing.length === 1 ? 's' : ''} below AA (4.5:1) against ${nameOf(bg)} — worst is ${nameOf(worst.sw)} at ${worst.ratio.toFixed(2)}:1.`,
     })
   } else {
     findings.push({
@@ -254,7 +261,7 @@ export function accessibilityRollup(swatches) {
     })
   }
 
-  return { findings, worst, bg }
+  return { findings: bySeverity(findings), worst, bg }
 }
 
 // ── Report roll-up ────────────────────────────────────────────────────────────

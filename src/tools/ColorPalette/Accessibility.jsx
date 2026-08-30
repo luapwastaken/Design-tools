@@ -33,7 +33,7 @@ export default function Accessibility() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         {VIEWS.map(v => (
-          <ModeChip key={v.id} active={view === v.id} onClick={() => setView(v.id)} title={v.hint}>
+          <ModeChip key={v.id} active={view === v.id} onClick={() => setView(v.id)} title={v.hint} grow={false}>
             {v.label}
           </ModeChip>
         ))}
