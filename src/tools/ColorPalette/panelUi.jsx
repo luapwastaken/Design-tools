@@ -193,6 +193,80 @@ export function Select({ value, onChange, children, style, ...rest }) {
   )
 }
 
+// ── Hex field ─────────────────────────────────────────────────────────────────
+//
+// A controlled input cannot gate its own onChange on the finished value. The
+// hex fields did exactly that — they only called back when the text already
+// matched /^#[0-9a-fA-F]{6}$/ — so deleting a character produced an invalid
+// string, no state update, and a re-render that pasted the old value straight
+// back over the keystroke. The field could not be typed in at all.
+//
+// The fix is a draft: hold what's being typed locally, push upward only when it
+// parses. The draft re-syncs from `value` whenever the field isn't focused, so
+// the picker and the eyedropper still drive it, and a half-typed hex left on
+// blur reverts rather than sticking around looking authoritative.
+
+// `shorthand` is off while typing on purpose. Someone entering #ff0000 passes
+// through "ff0" on the way, which is a perfectly good three-digit yellow — so
+// accepting shorthand on every keystroke would flash the swatch yellow mid-word
+// and leave a bogus entry in the undo history. Shorthand resolves on blur or
+// Enter instead, when the string is finished.
+export function normaliseHex(str, { shorthand = false } = {}) {
+  if (!str) return null
+  const s = str.trim().replace(/^#/, '')
+  if (/^[0-9a-fA-F]{6}$/.test(s)) return `#${s}`.toLowerCase()
+  if (shorthand && /^[0-9a-fA-F]{3}$/.test(s)) {
+    return `#${s[0]}${s[0]}${s[1]}${s[1]}${s[2]}${s[2]}`.toLowerCase()
+  }
+  return null
+}
+
+export function HexInput({ value, onCommit, style, ...rest }) {
+  const [draft, setDraft] = useState(value)
+  const [focused, setFocused] = useState(false)
+
+  // Re-sync from above only while the field is idle, so the picker, the sliders
+  // and the eyedropper still drive it without fighting whatever is being typed.
+  useEffect(() => { if (!focused) setDraft(value) }, [value, focused])
+
+  const finished = normaliseHex(draft, { shorthand: true })
+  const invalid = focused && draft.trim() !== '' && !finished
+
+  function commitAndExit(el) {
+    if (finished) onCommit(finished)
+    setDraft(finished ?? value)
+    el.blur()
+  }
+
+  return (
+    <input
+      value={draft}
+      spellCheck={false}
+      autoComplete="off"
+      className="cp-input cp-input--mono"
+      style={{ borderColor: invalid ? T.bad : undefined, ...style }}
+      title={invalid ? 'Not a hex colour — try #5ab4ff or #5af' : undefined}
+      onFocus={e => { setFocused(true); e.target.select() }}
+      onBlur={() => {
+        setFocused(false)
+        // A half-typed hex reverts rather than sitting there looking authoritative.
+        if (finished) onCommit(finished)
+        setDraft(finished ?? value)
+      }}
+      onChange={e => {
+        setDraft(e.target.value)
+        const hex = normaliseHex(e.target.value)
+        if (hex) onCommit(hex)
+      }}
+      onKeyDown={e => {
+        if (e.key === 'Enter') commitAndExit(e.currentTarget)
+        if (e.key === 'Escape') { setDraft(value); e.currentTarget.blur() }
+      }}
+      {...rest}
+    />
+  )
+}
+
 // ── Readouts ──────────────────────────────────────────────────────────────────
 
 export function Stat({ label, value, good }) {

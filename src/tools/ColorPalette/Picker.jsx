@@ -2,7 +2,7 @@ import { useRef, useEffect, useLayoutEffect, useState, useMemo } from 'react'
 import { oklchToHex, toOklch, maxChromaInGamut, lumaOklch, oklchForLuma } from '../../lib/color.js'
 import { hexToCmyk, cmykToRgb } from '../../lib/cmyk.js'
 import { pickScreenColor, eyeDropperSupported } from '../../lib/eyedropper.js'
-import { T, ModeChip } from './panelUi.jsx'
+import { T, ModeChip, HexInput } from './panelUi.jsx'
 
 const CANVAS_RES = 256
 const MAX_C = 0.37
@@ -458,9 +458,8 @@ export default function Picker({ oklch, onChange, valueLocked = false, hueLocked
       {/* Hex + preview + eyedropper */}
       <div style={{ display: 'flex', gap: 6, marginTop: 10, alignItems: 'center' }}>
         <div style={{ width: 30, height: 30, borderRadius: 6, background: previewHex, border: `1px solid ${T.line}`, flexShrink: 0 }} />
-        <input value={previewHex}
-          onChange={e => { if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) emit(toOklch(e.target.value)) }}
-          className="cp-input cp-input--mono"
+        <HexInput value={previewHex} aria-label="Hex colour"
+          onCommit={hex => emit(toOklch(hex))}
           style={{ flex: 1 }}
         />
         <EyeDropperBtn

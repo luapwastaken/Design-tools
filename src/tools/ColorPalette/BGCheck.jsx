@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { usePalette, updateSwatch } from './store.js'
 import { wcagContrast, oklchToHex } from '../../lib/color.js'
-import { T, MiniBtn, Input, Hint, Badge, FieldLabel } from './panelUi.jsx'
+import { T, MiniBtn, HexInput, Hint, Badge, FieldLabel } from './panelUi.jsx'
 
 const PRESETS = [
   { label: 'White',  hex: '#ffffff' },
@@ -122,9 +122,9 @@ export default function BGCheck() {
           <input type="color" value={customBg} onChange={e => setCustomBg(e.target.value)}
             aria-label="Custom background colour"
             style={{ width: 38, height: 28, padding: 0, border: 'none', background: 'none', cursor: 'pointer' }} />
-          <Input mono value={customBg} aria-label="Custom background hex"
-            onChange={e => { if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setCustomBg(e.target.value) }}
-            style={{ width: 100 }} />
+          <HexInput value={customBg} aria-label="Custom background hex"
+            onCommit={setCustomBg}
+            style={{ width: 104 }} />
         </div>
       )}
 
