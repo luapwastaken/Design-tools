@@ -2,9 +2,12 @@ import Generators from './Generators.jsx'
 import Recipes from './Recipes.jsx'
 import ImageExtract from './ImageExtract.jsx'
 import Gradient from './Gradient.jsx'
+import Report from './Report.jsx'
 import Accessibility from './Accessibility.jsx'
+import Structure from './Structure.jsx'
+import Reproduction from './Reproduction.jsx'
+import InContext from './InContext.jsx'
 import AutoFix from './AutoFix.jsx'
-import Harmony from './Harmony.jsx'
 import PaintMix from './PaintMix.jsx'
 import { T } from './tokens.js'
 import { useUi, setUi } from './uiState.js'
@@ -19,6 +22,11 @@ import { useUi, setUi } from './uiState.js'
 // Grade, Contrast, BG Check and Vision were four separate panels answering one
 // question ("can people see this?"), three of them computing WCAG ratios against
 // a background. They are now sub-views inside Accessibility.
+//
+// Check reads as a sequence rather than a pile: Report says whether anything is
+// wrong, the four middle panels each answer one question about the palette, and
+// AutoFix is where you act. Structure pairs the value measurement with Harmony's
+// critique, which opens on value anyway.
 
 const GROUPS = [
   {
@@ -35,8 +43,11 @@ const GROUPS = [
     id: 'check', label: 'Check',
     hint: 'Audit what you have',
     panels: [
+      { id: 'Report',        label: 'Report',        El: Report },
+      { id: 'Structure',     label: 'Structure',     El: Structure },
       { id: 'Accessibility', label: 'Accessibility', El: Accessibility },
-      { id: 'Harmony',       label: 'Harmony',       El: Harmony },
+      { id: 'Reproduction',  label: 'Reproduction',  El: Reproduction },
+      { id: 'In context',    label: 'In context',    El: InContext },
       { id: 'AutoFix',       label: 'AutoFix',       El: AutoFix },
     ],
   },

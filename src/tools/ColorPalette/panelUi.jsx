@@ -191,6 +191,39 @@ export function Badge({ tone = 'neutral', children, title }) {
   )
 }
 
+// ── Findings ──────────────────────────────────────────────────────────────────
+//
+// Every Check panel reports the same three severities, so they share one row
+// rather than each inventing its own colour and label. Severity strings come
+// from checks.js: 'issue' | 'note' | 'good'.
+
+export const SEV = {
+  issue: { color: T.bad,  label: 'Issue' },
+  note:  { color: T.warn, label: 'Note'  },
+  good:  { color: T.ok,   label: 'Good'  },
+}
+
+export function Finding({ sev = 'note', area, children, actions }) {
+  const s = SEV[sev] ?? SEV.note
+  return (
+    <div style={{
+      display: 'flex', gap: 10, alignItems: 'flex-start',
+      padding: '9px 11px', borderRadius: T.rLg,
+      background: T.raised, border: `1px solid ${T.line}`,
+      borderLeft: `3px solid ${s.color}`,
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 3 }}>
+          <span className="cp-micro" style={{ color: s.color, letterSpacing: 0.6 }}>{s.label}</span>
+          {area && <span className="cp-micro" style={{ color: T.faint }}>{area}</span>}
+        </div>
+        <div className="cp-body">{children}</div>
+        {actions && <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>{actions}</div>}
+      </div>
+    </div>
+  )
+}
+
 // ── Swatch strips ─────────────────────────────────────────────────────────────
 
 // Hoverable strip with hex tooltips. `transform` maps each hex for display

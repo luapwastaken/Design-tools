@@ -36,7 +36,18 @@ const DEFAULT_STATE = {
 
 function savedState() {
   const s = load()
-  return { ...DEFAULT_STATE, ...s }
+  const merged = { ...DEFAULT_STATE, ...s }
+  // Repair anything persisted by an older build. `oklch` and `history` were both
+  // added after the first release, and a swatch missing `oklch` throws the moment
+  // any panel sorts by lightness — which several of the Check panels now do.
+  // Derived from the hex, so it costs nothing and can't be wrong.
+  merged.swatches = (merged.swatches ?? []).map(sw => ({
+    ...sw,
+    oklch: sw.oklch && typeof sw.oklch.l === 'number' ? sw.oklch : toOklch(sw.hex),
+    history: Array.isArray(sw.history) ? sw.history : [],
+    role: sw.role ?? 'freeform',
+  }))
+  return merged
 }
 
 let _state = { ...savedState(), selected: [] }
