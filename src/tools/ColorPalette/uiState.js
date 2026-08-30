@@ -51,3 +51,19 @@ export function useUi() {
   }, [])
   return s
 }
+
+// Pane sizes and the drawer only — deliberately not the panel you had open or
+// the greyscale toggle, since "put the panes back" shouldn't also navigate you
+// somewhere else.
+export function resetLayout() {
+  setUi({
+    leftWidth:  DEFAULTS.leftWidth,
+    drawerH:    DEFAULTS.drawerH,
+    drawerOpen: DEFAULTS.drawerOpen,
+  })
+}
+
+// Everything this module owns, back to first-run.
+export function resetUi() {
+  setUi({ ...DEFAULTS })
+}

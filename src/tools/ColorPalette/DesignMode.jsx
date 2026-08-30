@@ -9,7 +9,9 @@ import Reproduction from './Reproduction.jsx'
 import InContext from './InContext.jsx'
 import AutoFix from './AutoFix.jsx'
 import PaintMix from './PaintMix.jsx'
+import { useState } from 'react'
 import { T } from './tokens.js'
+import { ResetBtn } from './panelUi.jsx'
 import { useUi, setUi } from './uiState.js'
 
 // ── Design-mode panels ────────────────────────────────────────────────────────
@@ -66,6 +68,18 @@ export default function DesignMode() {
   const { panel } = useUi()
   const current = ALL.some(p => p.id === panel) ? panel : ALL[0].id
 
+  // Resetting a panel is exactly "throw away this component's state", which
+  // React already does when a key changes. Bumping the key is one mechanism that
+  // resets all eleven panels — including the ones holding a dozen useStates —
+  // without each one having to hoist its defaults out and write a reset of its
+  // own that then drifts from them.
+  //
+  // The one thing it can't reach is state a panel persists itself: PaintMix
+  // reloads your owned pigments from localStorage on mount, so it carries its
+  // own reset for that list.
+  const [resetSeq, setResetSeq] = useState({})
+  const resetPanel = id => setResetSeq(s => ({ ...s, [id]: (s[id] ?? 0) + 1 }))
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
 
@@ -93,6 +107,15 @@ export default function DesignMode() {
             ))}
           </div>
         ))}
+        <span style={{ flex: 1, minWidth: 12 }} />
+        {/* Sits clear of the drawer's collapse chevron, which is pinned right. */}
+        <span style={{ marginRight: 30 }}>
+          <ResetBtn
+            label={`Reset ${current}`}
+            title={`Put the ${current} panel back to its defaults — your palette is untouched`}
+            onReset={() => resetPanel(current)}
+          />
+        </span>
       </nav>
 
       {/* Every panel stays mounted and inactive ones are hidden, rather than
@@ -109,7 +132,7 @@ export default function DesignMode() {
               ? { height: '100%', overflowY: 'auto', padding: '12px 14px' }
               : undefined}
           >
-            <p.El />
+            <p.El key={resetSeq[p.id] ?? 0} />
           </div>
         ))}
       </div>

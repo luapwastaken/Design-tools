@@ -5,8 +5,9 @@ import {
   reorderSwatches, setActive, sendToTool,
   toggleSelected, setSelected, clearSelected, bulkRemove, bulkUpdate,
   undo, redo, getState,
+  resetPalette, clearPalette,
 } from './store.js'
-import { useUi, setUi, getUi } from './uiState.js'
+import { useUi, setUi, getUi, resetLayout } from './uiState.js'
 import { oklchToHex, autoName } from '../../lib/color.js'
 import { pickScreenColor, eyeDropperSupported } from '../../lib/eyedropper.js'
 import { useGlobalUndo } from '../../lib/undo.js'
@@ -16,7 +17,7 @@ import DesignMode from './DesignMode.jsx'
 import IllustrationMode from './IllustrationMode.jsx'
 import PrintPanel from './PrintPanel.jsx'
 import ExportPanel from './ExportPanel.jsx'
-import { T, MiniBtn, IconBtn, Input, Select, Btn } from './panelUi.jsx'
+import { T, MiniBtn, IconBtn, Input, Select, Btn, ResetBtn } from './panelUi.jsx'
 import colorNames from '../../data/colorNames.json'
 import './colorpalette.css'
 
@@ -228,7 +229,7 @@ export default function ColorPalette() {
               flex: 1, minHeight: 0, overflowY: 'auto',
               padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10,
             }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
                 <span className="cp-micro">
                   {swatches.length} swatch{swatches.length === 1 ? '' : 'es'}
                 </span>
@@ -237,6 +238,17 @@ export default function ColorPalette() {
                   <kbd style={kbd}>Ctrl</kbd>+click to add to a selection ·
                   {' '}<kbd style={kbd}>Shift</kbd>+click for a range
                 </span>
+                <span style={{ flex: 1 }} />
+                <ResetBtn label="Reset panes" icon={false}
+                  title="Put the picker column and tool drawer back to their default sizes"
+                  onReset={resetLayout} />
+                <ResetBtn label="Clear" icon={false} confirmLabel="Delete all?"
+                  disabled={!swatches.length}
+                  title="Remove every swatch — this cannot be undone with Ctrl+Z"
+                  onReset={clearPalette} />
+                <ResetBtn label="Reset palette"
+                  title="Back to the four starting swatches. Your locks and print profile are kept."
+                  onReset={resetPalette} />
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' }}>

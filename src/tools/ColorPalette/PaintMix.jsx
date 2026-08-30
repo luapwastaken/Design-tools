@@ -8,7 +8,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { usePalette } from './store.js'
 import { PIGMENTS } from '../../data/pigments.js'
 import { solveRecipe, recipeVerdict } from '../../lib/paintRecipe.js'
-import { Section, ACCENT, ModeChip, MiniBtn, Card, T } from './panelUi.jsx'
+import { Section, ACCENT, ModeChip, MiniBtn, Card, T, ResetBtn } from './panelUi.jsx'
 
 const OWNED_KEY = 'designtools-paintmix-owned'
 
@@ -36,6 +36,13 @@ export default function PaintMix() {
 
   useEffect(() => { localStorage.setItem(OWNED_KEY, JSON.stringify([...owned])) }, [owned])
 
+  // The panel-level reset in the nav bar remounts this component, which is
+  // enough for every other panel — but not here, because loadOwned() reads the
+  // list straight back out of localStorage on mount. Ticking the whole set back
+  // on is the reset that actually means something.
+  const allOwned = owned.size === PIGMENTS.length
+  function resetOwned() { setOwned(new Set(PIGMENTS.map(p => p.id))) }
+
   const pigments = useMemo(() => PIGMENTS.filter(p => owned.has(p.id)), [owned])
 
   const recipes = useMemo(
@@ -60,7 +67,10 @@ export default function PaintMix() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 640 }}>
-      <Section label="Your paints" hint="Untick what you don't own — recipes only use ticked pigments.">
+      <Section label="Your paints"
+        hint={`${owned.size} of ${PIGMENTS.length} ticked — recipes only use these`}
+        action={<ResetBtn label="Tick all" icon={false} disabled={allOwned}
+          title="Turn every pigment back on" onReset={resetOwned} />}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 4 }}>
           {PIGMENTS.map(p => (
             <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: T.label, color: owned.has(p.id) ? T.textDim : T.faint, cursor: 'pointer', userSelect: 'none' }}>

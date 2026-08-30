@@ -1,7 +1,8 @@
 import ShadowHighlight from './ShadowHighlight.jsx'
 import Mixer from './Mixer.jsx'
 import MaterialPanel from './MaterialPanel.jsx'
-import { ModeChip, T } from './panelUi.jsx'
+import { useState } from 'react'
+import { ModeChip, T, ResetBtn } from './panelUi.jsx'
 import { useUi, setUi } from './uiState.js'
 
 const PANELS = [
@@ -12,6 +13,8 @@ const PANELS = [
 
 export default function IllustrationMode() {
   const { illPanel } = useUi()
+  // Same remount-key reset as DesignMode; Mixer alone holds 13 useStates.
+  const [resetSeq, setResetSeq] = useState({})
   const current = PANELS.some(p => p.id === illPanel) ? illPanel : PANELS[0].id
 
   return (
@@ -24,6 +27,12 @@ export default function IllustrationMode() {
           <ModeChip key={p.id} active={current === p.id}
             onClick={() => setUi({ illPanel: p.id })} grow={false}>{p.id}</ModeChip>
         ))}
+        <span style={{ flex: 1 }} />
+        <span style={{ marginRight: 30 }}>
+          <ResetBtn label={`Reset ${current}`}
+            title={`Put the ${current} panel back to its defaults — your palette is untouched`}
+            onReset={() => setResetSeq(s => ({ ...s, [current]: (s[current] ?? 0) + 1 }))} />
+        </span>
       </nav>
 
       {/* Kept mounted, hidden when inactive — same reason as DesignMode. Mixer
@@ -37,7 +46,7 @@ export default function IllustrationMode() {
               ? { height: '100%', overflowY: 'auto', padding: '12px 14px' }
               : undefined}
           >
-            <p.El />
+            <p.El key={resetSeq[p.id] ?? 0} />
           </div>
         ))}
       </div>

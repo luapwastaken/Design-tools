@@ -241,9 +241,37 @@ export function bulkUpdate(ids, patch) {
   setState({ swatches: _state.swatches.map(s => set.has(s.id) ? { ...s, ...patch } : s) })
 }
 
-export function resetPalette() {
-  setState({ ...DEFAULT_STATE, active: DEFAULT_STATE.swatches[0]?.id ?? null })
+// ── Resets ────────────────────────────────────────────────────────────────────
+//
+// Split into two, because "reset the palette" and "reset my settings" are
+// different intentions and the old single function did both — it spread the
+// whole DEFAULT_STATE, so asking for fresh swatches also silently threw away
+// your print profile and lock toggles.
+//
+// Both build fresh swatch objects rather than reusing DEFAULT_STATE's, whose ids
+// were generated once at module load; handing the same objects back twice would
+// give two "different" palettes that share swatch ids.
+
+function freshSwatches() {
+  return [
+    defaultSwatch('#1a1a2e', 'black'),
+    defaultSwatch('#16213e', 'main'),
+    defaultSwatch('#5ab4ff', 'accent'),
+    defaultSwatch('#f0f0f0', 'white'),
+  ]
 }
+
+// Swatches only. Locks, print profile and riso settings survive.
+export function resetPalette() {
+  const swatches = freshSwatches()
+  setState({ swatches, active: swatches[0].id, selected: [] })
+}
+
+// Empty the palette without seeding the defaults back in.
+export function clearPalette() {
+  setState({ swatches: [], active: null, selected: [] })
+}
+
 
 // ── Cross-tool send ───────────────────────────────────────────────────────────
 // Writes selected swatches into a shared cross-tool key

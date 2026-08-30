@@ -10,7 +10,7 @@
 // colorpalette.css. Inline styles here handle layout only, so a hover rule is
 // written once instead of once per button.
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Icon from '../../components/Icon.jsx'
 import { T, MONO } from './tokens.js'
 
@@ -19,19 +19,23 @@ export const ACCENT = T.accent
 
 // ── Structure ─────────────────────────────────────────────────────────────────
 
-export function Section({ label, hint, children }) {
+export function Section({ label, hint, action, children }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div className="cp-micro" style={{
         borderBottom: `1px solid ${T.line}`, paddingBottom: 6,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10,
       }}>
         <span>{label}</span>
+        <span style={{ flex: 1 }} />
         {hint && (
           <span className="cp-hint" style={{ textTransform: 'none', letterSpacing: 0, textAlign: 'right' }}>
             {hint}
           </span>
         )}
+        {/* A slot for a reset or other section-scoped control, so every panel
+            puts one in the same place instead of inventing a position. */}
+        {action}
       </div>
       {children}
     </div>
@@ -135,6 +139,39 @@ export function ModeChip({ active, onClick, children, title, grow = true }) {
       aria-pressed={active} style={{ flex: grow ? 1 : '0 0 auto' }}>
       {children}
     </button>
+  )
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+//
+// Two-step rather than a modal. These are rare actions, and an Electron
+// confirm() blocks the renderer and looks nothing like the rest of the app —
+// arming the button in place is both lighter and easier to back out of. It
+// disarms itself after four seconds so a stray click can't sit there loaded.
+
+export function ResetBtn({ onReset, label = 'Reset', confirmLabel = 'Sure?', title, icon = true, disabled }) {
+  const [armed, setArmed] = useState(false)
+
+  useEffect(() => {
+    if (!armed) return
+    const t = setTimeout(() => setArmed(false), 4000)
+    return () => clearTimeout(t)
+  }, [armed])
+
+  return (
+    <Btn
+      variant={armed ? 'danger' : 'ghost'}
+      disabled={disabled}
+      title={armed ? 'Click again to confirm' : title}
+      onClick={() => {
+        if (armed) { onReset(); setArmed(false) }
+        else setArmed(true)
+      }}
+      style={{ padding: '3px 8px', fontSize: T.label, whiteSpace: 'nowrap' }}
+    >
+      {icon && <Icon name="restart_alt" size={13} />}
+      {armed ? confirmLabel : label}
+    </Btn>
   )
 }
 
