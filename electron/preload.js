@@ -13,14 +13,4 @@ contextBridge.exposeInMainWorld('electron', {
   eyedropperSources:  () => ipcRenderer.invoke('eyedropper:sources'),
   eyedropperCursor:   () => ipcRenderer.invoke('eyedropper:cursor'),
   eyedropperDisplays: () => ipcRenderer.invoke('eyedropper:displays'),
-
-  // cobalt batch downloader — drives the embedded cobalt.tools webview and
-  // captures its downloads into a chosen folder.
-  cobaltSetDownloadDir: (dir) => ipcRenderer.invoke('cobalt:setDownloadDir', dir),
-  soundcloudExpand: (url) => ipcRenderer.invoke('soundcloud:expand', url),
-  onCobaltDownload: (cb) => {
-    const handler = (_e, data) => cb(data)
-    ipcRenderer.on('cobalt:download-event', handler)
-    return () => ipcRenderer.removeListener('cobalt:download-event', handler)
-  },
 })

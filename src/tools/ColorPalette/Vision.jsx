@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { simulateCVD, CVD_TYPES, deltaE } from '../../lib/color.js'
 import { usePalette } from './store.js'
-import { Section, FieldLabel } from './panelUi.jsx'
+import { Section, FieldLabel, T } from './panelUi.jsx'
 
 export default function Vision() {
   const { swatches } = usePalette()
@@ -34,8 +34,8 @@ export default function Vision() {
         {CVD_TYPES.map(t => (
           <div key={t.id}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-              <FieldLabel style={{ color: '#999' }}>{t.label}</FieldLabel>
-              <FieldLabel style={{ color: '#3d3d4a', fontSize: 9 }}>{t.note}</FieldLabel>
+              <FieldLabel style={{ color: T.muted }}>{t.label}</FieldLabel>
+              <FieldLabel style={{ color: T.faint, fontSize: T.micro }}>{t.note}</FieldLabel>
             </div>
             <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', height: 32 }}>
               {hexes.map((h, i) => (
@@ -48,23 +48,23 @@ export default function Vision() {
 
       {collisions.length > 0 ? (
         <div style={{
-          background: '#2a1a10', border: '1px solid #5a3a1a', borderRadius: 6, padding: '8px 10px',
+          background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.35)', borderRadius: T.rLg, padding: '10px 12px',
         }}>
-          <div style={{ fontSize: 10, color: '#e0a060', fontWeight: 600, marginBottom: 4 }}>
+          <div style={{ fontSize: T.label, color: T.warn, fontWeight: 600, marginBottom: 4 }}>
             {collisions.length} indistinguishable pair{collisions.length > 1 ? 's' : ''}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {collisions.slice(0, 6).map((c, k) => (
-              <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#b08050' }}>
-                <span style={{ width: 12, height: 12, borderRadius: 3, background: hexes[c.i], border: '1px solid #00000040' }} />
-                <span style={{ width: 12, height: 12, borderRadius: 3, background: hexes[c.j], border: '1px solid #00000040' }} />
+              <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: T.body, color: T.textDim }}>
+                <span style={{ width: 16, height: 16, borderRadius: 3, background: hexes[c.i], border: '1px solid rgba(0,0,0,0.35)' }} />
+                <span style={{ width: 16, height: 16, borderRadius: 3, background: hexes[c.j], border: '1px solid rgba(0,0,0,0.35)' }} />
                 collapse under {c.type}
               </div>
             ))}
           </div>
         </div>
       ) : (
-        <FieldLabel style={{ color: '#5a8a5a' }}>No colour collisions detected — palette is CVD-safe.</FieldLabel>
+        <FieldLabel style={{ color: T.ok }}>No colour collisions detected — the palette is CVD-safe.</FieldLabel>
       )}
     </Section>
   )

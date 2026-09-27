@@ -10,8 +10,7 @@
 import { useState, useMemo } from 'react'
 import { usePalette, addSwatch } from './store.js'
 import { MATERIALS, MATERIAL_BY_ID, suggestMaterialColors } from '../../lib/materials.js'
-
-const ACCENT = '#5ab4ff'
+import { ModeChip, MiniBtn, ACCENT, T } from './panelUi.jsx'
 
 export default function MaterialPanel() {
   const { swatches, active } = usePalette()
@@ -27,7 +26,7 @@ export default function MaterialPanel() {
     [sw?.hex, materialId, mode, heroHex, intensity]
   )
 
-  if (!sw) return <div style={{ color: '#666', fontSize: 12 }}>Select a swatch to use as the base colour.</div>
+  if (!sw) return <div style={{ color: T.faint, fontSize: T.body }}>Select a swatch to use as the base colour.</div>
   const mat = MATERIAL_BY_ID[materialId] ?? MATERIALS[0]
 
   return (
@@ -35,10 +34,10 @@ export default function MaterialPanel() {
 
       {/* Base colour */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <span style={{ width: 26, height: 26, borderRadius: 6, background: sw.hex, border: '1px solid #333', flexShrink: 0 }} />
+        <span style={{ width: 26, height: 26, borderRadius: 6, background: sw.hex, border: `1px solid ${T.line}`, flexShrink: 0 }} />
         <div>
-          <div style={{ fontSize: 11, color: '#ccc' }}>{sw.name || 'Base colour'}</div>
-          <div style={{ fontSize: 10, color: '#666', fontFamily: 'monospace' }}>{sw.hex}</div>
+          <div style={{ fontSize: T.body, color: T.textDim }}>{sw.name || 'Base colour'}</div>
+          <div className="cp-num" style={{ fontSize: T.label, color: T.faint }}>{sw.hex}</div>
         </div>
       </div>
 
@@ -47,15 +46,12 @@ export default function MaterialPanel() {
         <Label>Material</Label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
           {MATERIALS.map(m => (
-            <button key={m.id} onClick={() => setMaterialId(m.id)} title={m.desc} style={{
-              background: materialId === m.id ? '#1e3a5f' : '#15151c',
-              border: `1px solid ${materialId === m.id ? ACCENT : '#2a2a35'}`,
-              borderRadius: 5, color: materialId === m.id ? '#9ed0ff' : '#999',
-              padding: '4px 9px', fontSize: 11, cursor: 'pointer',
-            }}>{m.name}</button>
+            <ModeChip key={m.id} active={materialId === m.id} onClick={() => setMaterialId(m.id)} title={m.desc} grow={false}>
+              {m.name}
+            </ModeChip>
           ))}
         </div>
-        <div style={{ fontSize: 10, color: '#666', marginTop: 6, lineHeight: 1.5 }}>{mat.desc}</div>
+        <div style={{ fontSize: T.label, color: T.faint, marginTop: 6, lineHeight: 1.5 }}>{mat.desc}</div>
       </div>
 
       {/* Mode */}
@@ -67,23 +63,18 @@ export default function MaterialPanel() {
             ['expressive', 'Expressive', 'Pushed for stylised, painterly work — still harmonious'],
             ['extreme', 'Extreme', 'Graphic complementary split — shadows rotate toward the base’s opposite hue, highlights the other way. Posterised values, can rival the hero. Still in-gamut.'],
           ].map(([id, label, desc]) => (
-            <button key={id} onClick={() => setMode(id)} title={desc} style={{
-              flex: 1, background: mode === id ? '#1e3a5f' : '#15151c',
-              border: `1px solid ${mode === id ? ACCENT : '#2a2a35'}`,
-              borderRadius: 5, color: mode === id ? '#9ed0ff' : '#999',
-              padding: '5px 0', fontSize: 11, cursor: 'pointer',
-            }}>{label}</button>
+            <ModeChip key={id} active={mode === id} onClick={() => setMode(id)} title={desc}>{label}</ModeChip>
           ))}
         </div>
 
         {/* Extreme push slider */}
         {mode === 'extreme' && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-            <span style={{ fontSize: 10, color: '#888', whiteSpace: 'nowrap' }}>Push</span>
+            <span style={{ fontSize: T.label, color: T.muted, whiteSpace: 'nowrap' }}>Push</span>
             <input type="range" min={0.2} max={1.6} step={0.05} value={intensity}
               onChange={e => setIntensity(+e.target.value)}
               style={{ flex: 1, accentColor: ACCENT }} />
-            <span style={{ fontSize: 10, color: '#9ed0ff', fontFamily: 'monospace', width: 34, textAlign: 'right' }}>
+            <span className="cp-num" style={{ fontSize: T.label, color: T.accentText, width: 38, textAlign: 'right' }}>
               {Math.round(intensity * 100)}%
             </span>
           </div>
@@ -92,14 +83,9 @@ export default function MaterialPanel() {
 
       {/* Priority / hero colour */}
       <div>
-        <Label>Priority colour <span style={{ color: '#555', textTransform: 'none', letterSpacing: 0 }}>— suggestions defer so it pops</span></Label>
+        <Label>Priority colour <span style={{ color: T.faint, textTransform: 'none', letterSpacing: 0 }}>— suggestions defer so it pops</span></Label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
-          <button onClick={() => setHeroId(null)} style={{
-            background: heroId === null ? '#1e3a5f' : '#15151c',
-            border: `1px solid ${heroId === null ? ACCENT : '#2a2a35'}`,
-            borderRadius: 5, color: heroId === null ? '#9ed0ff' : '#888',
-            padding: '3px 9px', fontSize: 10, cursor: 'pointer',
-          }}>None</button>
+          <ModeChip active={heroId === null} onClick={() => setHeroId(null)} grow={false}>None</ModeChip>
           {swatches.map(s => {
             const on = heroId === s.id
             return (
@@ -107,7 +93,8 @@ export default function MaterialPanel() {
                 style={{
                   width: 22, height: 22, borderRadius: 5, background: s.hex, cursor: 'pointer',
                   border: on ? `2px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.12)',
-                  boxShadow: on ? `0 0 0 1px ${ACCENT}, 0 0 6px rgba(90,180,255,0.5)` : 'none',
+                  boxShadow: on ? `0 0 0 1px ${ACCENT}, 0 0 6px ${ACCENT}80` : 'none',
+                  padding: 0,
                 }} />
             )
           })}
@@ -118,12 +105,11 @@ export default function MaterialPanel() {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
           <Label style={{ margin: 0 }}>Suggestions</Label>
-          <span style={{ fontSize: 9, color: '#555' }}>click a swatch to add</span>
+          <span style={{ fontSize: T.micro, color: T.faint }}>click a swatch to add</span>
           <div style={{ flex: 1 }} />
-          <button onClick={() => stops.filter(s => s.label !== 'Base').forEach(s => addSwatch(s.hex, 'freeform', { name: s.label, material: mat.name }))} style={{
-            background: '#1e3a5f', border: `1px solid #2a5a8f`, borderRadius: 4,
-            color: '#9ed0ff', padding: '3px 10px', fontSize: 10, cursor: 'pointer',
-          }}>Add shadows + highlights</button>
+          <MiniBtn variant="primary" onClick={() => stops.filter(s => s.label !== 'Base').forEach(s => addSwatch(s.hex, 'freeform', { name: s.label, material: mat.name }))}>
+            Add shadows + highlights
+          </MiniBtn>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           {stops.map(s => (
@@ -131,11 +117,11 @@ export default function MaterialPanel() {
               <button onClick={() => addSwatch(s.hex, 'freeform', { name: s.label, material: mat.name })} title={`Add ${s.hex}`}
                 style={{
                   width: '100%', aspectRatio: '1 / 1.25', borderRadius: 6, background: s.hex,
-                  border: s.label === 'Base' ? `2px solid ${ACCENT}` : '1px solid #333',
+                  border: s.label === 'Base' ? `2px solid ${ACCENT}` : `1px solid ${T.line}`,
                   cursor: 'pointer', padding: 0,
                 }} />
-              <div style={{ fontSize: 9, color: s.label === 'Base' ? '#9ed0ff' : '#888', textAlign: 'center' }}>{s.label}</div>
-              <div style={{ fontSize: 8, color: '#555', fontFamily: 'monospace' }}>{s.hex}</div>
+              <div style={{ fontSize: T.micro, color: s.label === 'Base' ? T.accentText : T.muted, textAlign: 'center' }}>{s.label}</div>
+              <div className="cp-num" style={{ fontSize: T.micro, color: T.faint }}>{s.hex}</div>
             </div>
           ))}
         </div>
@@ -146,7 +132,7 @@ export default function MaterialPanel() {
 
 function Label({ children, style }) {
   return (
-    <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5, ...style }}>
+    <div style={{ fontSize: T.micro, color: T.faint, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5, ...style }}>
       {children}
     </div>
   )

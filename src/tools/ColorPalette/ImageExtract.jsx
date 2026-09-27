@@ -3,7 +3,7 @@ import { srgbToLinear, oklchToHex } from '../../lib/color.js'
 import { addSwatch } from './store.js'
 import { EditableNumber } from '../../components/NumberField.jsx'
 import Icon from '../../components/Icon.jsx'
-import { Section, FieldLabel, AddBtn, SwatchStrip, ACCENT } from './panelUi.jsx'
+import { Section, FieldLabel, AddBtn, SwatchStrip, ACCENT, T } from './panelUi.jsx'
 
 // Fast sRGB(0-255) → OKLab. Clustering in OKLab keeps the extracted palette
 // perceptually balanced — equal numeric distance ≈ equal visible difference —
@@ -75,6 +75,7 @@ export default function ImageExtract() {
   const [count, setCount] = useState(6)
   const [imgUrl, setImgUrl] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
   const fileRef = useRef(null)
   const imgRef = useRef(null)
 
@@ -99,15 +100,19 @@ export default function ImageExtract() {
     setBusy(false)
   }, [])
 
-  function onFile(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  // Shared by the file picker and the drop target. Revokes the previous object
+  // URL so repeatedly swapping images doesn't leak blobs for the session.
+  const loadFile = useCallback(file => {
+    if (!file || !file.type.startsWith('image/')) return
+    setImgUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null })
     const url = URL.createObjectURL(file)
     setImgUrl(url)
     const img = new Image()
     img.onload = () => { imgRef.current = img; extract(img, count) }
     img.src = url
-  }
+  }, [extract, count])
+
+  function onFile(e) { loadFile(e.target.files?.[0]) }
 
   function reExtract(k) {
     setCount(k)
@@ -118,13 +123,30 @@ export default function ImageExtract() {
     <Section label="Extract from Image" hint="clustered in OKLab">
       <input ref={fileRef} type="file" accept="image/*" onChange={onFile} style={{ display: 'none' }} />
 
-      <button onClick={() => fileRef.current?.click()} style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        background: '#131318', border: '1px dashed #2a2a38', borderRadius: 8,
-        color: '#888', padding: imgUrl ? '8px' : '22px', fontSize: 11, cursor: 'pointer',
-      }}>
-        <Icon name="image" size={16} color={ACCENT} />
-        {imgUrl ? 'Choose a different image' : 'Drop or choose an image'}
+      {/* The button has said "Drop or choose an image" since it was written, but
+          nothing ever listened for a drop — the offer was real, the handler was
+          missing. It works now. */}
+      <button type="button"
+        onClick={() => fileRef.current?.click()}
+        onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+        onDragEnter={e => { e.preventDefault(); setDragOver(true) }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={e => {
+          e.preventDefault()
+          setDragOver(false)
+          loadFile(e.dataTransfer?.files?.[0])
+        }}
+        className="cp-btn"
+        style={{
+          padding: imgUrl ? '8px' : '22px',
+          border: `1px dashed ${dragOver ? T.accent : T.line}`,
+          background: dragOver ? T.accentSoft : undefined,
+          color: dragOver ? T.accentText : undefined,
+        }}>
+        <Icon name="image" size={16} color={T.accentText} />
+        {dragOver ? 'Drop to extract'
+          : imgUrl ? 'Choose a different image'
+          : 'Drop or choose an image'}
       </button>
 
       {imgUrl && (
@@ -135,7 +157,7 @@ export default function ImageExtract() {
         <FieldLabel>Colors</FieldLabel>
         <EditableNumber value={count} onChange={reExtract} min={2} max={10} step={1} accent={ACCENT} width={32} align="center" />
         <div style={{ flex: 1 }} />
-        {busy && <span style={{ fontSize: 10, color: '#666' }}>extracting…</span>}
+        {busy && <span style={{ fontSize: T.label, color: T.faint }}>extracting…</span>}
       </div>
 
       {colors.length > 0 && <SwatchStrip hexes={colors} />}

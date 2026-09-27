@@ -5,7 +5,9 @@ import {
   reorderSwatches, setActive, sendToTool,
   toggleSelected, setSelected, clearSelected, bulkRemove, bulkUpdate,
   undo, redo, getState,
+  resetPalette, clearPalette,
 } from './store.js'
+import { useUi, setUi, getUi, resetLayout } from './uiState.js'
 import { oklchToHex, autoName } from '../../lib/color.js'
 import { pickScreenColor, eyeDropperSupported } from '../../lib/eyedropper.js'
 import { useGlobalUndo } from '../../lib/undo.js'
@@ -15,45 +17,60 @@ import DesignMode from './DesignMode.jsx'
 import IllustrationMode from './IllustrationMode.jsx'
 import PrintPanel from './PrintPanel.jsx'
 import ExportPanel from './ExportPanel.jsx'
+import { T, MiniBtn, IconBtn, Input, Select, Btn, ResetBtn } from './panelUi.jsx'
 import colorNames from '../../data/colorNames.json'
+import './colorpalette.css'
 
-export const C = {
-  bg:       '#0b0b0d',
-  sidebar:  '#0e0e11',
-  panel:    '#111114',
-  border:   '#1e1e24',
-  accent:   '#8b5cf6',
-  accentLo: '#2d1a5e',
-  text:     '#f0ede7',
-  muted:    '#4a4a54',
-  mutedHi:  '#6a6a7a',
-}
+// Re-exported because ExportPanel and PrintPanel import `C` from here. The
+// values now come from tokens.js — this is the compatibility shim, not a
+// second palette.
+export const C = T
 
 const SWATCH_SZ = 76
+const ROLES = ['black', 'main', 'accent', 'white', 'pop', 'freeform']
+
+// ── The four views ────────────────────────────────────────────────────────────
+//
+// Design and Illustration used to be one kind of tab (exclusive modes) sitting
+// in the same bar as Print and Export, which were a different kind (toggles that
+// replaced the pane and un-toggled on a second click). Same styling, two
+// interaction models, and clicking Print left Design still looking selected.
+//
+// They are all just views of the palette, so they are all one radio group now.
+const VIEWS = [
+  { id: 'design',       label: 'Design',       kind: 'edit' },
+  { id: 'illustration', label: 'Illustration', kind: 'edit' },
+  { id: 'print',        label: 'Print',        kind: 'output' },
+  { id: 'export',       label: 'Export',       kind: 'output' },
+]
 
 export default function ColorPalette() {
   const { swatches, active, mode, valueLockEnabled, hueLockEnabled, selected } = usePalette()
+  const ui = useUi()
   const activeSwatch = swatches.find(s => s.id === active)
-  const [view, setView] = useState('palette') // 'palette' | 'print' | 'export'
-  const [greyColors, setGreyColors] = useState(false)
   const [dragIdx, setDragIdx] = useState(null)
-  const [leftWidth, setLeftWidth] = useState(260)    // picker column px
-  const [paletteH, setPaletteH] = useState(164)     // palette grid px
+
+  const view = ui.view
+  const greyColors = ui.greyscale
+  // Which of the four tabs reads as current.
+  const currentTab = view === 'palette' ? mode : view
 
   const L_MIN = 252, L_MAX = 500
-  const P_MIN = 100, P_MAX = 340
+  const D_MIN = 140, D_MAX = 620
 
   useGlobalUndo(undo, redo)
+
   useEffect(() => {
     function onKey(e) {
       const ctrl = e.ctrlKey || e.metaKey
-      const inInput = document.activeElement?.tagName === 'INPUT'
-      if (!ctrl && (e.key === 'y' || e.key === 'Y') && !inInput) {
-        setGreyColors(v => !v)
-      }
+      const el = document.activeElement
+      const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' ||
+        el.tagName === 'SELECT' || el.isContentEditable)
+      if (ctrl || typing) return
+      if (e.key === 'y' || e.key === 'Y') setUi({ greyscale: !getUi().greyscale })
       // Global eyedropper — press I anywhere to grab a colour from screen
       // and drop it onto the active swatch.
-      if (!ctrl && (e.key === 'i' || e.key === 'I') && !inInput && eyeDropperSupported()) {
+      if ((e.key === 'i' || e.key === 'I') && eyeDropperSupported()) {
         e.preventDefault()
         pickScreenColor().then(hex => {
           if (!hex) return
@@ -69,6 +86,13 @@ export default function ColorPalette() {
 
   useEffect(() => {
     function onPaste(e) {
+      // Only claim the paste when it isn't destined for a field. Without this
+      // guard, pasting a hex into the Picker's own hex box applied it twice —
+      // once by the field, once here — and pasting anything hex-shaped into the
+      // swatch NAME box silently changed the colour instead of the name.
+      const el = e.target
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+
       const text = e.clipboardData?.getData('text') ?? ''
       if (!text) return
       const colors = parseColorList(text)
@@ -83,36 +107,44 @@ export default function ColorPalette() {
   }, [active, activeSwatch])
 
   const colorFilter = greyColors ? { filter: 'grayscale(1)' } : {}
+  const isEditing = view === 'palette'
+
+  function pickTab(t) {
+    if (t.kind === 'edit') { setMode(t.id); setUi({ view: 'palette', mode: t.id }) }
+    else setUi({ view: t.id })
+  }
 
   return (
-    <div style={{
-      display: 'flex', height: '100%', background: C.bg, color: C.text,
-      fontFamily: 'system-ui, sans-serif', overflow: 'hidden',
+    <div className="cp" style={{
+      display: 'flex', height: '100%', overflow: 'hidden',
     }}>
 
       {/* ── Left: Picker column ─────────────────────────────────── */}
       <div style={{
-        width: leftWidth, flexShrink: 0,
-        background: C.sidebar, display: 'flex', flexDirection: 'column',
-        padding: '14px 16px', gap: 10, overflowY: 'auto', overflow: 'hidden',
+        width: ui.leftWidth, flexShrink: 0,
+        background: T.sidebar, display: 'flex', flexDirection: 'column',
+        padding: '14px 16px', gap: 12, overflow: 'hidden',
       }}>
-        {/* Active color preview */}
         {activeSwatch && (
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: 8, background: activeSwatch.hex,
-              border: `2px solid ${C.accent}`, flexShrink: 0, ...colorFilter,
+            <div className="cp-sw" style={{
+              width: 44, height: 44, borderRadius: T.rLg, background: activeSwatch.hex,
+              border: `2px solid ${T.accent}`, flexShrink: 0, ...colorFilter,
             }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, color: C.text, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{
+                fontSize: T.body, color: T.text, fontWeight: 500,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
                 {activeSwatch.name || 'Unnamed'}
               </div>
-              <div style={{ fontSize: 10, color: C.muted, fontFamily: 'monospace' }}>{activeSwatch.hex}</div>
+              <div className="cp-num" style={{ fontSize: T.label, color: T.muted }}>
+                {activeSwatch.hex}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Color picker */}
         <div style={colorFilter}>
           <Picker
             oklch={activeSwatch?.oklch}
@@ -122,93 +154,104 @@ export default function ColorPalette() {
           />
         </div>
 
-        {/* Lock toggles */}
         <div style={{ display: 'flex', gap: 6 }}>
-          <LockBtn label={<><Icon name="lock" size={11} /> Value</>} checked={valueLockEnabled} onChange={setValueLock} title="Value lock — hold the perceived (greyscale) value steady as you change hue or chroma" />
-          <LockBtn label="H" checked={hueLockEnabled} onChange={setHueLock} title="Hue lock — freeze H across all inputs" />
+          <LockBtn
+            label={<><Icon name="lock" size={12} /> Value</>}
+            checked={valueLockEnabled} onChange={setValueLock}
+            title="Value lock — hold the perceived (greyscale) value steady as you change hue or chroma" />
+          <LockBtn
+            label={<><Icon name="lock" size={12} /> Hue</>}
+            checked={hueLockEnabled} onChange={setHueLock}
+            title="Hue lock — freeze H across all inputs" />
+          <LockBtn
+            label="Greyscale" checked={greyColors}
+            onChange={v => setUi({ greyscale: v })}
+            title="Greyscale preview — see the palette's value structure with hue removed (Y)" />
         </div>
 
-        {/* Greyscale toggle */}
-        <button
-          onClick={() => setGreyColors(v => !v)}
-          style={{
-            background: greyColors ? C.accentLo : 'transparent',
-            border: `1px solid ${greyColors ? C.accent : C.border}`,
-            borderRadius: 5, color: greyColors ? C.accent : C.muted,
-            padding: '4px 0', fontSize: 10, cursor: 'pointer', width: '100%',
-          }}
-        >
-          {greyColors ? 'Greyscale on' : 'Greyscale'} — Y
-        </button>
-
-        {/* Send to tool */}
         <div style={{ marginTop: 'auto', paddingTop: 8 }}>
-          <div style={{ fontSize: 9, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Send to</div>
+          <div className="cp-micro" style={{ marginBottom: 6 }}>Send to</div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <SendBtn label="Logo" onClick={() => sendToTool('logo-maker', swatches.map(s => s.hex))} />
-            <SendBtn label="Pattern" onClick={() => sendToTool('pattern-maker', swatches.map(s => s.hex))} />
-            <SendBtn label="Dither" onClick={() => sendToTool('dither-maker', (selected.length ? swatches.filter(s => selected.includes(s.id)) : swatches).map(s => s.hex))} />
+            <Btn style={{ flex: 1, padding: '6px 4px' }}
+              onClick={() => sendToTool('logo-maker', swatches.map(s => s.hex))}>Logo</Btn>
+            <Btn style={{ flex: 1, padding: '6px 4px' }}
+              onClick={() => sendToTool('pattern-maker', swatches.map(s => s.hex))}>Pattern</Btn>
+            <Btn style={{ flex: 1, padding: '6px 4px' }}
+              onClick={() => sendToTool('dither-maker',
+                (selected.length ? swatches.filter(s => selected.includes(s.id)) : swatches).map(s => s.hex))}>Dither</Btn>
           </div>
-          <div style={{ fontSize: 9, color: '#2a2a35', marginTop: 6 }}>Ctrl+V — paste color(s)</div>
-          {eyeDropperSupported() && (
-            <div style={{ fontSize: 9, color: '#2a2a35', marginTop: 2 }}>I — pick color from screen</div>
-          )}
+          <div className="cp-hint" style={{ marginTop: 8, lineHeight: 1.7 }}>
+            <kbd style={kbd}>Ctrl</kbd>+<kbd style={kbd}>V</kbd> paste colours
+            {eyeDropperSupported() && <> · <kbd style={kbd}>I</kbd> pick from screen</>}
+            {' '}· <kbd style={kbd}>Y</kbd> greyscale
+          </div>
         </div>
       </div>
 
-      {/* ── Horizontal resize handle ─────────────────────────────── */}
-      <HorzHandle onDelta={d => setLeftWidth(w => Math.max(L_MIN, Math.min(L_MAX, w + d)))} />
+      <Splitter axis="x" onDelta={d => setUi({ leftWidth: clamp(ui.leftWidth + d, L_MIN, L_MAX) })} />
 
       {/* ── Right: Main content ─────────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
 
-        {/* Top bar: mode tabs left, print/export right */}
-        <div style={{
-          display: 'flex', alignItems: 'stretch',
-          borderBottom: `1px solid ${C.border}`, background: C.sidebar, flexShrink: 0,
+        <div role="tablist" aria-label="Palette view" style={{
+          display: 'flex', alignItems: 'center', gap: 4, padding: '7px 12px',
+          borderBottom: `1px solid ${T.line}`, background: T.sidebar, flexShrink: 0,
         }}>
-          {['design', 'illustration'].map(m => (
-            <button key={m}
-              onClick={() => { setMode(m); setView('palette') }}
-              style={{
-                background: 'transparent', border: 'none',
-                borderBottom: mode === m && view === 'palette' ? `2px solid ${C.accent}` : '2px solid transparent',
-                color: mode === m && view === 'palette' ? C.text : C.muted,
-                padding: '8px 18px', fontSize: 12, cursor: 'pointer', textTransform: 'capitalize',
-              }}>{m}</button>
-          ))}
-          <div style={{ flex: 1 }} />
-          {['print', 'export'].map(v => (
-            <button key={v}
-              onClick={() => setView(view === v ? 'palette' : v)}
-              style={{
-                background: 'transparent', border: 'none',
-                borderBottom: view === v ? `2px solid ${C.accent}` : '2px solid transparent',
-                color: view === v ? C.text : C.muted,
-                padding: '8px 16px', fontSize: 11, cursor: 'pointer', textTransform: 'capitalize',
-              }}>{v}</button>
+          {VIEWS.map((t, i) => (
+            <span key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {/* Editing views and output views are the same kind of control —
+                  a separator is enough to say which pair does what. */}
+              {i > 0 && VIEWS[i - 1].kind !== t.kind && (
+                <span aria-hidden style={{ width: 1, height: 18, background: T.line, margin: '0 8px' }} />
+              )}
+              <button type="button" role="tab"
+                aria-selected={currentTab === t.id}
+                onClick={() => pickTab(t)}
+                className={currentTab === t.id ? 'cp-chip is-active' : 'cp-chip'}
+                style={{ padding: '6px 14px', fontSize: T.body }}
+              >{t.label}</button>
+            </span>
           ))}
         </div>
 
-        {/* ── Secondary views ── */}
-        {view === 'print' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}><PrintPanel /></div>
-        )}
-        {view === 'export' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}><ExportPanel /></div>
-        )}
+        {view === 'print' && <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}><PrintPanel /></div>}
+        {view === 'export' && <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}><ExportPanel /></div>}
 
-        {/* ── Palette view ── */}
-        {view === 'palette' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {isEditing && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
 
-            {/* ═══ PALETTE GRID — main visual focus ═══ */}
+            {/* ═══ PALETTE — now the largest thing on screen ═══
+                It was a 164px strip that scrolled internally while the tool
+                panels below took every remaining pixel: the document was the
+                smallest element in its own editor. It grows first now, and the
+                panels live in a drawer sized to what you're doing. */}
             <div style={{
-              flexShrink: 0, padding: '16px 16px 12px',
-              borderBottom: `1px solid ${C.border}`,
-              overflowY: 'auto', height: paletteH,
+              flex: 1, minHeight: 0, overflowY: 'auto',
+              padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10,
             }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+                <span className="cp-micro">
+                  {swatches.length} swatch{swatches.length === 1 ? '' : 'es'}
+                </span>
+                <span className="cp-hint">
+                  {/* Multi-select existed but nothing on screen said so. */}
+                  <kbd style={kbd}>Ctrl</kbd>+click to add to a selection ·
+                  {' '}<kbd style={kbd}>Shift</kbd>+click for a range
+                </span>
+                <span style={{ flex: 1 }} />
+                <ResetBtn label="Reset panes" icon={false}
+                  title="Put the picker column and tool drawer back to their default sizes"
+                  onReset={resetLayout} />
+                <ResetBtn label="Clear" icon={false} confirmLabel="Delete all?"
+                  disabled={!swatches.length}
+                  title="Remove every swatch — this cannot be undone with Ctrl+Z"
+                  onReset={clearPalette} />
+                <ResetBtn label="Reset palette"
+                  title="Back to the four starting swatches. Your locks and print profile are kept."
+                  onReset={resetPalette} />
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' }}>
                 {swatches.map((sw, idx) => (
                   <SwatchCard
                     key={sw.id}
@@ -217,18 +260,12 @@ export default function ColorPalette() {
                     isSelected={selected.includes(sw.id)}
                     colorFilter={colorFilter}
                     onClick={e => {
-                      if (e.ctrlKey || e.metaKey) {
-                        toggleSelected(sw.id)
-                        setActive(sw.id)
-                      } else if (e.shiftKey) {
+                      if (e.ctrlKey || e.metaKey) { toggleSelected(sw.id); setActive(sw.id) }
+                      else if (e.shiftKey) {
                         const anchorIdx = swatches.findIndex(s => s.id === active)
-                        const min = Math.min(anchorIdx, idx)
-                        const max = Math.max(anchorIdx, idx)
+                        const min = Math.min(anchorIdx, idx), max = Math.max(anchorIdx, idx)
                         setSelected(swatches.slice(min, max + 1).map(s => s.id))
-                      } else {
-                        setActive(sw.id)
-                        clearSelected()
-                      }
+                      } else { setActive(sw.id); clearSelected() }
                     }}
                     onDragStart={() => setDragIdx(idx)}
                     onDragOver={e => e.preventDefault()}
@@ -239,86 +276,128 @@ export default function ColorPalette() {
                     onDragEnd={() => setDragIdx(null)}
                   />
                 ))}
-                {/* Add swatch */}
-                <button
+                <button type="button"
                   onClick={() => addSwatch('#808080')}
+                  title="Add a swatch"
+                  className="cp-btn"
                   style={{
                     width: SWATCH_SZ, height: SWATCH_SZ, borderRadius: 10,
-                    background: 'transparent', border: `2px dashed ${C.border}`,
-                    color: C.muted, fontSize: 24, cursor: 'pointer', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    alignSelf: 'flex-start',
+                    background: 'transparent', borderStyle: 'dashed',
+                    fontSize: 26, flexShrink: 0, alignSelf: 'flex-start', padding: 0,
                   }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = C.mutedHi}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
                 >+</button>
               </div>
             </div>
 
-            {/* ── Vertical resize handle ── */}
-            <VertHandle onDelta={d => setPaletteH(h => Math.max(P_MIN, Math.min(P_MAX, h + d)))} />
-
-            {/* Bulk action bar — visible when 2+ swatches selected */}
             {selected.length > 1 && (
               <div style={{
                 display: 'flex', gap: 8, alignItems: 'center',
-                padding: '6px 16px', borderBottom: `1px solid ${C.border}`,
-                background: C.accentLo, flexShrink: 0,
+                padding: '8px 16px', borderTop: `1px solid ${T.accentLine}`,
+                background: T.accentSoft, flexShrink: 0,
               }}>
-                <span style={{ fontSize: 10, color: C.accent, fontWeight: 500 }}>
+                <span style={{ fontSize: T.body, color: T.accentText, fontWeight: 600 }}>
                   {selected.length} selected
                 </span>
                 <div style={{ flex: 1 }} />
-                <MiniBtn onClick={() => { bulkUpdate(selected, { name: '' }); swatches.filter(s => selected.includes(s.id)).forEach(s => updateSwatch(s.id, { name: autoName(s.hex, colorNames) })) }}>
-                  Auto name all
+                <MiniBtn onClick={() => swatches.filter(s => selected.includes(s.id))
+                  .forEach(s => updateSwatch(s.id, { name: autoName(s.hex, colorNames) }))}>
+                  Auto name
                 </MiniBtn>
-                <BulkRoleSelect onChange={role => bulkUpdate(selected, { role })} />
-                <MiniBtn danger onClick={() => bulkRemove(selected)}>
-                  Delete ({selected.length})
+                <Select defaultValue="" style={{ padding: '4px 7px', fontSize: T.label }}
+                  onChange={e => { if (e.target.value) { bulkUpdate(selected, { role: e.target.value }); e.target.value = '' } }}>
+                  <option value="" disabled>Set role…</option>
+                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </Select>
+                <MiniBtn variant="danger" onClick={() => bulkRemove(selected)}>
+                  Delete {selected.length}
                 </MiniBtn>
                 <MiniBtn onClick={clearSelected}>Clear</MiniBtn>
               </div>
             )}
 
-            {/* Active swatch info bar */}
             {activeSwatch && (
               <div style={{
                 display: 'flex', gap: 8, alignItems: 'center',
-                padding: '8px 16px', borderBottom: `1px solid ${C.border}`,
-                flexShrink: 0, background: C.panel,
+                padding: '9px 16px', borderTop: `1px solid ${T.line}`,
+                flexShrink: 0, background: T.panel,
               }}>
-                <input
+                <Input
                   value={activeSwatch.name}
                   onChange={e => updateSwatch(activeSwatch.id, { name: e.target.value })}
-                  placeholder="Name…"
-                  style={{
-                    width: 130, background: '#1a1a22', border: `1px solid ${C.border}`,
-                    borderRadius: 5, color: C.text, padding: '4px 8px', fontSize: 11, outline: 'none',
-                  }}
+                  placeholder="Name this colour…"
+                  aria-label="Swatch name"
+                  style={{ width: 180 }}
                 />
-                <MiniBtn onClick={() => updateSwatch(activeSwatch.id, { name: autoName(activeSwatch.hex, colorNames) })}>
+                <MiniBtn title="Name this swatch from the nearest known colour"
+                  onClick={() => updateSwatch(activeSwatch.id, { name: autoName(activeSwatch.hex, colorNames) })}>
                   Auto
                 </MiniBtn>
-                <MiniBtn onClick={() => swatches.forEach(sw => updateSwatch(sw.id, { name: autoName(sw.hex, colorNames) }))}>
+                <MiniBtn title="Name every swatch in the palette"
+                  onClick={() => swatches.forEach(sw => updateSwatch(sw.id, { name: autoName(sw.hex, colorNames) }))}>
                   Name all
                 </MiniBtn>
                 <div style={{ flex: 1 }} />
-                <RoleSelect value={activeSwatch.role} onChange={role => updateSwatch(activeSwatch.id, { role })} />
-                <IconBtn title={activeSwatch.locked ? 'Unlock color' : 'Lock color — prevent edits'} onClick={() => updateSwatch(activeSwatch.id, { locked: !activeSwatch.locked })}>
-                  <Icon name={activeSwatch.locked ? 'lock' : 'lock_open'} size={13} />
+                <Select value={activeSwatch.role} aria-label="Swatch role"
+                  style={{ padding: '5px 8px', fontSize: T.label }}
+                  onChange={e => updateSwatch(activeSwatch.id, { role: e.target.value })}>
+                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </Select>
+                <IconBtn title={activeSwatch.locked ? 'Unlock colour' : 'Lock colour — prevent edits'}
+                  onClick={() => updateSwatch(activeSwatch.id, { locked: !activeSwatch.locked })}>
+                  <Icon name={activeSwatch.locked ? 'lock' : 'lock_open'} size={15} />
                 </IconBtn>
                 <IconBtn title="Duplicate" onClick={() => duplicateSwatch(activeSwatch.id)}>
-                  <Icon name="content_copy" size={13} />
+                  <Icon name="content_copy" size={15} />
                 </IconBtn>
                 <IconBtn danger title="Remove" onClick={() => removeSwatch(activeSwatch.id)}>
-                  <Icon name="close" size={13} />
+                  <Icon name="close" size={15} />
                 </IconBtn>
               </div>
             )}
 
-            {/* Mode sub-panels */}
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              {mode === 'design' ? <DesignMode /> : <IllustrationMode />}
+            {/* ── Tool drawer ──
+                The panels live here rather than owning the lower half outright,
+                so the palette above keeps whatever room is left. The height is
+                remembered across sessions; collapsing hands the whole pane to
+                the swatches when you just want to look at colours. */}
+            {ui.drawerOpen && (
+              <Splitter axis="y" onDelta={d => setUi({ drawerH: clamp(ui.drawerH - d, D_MIN, D_MAX) })} />
+            )}
+            <div style={{
+              height: ui.drawerOpen ? ui.drawerH : 'auto',
+              flexShrink: 0, display: 'flex', flexDirection: 'column',
+              background: T.panel, minHeight: 0, position: 'relative',
+              borderTop: ui.drawerOpen ? 'none' : `1px solid ${T.line}`,
+            }}>
+              {ui.drawerOpen ? (
+                <>
+                  <div style={{ flex: 1, minHeight: 0 }}>
+                    {mode === 'design' ? <DesignMode /> : <IllustrationMode />}
+                  </div>
+                  <IconBtn
+                    title="Collapse tools"
+                    onClick={() => setUi({ drawerOpen: false })}
+                    style={{ position: 'absolute', top: 5, right: 8, zIndex: 2 }}
+                  >
+                    <Icon name="expand_more" size={16} />
+                  </IconBtn>
+                </>
+              ) : (
+                <button type="button"
+                  onClick={() => setUi({ drawerOpen: true })}
+                  aria-expanded={false}
+                  className="cp-btn cp-btn--ghost"
+                  style={{
+                    justifyContent: 'flex-start', gap: 10, height: 36,
+                    borderRadius: 0, padding: '0 12px', width: '100%',
+                  }}>
+                  <Icon name="expand_less" size={16} />
+                  <span className="cp-micro">Tools</span>
+                  <span className="cp-label" style={{ color: T.faint }}>
+                    {mode === 'design' ? ui.panel : ui.illPanel}
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -327,17 +406,22 @@ export default function ColorPalette() {
   )
 }
 
-// ── Swatch card for the palette grid ─────────────────────────────────────────
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
+
+const kbd = {
+  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontSize: 11, background: '#1a1a22', border: `1px solid ${'#26262f'}`,
+  borderRadius: 3, padding: '1px 4px', color: '#9e9e9e',
+}
+
+// ── Swatch card ───────────────────────────────────────────────────────────────
 
 function SwatchCard({ swatch, isActive, isSelected, colorFilter, onClick, onDragStart, onDragOver, onDrop, onDragEnd }) {
   const [hover, setHover] = useState(false)
-  const border = isActive
-    ? `3px solid ${C.accent}`
-    : isSelected
-      ? `2px dashed ${C.accent}`
-      : hover
-        ? `2px solid ${C.mutedHi}`
-        : '2px solid transparent'
+  const border = isActive ? `3px solid ${T.accent}`
+    : isSelected ? `2px dashed ${T.accent}`
+    : hover ? `2px solid ${T.lineHi}`
+    : '2px solid transparent'
 
   return (
     <div
@@ -349,25 +433,28 @@ function SwatchCard({ swatch, isActive, isSelected, colorFilter, onClick, onDrag
       onDragEnd={onDragEnd}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      style={{ display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer', flexShrink: 0, width: SWATCH_SZ }}
+      title={`${swatch.name || 'Unnamed'} — ${swatch.hex}`}
+      style={{ display: 'flex', flexDirection: 'column', gap: 5, cursor: 'pointer', flexShrink: 0, width: SWATCH_SZ }}
     >
-      <div style={{
+      <div className="cp-sw" style={{
         width: SWATCH_SZ, height: SWATCH_SZ,
         borderRadius: 10, background: swatch.hex,
-        border, boxSizing: 'border-box',
-        position: 'relative',
+        border, boxSizing: 'border-box', position: 'relative',
         ...colorFilter,
       }}>
         {swatch.locked && (
-          <div style={{
-            position: 'absolute', bottom: 5, right: 5,
-            width: 7, height: 7, borderRadius: '50%',
-            background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.2)',
-          }} />
+          <div title="Locked" style={{
+            position: 'absolute', bottom: 4, right: 4,
+            width: 16, height: 16, borderRadius: '50%',
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Icon name="lock" size={10} color="rgba(255,255,255,0.85)" />
+          </div>
         )}
       </div>
       <div style={{
-        fontSize: 9, color: isActive ? C.text : C.muted,
+        fontSize: T.label, color: isActive ? T.text : T.muted,
         textAlign: 'center', width: '100%',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>
@@ -377,155 +464,67 @@ function SwatchCard({ swatch, isActive, isSelected, colorFilter, onClick, onDrag
   )
 }
 
-// ── Small UI components ───────────────────────────────────────────────────────
-
 function LockBtn({ label, checked, onChange, title }) {
   return (
-    <button title={title} onClick={() => onChange(!checked)} style={{
-      flex: 1, background: checked ? C.accentLo : '#1a1a22',
-      border: `1px solid ${checked ? C.accent : C.border}`,
-      borderRadius: 5, color: checked ? C.accent : C.muted,
-      padding: '4px 0', fontSize: 10, cursor: 'pointer',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-    }}>{label}</button>
+    <button type="button" title={title} onClick={() => onChange(!checked)}
+      aria-pressed={checked}
+      className={checked ? 'cp-chip is-active' : 'cp-chip'}
+      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+      {label}
+    </button>
   )
 }
 
-function MiniBtn({ children, onClick, danger }) {
-  const base = danger ? { bg: '#3a0010', border: '#6a001f', color: '#ff4060' } : { bg: '#1a1a22', border: C.border, color: C.muted }
-  return (
-    <button onClick={onClick} style={{
-      background: base.bg, border: `1px solid ${base.border}`,
-      borderRadius: 4, color: base.color, padding: '3px 8px', fontSize: 10, cursor: 'pointer',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = danger ? '#e04060' : C.mutedHi; e.currentTarget.style.color = danger ? '#ff6080' : C.text }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = base.border; e.currentTarget.style.color = base.color }}
-    >{children}</button>
-  )
-}
+// ── Splitter ──────────────────────────────────────────────────────────────────
+//
+// One component for both axes; the old pair were near-identical copies. The hit
+// area is 9px with a visible grip — the 5px versions were, in Kimi's words on
+// reviewing this tool, "nearly impossible to grab", which is also why the
+// palette never got resized.
 
-function BulkRoleSelect({ onChange }) {
-  const ROLES = ['black', 'main', 'accent', 'white', 'pop', 'freeform']
+function Splitter({ axis, onDelta }) {
+  const dragging = useRef(false)
+  const last = useRef(0)
+  const [hot, setHot] = useState(false)
+  const horiz = axis === 'x'
+
   return (
-    <select
-      defaultValue=""
-      onChange={e => { if (e.target.value) { onChange(e.target.value); e.target.value = '' } }}
+    <div
+      role="separator"
+      aria-orientation={horiz ? 'vertical' : 'horizontal'}
+      onPointerDown={e => {
+        dragging.current = true
+        last.current = horiz ? e.clientX : e.clientY
+        e.currentTarget.setPointerCapture(e.pointerId)
+        setHot(true)
+      }}
+      onPointerMove={e => {
+        if (!dragging.current) return
+        const pos = horiz ? e.clientX : e.clientY
+        const d = pos - last.current
+        last.current = pos
+        if (d) onDelta(d)
+      }}
+      onPointerUp={() => { dragging.current = false; setHot(false) }}
+      onPointerCancel={() => { dragging.current = false; setHot(false) }}
+      onMouseEnter={() => setHot(true)}
+      onMouseLeave={() => { if (!dragging.current) setHot(false) }}
       style={{
-        background: '#1a1a22', border: `1px solid ${C.border}`, borderRadius: 4,
-        color: C.muted, padding: '3px 6px', fontSize: 10, cursor: 'pointer', outline: 'none',
+        [horiz ? 'width' : 'height']: 9,
+        flexShrink: 0, zIndex: 10,
+        cursor: horiz ? 'col-resize' : 'row-resize',
+        background: hot ? T.accentSoft : T.bg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'background 0.12s',
       }}
     >
-      <option value="" disabled>Set role…</option>
-      {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-    </select>
-  )
-}
-
-function SendBtn({ label, onClick }) {
-  return (
-    <button onClick={onClick} style={{
-      flex: 1, background: '#1a1a22', border: `1px solid ${C.border}`,
-      borderRadius: 4, color: C.muted, padding: '4px 0', fontSize: 10, cursor: 'pointer',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = C.mutedHi; e.currentTarget.style.color = C.text }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted }}
-    >{label}</button>
-  )
-}
-
-function RoleSelect({ value, onChange }) {
-  const ROLES = ['black', 'main', 'accent', 'white', 'pop', 'freeform']
-  return (
-    <select value={value} onChange={e => onChange(e.target.value)} style={{
-      background: '#1a1a22', border: `1px solid ${C.border}`, borderRadius: 4,
-      color: C.text, padding: '3px 6px', fontSize: 10, cursor: 'pointer', outline: 'none',
-    }}>
-      {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-    </select>
-  )
-}
-
-function IconBtn({ children, onClick, title, danger }) {
-  return (
-    <button title={title} onClick={onClick} style={{
-      width: 22, height: 22, border: 'none', borderRadius: 4,
-      background: 'transparent', color: danger ? '#e05' : C.muted,
-      fontSize: 12, cursor: 'pointer', padding: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.background = danger ? '#3a0010' : '#2a2a35'; e.currentTarget.style.color = danger ? '#ff4060' : C.text }}
-      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = danger ? '#e05' : C.muted }}
-    >{children}</button>
-  )
-}
-
-// ── Resize handles ────────────────────────────────────────────────────────────
-
-function HorzHandle({ onDelta }) {
-  const ref = useRef(null)
-  const dragging = useRef(false)
-  const lastX = useRef(0)
-  const [hot, setHot] = useState(false)
-
-  return (
-    <div
-      ref={ref}
-      onPointerDown={e => {
-        dragging.current = true
-        lastX.current = e.clientX
-        e.currentTarget.setPointerCapture(e.pointerId)
-        setHot(true)
-      }}
-      onPointerMove={e => {
-        if (!dragging.current) return
-        const d = e.clientX - lastX.current
-        lastX.current = e.clientX
-        if (d) onDelta(d)
-      }}
-      onPointerUp={() => { dragging.current = false; setHot(false) }}
-      onPointerCancel={() => { dragging.current = false; setHot(false) }}
-      onMouseEnter={() => setHot(true)}
-      onMouseLeave={() => { if (!dragging.current) setHot(false) }}
-      style={{
-        width: 5, flexShrink: 0, cursor: 'col-resize', zIndex: 10,
-        background: hot ? C.accent : C.border,
-        transition: 'background 0.15s',
-      }}
-    />
-  )
-}
-
-function VertHandle({ onDelta }) {
-  const ref = useRef(null)
-  const dragging = useRef(false)
-  const lastY = useRef(0)
-  const [hot, setHot] = useState(false)
-
-  return (
-    <div
-      ref={ref}
-      onPointerDown={e => {
-        dragging.current = true
-        lastY.current = e.clientY
-        e.currentTarget.setPointerCapture(e.pointerId)
-        setHot(true)
-      }}
-      onPointerMove={e => {
-        if (!dragging.current) return
-        const d = e.clientY - lastY.current
-        lastY.current = e.clientY
-        if (d) onDelta(d)
-      }}
-      onPointerUp={() => { dragging.current = false; setHot(false) }}
-      onPointerCancel={() => { dragging.current = false; setHot(false) }}
-      onMouseEnter={() => setHot(true)}
-      onMouseLeave={() => { if (!dragging.current) setHot(false) }}
-      style={{
-        height: 5, flexShrink: 0, cursor: 'ns-resize',
-        background: hot ? C.accent : C.border,
-        transition: 'background 0.15s',
-      }}
-    />
+      <div style={{
+        [horiz ? 'width' : 'height']: 1,
+        [horiz ? 'height' : 'width']: horiz ? 28 : 40,
+        background: hot ? T.accent : T.line,
+        borderRadius: 1, transition: 'background 0.12s',
+      }} />
+    </div>
   )
 }
 

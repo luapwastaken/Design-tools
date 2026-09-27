@@ -3,7 +3,7 @@ import { interpolate, toHex } from '../../lib/color.js'
 import { addSwatch, usePalette } from './store.js'
 import { NumberSlider } from '../../components/NumberField.jsx'
 import Icon from '../../components/Icon.jsx'
-import { Section, FieldLabel, ModeChip, AddBtn, SwatchStrip, ACCENT } from './panelUi.jsx'
+import { Section, FieldLabel, ModeChip, AddBtn, SwatchStrip, Btn, ACCENT, T } from './panelUi.jsx'
 
 const SPACES = [
   { id: 'oklch', label: 'OKLCH' },
@@ -57,20 +57,16 @@ export default function Gradient() {
       <NumberSlider label="Angle" min={0} max={360} step={1} value={angle} onChange={setAngle} accent={ACCENT} labelWidth={40} numWidth={32} suffix="°" />
 
       {/* smooth preview */}
-      <div style={{ height: 44, borderRadius: 8, background: cssGradient, border: '1px solid #222230' }} />
+      <div style={{ height: 44, borderRadius: 8, background: cssGradient, border: `1px solid ${T.line}` }} />
       {/* discrete stops */}
       <SwatchStrip hexes={ramp} height={28} />
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <AddBtn onClick={() => ramp.forEach(h => addSwatch(h))}>+ Add {stops} stops</AddBtn>
-        <button onClick={copy} style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          background: '#131318', border: '1px solid #222230', borderRadius: 5,
-          color: copied ? '#7ee787' : '#888', padding: '5px 10px', fontSize: 10, cursor: 'pointer',
-        }}>
+        <Btn onClick={copy} style={{ color: copied ? T.ok : T.muted }}>
           <Icon name={copied ? 'check_circle' : 'content_copy'} size={12} />
           {copied ? 'Copied' : 'Copy CSS'}
-        </button>
+        </Btn>
       </div>
     </Section>
   )
@@ -80,11 +76,8 @@ function SwatchSelect({ value, onChange, options }) {
   const cur = options.find(s => s.id === value) ?? options[0]
   return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
-      <span style={{ width: 16, height: 16, borderRadius: 4, background: cur.hex, border: '1px solid #2a2a38', flexShrink: 0 }} />
-      <select value={value} onChange={e => onChange(e.target.value)} style={{
-        flex: 1, background: '#111118', border: '1px solid #2a2a38', borderRadius: 4,
-        color: '#b0a8d8', padding: '3px 4px', fontSize: 10, outline: 'none', minWidth: 0,
-      }}>
+      <span style={{ width: 16, height: 16, borderRadius: 4, background: cur.hex, border: `1px solid ${T.line}`, flexShrink: 0 }} />
+      <select value={value} onChange={e => onChange(e.target.value)} className="cp-select" style={{ flex: 1 }}>
         {options.map(s => (
           <option key={s.id} value={s.id}>{s.name || s.hex}</option>
         ))}

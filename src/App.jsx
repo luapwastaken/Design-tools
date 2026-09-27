@@ -8,7 +8,6 @@ import DitherTool from './tools/DitherTool/index.jsx'
 import PostFX from './tools/PostFX/index.jsx'
 import LineartTool from './tools/LineartTool/index.jsx'
 import MotionMaker from './tools/MotionMaker/index.jsx'
-import CobaltTool from './tools/CobaltTool.jsx'
 import Icon from './components/Icon.jsx'
 
 // ── Tool registry: add new tools here ──────────────────────────────
@@ -60,13 +59,6 @@ const TOOLS = [
     icon: <Icon name="movie_filter" size={18} />,
     accentColor: '#ff7849',
     component: MotionMaker,
-  },
-  {
-    id: 'cobalt',
-    label: 'cobalt.tools',
-    icon: <Icon name="download" size={18} />,
-    accentColor: '#7dd3fc',
-    component: CobaltTool,
   },
 ]
 

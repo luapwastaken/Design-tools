@@ -2,6 +2,7 @@ import { useRef, useEffect, useLayoutEffect, useState, useMemo } from 'react'
 import { oklchToHex, toOklch, maxChromaInGamut, lumaOklch, oklchForLuma } from '../../lib/color.js'
 import { hexToCmyk, cmykToRgb } from '../../lib/cmyk.js'
 import { pickScreenColor, eyeDropperSupported } from '../../lib/eyedropper.js'
+import { T, ModeChip, HexInput } from './panelUi.jsx'
 
 const CANVAS_RES = 256
 const MAX_C = 0.37
@@ -368,21 +369,15 @@ export default function Picker({ oklch, onChange, valueLocked = false, hueLocked
     <div style={{ userSelect: 'none' }}>
 
       {/* Color mode tabs */}
-      <div style={{ display: 'flex', marginBottom: 8, background: '#0a0a0c', borderRadius: 5, padding: 2, gap: 1 }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
         {MODES.map(m => (
-          <button key={m} onClick={() => setColorMode(m)} style={{
-            flex: 1, background: colorMode === m ? '#1e1a2e' : 'transparent',
-            border: 'none', borderRadius: 4,
-            color: colorMode === m ? '#c4b5fd' : '#444',
-            padding: '3px 0', fontSize: 9, cursor: 'pointer',
-            fontWeight: colorMode === m ? 600 : 400,
-          }}>{m}</button>
+          <ModeChip key={m} active={colorMode === m} onClick={() => setColorMode(m)}>{m}</ModeChip>
         ))}
       </div>
 
       {/* 2D square — OKLCH, HSL, HSV only */}
       {showSquare && (
-        <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 6, overflow: 'hidden', cursor: lcCursor, background: '#111' }}
+        <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 6, overflow: 'hidden', cursor: lcCursor, background: T.panel }}
           onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); dragging.current = 'sq'; squarePointerAt(e) }}>
           <canvas ref={lcRef} width={CANVAS_RES} height={CANVAS_RES}
             style={{ width: '100%', height: '100%', display: 'block', imageRendering: 'auto' }} />
@@ -417,19 +412,20 @@ export default function Picker({ oklch, onChange, valueLocked = false, hueLocked
             {label:'H',value:Math.round(h),field:'h',onInput:onHInput,isLocked:hueLocked},
           ].map(({label,value,field,onInput,isLocked}) => (
             <label key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 9, color: isLocked ? 'rgba(139,92,246,0.9)' : '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
+              <span style={{ fontSize: T.micro, color: isLocked ? T.accentText : T.muted, textTransform: 'uppercase', letterSpacing: 1 }}>
                 {label}{isLocked ? ' 🔒' : ''}
               </span>
               <input type="number" value={value} step={field==='l'?0.01:field==='c'?0.005:1}
                 readOnly={isLocked}
                 onChange={isLocked ? undefined : onInput}
                 onKeyDown={e => { if (e.key==='ArrowUp'||e.key==='ArrowDown') { e.preventDefault(); nudge(e.key, field) } }}
+                className="cp-input"
                 style={{
-                  width: '100%', background: isLocked ? '#111118' : '#1a1a22',
-                  border: `1px solid ${isLocked ? 'rgba(139,92,246,0.5)' : '#333'}`,
-                  borderRadius: 4, color: isLocked ? 'rgba(139,92,246,0.7)' : '#f0ede7',
-                  padding: '3px 5px', fontSize: 11, outline: 'none', boxSizing: 'border-box',
-                  cursor: isLocked ? 'default' : 'text',
+                  width: '100%', boxSizing: 'border-box',
+                  ...(isLocked ? {
+                    background: T.panel, borderColor: T.accentLine,
+                    color: T.accentText, cursor: 'default',
+                  } : null),
                 }}
               />
             </label>
@@ -442,9 +438,9 @@ export default function Picker({ oklch, onChange, valueLocked = false, hueLocked
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
           {valueLocked && (colorMode === 'RGB' || colorMode === 'CMYK') && (
             <div style={{
-              fontSize: 9, color: 'rgba(139,92,246,0.8)', background: 'rgba(139,92,246,0.08)',
-              border: '1px solid rgba(139,92,246,0.25)', borderRadius: 4,
-              padding: '3px 7px', letterSpacing: 0.3,
+              fontSize: T.micro, color: T.accentText, background: 'rgba(139,92,246,0.08)',
+              border: '1px solid rgba(139,92,246,0.25)', borderRadius: T.r,
+              padding: '4px 8px', letterSpacing: 0.3,
             }}>
               🔒 Value lock active — sliders adjust to preserve greyscale value
             </div>
@@ -461,10 +457,10 @@ export default function Picker({ oklch, onChange, valueLocked = false, hueLocked
 
       {/* Hex + preview + eyedropper */}
       <div style={{ display: 'flex', gap: 6, marginTop: 10, alignItems: 'center' }}>
-        <div style={{ width: 30, height: 30, borderRadius: 6, background: previewHex, border: '1px solid #333', flexShrink: 0 }} />
-        <input value={previewHex}
-          onChange={e => { if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) emit(toOklch(e.target.value)) }}
-          style={{ flex: 1, background: '#1a1a22', border: '1px solid #333', borderRadius: 4, color: '#f0ede7', padding: '4px 8px', fontSize: 12, fontFamily: 'monospace', outline: 'none' }}
+        <div style={{ width: 30, height: 30, borderRadius: 6, background: previewHex, border: `1px solid ${T.line}`, flexShrink: 0 }} />
+        <HexInput value={previewHex} aria-label="Hex colour"
+          onCommit={hex => emit(toOklch(hex))}
+          style={{ flex: 1 }}
         />
         <EyeDropperBtn
           onPick={hex => emit(toOklch(hex))}
@@ -483,7 +479,7 @@ function GradientSlider({ ch, colorMode, previewHex, onChange, isLocked = false 
 
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-      <span style={{ fontSize: 10, color: isLocked ? 'rgba(139,92,246,0.9)' : '#666', width: 14, textAlign: 'right', flexShrink: 0 }}>
+      <span style={{ fontSize: T.label, color: isLocked ? T.accentText : T.faint, width: 18, textAlign: 'right', flexShrink: 0 }}>
         {ch.key}
       </span>
       <div style={{ flex: 1, position: 'relative', height: 12, borderRadius: 6, opacity: isLocked ? 0.45 : 1 }}>
@@ -506,15 +502,16 @@ function GradientSlider({ ch, colorMode, previewHex, onChange, isLocked = false 
         readOnly={isLocked}
         value={ch.dec === 0 ? Math.round(ch.value) : +ch.value.toFixed(ch.dec)}
         onChange={isLocked ? undefined : e => onChange(ch.key, +e.target.value)}
+        className="cp-input"
         style={{
-          width: 44, background: isLocked ? '#111118' : '#1a1a22',
-          border: `1px solid ${isLocked ? 'rgba(139,92,246,0.5)' : '#333'}`,
-          borderRadius: 4, color: isLocked ? 'rgba(139,92,246,0.7)' : '#f0ede7',
-          padding: '3px 5px', fontSize: 10, outline: 'none', boxSizing: 'border-box',
-          textAlign: 'right', cursor: isLocked ? 'default' : 'text',
+          width: 56, textAlign: 'right', boxSizing: 'border-box',
+          ...(isLocked ? {
+            background: T.panel, borderColor: T.accentLine,
+            color: T.accentText, cursor: 'default',
+          } : null),
         }}
       />
-      {ch.unit && <span style={{ fontSize: 9, color: '#444', width: 8, flexShrink: 0 }}>{ch.unit}</span>}
+      {ch.unit && <span style={{ fontSize: T.micro, color: T.faint, width: 10, flexShrink: 0 }}>{ch.unit}</span>}
     </div>
   )
 }
@@ -541,31 +538,29 @@ function EyeDropperBtn({ onPick, onPreview }) {
     if (hex) onPick(hex)
   }
 
-  const btnBg    = isPicking && liveHex ? liveHex : isPicking ? '#2d1a5e' : '#1a1a22'
-  const btnBdr   = isPicking ? '#8b5cf6' : '#333'
-  const btnColor = isPicking ? '#8b5cf6' : '#888'
+  const btnBg    = isPicking && liveHex ? liveHex : isPicking ? T.accentSoft : T.control
+  const btnBdr   = isPicking ? T.accent : T.line
+  const btnColor = isPicking ? T.accentText : T.muted
 
   return (
     <button
       onClick={startPick}
       disabled={isPicking}
       title={isPicking ? 'Click any pixel on screen…' : 'Pick colour from screen (all monitors)'}
+      className="cp-icon-btn"
       style={{
         width: 30, height: 30, flexShrink: 0, position: 'relative', overflow: 'hidden',
-        background: btnBg, border: `1px solid ${btnBdr}`, borderRadius: 4,
-        color: btnColor, cursor: isPicking ? 'default' : 'pointer',
-        padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: btnBg, borderColor: btnBdr, color: btnColor,
+        cursor: isPicking ? 'default' : 'pointer',
         transition: 'background 0.05s',
       }}
-      onMouseEnter={e => { if (!isPicking) { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.color = '#c4b5fd' } }}
-      onMouseLeave={e => { if (!isPicking) { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#888' } }}
     >
       {isPicking && liveHex ? (
         <div style={{ position: 'absolute', inset: 0, background: liveHex, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ width: 6, height: 6, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.85)', boxShadow: '0 0 0 1px rgba(0,0,0,0.4)' }} />
         </div>
       ) : isPicking ? (
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6', opacity: 0.8 }} />
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.accent, opacity: 0.8 }} />
       ) : (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
           <path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.41 1.41-6.6 6.6A2 2 0 0 0 5 16v3h3a2 2 0 0 0 1.42-.59l6.6-6.6 1.41 1.42 1.42-1.42-1.42-1.41 3.12-3.12a1 1 0 0 0 0-1.65z"/>

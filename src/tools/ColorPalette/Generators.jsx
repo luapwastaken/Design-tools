@@ -2,9 +2,7 @@ import { useState, useMemo } from 'react'
 import { generateHarmony, generateRamp, oklchToHex } from '../../lib/color.js'
 import { addSwatch, usePalette } from './store.js'
 import { NumberSlider, EditableNumber } from '../../components/NumberField.jsx'
-import Icon from '../../components/Icon.jsx'
-
-const ACCENT = '#8b5cf6'
+import { Section, FieldLabel, ModeChip, StepBtn, DiceBtn, AddBtn, SwatchStrip, LockableStrip, ACCENT, T } from './panelUi.jsx'
 
 // ── AcerolaFX palette generator (ported from HLSL) ────────────────────────────
 // Original: https://github.com/GarrettGunnell/AcerolaFX/blob/main/Shaders/AcerolaFX_PaletteSwap.fx
@@ -145,11 +143,8 @@ export default function Generators() {
           <input
             type="number" value={seed} min={1} max={999999999}
             onChange={e => setSeed(Math.max(1, Math.min(999999999, +e.target.value || 1)))}
-            style={{
-              width: 90, background: '#111118', border: '1px solid #2a2a38',
-              borderRadius: 4, color: '#b0a8d8', padding: '3px 6px',
-              fontSize: 11, outline: 'none', fontVariantNumeric: 'tabular-nums',
-            }}
+            className="cp-input cp-input--mono"
+            style={{ width: 100 }}
           />
           <DiceBtn onClick={() => setSeed(randSeed())} title="Random seed" />
         </div>
@@ -208,85 +203,6 @@ export default function Generators() {
   )
 }
 
-// ── Swatch strip ──────────────────────────────────────────────────────────────
-
-function SwatchStrip({ hexes }) {
-  const [hovered, setHovered] = useState(null)
-  return (
-    <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', height: 52 }}>
-      {hexes.map((hex, i) => (
-        <div key={i}
-          onMouseEnter={() => setHovered(i)}
-          onMouseLeave={() => setHovered(null)}
-          style={{
-            flex: hovered === i ? 1.6 : 1,
-            background: hex, position: 'relative',
-            transition: 'flex 0.15s ease',
-          }}
-        >
-          {hovered === i && (
-            <div style={{
-              position: 'absolute', bottom: 4, left: '50%',
-              transform: 'translateX(-50%)',
-              background: 'rgba(0,0,0,0.7)', color: '#fff',
-              fontSize: 9, padding: '2px 5px', borderRadius: 3,
-              fontFamily: 'monospace', whiteSpace: 'nowrap', pointerEvents: 'none',
-            }}>
-              {hex}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ── Lockable swatch strip (Coolors-style lock + reroll) ───────────────────────
-
-function LockableStrip({ hexes, locked, onToggle }) {
-  const [hovered, setHovered] = useState(null)
-  return (
-    <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', height: 56 }}>
-      {hexes.map((hex, i) => {
-        const isLocked = locked[i] != null
-        const dark = isLightHex(hex)
-        return (
-          <div key={i}
-            onMouseEnter={() => setHovered(i)}
-            onMouseLeave={() => setHovered(null)}
-            onClick={() => onToggle(i)}
-            title={isLocked ? 'Unlock — reroll will change it' : 'Lock — reroll will keep it'}
-            style={{
-              flex: 1, background: hex, position: 'relative', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            {(isLocked || hovered === i) && (
-              <Icon name={isLocked ? 'lock' : 'lock_open'} size={13}
-                color={dark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.85)'} />
-            )}
-            {hovered === i && (
-              <div style={{
-                position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)',
-                background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 8,
-                padding: '1px 4px', borderRadius: 3, fontFamily: 'monospace',
-                whiteSpace: 'nowrap', pointerEvents: 'none',
-              }}>{hex}</div>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function isLightHex(hex) {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.55
-}
-
 // ── Range row (min + max sliders) ─────────────────────────────────────────────
 
 function RangeRow({ label, minVal, maxVal, onMinChange, onMaxChange, step, min, max }) {
@@ -295,105 +211,24 @@ function RangeRow({ label, minVal, maxVal, onMinChange, onMaxChange, step, min, 
       <FieldLabel style={{ width: 62, flexShrink: 0 }}>{label}</FieldLabel>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          <span style={{ fontSize: 9, color: '#555', width: 18 }}>min</span>
+          <span style={{ fontSize: T.micro, color: T.faint, width: 24 }}>min</span>
           <input type="range" min={min} max={max} step={step} value={minVal}
             onChange={e => onMinChange(+e.target.value)}
             style={{ flex: 1, accentColor: ACCENT }}
           />
           <EditableNumber value={+(minVal * 100).toFixed(1)} onChange={v => onMinChange(v / 100)}
-            min={min * 100} max={max * 100} step={step * 100} dec={0} suffix="%" width={30} color="#888" accent={ACCENT} />
+            min={min * 100} max={max * 100} step={step * 100} dec={0} suffix="%" width={30} color={T.muted} accent={ACCENT} />
         </div>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          <span style={{ fontSize: 9, color: '#555', width: 18 }}>max</span>
+          <span style={{ fontSize: T.micro, color: T.faint, width: 24 }}>max</span>
           <input type="range" min={min} max={max} step={step} value={maxVal}
             onChange={e => onMaxChange(+e.target.value)}
             style={{ flex: 1, accentColor: ACCENT }}
           />
           <EditableNumber value={+(maxVal * 100).toFixed(1)} onChange={v => onMaxChange(v / 100)}
-            min={min * 100} max={max * 100} step={step * 100} dec={0} suffix="%" width={30} color="#888" accent={ACCENT} />
+            min={min * 100} max={max * 100} step={step * 100} dec={0} suffix="%" width={30} color={T.muted} accent={ACCENT} />
         </div>
       </div>
     </div>
-  )
-}
-
-// ── Small UI pieces ───────────────────────────────────────────────────────────
-
-function Section({ label, children }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{
-        fontSize: 9, color: '#555', textTransform: 'uppercase',
-        letterSpacing: 1.2, borderBottom: '1px solid #1a1a24', paddingBottom: 5,
-      }}>
-        {label}
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function FieldLabel({ children, style }) {
-  return (
-    <span style={{ fontSize: 10, color: '#666', ...style }}>{children}</span>
-  )
-}
-
-function ModeChip({ active, onClick, children }) {
-  return (
-    <button onClick={onClick} style={{
-      flex: 1,
-      background: active ? '#2d1a5e' : '#131318',
-      border: `1px solid ${active ? '#6d3fbe' : '#222230'}`,
-      borderRadius: 5, color: active ? '#c4b5fd' : '#555',
-      padding: '4px 0', fontSize: 10, cursor: 'pointer',
-      transition: 'all 0.1s',
-    }}>
-      {children}
-    </button>
-  )
-}
-
-function StepBtn({ children, onClick }) {
-  return (
-    <button onClick={onClick} style={{
-      width: 22, height: 22, background: '#131318', border: '1px solid #222230',
-      borderRadius: 4, color: '#888', fontSize: 14, cursor: 'pointer',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
-    }}>
-      {children}
-    </button>
-  )
-}
-
-function DiceBtn({ onClick, title }) {
-  return (
-    <button onClick={onClick} title={title} style={{
-      width: 28, height: 26, background: '#131318', border: '1px solid #222230',
-      borderRadius: 4, color: '#8b5cf6', fontSize: 14, cursor: 'pointer',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
-      transition: 'border-color 0.1s, color 0.1s',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = '#6d3fbe'; e.currentTarget.style.color = '#c4b5fd' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = '#222230'; e.currentTarget.style.color = '#8b5cf6' }}
-    >
-      ⚄
-    </button>
-  )
-}
-
-function AddBtn({ children, onClick }) {
-  return (
-    <button onClick={onClick} style={{
-      alignSelf: 'flex-start',
-      background: '#1a1030', border: '1px solid #3d2a7a',
-      borderRadius: 5, color: '#9d7dea',
-      padding: '5px 12px', fontSize: 10, cursor: 'pointer',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.background = '#2d1a5e'; e.currentTarget.style.color = '#c4b5fd' }}
-      onMouseLeave={e => { e.currentTarget.style.background = '#1a1030'; e.currentTarget.style.color = '#9d7dea' }}
-    >
-      {children}
-    </button>
   )
 }

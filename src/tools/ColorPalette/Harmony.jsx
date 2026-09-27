@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { usePalette, updateSwatch } from './store.js'
 import { toOklch, oklchToHex } from '../../lib/color.js'
+import { Card, MiniBtn, T } from './panelUi.jsx'
 
 // ── Palette harmony critic ──────────────────────────────────────────────────
 //
@@ -10,9 +11,9 @@ import { toOklch, oklchToHex } from '../../lib/color.js'
 // with a one-click fix. Advisory by design — it explains, it doesn't grade.
 
 const SEV = {
-  issue: { color: '#e0795a', label: 'Issue' },
-  note: { color: '#d3b53f', label: 'Note' },
-  good: { color: '#22c55e', label: 'Good' },
+  issue: { color: T.bad, label: 'Issue' },
+  note: { color: T.warn, label: 'Note' },
+  good: { color: T.ok, label: 'Good' },
 }
 
 const hueDist = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d }
@@ -206,43 +207,38 @@ export default function Harmony() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 620 }}>
-      <p style={{ fontSize: 12, color: '#ccc', margin: 0, lineHeight: 1.5 }}>{summary}</p>
+      <p style={{ fontSize: T.body, color: T.textDim, margin: 0, lineHeight: 1.5 }}>{summary}</p>
 
       {findings.map((f, i) => (
-        <div key={i} style={{ background: '#151520', borderRadius: 6, padding: 10, border: '1px solid #2a2a35' }}>
+        <Card key={i}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
-            <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: SEV[f.sev].color }}>{SEV[f.sev].label}</span>
-            <span style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>{f.area}</span>
+            <span style={{ fontSize: T.micro, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: SEV[f.sev].color }}>{SEV[f.sev].label}</span>
+            <span style={{ fontSize: T.micro, color: T.faint, textTransform: 'uppercase', letterSpacing: 0.5 }}>{f.area}</span>
           </div>
-          <div style={{ fontSize: 11, color: '#bbb', lineHeight: 1.5 }}>{f.text}</div>
+          <div style={{ fontSize: T.body, color: T.textDim, lineHeight: 1.5 }}>{f.text}</div>
           {f.fixes?.length > 0 && (
             <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
               {f.fixes.map((fix, j) => (
-                <button key={j} onClick={() => updateSwatch(fix.id, { hex: fix.hex })} style={fixBtn}>
-                  <span style={{ width: 12, height: 12, borderRadius: 3, background: fix.hex, border: '1px solid #333', display: 'inline-block' }} />
+                <MiniBtn key={j} onClick={() => updateSwatch(fix.id, { hex: fix.hex })}>
+                  <span style={{ width: 12, height: 12, borderRadius: 3, background: fix.hex, border: `1px solid ${T.line}`, display: 'inline-block' }} />
                   {fix.label}
-                </button>
+                </MiniBtn>
               ))}
             </div>
           )}
-        </div>
+        </Card>
       ))}
 
       {allFixes.length > 1 && (
-        <button onClick={() => allFixes.forEach(fix => updateSwatch(fix.id, { hex: fix.hex }))} style={{ ...fixBtn, alignSelf: 'flex-start', borderColor: '#3d2a7a', color: '#e0d8ff', background: '#1e1a2e' }}>
+        <MiniBtn onClick={() => allFixes.forEach(fix => updateSwatch(fix.id, { hex: fix.hex }))}
+          style={{ alignSelf: 'flex-start', borderColor: T.accentLine, color: T.accentText, background: T.accentSoft }}>
           Apply all {allFixes.length} fixes
-        </button>
+        </MiniBtn>
       )}
 
-      <p style={{ fontSize: 10, color: '#666', margin: 0, lineHeight: 1.5 }}>
+      <p style={{ fontSize: T.label, color: T.faint, margin: 0, lineHeight: 1.5 }}>
         Advisory only — stylised palettes break these rules on purpose. Locked swatches are never modified. Updates live as you edit.
       </p>
     </div>
   )
-}
-
-const fixBtn = {
-  display: 'inline-flex', alignItems: 'center', gap: 6,
-  background: '#18181c', border: '1px solid #2a2a35', borderRadius: 5,
-  color: '#aaa', padding: '4px 10px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit',
 }

@@ -1,11 +1,12 @@
 # Motion Maker — session handoff (2026-06-16)
 
-## Branch state (updated end of session)
+## Branch state (updated 2026-06-21)
 
 - **Current branch**: `feat/motion-maker-rigging` (cut from the value-ops work; local `main` is stale at 1.8.x — the real history lives on the feature branches)
 - **Version**: `1.41.0`
 - Waves 19-26 added 11 nodes (Null/Anchor, Parent/Pin, Stagger, Feel, Seed/Shuffle, Marker, Sequencer, Stroke/Outline, Round Corners, Path, Trim Paths, Motion Blur, Gooey/Metaball, Timing Check). **64 nodes total.**
 - **All cleanly node-shaped spec items are done.** Remaining work (below) each needs a new subsystem.
+- Branch has 9 commits not yet pushed / PRed. Ready to open a PR against `main` when desired.
 
 ## Remaining — each is a feature, not a node
 

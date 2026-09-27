@@ -5,15 +5,7 @@ import { hexToCmyk } from '../../lib/cmyk.js'
 import { usePalette } from './store.js'
 import { markSaved } from '../../lib/unsavedChanges.js'
 import { EditableNumber } from '../../components/NumberField.jsx'
-
-const C = {
-  accent: '#8b5cf6',
-  accentLo: '#2d1a5e',
-  accentBorder: '#5a3a9f',
-  text: '#f0ede7',
-  muted: '#4a4a54',
-  border: '#1e1e24',
-}
+import { T, Section, Btn, MiniBtn, FieldLabel, Hint } from './panelUi.jsx'
 
 // ── Text format builders ──────────────────────────────────────────────────────
 
@@ -235,7 +227,7 @@ export default function ExportPanel() {
   )
 
   if (!swatches.length) {
-    return <div style={{ color: '#666', fontSize: 12, padding: 12 }}>No swatches to export.</div>
+    return <Hint style={{ padding: 12 }}>No swatches to export.</Hint>
   }
 
   return (
@@ -244,90 +236,68 @@ export default function ExportPanel() {
       {/* Color sheet with inline preview */}
       <Section label="Color sheet">
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontSize: 11, color: '#888' }}>Columns</span>
+          <FieldLabel>Columns</FieldLabel>
           <input type="range" min={2} max={8} value={cols} onChange={e => setCols(+e.target.value)}
-            style={{ flex: 1, accentColor: C.accent }} />
-          <EditableNumber value={cols} onChange={setCols} min={2} max={8} step={1} accent={C.accent} width={28} color={C.text} />
-          <button onClick={() => setShowPreview(v => !v)} style={{
-            background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 4,
-            color: C.muted, padding: '2px 8px', fontSize: 10, cursor: 'pointer',
-          }}>{showPreview ? 'Hide' : 'Preview'}</button>
+            style={{ flex: 1, accentColor: T.accent }} />
+          <EditableNumber value={cols} onChange={setCols} min={2} max={8} step={1} accent={T.accent} width={28} color={T.text} />
+          <MiniBtn variant="ghost" onClick={() => setShowPreview(v => !v)}>
+            {showPreview ? 'Hide' : 'Preview'}
+          </MiniBtn>
         </div>
 
         {/* Inline SVG preview */}
         {showPreview && (
-          <div style={{ marginBottom: 10, borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.border}` }}>
+          <div style={{ marginBottom: 10, borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.line}` }}>
             <img src={svgDataUrl} alt="Palette preview"
               style={{ width: '100%', display: 'block', imageRendering: 'pixelated' }} />
           </div>
         )}
 
         <div style={{ display: 'flex', gap: 6 }}>
-          <Btn onClick={() => downloadText(svgString, 'palette.svg', 'image/svg+xml')}>Download SVG</Btn>
-          <Btn onClick={() => downloadSvgAsPng(svgString, 'palette.png')}>Download PNG</Btn>
+          <Btn variant="primary" onClick={() => downloadText(svgString, 'palette.svg', 'image/svg+xml')}>Download SVG</Btn>
+          <Btn variant="primary" onClick={() => downloadSvgAsPng(svgString, 'palette.png')}>Download PNG</Btn>
         </div>
       </Section>
 
       {/* Data formats */}
       <Section label="Code + data">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          <Btn onClick={() => downloadText(`:root {\n${toCssVars(swatches)}\n}`, 'palette.css', 'text/css')}>CSS variables</Btn>
-          <Btn onClick={() => downloadText(toTailwind(swatches), 'tailwind.config.js', 'text/javascript')}>Tailwind config</Btn>
-          <Btn onClick={() => downloadText(toTxt(swatches), 'palette.txt', 'text/plain')}>Text (.txt)</Btn>
-          <Btn onClick={() => downloadText(toJson(swatches), 'palette.json', 'application/json')}>JSON</Btn>
-          <Btn onClick={() => downloadText(toGpl(swatches), 'palette.gpl', 'text/plain')}>GPL (GIMP / Krita)</Btn>
+          <Btn variant="primary" onClick={() => downloadText(`:root {\n${toCssVars(swatches)}\n}`, 'palette.css', 'text/css')}>CSS variables</Btn>
+          <Btn variant="primary" onClick={() => downloadText(toTailwind(swatches), 'tailwind.config.js', 'text/javascript')}>Tailwind config</Btn>
+          <Btn variant="primary" onClick={() => downloadText(toTxt(swatches), 'palette.txt', 'text/plain')}>Text (.txt)</Btn>
+          <Btn variant="primary" onClick={() => downloadText(toJson(swatches), 'palette.json', 'application/json')}>JSON</Btn>
+          <Btn variant="primary" onClick={() => downloadText(toGpl(swatches), 'palette.gpl', 'text/plain')}>GPL (GIMP / Krita)</Btn>
         </div>
       </Section>
 
       {/* App palette formats */}
       <Section label="App palette formats">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          <Btn onClick={() => downloadBinary(buildAse(swatches), 'palette.ase')} title="Adobe Illustrator, Photoshop, InDesign, Clip Studio Paint">
+          <Btn variant="primary" onClick={() => downloadBinary(buildAse(swatches), 'palette.ase')} title="Adobe Illustrator, Photoshop, InDesign, Clip Studio Paint">
             ASE (Adobe / CSP)
           </Btn>
-          <Btn onClick={() => downloadBinary(buildAco(swatches), 'palette.aco')} title="Photoshop ACO, Clip Studio Paint">
+          <Btn variant="primary" onClick={() => downloadBinary(buildAco(swatches), 'palette.aco')} title="Photoshop ACO, Clip Studio Paint">
             ACO (Photoshop / CSP)
           </Btn>
-          <Btn onClick={async () => {
+          <Btn variant="primary" onClick={async () => {
             const buf = await buildProcreateSwatches(swatches)
             downloadBinary(buf, 'palette.swatches')
           }} title="Procreate for iPad">
             Procreate (.swatches)
           </Btn>
         </div>
-        <div style={{ fontSize: 10, color: '#555', marginTop: 8, lineHeight: 1.5 }}>
+        <Hint style={{ marginTop: 8 }}>
           Krita: use GPL above. CSP: import ASE or ACO via Edit → Color Sets.
           Procreate: share the .swatches file to your iPad and open with Procreate.
-        </div>
+        </Hint>
       </Section>
 
       <Section label="Note">
-        <p style={{ fontSize: 10, color: '#555', margin: 0, lineHeight: 1.5 }}>
+        <Hint>
           Pantone libraries are excluded due to licensing.
           Import your own .ase from Pantone Color Manager for Pantone matching.
-        </p>
+        </Hint>
       </Section>
     </div>
-  )
-}
-
-function Section({ label, children }) {
-  return (
-    <div>
-      <div style={{ fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{label}</div>
-      {children}
-    </div>
-  )
-}
-
-function Btn({ children, onClick, title }) {
-  return (
-    <button onClick={onClick} title={title} style={{
-      background: C.accentLo, border: `1px solid ${C.accentBorder}`, borderRadius: 5,
-      color: '#c4b5fd', padding: '5px 12px', fontSize: 11, cursor: 'pointer',
-    }}
-      onMouseEnter={e => e.currentTarget.style.background = '#3d1f78'}
-      onMouseLeave={e => e.currentTarget.style.background = C.accentLo}
-    >{children}</button>
   )
 }

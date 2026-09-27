@@ -8,7 +8,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { usePalette } from './store.js'
 import { PIGMENTS } from '../../data/pigments.js'
 import { solveRecipe, recipeVerdict } from '../../lib/paintRecipe.js'
-import { Section, ACCENT, ModeChip } from './panelUi.jsx'
+import { Section, ACCENT, ModeChip, MiniBtn, Card, T, ResetBtn } from './panelUi.jsx'
 
 const OWNED_KEY = 'designtools-paintmix-owned'
 
@@ -36,6 +36,13 @@ export default function PaintMix() {
 
   useEffect(() => { localStorage.setItem(OWNED_KEY, JSON.stringify([...owned])) }, [owned])
 
+  // The panel-level reset in the nav bar remounts this component, which is
+  // enough for every other panel — but not here, because loadOwned() reads the
+  // list straight back out of localStorage on mount. Ticking the whole set back
+  // on is the reset that actually means something.
+  const allOwned = owned.size === PIGMENTS.length
+  function resetOwned() { setOwned(new Set(PIGMENTS.map(p => p.id))) }
+
   const pigments = useMemo(() => PIGMENTS.filter(p => owned.has(p.id)), [owned])
 
   const recipes = useMemo(
@@ -60,12 +67,15 @@ export default function PaintMix() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 640 }}>
-      <Section label="Your paints" hint="Untick what you don't own — recipes only use ticked pigments.">
+      <Section label="Your paints"
+        hint={`${owned.size} of ${PIGMENTS.length} ticked — recipes only use these`}
+        action={<ResetBtn label="Tick all" icon={false} disabled={allOwned}
+          title="Turn every pigment back on" onReset={resetOwned} />}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 4 }}>
           {PIGMENTS.map(p => (
-            <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: owned.has(p.id) ? '#ccc' : '#555', cursor: 'pointer', userSelect: 'none' }}>
+            <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: T.label, color: owned.has(p.id) ? T.textDim : T.faint, cursor: 'pointer', userSelect: 'none' }}>
               <input type="checkbox" checked={owned.has(p.id)} onChange={() => toggleOwned(p.id)} style={{ accentColor: ACCENT }} />
-              <span style={{ width: 12, height: 12, borderRadius: 3, background: p.hex, border: '1px solid #333', flexShrink: 0 }} />
+              <span style={{ width: 12, height: 12, borderRadius: 3, background: p.hex, border: `1px solid ${T.line}`, flexShrink: 0 }} />
               {p.name}
             </label>
           ))}
@@ -88,16 +98,16 @@ export default function PaintMix() {
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input type="color" value={target}
                 onChange={e => { setTarget(e.target.value); setFollowActive(false) }}
-                style={{ width: 44, height: 30, padding: 0, border: '1px solid #333', borderRadius: 5, background: 'none', cursor: 'pointer' }} />
-              <span style={{ fontSize: 11, color: '#ccc', fontFamily: 'monospace' }}>{target}</span>
+                style={{ width: 44, height: 30, padding: 0, border: `1px solid ${T.line}`, borderRadius: 5, background: 'none', cursor: 'pointer' }} />
+              <span className="cp-num" style={{ fontSize: T.body, color: T.textDim }}>{target}</span>
               {!followActive && (
-                <button onClick={() => setFollowActive(true)} style={chipBtn}>Follow active swatch</button>
+                <MiniBtn onClick={() => setFollowActive(true)}>Follow active swatch</MiniBtn>
               )}
             </div>
           </Section>
 
           {pigments.length < 2
-            ? <div style={{ fontSize: 11, color: '#888' }}>Tick at least two paints to solve recipes.</div>
+            ? <div style={{ fontSize: T.body, color: T.muted }}>Tick at least two paints to solve recipes.</div>
             : recipes.map((r, i) => <RecipeCard key={i} rank={i + 1} recipe={r} target={target} />)}
         </>
       )}
@@ -106,10 +116,10 @@ export default function PaintMix() {
         <Section label="Recipes for every swatch" hint="Best single recipe per palette colour with your ticked paints.">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {paletteRecipes.map(({ sw, recipe }) => recipe && (
-              <div key={sw.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#151520', borderRadius: 6, padding: '6px 8px' }}>
+              <div key={sw.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: T.raised, borderRadius: 6, padding: '6px 8px' }}>
                 <PairSwatch target={sw.hex} mix={recipe.hex} size={22} />
-                <span style={{ fontSize: 10, color: '#aaa', minWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sw.name || sw.hex}</span>
-                <span style={{ flex: 1, fontSize: 10, color: '#ccc' }}>
+                <span style={{ fontSize: T.label, color: T.muted, minWidth: 84, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sw.name || sw.hex}</span>
+                <span style={{ flex: 1, fontSize: T.label, color: T.textDim }}>
                   {recipe.parts.map(p => `${p.pct}% ${p.pigment.name}`).join(' + ')}
                 </span>
                 <Verdict de={recipe.de} />
@@ -119,7 +129,7 @@ export default function PaintMix() {
         </Section>
       )}
 
-      <p style={{ fontSize: 10, color: '#666', margin: 0, lineHeight: 1.5 }}>
+      <p style={{ fontSize: T.label, color: T.faint, margin: 0, lineHeight: 1.5 }}>
         Percentages are physical parts of the mix — tinting strength is already accounted for.
         Pigment colours are tube approximations; treat recipes as a starting point and adjust by eye.
       </p>
@@ -129,27 +139,27 @@ export default function PaintMix() {
 
 function RecipeCard({ rank, recipe, target }) {
   return (
-    <div style={{ background: '#151520', borderRadius: 6, padding: 10, border: '1px solid #2a2a35' }}>
+    <Card>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>Recipe {rank}</span>
+        <span style={{ fontSize: T.micro, color: T.faint, textTransform: 'uppercase', letterSpacing: 0.5 }}>Recipe {rank}</span>
         <Verdict de={recipe.de} />
-        <span style={{ fontSize: 9, color: '#555' }}>ΔE {recipe.de.toFixed(1)}</span>
+        <span className="cp-num" style={{ fontSize: T.micro, color: T.faint }}>ΔE {recipe.de.toFixed(1)}</span>
         <div style={{ flex: 1 }} />
         <PairSwatch target={target} mix={recipe.hex} size={28} labelled />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {recipe.parts.map((p, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 14, height: 14, borderRadius: 3, background: p.pigment.hex, border: '1px solid #333', flexShrink: 0 }} />
-            <span style={{ fontSize: 11, color: '#ccc', minWidth: 120 }}>{p.pigment.name}</span>
-            <div style={{ flex: 1, height: 6, background: '#1e1e26', borderRadius: 3, overflow: 'hidden' }}>
+            <span style={{ width: 14, height: 14, borderRadius: 3, background: p.pigment.hex, border: `1px solid ${T.line}`, flexShrink: 0 }} />
+            <span style={{ fontSize: T.body, color: T.textDim, minWidth: 140 }}>{p.pigment.name}</span>
+            <div style={{ flex: 1, height: 6, background: T.control, borderRadius: 3, overflow: 'hidden' }}>
               <div style={{ width: `${p.pct}%`, height: '100%', background: p.pigment.hex }} />
             </div>
-            <span style={{ fontSize: 11, color: '#e0d8ff', fontVariantNumeric: 'tabular-nums', minWidth: 34, textAlign: 'right' }}>{p.pct}%</span>
+            <span className="cp-num" style={{ fontSize: T.body, color: T.accentText, minWidth: 40, textAlign: 'right' }}>{p.pct}%</span>
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -157,8 +167,8 @@ function RecipeCard({ rank, recipe, target }) {
 function PairSwatch({ target, mix, size = 24, labelled = false }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: labelled ? 6 : 0 }}>
-      {labelled && <span style={{ fontSize: 8, color: '#666' }}>target / mix</span>}
-      <div style={{ display: 'flex', borderRadius: 4, overflow: 'hidden', border: '1px solid #333' }}>
+      {labelled && <span style={{ fontSize: T.micro, color: T.faint }}>target / mix</span>}
+      <div style={{ display: 'flex', borderRadius: 4, overflow: 'hidden', border: `1px solid ${T.line}` }}>
         <div style={{ width: size, height: size, background: target }} />
         <div style={{ width: size, height: size, background: mix }} />
       </div>
@@ -168,10 +178,5 @@ function PairSwatch({ target, mix, size = 24, labelled = false }) {
 
 function Verdict({ de }) {
   const v = recipeVerdict(de)
-  return <span style={{ fontSize: 9, fontWeight: 600, color: v.color, textTransform: 'uppercase', letterSpacing: 0.4 }}>{v.label}</span>
-}
-
-const chipBtn = {
-  background: '#18181c', border: '1px solid #2a2a35', borderRadius: 4,
-  color: '#aaa', padding: '3px 8px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit',
+  return <span style={{ fontSize: T.micro, fontWeight: 600, color: v.color, textTransform: 'uppercase', letterSpacing: 0.4 }}>{v.label}</span>
 }
