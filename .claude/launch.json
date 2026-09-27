@@ -12,6 +12,13 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8099", "--directory", "D:\\stuff\\dragons website"],
       "port": 8099
+    },
+    {
+      "name": "hires",
+      "runtimeExecutable": "D:/stuff/hires-web-dev.bat",
+      "runtimeArgs": [],
+      "port": 5183,
+      "autoPort": true
     }
   ]
 }
