@@ -1,0 +1,15 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 16px 14px;
+  border-radius: 4px;
+  outline: 1px dashed var(--tick);
+  outline-offset: -1px;
+  background: var(--module);
+}
+.empty > :global(.material-symbols-rounded) { color: var(--ink-3); }
+.title { font-size: var(--fs-row); font-weight: 600; }
+.detail { max-width: 44ch; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
+.action { margin-top: 4px; }

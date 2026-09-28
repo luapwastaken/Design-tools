@@ -253,7 +253,7 @@ The Primitives board in `c-instrument.html` is the visual reference. What must h
 ## 8. Motion
 
 - Only floating layers move: popovers and menus may scale from 0.98 at their origin; toasts enter
-  by `translateY` from 100% plus 8px (120ms) and leave the same way (90ms). Easing
+  by `translateY` from 100% plus 12px (120ms) and leave the same way (90ms). Easing
   `cubic-bezier(.2,.8,.2,1)`.
 - **Docked panels (Library, inspector, rail collapse) snap open and closed with no animation.**
 - Hover and press change colour instantly. Press moves 1px by transform.

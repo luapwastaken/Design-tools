@@ -1,0 +1,11 @@
+.kbd {
+  flex: none;
+  padding: 3px 4px;
+  border-radius: 2px;
+  background: var(--well);
+  color: var(--ink-3);
+  font: 500 10px/1 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}

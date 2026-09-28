@@ -3,7 +3,15 @@ import type { Bridge } from '../shared/api.ts';
 import type { Theme } from '../shared/types.ts';
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
-const initialTheme: Theme = arg('dt-theme') === 'light' ? 'light' : 'dark';
+// Ask main (sync, before first paint); the launch argument is only a fallback, stale after a crash reload.
+function currentTheme(): Theme {
+  let t: unknown;
+  try {
+    t = ipcRenderer.sendSync('dt:theme');
+  } catch {}
+  return (t ?? arg('dt-theme')) === 'light' ? 'light' : 'dark';
+}
+const initialTheme = currentTheme();
 
 // Set the theme before first paint so a light-theme start never flashes dark. A sandboxed preload
 // runs before <html> exists, so wait for the element to be inserted (still before any paint).

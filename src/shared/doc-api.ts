@@ -54,8 +54,11 @@ export interface DocController<D> {
   /** begin + set + commit in one call, for clicks and one-off changes */
   transact(label: string, fn: (d: D) => D, key?: string): void;
 
+  /** during an open gesture: cancels it instead, no step (spec §8) */
   undo(): void;
+  /** during an open gesture with something to redo: cancels it first */
   redo(): void;
+  // canUndo/canRedo/labels/depth describe history steps only; an open gesture is not one
   canUndo(): boolean;
   canRedo(): boolean;
   undoLabel(): string | null;
@@ -63,13 +66,22 @@ export interface DocController<D> {
   depth(): number;
 
   // shell-only
-  /** replace doc and source with no history step (restore on launch, load-time analysis) */
+  // reset and receive both end an open gesture, and give older entries of `source`'s item its stamp
+  /**
+   * Replace the current entry's doc and source in place: no step, undo and redo kept (restore on
+   * launch, load-time analysis). To drop history (Start empty), create a new controller instead.
+   */
   reset(data: D, source: DocSource, cause: 'restore'): void;
-  /** receive(): replace or merge as ONE history step labelled `label` */
+  /** receive(): replace or merge as ONE history step labelled `label`, never coalesced */
   receive(label: string, data: D, source: DocSource): void;
-  setSource(source: DocSource): void;
+  /**
+   * After a write, no step and no onChange. Every entry linked to `from`'s item (every unlinked
+   * entry when `from` is null) takes `source`. Omit `from` for the same item (new stamp, rename,
+   * move); pass it for a first commit (null) or a fork (the original).
+   */
+  setSource(source: DocSource, from?: DocSource): void;
   setState(state: DocState): void;
-  /** persistence hook: called after every change to data or source, with its cause */
+  /** persistence hook: called after every commit, undo, redo, receive and reset, with its cause */
   onChange(fn: (entry: Entry<D>, cause: ChangeCause) => void): () => void;
 }
 

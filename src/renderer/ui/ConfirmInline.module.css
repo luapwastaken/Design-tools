@@ -1,0 +1,14 @@
+.arm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px 10px 10px;
+  border-radius: var(--r-ctl);
+  background: var(--well);
+  box-shadow: inset 0 0 0 1px var(--tick);
+}
+.q { display: flex; align-items: center; gap: 8px; font-size: var(--fs-ctl); color: var(--ink); }
+.q > :global(.material-symbols-rounded) { color: var(--ink-2); }
+.detail { padding-left: 26px; color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.4; }
+.actions { display: flex; align-items: center; gap: 6px; padding-left: 26px; }
+.grow { flex: 1; }

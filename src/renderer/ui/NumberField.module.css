@@ -1,0 +1,67 @@
+.wrap { min-width: 0; }
+
+.nf {
+  display: flex;
+  align-items: center;
+  height: var(--ctl);
+  border-radius: var(--r-ctl);
+  background: var(--well);
+  cursor: text;
+}
+.nf:hover, .nf[data-state="hover"] { background: var(--well-hover); }
+.nf:focus-within, .nf[data-state="focus"] { background: var(--well); box-shadow: inset 0 0 0 1px var(--signal); }
+.nf[data-state="scrub"] { background: var(--well); box-shadow: inset 0 0 0 1px var(--tick); }
+.nf[data-error] { background: var(--danger-soft); box-shadow: inset 0 0 0 1px var(--danger); }
+
+/* the scrub handle */
+.label {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding-left: 8px;
+  color: var(--ink-3);
+  font: 500 var(--fs-label)/1 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.label:hover, .nf[data-state="scrub"] .label { color: var(--ink); }
+
+.nf input {
+  width: 100%;
+  height: 100%;
+  padding: 0 2px 0 8px;
+  text-align: right;
+  font: 400 var(--fs-value)/1 var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.nf input:focus-visible { outline: none; }
+.nf input:last-child { padding-right: 8px; }
+
+.unit {
+  padding: 0 8px 0 3px;
+  color: var(--ink-3);
+  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font-stretch: normal;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* disabled: value stays readable, label and unit go unlit */
+.nf[data-disabled], .nf[data-disabled]:hover { background: var(--well); cursor: default; }
+.nf[data-disabled] .label, .nf[data-disabled] .unit { color: var(--ink-4); cursor: default; }
+.nf[data-disabled] input { color: var(--ink-3); }
+
+/* compact, for a module header */
+.sm { height: var(--ib-sm); }
+.sm .label { padding-left: 7px; }
+.sm input { padding-left: 4px; font-size: var(--fs-base); }
+.sm .unit { padding-right: 7px; font-size: 10.5px; }
+
+/* while any value is being scrubbed, the whole window shows the scrub cursor */
+:global(html[data-scrub]), :global(html[data-scrub] *) { cursor: ew-resize !important; }

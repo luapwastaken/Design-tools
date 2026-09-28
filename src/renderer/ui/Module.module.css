@@ -1,0 +1,58 @@
+.mod {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--r-mod);
+  background: var(--module);
+}
+
+.head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: var(--row);
+  padding: 0 5px 0 10px;
+  background: var(--module-head);
+}
+.title {
+  color: var(--ink);
+  font: 600 var(--fs-mod-title)/1 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.sub {
+  color: var(--ink-3);
+  font: 400 var(--fs-mod-sub)/1 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.grow { flex: 1; }
+.readout {
+  color: var(--ink-2);
+  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  padding-right: 5px;
+}
+
+.body { flex: 1 1 auto; min-height: 0; padding: 10px 12px 12px; }
+.scroll { overflow: auto; scrollbar-gutter: stable; }
+.flush { padding: 0; }
+
+.foot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--module-head);
+  color: var(--ink-2);
+  font-size: var(--fs-base);
+}

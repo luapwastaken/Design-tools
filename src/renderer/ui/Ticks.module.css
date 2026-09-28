@@ -1,0 +1,3 @@
+.ticks { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; pointer-events: none; }
+.ticks i { position: absolute; top: 0; width: 1px; height: 3px; background: var(--tick); }
+.ticks i.major { height: 5px; background: var(--tick-strong); }

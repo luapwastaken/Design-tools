@@ -1,0 +1,35 @@
+.prog {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px 10px 10px;
+  border-radius: var(--r-ctl);
+  background: var(--well);
+}
+.head { display: flex; align-items: center; gap: 8px; font-size: var(--fs-ctl); }
+.label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pct {
+  color: var(--signal);
+  font: 400 var(--fs-value)/1 var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+/* the busy spinner: the one loop allowed in the chrome (brief §8); reduced motion stops it */
+.spin { color: var(--ink-2); animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(1turn); } }
+
+.bar { position: relative; height: 14px; }
+.track, .fill { position: absolute; left: 0; top: 0; height: 4px; border-radius: 2px; }
+.track { right: 0; background: var(--raise); }
+.fill { background: var(--signal); }
+
+.foot { display: flex; align-items: center; gap: 8px; min-height: var(--btn-xs); }
+.detail {
+  flex: 1;
+  color: var(--ink-3);
+  font: 400 var(--fs-label)/1.3 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .03em;
+  font-variant-numeric: tabular-nums;
+}

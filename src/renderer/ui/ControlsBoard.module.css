@@ -1,0 +1,55 @@
+.board {
+  height: 100%;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  padding: 18px 20px 28px;
+  background: var(--ground);
+  color: var(--ink);
+}
+
+.head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.head h1 { font: 600 var(--fs-title)/1 var(--font-sans); font-stretch: var(--sans-stretch); }
+.tokens { display: flex; gap: 3px; margin-left: auto; }
+.tokens div { display: flex; flex-direction: column; gap: 4px; width: 54px; }
+.tokens i { height: 18px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.tokens span { color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-mono); font-stretch: normal; letter-spacing: .03em; }
+
+.cols { columns: 300px; column-gap: 12px; }
+.wideRow { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 12px; align-items: start; }
+
+.pg {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 12px;
+  padding: 10px 12px 12px;
+  border-radius: var(--r-mod);
+  background: var(--module);
+  break-inside: avoid;
+}
+.wideRow .pg { margin-bottom: 0; }
+.pgTitle { display: flex; align-items: center; gap: 8px; }
+.pgTitle::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.cap { color: var(--ink-3); font: 400 var(--fs-label)/1.4 var(--font-mono); font-stretch: normal; letter-spacing: .03em; }
+.muted { color: var(--ink-2); font-size: var(--fs-base); }
+
+.prow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+.specimens { display: flex; flex-wrap: wrap; gap: 12px 14px; }
+.specimen { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.state { color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-mono); font-stretch: normal; letter-spacing: .06em; text-transform: uppercase; }
+.onSwatch { position: relative; display: grid; place-items: end; width: 44px; height: 30px; padding: 3px; border-radius: 2px; }
+.onSwatch::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--edge); pointer-events: none; }
+
+.inlineMenu { width: 100%; max-width: none; margin-top: -4px; }
+
+.demoMod { background: var(--module-head); }
+.demoMod > div:empty { display: none; }
+
+/* the context-menu specimen: a row with its menu and submenu drawn open */
+.menuStage { position: relative; height: 262px; }
+.menuRow { width: 240px; }
+.menuRoot { position: absolute; left: 6px; top: 50px; }
+.menuSub { position: absolute; left: 186px; top: 72px; }
+
+.list { display: flex; flex-direction: column; gap: 1px; max-width: 360px; }
