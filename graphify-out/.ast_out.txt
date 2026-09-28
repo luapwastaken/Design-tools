@@ -1,2 +1,0 @@
-  AST extraction: 103/103 files (100%) [24 workers]
-AST: 1084 nodes, 2300 edges

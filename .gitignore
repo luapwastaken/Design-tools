@@ -21,3 +21,15 @@ graphify-out/cache/
 # Env
 .env
 .env.local
+
+# Local-only: AI tooling, planning docs and code graphs (kept on disk, never committed)
+.claude/
+.agents/
+skills-lock.json
+CLAUDE.md
+AGENTS.md
+docs/
+graphify-out/
+src/graphify-out/
+*.md
+!README.md
