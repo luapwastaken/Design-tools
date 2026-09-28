@@ -114,7 +114,7 @@ async function start(): Promise<void> {
     const [info, settings, index] = await Promise.all([ipc.invoke('app.info'), ipc.invoke('settings.get'), ipc.invoke('library.index')]);
     // an index event may have arrived meanwhile: keep the newest
     setState({ settings, library: getState().library ?? index, isPackaged: info.isPackaged });
-    const tools = await restoreAll(await registeredTools(info.isPackaged));
+    const tools = await restoreAll(await registeredTools(info.isPackaged, !!window.api?.smokeRun));
     setState({ tools });
     const active = tools[0]?.id ?? getState().active;
     setState({ ready: true, active, mounted: tools.length ? [active] : [] });

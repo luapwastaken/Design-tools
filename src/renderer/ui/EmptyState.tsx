@@ -12,12 +12,14 @@ export type EmptyStateProps = {
   detail?: ReactNode;
   /** the one action */
   action?: { label: string; icon?: IconName; onClick(): void };
+  /** a problem to fix, not a place to drop: a solid edge, since the dashed one means "drop here" */
+  problem?: boolean;
   className?: string;
 };
 
-export function EmptyState({ icon, title, detail, action, className }: EmptyStateProps) {
+export function EmptyState({ icon, title, detail, action, problem, className }: EmptyStateProps) {
   return (
-    <div className={cx(s.empty, className)}>
+    <div className={cx(s.empty, problem && s.problem, className)}>
       <Icon name={icon} size={20} />
       <b className={s.title}>{title}</b>
       {detail && <p className={s.detail}>{detail}</p>}

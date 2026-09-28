@@ -42,6 +42,7 @@ function changed(r: Runtime, entry: Entry<unknown>, cause: ChangeCause): void {
   r.crashes = 0; // another document now: an earlier crash no longer counts towards starting empty
   // spec §8: after a tool commit, Ctrl+Z belongs to the tool again
   if (cause === 'commit' || cause === 'receive') toast.noteCommit();
+  else toast.refresh(); // an undo or redo can end a Send to toast's hold on Ctrl+Z
   if (quiet === r) return;
   void enqueue(r, () => (r.def.itemKind ? persistItem(r, entry, cause) : saveWorkspace(r)));
 }
@@ -254,6 +255,9 @@ export function reconcile(): void {
 }
 
 async function checkItems(): Promise<void> {
+  // the whole Library folder is gone (renamed, a drive unplugged): its items aren't, one by one. The
+  // documents stay as they were; a write says NOT SAVED until the folder is back (spec §11)
+  if (!getState().library?.ok) return refreshAll();
   for (const r of docRuntimes()) {
     const src = r.doc.source();
     if (!src) continue;

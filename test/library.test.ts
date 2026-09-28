@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { copyFile, mkdir, mkdtemp, open, readdir, readFile, rm, utimes, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, open, readdir, readFile, rename, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -44,12 +44,13 @@ afterEach(async () => {
 function harness(dir = root, trashItem = async (path: string) => rm(path)) {
   const changes: LibraryIndex[] = [];
   const trashed: string[] = [];
+  const logged: string[] = [];
   const lib = new LibraryService(
     dir,
-    { trashItem: async (p) => (trashed.push(p), trashItem(p)), now: Date.now },
+    { trashItem: async (p) => (trashed.push(p), trashItem(p)), now: Date.now, log: (m, d) => logged.push(`${m}\n${d}`), rootPollMs: 40 },
     (index) => changes.push(index),
   );
-  return { lib, changes, trashed };
+  return { lib, changes, trashed, logged };
 }
 
 describe('names', () => {
@@ -77,6 +78,15 @@ describe('names', () => {
     assert.equal(safeName(''), 'Untitled');
     assert.equal(safeName('   '), 'Untitled');
     assert.equal(safeName('...'), 'Untitled');
+  });
+
+  test('names are at most 120 characters, and a whole path stays under 260', async () => {
+    assert.equal(safeName('L'.repeat(240)), 'L'.repeat(120));
+    assert.equal(safeName(`${'a'.repeat(119)}. b`), 'a'.repeat(119), 'no trailing dot or space after the cut');
+    assert.equal(safeName('\u{1F600}'.repeat(70)).length, 120, 'never half a character');
+    const deep = join(root, 'd'.repeat(150));
+    const name = await uniqueName(deep, 'L'.repeat(120), '.palette.json');
+    assert.ok(join(deep, `${name} 99.palette.json`).length <= 259, `${join(deep, name).length}`);
   });
 
   test('uniqueName ignores case and counts up', async () => {
@@ -414,11 +424,70 @@ describe('LibraryService', () => {
     try {
       const r = await lib.write('p1', palette('p1', 'never lands'), w.stamp);
       assert.equal(r.ok ? 'ok' : r.reason, 'error');
+      // spec §11: plain words for the status bar, naming the file and not our temp file; Node's text is logged
+      assert.equal(!r.ok && r.reason === 'error' && r.message, 'P.palette.json is open in another program, or the folder is read-only.');
     } finally {
       await held.close();
     }
     assert.equal(await readFile(ref.path, 'utf8'), before);
     assert.deepEqual(await readdir(join(root, 'Scratch')), ['P.palette.json'], 'no temp file left');
+  });
+
+  test('an unreadable rewrite of a doc keeps its id, so it reads as changed, not gone', async () => {
+    const { lib } = harness();
+    const { ref, stamp } = await lib.create('Scratch', 'Night', palette('p1'));
+    await writeFile(ref.path, '{ this is not json'); // a sync or an editor half way through its save
+    await lib.rescanAll();
+    assert.ok(ids(await lib.index()).includes('p1'));
+    await assert.rejects(lib.read('p1'), (e: Error) => e.message === "Night isn't a readable palette.");
+    const r = await lib.write('p1', palette('p1', 'mine'), stamp);
+    assert.equal(r.ok ? 'ok' : r.reason, 'changed-outside');
+    assert.equal(await readFile(ref.path, 'utf8'), '{ this is not json');
+  });
+
+  test('a rename that types the extension keeps one', async () => {
+    const { lib } = harness();
+    const img = await lib.createImage('Scratch', 'fx shot', 'png', new Uint8Array([1]).buffer);
+    assert.equal((await lib.rename(img.id, 'fx shot.PNG')).name, 'fx shot');
+    assert.equal((await lib.rename(img.id, 'glow.png')).name, 'glow');
+    await lib.create('Scratch', 'Night', palette('p1'));
+    assert.equal((await lib.rename('p1', 'Day.palette.json')).name, 'Day');
+  });
+
+  test('with the whole Library folder gone, a write fails (to be tried again) instead of reading as missing', async () => {
+    const libRoot = join(root, 'Library');
+    await mkdir(libRoot);
+    const { lib } = harness(libRoot);
+    const { stamp } = await lib.create('Scratch', 'P', palette('p1'));
+    await rename(libRoot, join(root, 'Library away'));
+    const r = await lib.write('p1', palette('p1', 'mine'), stamp);
+    assert.deepEqual(r, { ok: false, reason: 'error', message: 'The Library folder is missing.' });
+    await rename(join(root, 'Library away'), libRoot);
+    await lib.rescanAll();
+    assert.ok((await lib.write('p1', palette('p1', 'mine'), stamp)).ok, 'once it is back, Try again writes');
+  });
+
+  test('the Library folder renamed away and back, or deleted and restored, is noticed without focus', async () => {
+    const libRoot = join(root, 'Library');
+    await mkdir(join(libRoot, 'Brand'), { recursive: true });
+    const { lib, changes } = harness(libRoot);
+    await lib.start();
+    try {
+      const last = () => changes.at(-1);
+      await rename(libRoot, join(root, 'Library away')); // fs.watch reports nothing for this on Windows
+      await until(() => last()?.ok === false);
+      await rename(join(root, 'Library away'), libRoot);
+      await until(() => last()?.ok === true && last()!.collections.some((c) => c.name === 'Brand'));
+      await rm(libRoot, { recursive: true, force: true, maxRetries: 10 });
+      await until(() => last()?.ok === false);
+      await mkdir(join(libRoot, 'Restored'), { recursive: true });
+      await until(() => last()?.ok === true && last()!.collections.some((c) => c.name === 'Restored'));
+      // and the watcher runs on the folder that came back
+      await writeFile(join(libRoot, 'Restored', 'new.svg'), '<svg/>');
+      await until(() => !!last()?.collections.find((c) => c.name === 'Restored')?.items.length);
+    } finally {
+      lib.stop();
+    }
   });
 
   test('duplicate makes "<name> copy" with a fresh id', async () => {
@@ -472,6 +541,23 @@ describe('LibraryService', () => {
     assert.equal(existsSync(missing), false);
   });
 
+  test('an existing root gets Scratch on start and on setRoot; a missing one stays missing', async () => {
+    const names = (index: LibraryIndex) => index.collections.map((c) => c.name);
+    await mkdir(join(root, 'Brand'));
+    const { lib } = harness();
+    assert.deepEqual(names(await lib.index()), ['Brand', 'Scratch']);
+
+    const other = join(root, 'Brand');
+    await lib.setRoot(other);
+    assert.deepEqual(names(await lib.index()), ['Scratch']);
+    assert.ok(existsSync(join(other, 'Scratch')));
+
+    const gone = join(root, 'Gone');
+    await lib.setRoot(gone);
+    assert.equal((await lib.index()).ok, false);
+    assert.equal(existsSync(gone), false);
+  });
+
   test('collection create makes Scratch too', async () => {
     const { lib } = harness();
     await lib.collectionCreate('Monolith');
@@ -486,16 +572,22 @@ describe('LibraryService', () => {
       await writeFile(join(src, 'photo.JPG'), 'jpg');
       await writeFile(join(src, 'mark.svg'), '<svg/>');
       await writeFile(join(src, 'notes.txt'), 'hi');
+      await writeFile(join(src, 'fake.psd'), '8BPS');
       const r = await lib.import(
-        [join(src, 'photo.JPG'), join(src, 'mark.svg'), join(src, 'notes.txt'), join(src, 'gone.png')],
+        [join(src, 'photo.JPG'), join(src, 'mark.svg'), join(src, 'notes.txt'), join(src, 'gone.png'), join(src, 'fake.psd')],
         'Imports',
       );
       assert.deepEqual(r.made.map((i) => [i.name, i.kind, i.ext, i.collection]), [
         ['photo', 'image', 'jpg', 'Imports'],
         ['mark', 'svg', 'svg', 'Imports'],
       ]);
-      assert.deepEqual(r.failed.map((f) => f.name), ['notes.txt', 'gone.png']);
-      assert.ok(r.failed.every((f) => f.reason.length > 0));
+      // spec §10.3: a plain sentence for each file
+      assert.deepEqual(r.failed, [
+        { name: 'notes.txt', reason: "TXT files aren't supported. The Library takes ASE, ACO and GPL palettes, images and SVGs." },
+        { name: 'gone.png', reason: "The file isn't there any more." },
+        { name: 'fake.psd', reason: "PSD files aren't supported. Export a PNG or TIFF." },
+      ]);
+      assert.deepEqual(r.warnings, []);
     } finally {
       await rm(src, { recursive: true, force: true });
     }
@@ -511,6 +603,23 @@ describe('LibraryService', () => {
     assert.deepEqual(r.failed, []);
     assert.equal(r.made[0].kind, 'palette');
     assert.ok(paletteOf(await lib.read(r.made[0].id)).swatches.length > 0);
+  });
+
+  test('an import passes on what the palette reader noticed (spec §6.3)', { skip: noReader }, async () => {
+    const { lib } = harness();
+    const src = join(root, '..', `dt-import-${randomUUID().slice(0, 8)}`);
+    await mkdir(src);
+    try {
+      // Aseprite writes RGBA GIMP palettes; a fully transparent entry is an empty slot
+      await writeFile(join(src, 'slots.gpl'), 'GIMP Palette\nChannels: RGBA\n#\n255 0 0 255 Red\n0 0 0 0 Empty\n');
+      const r = await lib.import([join(src, 'slots.gpl')], 'Scratch');
+      assert.deepEqual(r.failed, []);
+      assert.equal(r.warnings.length, 1);
+      assert.equal(r.warnings[0].name, r.made[0].name);
+      assert.match(r.warnings[0].messages.join(' '), /transparent/);
+    } finally {
+      await rm(src, { recursive: true, force: true });
+    }
   });
 
   test('an .ase in a collection is listed as not imported until it is', { skip: noReader }, async () => {

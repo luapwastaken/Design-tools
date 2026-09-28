@@ -7,20 +7,6 @@ export async function fetchBlob(url: string): Promise<Blob> {
   return res.blob();
 }
 
-/** Full resolution, alpha kept (spec §10.3). */
-export async function decode(blob: Blob): Promise<ImageBitmap> {
-  if (blob.type !== 'image/svg+xml') return createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
-  // createImageBitmap can't read SVG; an <img> can, in its own document
-  const img = new Image();
-  img.src = URL.createObjectURL(blob);
-  try {
-    await img.decode();
-    return await createImageBitmap(img);
-  } finally {
-    URL.revokeObjectURL(img.src);
-  }
-}
-
 /** The bitmap's pixels, shrunk to fit `maxEdge` (never enlarged). Closes the bitmap. */
 export function pixels(bmp: ImageBitmap, maxEdge = Infinity): ImageData {
   const k = Math.min(1, maxEdge / Math.max(bmp.width, bmp.height));

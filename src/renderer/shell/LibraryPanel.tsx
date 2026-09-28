@@ -236,10 +236,15 @@ export function LibraryPanel({ narrow }: { narrow: boolean }) {
               <EmptyState
                 icon="folder_off"
                 title="Can't open the Library folder"
+                problem
                 detail={
                   <>
-                    <span className={s.mono}>{library.root}</span>
-                    <br />
+                    {/* one line, clipped from the left so the folder's own name stays; the tooltip has all of it */}
+                    <Tooltip content={library.root} overflowOnly>
+                      <span className={s.rootPath}>
+                        <bdi>{library.root}</bdi>
+                      </span>
+                    </Tooltip>
                     {library.error ?? 'It may have been moved, renamed or disconnected.'} Tools keep working, and their documents stay open.
                   </>
                 }

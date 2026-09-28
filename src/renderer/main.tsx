@@ -10,3 +10,7 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+// a smoke pass (spec §12); loaded only then
+const run = window.api.smokeRun;
+if (run) void import('./smoke.ts').then((m) => m.runSmoke(run));

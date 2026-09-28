@@ -2,7 +2,7 @@ import { cloneElement, useEffect, useLayoutEffect, useRef, useState, type Pointe
 import { createPortal } from 'react-dom';
 import { cx } from './cx.ts';
 import { formatKeys } from './Kbd.tsx';
-import { placeBelow } from './popover.ts';
+import { placeBelow, placeRight } from './popover.ts';
 import s from './Tooltip.module.css';
 
 const DELAY = 500;
@@ -17,9 +17,9 @@ type Trigger = {
 
 /**
  * Our own tooltip (hard rule 6: never `title`). Wraps one element and listens to its pointer
- * events; shows after 500ms of hover, below the trigger, with no transition.
+ * events; shows after 500ms of hover, below the trigger (or beside it), with no transition.
  */
-export function Tooltip({ content, shortcut, children, disabled, overflowOnly }: {
+export function Tooltip({ content, shortcut, children, disabled, overflowOnly, side = 'below' }: {
   /** default: the trigger's own text (with `overflowOnly`, for rich content like a toast message) */
   content?: string;
   shortcut?: string;
@@ -27,6 +27,8 @@ export function Tooltip({ content, shortcut, children, disabled, overflowOnly }:
   disabled?: boolean;
   /** only when the trigger's text is cut off with an ellipsis (it then shows the full text) */
   overflowOnly?: boolean;
+  /** 'right' for a column of icons, so the tip never covers the next one down */
+  side?: 'below' | 'right';
 }) {
   const [shown, setShown] = useState<{ anchor: DOMRect; text: string } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -87,19 +89,19 @@ export function Tooltip({ content, shortcut, children, disabled, overflowOnly }:
   return (
     <>
       {trigger}
-      {shown && createPortal(<Floating anchor={shown.anchor} content={shown.text} shortcut={shortcut} />, document.body)}
+      {shown && createPortal(<Floating anchor={shown.anchor} content={shown.text} shortcut={shortcut} side={side} />, document.body)}
     </>
   );
 }
 
-function Floating({ anchor, content, shortcut }: { anchor: DOMRect; content: string; shortcut?: string }) {
+function Floating({ anchor, content, shortcut, side }: { anchor: DOMRect; content: string; shortcut?: string; side: 'below' | 'right' }) {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const el = ref.current!;
-    const { x, y } = placeBelow(anchor, el.offsetWidth, el.offsetHeight, 'center', 6);
+    const { x, y } = side === 'right' ? placeRight(anchor, el.offsetWidth, el.offsetHeight, 6) : placeBelow(anchor, el.offsetWidth, el.offsetHeight, 'center', 6);
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
-  }, [anchor]);
+  }, [anchor, side]);
   return <TipBubble ref={ref} className={s.floating} content={content} shortcut={shortcut} />;
 }
 

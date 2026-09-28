@@ -2,8 +2,9 @@
 // can be exercised before the real image tools exist. The registry lists it only when not packaged;
 // deleted when Dither, Halftone and Post FX land.
 import type { Oklch } from '../../../shared/color/index.ts';
+import { decodeImage, unsupportedImage } from '../../lib/load.ts';
 import type { ToolDefinition } from '../../shell/tool.ts';
-import { decode, fetchBlob, pixels, tint, toPng } from './pixels.ts';
+import { fetchBlob, pixels, tint, toPng } from './pixels.ts';
 import { View } from './View.tsx';
 
 /** the source image, copied into the workspace (spec §7.2); `hash` is the asset to keep */
@@ -40,17 +41,20 @@ export const tool: ToolDefinition<ImageDoc> = {
     if (item.kind === 'palette') return { ...current, tints: item.payload.swatches.map((w) => w.oklch) };
     // the shell rasterises patterns and logos; their preview SVG is only the fallback
     const blob = 'url' in item ? await fetchBlob(item.url) : new Blob([item.payload.preview.svg], { type: 'image/svg+xml' });
+    const why = unsupportedImage(blob.type, `${item.ref.name}.${item.ref.ext}`);
+    if (why) throw new Error(why);
     return { ...current, source: await store(blob, item.ref.name, extOf(blob, item.ref.ext)) };
   },
   async render(d, { maxEdge }) {
     if (!d.source) throw new Error('There is no image to send yet.');
-    const img = pixels(await decode(await fetchBlob(d.source.url)), maxEdge);
+    const img = pixels(await decodeImage(await fetchBlob(d.source.url), d.source.name), maxEdge);
     tint(img.data, d.tints, d.strength);
     return { blob: await toPng(img), name: d.source.name, ext: 'png' };
   },
 
+  // anything it can't open (a PSD, a TIFF) is offered to the Library, which says why or keeps it
   async onFiles(files, _how, doc) {
-    const file = files.find((f) => f.type.startsWith('image/'));
+    const file = files.find((f) => f.type.startsWith('image/') && !unsupportedImage(f.type, f.name));
     if (!file) return false;
     const name = file.name.replace(/\.[^.]*$/, '') || 'Pasted image';
     const source = await store(file, name, extOf(file, 'png'));

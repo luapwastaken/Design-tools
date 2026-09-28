@@ -68,6 +68,21 @@ test('gc leaves temp files and repeated puts alone', async () => {
   await rm(tmp);
 });
 
+test('gc keeps assets a crashed document refers to (Start empty keeps its images)', async () => {
+  const put = (text: string) => ws.putAsset('dither', new TextEncoder().encode(text).buffer as ArrayBuffer, 'png');
+  const [old, other, current] = [await put('crashed doc'), await put('unused'), await put('current doc')];
+  await Promise.all([old, other, current].map((a) => age(a.hash, 'png')));
+  await ws.quarantine('dither', { toolId: 'dither', docVersion: 1, doc: { source: old.url } });
+  await ws.save('dither', { toolId: 'dither', docVersion: 1, doc: { source: current.url } });
+  assert.equal(await ws.gcAssets('dither', [current.hash]), 1);
+  const has = async (a: { hash: string }) => (await readdir(assetsDir)).includes(`${a.hash}.png`);
+  assert.deepEqual([await has(old), await has(current), await has(other)], [true, true, false]);
+
+  await writeFile(join(root, 'workspace', 'dither', 'crashed', 'other tool.json'), `"dt://asset/halftone/${current.hash}.png"`);
+  assert.equal(await ws.gcAssets('dither', []), 1);
+  assert.deepEqual([await has(old), await has(current)], [true, false], "another tool's reference doesn't count");
+});
+
 test('tool ids and extensions cannot escape the workspace', async () => {
   await assert.rejects(ws.load('../x' as 'dither'), /Unknown tool/);
   await assert.rejects(ws.putAsset('dither', new ArrayBuffer(1), 'p/ng'), /Unsupported/);

@@ -26,6 +26,13 @@ export function placeBelow(a: DOMRect, w: number, h: number, align: 'start' | 'c
   return { ...p, origin: `${clamp(a.left + a.width / 2 - p.x, 0, w)}px ${above ? h : 0}px` };
 }
 
+/** Beside the anchor, centred on it (tooltips on an icon rail); on its left when there's no room on the right. */
+export function placeRight(a: DOMRect, w: number, h: number, gap: number): Placement {
+  const left = a.right + gap + w > innerWidth - M;
+  const p = finish(left ? a.left - gap - w : a.right + gap, a.top + a.height / 2 - h / 2, w, h);
+  return { ...p, origin: `${left ? w : 0}px ${h / 2}px` };
+}
+
 /** A context menu at the pointer, opening away from the nearest window edges. */
 export function placeAtPoint(px: number, py: number, w: number, h: number): Placement {
   const x = px + w > innerWidth - M ? px - w : px;

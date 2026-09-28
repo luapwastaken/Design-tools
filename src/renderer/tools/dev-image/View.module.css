@@ -1,7 +1,7 @@
 /* DEV ONLY (plan unit D) */
 .view {
   display: grid;
-  grid-template: minmax(0, 1fr) / minmax(0, 1fr) 320px;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr) 380px; /* brief §5: the inspector is 380 */
   gap: var(--gap);
   height: 100%;
 }

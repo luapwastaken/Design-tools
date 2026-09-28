@@ -13,7 +13,7 @@
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --test \"test/**/*.test.ts\"",
-    "smoke": "electron-vite build && electron . --smoke",
+    "smoke": "electron-vite build && node scripts/smoke.mjs",
     "check": "npm run typecheck && npm test && npm run check:rules",
     "check:rules": "node scripts/check-rules.mjs"
   },

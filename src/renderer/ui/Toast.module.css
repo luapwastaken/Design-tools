@@ -45,6 +45,8 @@
 @starting-style {
   .floating { transform: translateY(calc(100% + 12px)); }
 }
+/* waiting behind three newer ones: out of sight at once, back by sliding down a slot */
+.floating[data-waiting] { visibility: hidden; }
 .floating[data-leaving] {
   z-index: -1;
   pointer-events: none;

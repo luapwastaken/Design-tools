@@ -22,9 +22,13 @@ export type Api = {
   // ── app ──
   'app.info': () => Promise<{ version: string; isPackaged: boolean; smoke: boolean; userData: string }>;
   'app.log': (level: 'info' | 'warn' | 'error', message: string, details?: string) => Promise<void>;
-  /** renderer's answer to the 'app.closeRequest' event: everything flushed; `busy` = an export/import is running */
-  'app.closeReply': (busy: boolean) => Promise<void>;
-  /** --smoke only: report the result; main exits 0 or 1 */
+  /**
+   * renderer's answer to the 'app.closeRequest' event: everything flushed; `busy` = an export/import
+   * is running; `pendingTrash` = ids of deletes still showing their Undo toast, which main sends to
+   * the Recycle Bin once the quit is certain (spec §6.3), and leaves alone on "Keep running"
+   */
+  'app.closeReply': (busy: boolean, pendingTrash: string[]) => Promise<void>;
+  /** smoke runs only: report the result; main quits through the close handshake, then exits 0 or 1 */
   'app.smokeDone': (ok: boolean, report: string) => Promise<void>;
 
   // ── settings ──
@@ -101,7 +105,10 @@ export type Bridge = {
   pathForFile(file: File): string;
   /** the theme main started with, so the renderer can match before first paint */
   initialTheme: Theme;
+  /** a smoke folder (--smoke, --smoke-dir): temp userData and Library */
   smoke: boolean;
+  /** the smoke pass src/renderer/smoke.ts runs: 'full' (--smoke) or 'quiet' (--smoke-quiet); null for none */
+  smokeRun: 'full' | 'quiet' | null;
 };
 
 declare global {

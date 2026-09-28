@@ -20,7 +20,9 @@
 .thumb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--edge); pointer-events: none; }
 
 .text { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
-.name { overflow: hidden; color: var(--ink); font-size: var(--fs-row); line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+/* the name line holds the actions too; its fixed height lets them overhang it, so showing them never moves the row */
+.top { display: flex; align-items: center; gap: 4px; height: 16px; min-width: 0; }
+.name { flex: 1; min-width: 0; overflow: hidden; color: var(--ink); font-size: var(--fs-row); line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .meta {
   display: flex;
   min-width: 0;
@@ -32,12 +34,14 @@
   text-transform: uppercase;
   white-space: nowrap;
 }
-/* brief §7 overflow: the kind and its size end in an ellipsis; the use label and OPEN keep their width */
+/* at its natural width, so its parts can be measured (ui/fit.ts); squeezed, the kind alone ends in an ellipsis */
+.line { display: flex; flex: none; width: max-content; }
+.squeeze { flex: 1 1 auto; width: auto; min-width: 0; }
 .kind { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .keep { flex: none; }
 .lit { color: var(--ink-2); }
 .open { margin-left: 10px; color: var(--signal); }
 
-/* in the row's flow while they show, so the text column gives way to them instead of sitting under them */
+/* in the name line's flow while they show, so the name gives way to them instead of sitting under them */
 .actions { display: none; flex: none; align-items: center; gap: 2px; }
 .item:hover .actions, .item:focus-within .actions, .sel .actions, .item[data-force="hover"] .actions { display: flex; }

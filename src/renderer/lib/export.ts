@@ -1,0 +1,26 @@
+// Exporting (spec §10.4). Main picks the place (the save dialog, remembering the folder per tool
+// and type) and replaces reversibly. Here each export counts as running work for the quit check,
+// and a failure becomes an error toast with main's plain message (main logs the details).
+import type { Api } from '../../shared/api.ts';
+import { shell } from '../shell/core/index.ts';
+import { errorText } from '../shell/core/errors.ts';
+import { ipc } from '../shell/core/ipc.ts';
+import { toast } from '../ui/index.ts';
+
+type SaveReq = Parameters<Api['export.save']>[0];
+type FolderReq = Parameters<Api['export.toFolder']>[0];
+
+/** one file through the save dialog; its path, or null when cancelled or failed */
+export const saveFile = (req: SaveReq): Promise<string | null> => run(() => ipc.invoke('export.save', req));
+
+/** several files into one chosen folder, never a burst of dialogs; null when cancelled or failed */
+export const saveToFolder = (req: FolderReq): Promise<{ folder: string; written: string[] } | null> => run(() => ipc.invoke('export.toFolder', req));
+
+async function run<T>(fn: () => Promise<T | null>): Promise<T | null> {
+  try {
+    return await shell.runBusy(fn);
+  } catch (e) {
+    toast.show({ kind: 'error', message: errorText(e) });
+    return null;
+  }
+}

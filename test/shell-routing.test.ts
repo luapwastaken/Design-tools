@@ -81,8 +81,9 @@ test('history labels and the Send to toast', () => {
   assert.equal(receiveLabel('Monolith core', { mode: 'apply', label: 'INKS' }), 'Inks from Monolith core');
   assert.equal(receiveLabel('Monolith core', { mode: 'apply', label: 'PICK COLOURS' }), 'Pick colours from Monolith core');
   assert.equal(receiveLabel('Bracket mark', { mode: 'apply', label: 'AS SHAPE' }), 'Bracket mark as shape');
-  assert.equal(sentMessage('Monolith core', { mode: 'open', label: 'PALETTE' }, 'Design'), 'Opened Monolith core in Design. Ctrl+Z goes back.');
-  assert.equal(sentMessage('Monolith core', { mode: 'apply', label: 'INKS' }, 'Halftone'), 'Inks from Monolith core in Halftone. Ctrl+Z goes back.');
+  // the toast's Undo and Ctrl Z hint say how to go back, so the message doesn't (brief §6)
+  assert.equal(sentMessage('Monolith core', { mode: 'open', label: 'PALETTE' }, 'Design'), 'Opened Monolith core in Design.');
+  assert.equal(sentMessage('Monolith core', { mode: 'apply', label: 'INKS' }, 'Halftone'), 'Inks from Monolith core in Halftone.');
 });
 
 test('Ctrl+<n> finds the tool with that shortcut', () => {
@@ -102,16 +103,29 @@ test('asset hashes a document refers to, for this tool only', () => {
   assert.deepEqual(assetHashes('dither', undefined), []);
 });
 
-test('an import says what it made, or why not', () => {
+test('an import says what it made, or why not, and what the readers noticed', () => {
   const made = (...names: string[]) => names.map((name) => ({ name }) as LibraryItemRef);
-  assert.deepEqual(importSummary({ made: made('A'), failed: [] }, 'Scratch'), { made: 'Added A to Scratch.', failed: null });
-  assert.equal(importSummary({ made: made('A', 'B'), failed: [] }, '').made, 'Added A and B to the Library root.');
-  assert.equal(importSummary({ made: made('A', 'B', 'C'), failed: [] }, 'M').made, 'Added A, B and C to M.');
-  assert.equal(importSummary({ made: made('A', 'B', 'C', 'D', 'E'), failed: [] }, 'M').made, 'Added A, B and 3 more to M.');
-  assert.deepEqual(importSummary({ made: [], failed: [{ name: 'x.psd', reason: 'Not a palette (.ase, .aco, .gpl), image or SVG.' }] }, 'M'), {
-    made: null,
-    failed: "Couldn't import x.psd (Not a palette (.ase, .aco, .gpl), image or SVG).",
-  });
+  const none = { failed: [], warnings: [] };
+  assert.deepEqual(importSummary({ ...none, made: made('A') }, 'Scratch'), { made: 'Added A to Scratch.', failed: null, warned: null });
+  assert.equal(importSummary({ ...none, made: made('A', 'B') }, '').made, 'Added A and B to the Library root.');
+  assert.equal(importSummary({ ...none, made: made('A', 'B', 'C') }, 'M').made, 'Added A, B and C to M.');
+  assert.equal(importSummary({ ...none, made: made('A', 'B', 'C', 'D', 'E') }, 'M').made, 'Added A, B and 3 more to M.');
+  const psd = "PSD files aren't supported. Export a PNG or TIFF.";
+  const r = importSummary(
+    {
+      made: made('chalk'),
+      failed: [
+        { name: 'x.psd', reason: psd },
+        { name: 'y.psd', reason: psd },
+        { name: 'gone.png', reason: "The file isn't there any more" },
+      ],
+      warnings: [{ name: 'chalk', messages: ['Skipped 2 colours in wide CMYK', 'CMYK colours are shown as an estimate; the original values are kept.'] }],
+    },
+    'M',
+  );
+  // one sentence per reason, no nested brackets; every sentence ends in a full stop
+  assert.equal(r.failed, `Couldn't import x.psd and y.psd. ${psd} Couldn't import gone.png. The file isn't there any more.`);
+  assert.equal(r.warned, 'chalk: Skipped 2 colours in wide CMYK. CMYK colours are shown as an estimate; the original values are kept.');
 });
 
 test('an item file is checked before a tool gets it', () => {

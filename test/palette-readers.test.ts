@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { readPaletteFile } from '../src/shared/color/palette-readers.ts';
 import { hexToOklch, toHex } from '../src/shared/color/index.ts';
 
@@ -218,4 +218,27 @@ test('every read makes fresh random ids', () => {
 test('stored OKLCH is the unrounded colour', () => {
   const [s] = readPaletteFile('gpl', utf8('GIMP Palette\n231 42 80 Amaranth\n'), 'x').swatches;
   assert.deepEqual(s.oklch, hexToOklch('#e72a50'));
+});
+
+// Spec §12 asks for real .aco files. Photoshop's own swatch presets can't ship in this public repo,
+// so they are read where Photoshop is installed, and the test is skipped elsewhere.
+const PS_SWATCHES = ['Adobe Photoshop 2026', 'Adobe Photoshop 2025', 'Adobe Photoshop (Beta)']
+  .map((v) => `C:/Program Files/Adobe/${v}/Presets/Color Swatches`)
+  .find((d) => existsSync(d));
+
+test("Photoshop's own .aco presets read in full", { skip: !PS_SWATCHES && 'Photoshop is not installed here' }, () => {
+  const files = readdirSync(PS_SWATCHES!).filter((f) => f.toLowerCase().endsWith('.aco'));
+  assert.ok(files.length > 0);
+  for (const f of files) {
+    const read = readPaletteFile('aco', new Uint8Array(readFileSync(`${PS_SWATCHES}/${f}`)), f);
+    assert.ok(read.swatches.length > 0, f);
+    assert.ok(read.swatches.every((w) => /^#[0-9a-f]{6}$/.test(toHex(w.oklch))), f);
+    // RGB, HSB, CMYK, Lab and grey are read; only wide CMYK and the named-book spaces are skipped
+    assert.ok(read.warnings.every((w) => !/ends early/i.test(w)), `${f}: ${read.warnings}`);
+  }
+  // a v1 + v2 file keeps its names (v1-only ones, like Windows.aco, have none to keep)
+  if (files.includes('ANPA Colors.aco')) {
+    const anpa = readPaletteFile('aco', new Uint8Array(readFileSync(`${PS_SWATCHES}/ANPA Colors.aco`)), 'ANPA');
+    assert.ok(anpa.swatches.every((w) => w.name.startsWith('ANPA ')));
+  }
 });

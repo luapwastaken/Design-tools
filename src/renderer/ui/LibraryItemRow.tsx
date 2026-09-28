@@ -1,6 +1,7 @@
-import { useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { ItemKind, LibraryItemRef } from '../../shared/types.ts';
 import { cx } from './cx.ts';
+import { useFit } from './fit.ts';
 import { IconButton } from './IconButton.tsx';
 import type { MenuAnchor, MenuOptions } from './menu.ts';
 import { Tooltip } from './Tooltip.tsx';
@@ -15,10 +16,14 @@ export type LibraryItemRowProps = {
   /** 44×30 thumbnail content (SwatchStrip, an <img>); the row frames it */
   thumb: ReactNode;
   selected?: boolean;
-  /** the active tool's use label when it accepts this item: INKS, AS SHAPE */
+  /** the active tool's use label when it accepts this item: INKS, AS SHAPE (one that only repeats the kind lights the kind instead) */
   accepted?: string;
-  /** tool label when the item is open in a tool: the row shows the OPEN tag, the tooltip names the tool */
+  /**
+   * tool label when the item is open in a tool (spec §6.4): OPEN IN <TOOL>, or just OPEN when that
+   * tool is the active one (`openHere`) or the row is too narrow; the tooltip then names it
+   */
   openIn?: string;
+  openHere?: boolean;
   /** why a double-click does nothing here (spec §6.4); the row's tooltip */
   note?: string;
   onOpen(): void;
@@ -45,8 +50,16 @@ export type LibraryItemRowProps = {
 
 /** One Library item (brief §7 states). Click selects, double-click or Enter opens, right-click or More opens the menu. */
 export function LibraryItemRow(p: LibraryItemRowProps) {
-  const { item, thumb, selected, accepted, openIn, note, dragData, meta, anchor, actions } = p;
+  const { item, thumb, selected, accepted, openIn, openHere, note, dragData, meta, anchor, actions } = p;
   const [dragging, setDragging] = useState(false);
+  // a use label that only repeats the kind (PALETTE · PALETTE) isn't shown: the lit kind says it
+  const use = accepted?.toUpperCase() === KIND[item.kind].toUpperCase() ? undefined : accepted;
+  // Too narrow for the whole meta line: the size goes first, then the use label (the lit kind still
+  // says the tool takes it), then OPEN IN <TOOL> shortens to OPEN. Only then is the kind cut.
+  const box = useRef<HTMLSpanElement>(null);
+  const line = useRef<HTMLSpanElement>(null);
+  const level = useFit(box, line, 5, `${meta}|${use}|${openIn}|${openHere}`);
+  const longTag = !!openIn && !openHere && level < 3;
   const row = (
     <div
       id={p.id}
@@ -81,33 +94,37 @@ export function LibraryItemRow(p: LibraryItemRowProps) {
       {openIn && <i className={s.led} />}
       <span className={s.thumb}>{thumb}</span>
       <span className={s.text}>
-        <Tooltip content={item.name} overflowOnly disabled={!!note}>
-          <span className={s.name}>{item.name}</span>
-        </Tooltip>
-        {/* only the kind and its size shrink: the use label and the OPEN tag are the row's state (brief §7) */}
-        <span className={cx(s.meta, accepted && s.lit)}>
-          <span className={s.kind}>
-            {KIND[item.kind]}
-            {meta && ` ${meta}`}
+        <span className={s.top}>
+          <Tooltip content={item.name} overflowOnly disabled={!!note}>
+            <span className={s.name}>{item.name}</span>
+          </Tooltip>
+          {/* on the name line, so the meta line keeps its width. Mouse-only: they never take focus,
+              and the row's menu carries the same commands */}
+          <span className={s.actions} aria-hidden="true" onMouseDown={(e) => e.preventDefault()} onDoubleClick={(e) => e.stopPropagation()}>
+            {actions}
+            <IconButton
+              icon="more_horiz"
+              label="More"
+              size="xs"
+              tabIndex={-1}
+              onClick={(e) => p.onMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0 ? { initial: 0 } : {})}
+            />
           </span>
-          {accepted && <span className={s.keep}>&nbsp;· {accepted}</span>}
-          {openIn && (
-            <Tooltip content={`Open in ${openIn}`}>
-              <span className={cx(s.keep, s.open)}>Open</span>
-            </Tooltip>
-          )}
         </span>
-      </span>
-      {/* mouse-only: they never take focus, and the row's menu carries the same commands */}
-      <span className={s.actions} aria-hidden="true" onMouseDown={(e) => e.preventDefault()} onDoubleClick={(e) => e.stopPropagation()}>
-        {actions}
-        <IconButton
-          icon="more_horiz"
-          label="More"
-          size="xs"
-          tabIndex={-1}
-          onClick={(e) => p.onMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0 ? { initial: 0 } : {})}
-        />
+        <span ref={box} className={cx(s.meta, accepted && s.lit)}>
+          <span ref={line} className={cx(s.line, level === 4 && s.squeeze)}>
+            <span className={s.kind}>
+              {KIND[item.kind]}
+              {meta && level < 1 && ` ${meta}`}
+            </span>
+            {use && level < 2 && <span className={s.keep}>&nbsp;· {use}</span>}
+            {openIn && (
+              <Tooltip content={`Open in ${openIn}`} disabled={longTag}>
+                <span className={cx(s.keep, s.open)}>{longTag ? `Open in ${openIn}` : 'Open'}</span>
+              </Tooltip>
+            )}
+          </span>
+        </span>
       </span>
     </div>
   );

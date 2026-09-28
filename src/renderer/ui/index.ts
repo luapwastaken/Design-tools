@@ -23,6 +23,7 @@ export { EmptyState, type EmptyStateProps } from './EmptyState.tsx';
 export { Progress, type ProgressProps } from './Progress.tsx';
 export { LibraryItemRow, ITEM_MIME, type LibraryItemRowProps } from './LibraryItemRow.tsx';
 export { SwatchStrip } from './SwatchStrip.tsx';
+export { UndoRedo } from './UndoRedo.tsx';
 export { FieldError } from './FieldError.tsx';
 export { toast, type ToastOptions } from './toast.ts';
 export { ToastHost } from './Toast.tsx';

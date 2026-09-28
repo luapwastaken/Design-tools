@@ -12,8 +12,8 @@ import { getState, setState } from './store.ts';
 // Library operations (spec §6.3). Views confirm Delete and Move with ConfirmInline first; these run
 // after. Rename, duplicate, lock and unlock are undone by doing them again, so they show no toast.
 
-/** deletes waiting for their Undo toast to close: item id -> send it to the Recycle Bin now */
-const pendingTrash = new Map<string, () => Promise<void>>();
+/** ids of deletes waiting for their Undo toast to close; a quit hands them to main (close.ts) */
+const pendingTrash = new Set<string>();
 
 async function attempt<T>(what: string, fn: () => Promise<T>): Promise<T | undefined> {
   try {
@@ -34,36 +34,24 @@ export async function deleteItem(ref: LibraryItemRef): Promise<void> {
   // a tool that has it open keeps it, detached (brief §6: "it stays open there, detached")
   missing.add(ref.id);
   refreshAll();
-  let done = false;
-  const trash = async () => {
-    if (done) return;
-    done = true;
-    pendingTrash.delete(ref.id);
-    await ipc.invoke('library.trash', ref.id).catch((e) => reportError(`Couldn't move ${ref.name} to the Recycle Bin`, e));
-  };
-  const toastId = toast.show({
+  pendingTrash.add(ref.id);
+  toast.show({
     icon: 'delete',
     message: `Deleted ${KIND_WORD[ref.kind]} “${ref.name}”`,
     undo: async () => {
-      done = true;
-      pendingTrash.delete(ref.id);
       await ipc.invoke('library.unhide', ref.id);
       missing.delete(ref.id);
       refreshAll();
     },
-    onClose: (why) => void (why === 'undo' ? undefined : trash()),
-  });
-  pendingTrash.set(ref.id, async () => {
-    const trashed = trash();
-    toast.dismiss(toastId); // its Undo can't bring a trashed file back
-    await trashed;
+    // runs once, before `undo`
+    onClose(why) {
+      pendingTrash.delete(ref.id);
+      if (why !== 'undo') void ipc.invoke('library.trash', ref.id).catch((e) => reportError(`Couldn't move ${ref.name} to the Recycle Bin`, e));
+    },
   });
 }
 
-/** quitting: every delete still showing its Undo toast goes to the Recycle Bin now (spec §6.3) */
-export async function trashPending(): Promise<void> {
-  await Promise.all([...pendingTrash.values()].map((trash) => trash()));
-}
+export const pendingTrashIds = (): string[] => [...pendingTrash];
 
 export async function moveItem(ref: LibraryItemRef, collection: string): Promise<void> {
   const moved = await attempt(`Couldn't move ${ref.name}`, () => ipc.invoke('library.move', ref.id, collection));
@@ -92,8 +80,9 @@ export async function revealItem(ref: LibraryItemRef): Promise<void> {
 export async function importFiles(paths: string[], collection: string): Promise<void> {
   const result = await runBusy(() => attempt("Couldn't import", () => ipc.invoke('library.import', paths, collection)));
   if (!result) return;
-  const { made, failed } = importSummary(result, collection);
+  const { made, failed, warned } = importSummary(result, collection);
   if (made) toast.show({ icon: 'download', message: made });
+  if (warned) toast.show({ icon: 'warning', message: warned, duration: 8000 });
   if (failed) toast.show({ kind: 'error', message: failed });
 }
 

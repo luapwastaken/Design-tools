@@ -2,7 +2,7 @@
 // Electron parts come in through `platform`, so it runs under node --test.
 import { randomUUID } from 'node:crypto';
 import { type FSWatcher, watch } from 'node:fs';
-import { copyFile, mkdir, open, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, open, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join, resolve, sep } from 'node:path';
 import type {
   Collection,
@@ -16,7 +16,7 @@ import type {
 } from '../../shared/types.ts';
 import { DOC_SUFFIX } from '../../shared/types.ts';
 import { isMissing, renameRetry } from '../fsx.ts';
-import { atomically, sameStamp, stampOf } from './files.ts';
+import { atomically, plainError, sameStamp, stampOf } from './files.ts';
 import { safeName, uniqueName } from './names.ts';
 import {
   COLLECTION_FILE,
@@ -34,6 +34,10 @@ export type Platform = {
   /** to the Recycle Bin (Electron: shell.trashItem) */
   trashItem(path: string): Promise<void>;
   now(): number;
+  /** Node's own text of a failed file operation (callers get a plain sentence) */
+  log?(message: string, details: string): void;
+  /** how often to look at the Library folder itself; default 2s */
+  rootPollMs?: number;
 };
 
 const WATCH_DEBOUNCE_MS = 250;
@@ -42,6 +46,9 @@ const EMIT_DEBOUNCE_MS = 100;
 const WATCH_RETRY_MS = 5000;
 /** queue key for operations that pick names or change folders (item ids are never empty) */
 const STRUCTURE = '';
+/** Windows' watcher reports nothing when the Library folder itself is renamed, deleted or put back */
+const ROOT_POLL_MS = 2000;
+const FOLDER_MISSING = 'The Library folder is missing.';
 
 const unscanned = (root: string): LibraryIndex => ({ root, ok: false, error: 'Not scanned yet.', collections: [] });
 
@@ -51,7 +58,7 @@ async function mkdirIn(root: string, name: string): Promise<string> {
   try {
     await mkdir(dir);
   } catch (e) {
-    if (isMissing(e)) throw new Error('The Library folder is missing.');
+    if (isMissing(e)) throw new Error(FOLDER_MISSING);
     if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
   }
   return dir;
@@ -89,6 +96,9 @@ export class LibraryService {
   private pending: Set<string> | 'all' | null = null;
   private rescanTimer: ReturnType<typeof setTimeout> | null = null;
   private emitTimer: ReturnType<typeof setTimeout> | null = null;
+  private rootPoll: ReturnType<typeof setInterval> | null = null;
+  /** the Library folder's identity (dev:ino) at the last look, null when it wasn't there */
+  private rootId: string | null = null;
 
   constructor(root: string, platform: Platform, onChange: (index: LibraryIndex) => void) {
     this.root = root;
@@ -103,6 +113,9 @@ export class LibraryService {
     this.started = true;
     await this.ready();
     this.watch();
+    this.rootId = await this.rootIdentity();
+    this.rootPoll ??= setInterval(() => void this.checkRoot(), this.platform.rootPollMs ?? ROOT_POLL_MS);
+    this.rootPoll.unref?.();
   }
 
   stop(): void {
@@ -110,6 +123,8 @@ export class LibraryService {
     this.unwatch();
     if (this.emitTimer) clearTimeout(this.emitTimer);
     this.emitTimer = null;
+    if (this.rootPoll) clearInterval(this.rootPoll);
+    this.rootPoll = null;
   }
 
   async setRoot(root: string): Promise<void> {
@@ -121,7 +136,7 @@ export class LibraryService {
       this.hidden.clear();
       this.aliases.clear();
       this.own.clear();
-    }).then(() => this.refresh());
+    }).then(() => this.load());
     await this.loaded;
     if (this.started) this.watch();
   }
@@ -153,8 +168,14 @@ export class LibraryService {
       const fh = await open(ref.path, 'r');
       try {
         const { mtimeMs, size } = await fh.stat();
-        const data = parseJson(await fh.readFile('utf8'));
-        if (!data || typeof data !== 'object') throw new Error(`${ref.name} isn't a ${ref.kind} file.`);
+        const text = await fh.readFile('utf8');
+        let data: unknown = null;
+        try {
+          data = parseJson(text);
+        } catch {
+          // said as the shell says it of a file of the wrong shape (routing.ts itemProblem)
+        }
+        if (!data || typeof data !== 'object') throw new Error(`${ref.name} isn't a readable ${ref.kind}.`);
         // the file's name decides the kind, and the index decides the id (a copy's id is its path)
         const payload = { ...data, kind: ref.kind, id: ref.id };
         return { ref: { ...ref, mtimeMs, size }, kind: ref.kind, payload } as LoadedItem;
@@ -178,11 +199,11 @@ export class LibraryService {
   write(id: string, payload: DocPayload, expected: FileStamp | null): Promise<WriteResult> {
     return this.op(id, async (): Promise<WriteResult> => {
       const ref = this.find(id);
-      if (!ref) return { ok: false, reason: 'missing' };
+      if (!ref) return this.gone();
       if (ref.kind !== payload.kind) return { ok: false, reason: 'error', message: `${ref.name} isn't a ${payload.kind}.` };
       try {
         const current = await stampOf(ref.path);
-        if (!current) return { ok: false, reason: 'missing' };
+        if (!current) return this.gone();
         if (expected && !sameStamp(current, expected)) return { ok: false, reason: 'changed-outside', stamp: current };
         const own = ref.id.startsWith('path:') ? randomUUID() : ref.id;
         const stamp = await this.writeDoc(ref.path, { ...payload, id: own });
@@ -192,9 +213,20 @@ export class LibraryService {
         if (own !== ref.id) this.emit();
         return { ok: true, ref: next, stamp };
       } catch (e) {
-        return { ok: false, reason: 'error', message: (e as Error).message };
+        return { ok: false, reason: 'error', message: this.plain(e) };
       }
     });
+  }
+
+  /**
+   * The item's file is gone. With the whole Library folder gone (renamed, a drive unplugged) that
+   * isn't the item's doing: the write fails and can be tried again once the folder is back, rather
+   * than the edit forking a copy (spec §7.3 "missing" is for the item alone).
+   */
+  private async gone(): Promise<WriteResult> {
+    if (await this.rootIdentity()) return { ok: false, reason: 'missing' };
+    void this.checkRoot();
+    return { ok: false, reason: 'error', message: FOLDER_MISSING };
   }
 
   create(collection: string, name: string, payload: DocPayload): Promise<{ ref: LibraryItemRef; stamp: FileStamp }> {
@@ -222,10 +254,12 @@ export class LibraryService {
     return this.op(id, () =>
       this.op(STRUCTURE, async () => {
         const ref = this.require(id);
-        const base = safeName(name);
+        const suffix = suffixOf(ref);
+        // "fx shot.png" typed for an image is its name, not "fx shot.png.png"
+        const typed = name.trim();
+        const base = safeName(typed.toLowerCase().endsWith(suffix.toLowerCase()) ? typed.slice(0, -suffix.length) : typed);
         if (base === ref.name) return ref;
         const dir = dirname(ref.path);
-        const suffix = suffixOf(ref);
         // a change of case only collides with the item itself
         const next = base.toLowerCase() === ref.name.toLowerCase() ? base : await uniqueName(dir, base, suffix);
         return this.relocate(ref, join(dir, next + suffix), [ref.collection]);
@@ -294,17 +328,19 @@ export class LibraryService {
   import(paths: string[], collection: string): Promise<ImportResult> {
     return this.op(STRUCTURE, async () => {
       const dir = await this.ensureDir(collection);
-      const made: string[] = [];
+      const made: { path: string; warnings: string[] }[] = [];
       const failed: ImportResult['failed'] = [];
       for (const src of paths) {
         try {
           made.push(await this.importOne(src, dir));
         } catch (e) {
-          failed.push({ name: basename(src), reason: isMissing(e) ? "The file isn't there any more." : (e as Error).message });
+          failed.push({ name: basename(src), reason: isMissing(e) ? "The file isn't there any more." : this.plain(e) });
         }
       }
       await this.refresh([collection]);
-      return { made: made.map((p) => this.at(p)), failed };
+      const refs = made.map((m) => this.at(m.path));
+      const warnings = made.flatMap((m, i) => (m.warnings.length ? [{ name: refs[i].name, messages: m.warnings }] : []));
+      return { made: refs, failed, warnings };
     });
   }
 
@@ -359,17 +395,34 @@ export class LibraryService {
   // ── internals ──
 
   private ready(): Promise<void> {
-    return (this.loaded ??= this.refresh());
+    return (this.loaded ??= this.load());
   }
 
-  /** `fn` once everything queued under `key` has settled: one queue per item, one for structure */
+  /**
+   * The first scan of a root. Scratch always exists (spec §6), so a root without one (a folder
+   * Luap just pointed the app at) gets it; a missing root makes mkdir fail and is never recreated.
+   */
+  private async load(): Promise<void> {
+    await mkdir(join(this.root, SCRATCH)).catch(() => {});
+    await this.refresh();
+  }
+
+  /**
+   * `fn` once everything queued under `key` has settled: one queue per item, one for structure. A
+   * failure reaches the caller as a plain sentence; Node's own text goes to the log.
+   */
   private op<T>(id: string, fn: () => Promise<T>): Promise<T> {
     const key = this.current(id); // an old id queues with the new one
     const gate = key === STRUCTURE ? null : this.gate;
     const next = (this.queues.get(key) ?? Promise.resolve()).then(async () => {
       await gate;
       await this.ready();
-      return fn();
+      try {
+        return await fn();
+      } catch (e) {
+        const message = this.plain(e);
+        throw e instanceof Error && message === e.message ? e : new Error(message);
+      }
     });
     const tail = next.then(
       () => {},
@@ -383,6 +436,13 @@ export class LibraryService {
   /** every item operation queued so far */
   private async settled(): Promise<void> {
     await Promise.all([...this.queues].filter(([key]) => key !== STRUCTURE).map(([, tail]) => tail));
+  }
+
+  /** a plain sentence for `e`, logging Node's own text */
+  private plain(e: unknown): string {
+    const { message, raw } = plainError(e);
+    if (raw) this.platform.log?.(`Library: ${message}`, raw);
+    return message;
   }
 
   private serial(fn: () => unknown): Promise<void> {
@@ -541,8 +601,8 @@ export class LibraryService {
     }
   }
 
-  /** one file into `dir`; returns the path it made */
-  private async importOne(src: string, dir: string): Promise<string> {
+  /** one file into `dir`; returns the path it made, and what the palette reader had to say */
+  private async importOne(src: string, dir: string): Promise<{ path: string; warnings: string[] }> {
     const ext = extname(src).slice(1).toLowerCase();
     const stem = basename(src, extname(src));
     if (isPaletteExt(ext)) {
@@ -557,17 +617,34 @@ export class LibraryService {
       const path = join(dir, (await uniqueName(dir, safeName(name), suffix)) + suffix);
       const notes = read.warnings.join('\n');
       await this.writeDoc(path, { kind: 'palette', id: randomUUID(), version: 1, swatches: read.swatches, notes });
-      return path;
+      return { path, warnings: read.warnings };
     }
     if (ext === 'svg' || isImageExt(ext)) {
       const path = join(dir, `${await uniqueName(dir, safeName(stem), `.${ext}`)}.${ext}`);
       await atomically(path, (tmp) => copyFile(src, tmp));
-      return path;
+      return { path, warnings: [] };
     }
-    throw new Error('Not a palette (.ase, .aco, .gpl), image or SVG.');
+    throw new Error(unsupported(ext));
   }
 
   // ── watching ──
+
+  private async rootIdentity(): Promise<string | null> {
+    const st = await stat(this.root).catch(() => null);
+    return st?.isDirectory() ? `${st.dev}:${st.ino}` : null;
+  }
+
+  /**
+   * fs.watch says nothing when the Library folder itself is renamed away, deleted and put back, or
+   * swapped for another (checked on Windows), and window focus (rescanAll) may never come. So look
+   * at it now and then, and rescan when it came, went or changed.
+   */
+  private async checkRoot(): Promise<void> {
+    const now = await this.rootIdentity();
+    const was = this.rootId;
+    this.rootId = now;
+    if ((now !== null) !== this.state.ok || (now !== null && was !== null && now !== was)) await this.rescanAll();
+  }
 
   private watch(): void {
     if (this.watcher || !this.state.ok) return;
@@ -628,4 +705,11 @@ export class LibraryService {
       void this.refresh(pending === 'all' || !pending ? undefined : [...pending]);
     }, WATCH_DEBOUNCE_MS);
   }
+}
+
+/** why a file can't be imported, in words (spec §10.3) */
+function unsupported(ext: string): string {
+  if (ext === 'psd') return "PSD files aren't supported. Export a PNG or TIFF.";
+  const what = ext ? `${ext.toUpperCase()} files aren't supported.` : "It isn't a file the Library takes.";
+  return `${what} The Library takes ASE, ACO and GPL palettes, images and SVGs.`;
 }

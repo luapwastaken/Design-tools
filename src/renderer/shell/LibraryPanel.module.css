@@ -17,7 +17,21 @@
 .create { padding: 6px 4px 2px; }
 .none { display: flex; align-items: center; gap: 8px; padding: 12px 10px; color: var(--ink-3); font-size: var(--fs-meta); }
 .emptyCollection { padding: 4px 10px 8px 26px; color: var(--ink-3); font-size: var(--fs-meta); }
-.mono { color: var(--ink); font: 400 var(--fs-unit)/1.45 var(--font-mono); font-stretch: normal; overflow-wrap: anywhere; user-select: text; }
+/* width 0 keeps the one long line out of the card's sizing; it then fills what the sentences below take */
+.rootPath {
+  display: block;
+  width: 0;
+  min-width: 100%;
+  overflow: hidden;
+  color: var(--ink);
+  font: 400 var(--fs-unit)/1.45 var(--font-mono);
+  font-stretch: normal;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  user-select: text;
+}
 
 /* footer: the Library folder (clipped from the left, so its own name stays) and the counts */
 .path {

@@ -3,7 +3,9 @@ import type { IconName } from '../shell/tool.ts';
 
 // Toasts: an imperative store so any handler can show one; <ToastHost /> draws them.
 // Undo toasts stay 8s, paused while hovered or while the window is unfocused; error toasts stay
-// until dismissed (brief §6). At most three show; a fourth closes the oldest.
+// until dismissed (brief §6). At most three show. Older ones wait out of sight with their clocks
+// running, and come back as newer ones close: pushing one out never closes it, so a fourth quick
+// delete can't send the first to the Recycle Bin early.
 
 export type ToastOptions = {
   icon?: IconName;
@@ -12,6 +14,8 @@ export type ToastOptions = {
   undo?: () => void | Promise<void>;
   /** false: this toast's Undo never answers Ctrl+Z */
   ctrlZ?: boolean;
+  /** Ctrl+Z answers this toast's Undo only while this holds (asked at the key press; `toast.refresh` redraws the hint) */
+  when?: () => boolean;
   /** ms; default 8000 with undo, 5000 without, until dismissed for errors */
   duration?: number;
   onClose?(reason: 'timeout' | 'undo' | 'dismiss'): void;
@@ -24,7 +28,8 @@ export type ToastEntry = ToastOptions & {
   leaving: boolean;
 };
 
-const MAX = 3;
+/** how many show at once */
+export const MAX_SHOWN = 3;
 export const LEAVE_MS = 90;
 
 let list: ToastEntry[] = [];
@@ -68,8 +73,6 @@ export const toast = {
     const id = crypto.randomUUID();
     const duration = o.duration ?? (o.kind === 'error' ? Infinity : o.undo ? 8000 : 5000);
     emit([...list, { ...o, id, ctrlZLive: !!o.undo && o.ctrlZ !== false, leaving: false }]);
-    const shown = list.filter((x) => !x.leaving);
-    if (shown.length > MAX) close(shown[0].id, 'timeout');
     if (Number.isFinite(duration)) {
       timers.set(id, { left: duration, since: 0, holds: new Set(document.hasFocus() ? [] : ['blur']) });
       run(id);
@@ -79,8 +82,12 @@ export const toast = {
   dismiss: (id: string) => close(id, 'dismiss'),
   /** the toast Ctrl+Z should undo right now, if any (the keymap asks before the tool's history) */
   activeCtrlZ(): { id: string; run(): void } | null {
-    const t = list.findLast((x) => !x.leaving && x.ctrlZLive);
+    const t = list.findLast((x) => !x.leaving && x.ctrlZLive && (x.when?.() ?? true));
     return t ? { id: t.id, run: () => void undo(t.id) } : null;
+  },
+  /** something a toast's `when` reads changed: redraw the Ctrl Z hint */
+  refresh() {
+    if (list.some((x) => x.when)) emit([...list]);
   },
   /** a tool committed: Ctrl+Z belongs to the tool again; toasts keep their Undo button */
   noteCommit() {

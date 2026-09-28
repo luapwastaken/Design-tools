@@ -127,7 +127,10 @@ async function readId(path: string, st: Stats, cache: IdCache): Promise<void> {
     // "path:" ids are computed, never stored; one found in a file is ignored
     if (typeof v?.id === 'string' && v.id && !v.id.startsWith('path:')) id = v.id;
   } catch {
-    // not JSON: identified by path
+    // Not JSON. Most likely a sync or an editor half way through its save: the file keeps the id it
+    // had, so an open document reads CHANGED ON DISK rather than gone (spec §7.3). A file never
+    // read before is identified by its path.
+    id = cache.get(path)?.id ?? null;
   }
   cache.set(path, { mtimeMs: st.mtimeMs, size: st.size, id });
 }

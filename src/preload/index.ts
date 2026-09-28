@@ -41,6 +41,7 @@ const bridge: Bridge = {
   pathForFile: (file) => webUtils.getPathForFile(file),
   initialTheme,
   smoke: process.argv.includes('--dt-smoke'),
+  smokeRun: arg('dt-smoke-run') === 'full' ? 'full' : arg('dt-smoke-run') === 'quiet' ? 'quiet' : null,
 };
 
 contextBridge.exposeInMainWorld('api', bridge);

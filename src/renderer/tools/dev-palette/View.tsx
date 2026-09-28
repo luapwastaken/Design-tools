@@ -2,9 +2,9 @@
 import { useState, useSyncExternalStore, type MouseEvent } from 'react';
 import { cssColor, toHex } from '../../../shared/color/index.ts';
 import type { DocController } from '../../../shared/doc-api.ts';
-import type { ItemKind, Swatch } from '../../../shared/types.ts';
+import type { ItemKind, Swatch, ToolId } from '../../../shared/types.ts';
 import { shell } from '../../shell/core/index.ts';
-import { Button, ControlsBoard, EmptyState, IconButton, Module, Segmented, Slider, TextInput, menu, useDocNumber, type MenuItem } from '../../ui/index.ts';
+import { Button, ControlsBoard, EmptyState, IconButton, Module, Segmented, Slider, TextInput, UndoRedo, menu, useDocNumber, type MenuItem } from '../../ui/index.ts';
 import { mapSwatch, newSwatch, type PaletteDoc } from './swatches.ts';
 import s from './View.module.css';
 
@@ -29,17 +29,17 @@ const add = (doc: Doc) =>
   });
 
 // the tab is view state: saved with the workspace, never in history (spec §7.1)
-const savedTab = (): Tab => ((shell.view('dev-palette') as { tab?: Tab } | undefined)?.tab === 'controls' ? 'controls' : 'swatches');
+const savedTab = (id: ToolId): Tab => ((shell.view(id) as { tab?: Tab } | undefined)?.tab === 'controls' ? 'controls' : 'swatches');
 
 export function View({ doc }: { doc: Doc; active: boolean }) {
-  const [tab, setTabState] = useState<Tab>(savedTab);
+  const [tab, setTabState] = useState<Tab>(() => savedTab(doc.toolId));
   const setTab = (t: Tab) => {
     setTabState(t);
-    shell.setView('dev-palette', { tab: t });
+    shell.setView(doc.toolId, { tab: t });
   };
   const [crash, setCrash] = useState(false);
   const d = useSyncExternalStore(doc.subscribe, doc.get);
-  const sendKind = useSyncExternalStore(doc.subscribe, () => shell.sendKind('dev-palette'));
+  const sendKind = useSyncExternalStore(doc.subscribe, () => shell.sendKind(doc.toolId));
   // exercises ToolHost's error module (Reload tool, Start empty, Copy details)
   if (crash) throw new Error('Crash test: the dev palette view threw on purpose.');
 
@@ -59,8 +59,9 @@ export function View({ doc }: { doc: Doc; active: boolean }) {
           actions={
             <>
               <IconButton icon="bug_report" label="Crash this view (dev test)" size="sm" onClick={() => setCrash(true)} />
+              <UndoRedo doc={doc} />
               <IconButton icon="add" label="Add swatch" size="sm" onClick={() => add(doc)} />
-              <SendTo kind={sendKind} />
+              <SendTo from={doc.toolId} kind={sendKind} />
             </>
           }
         >
@@ -84,13 +85,13 @@ export function View({ doc }: { doc: Doc; active: boolean }) {
   );
 }
 
-function SendTo({ kind }: { kind: ItemKind | null }) {
+function SendTo({ from, kind }: { from: ToolId; kind: ItemKind | null }) {
   const open = (e: MouseEvent<HTMLButtonElement>) => {
     if (!kind) return;
     const items: MenuItem[] = shell
       .targetsFor(kind)
-      .filter((t) => t.tool.id !== 'dev-palette')
-      .map(({ tool, use }) => ({ label: tool.label, icon: tool.icon, hint: use.label, onSelect: () => void shell.sendDoc('dev-palette', tool.id) }));
+      .filter((t) => t.tool.id !== from)
+      .map(({ tool, use }) => ({ label: tool.label, icon: tool.icon, hint: use.label, onSelect: () => void shell.sendDoc(from, tool.id) }));
     const at = e.currentTarget.getBoundingClientRect();
     // detail 0: opened from the keyboard, so start on the first row
     menu.open(at, items.length ? items : [{ label: 'No tool takes a palette', disabled: true }], { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined });

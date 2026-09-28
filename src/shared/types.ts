@@ -5,7 +5,9 @@ export type Theme = 'dark' | 'light';
 export type ToolId =
   | 'design' | 'illustration' | 'pattern' | 'logo' | 'dither' | 'halftone' | 'postfx'
   /** dev-only stubs used during the foundation (registered only when not packaged) */
-  | 'dev-palette' | 'dev-image';
+  | 'dev-palette' | 'dev-image'
+  /** dev-only: a second palette tool, registered only during a smoke pass (shell/registry.ts) */
+  | 'smoke-palette';
 
 // ── Library ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -94,8 +96,12 @@ export type LoadedItem =
   /** images and SVGs: the renderer fetches `url` (dt://) itself */
   | { ref: LibraryItemRef; kind: 'image' | 'svg'; url: string };
 
-/** Result of an import. */
-export type ImportResult = { made: LibraryItemRef[]; failed: { name: string; reason: string }[] };
+/** Result of an import. `warnings`: what a palette reader had to say about one it made (spec §6.3). */
+export type ImportResult = {
+  made: LibraryItemRef[];
+  failed: { name: string; reason: string }[];
+  warnings: { name: string; messages: string[] }[];
+};
 
 /** State of a doc-kind item on disk, for "changed outside" detection. */
 export type FileStamp = { mtimeMs: number; size: number };

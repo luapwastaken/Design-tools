@@ -92,6 +92,7 @@ export function ItemEntry(p: Props) {
       selected={p.selected}
       accepted={p.accepted ?? undefined}
       openIn={owner && shell.tool(owner).label}
+      openHere={owner === shell.getState().active}
       note={shell.openTarget(item.kind) ? undefined : cantOpen(item.kind, shell.targetsFor(item.kind).map((t) => t.tool.label))}
       tabIndex={p.tabStop ? 0 : -1}
       dragData={item.id}

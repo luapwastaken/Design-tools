@@ -23,6 +23,20 @@ export function createWorkspace(userData: string) {
     const dir = toolDir(tool);
     return { state: join(dir, 'state.json'), prev: join(dir, 'state.prev.json') };
   };
+  /** assets the documents in crashed/ refer to: Start empty keeps the old document, so its images stay too */
+  const crashedHashes = async (tool: string): Promise<string[]> => {
+    const dir = join(toolDir(tool), 'crashed');
+    let names: string[];
+    try {
+      names = await readdir(dir);
+    } catch (e) {
+      if (isMissing(e)) return [];
+      throw e;
+    }
+    const texts = await Promise.all(names.filter((n) => n.endsWith('.json')).map((n) => readFile(join(dir, n), 'utf8')));
+    const ref = new RegExp(`dt://asset/${tool}/([0-9a-f]{64})`, 'g');
+    return texts.flatMap((t) => [...t.matchAll(ref)].map((m) => m[1]));
+  };
 
   return {
     async load(tool: ToolId): Promise<WorkspaceState | null> {
@@ -76,10 +90,14 @@ export function createWorkspace(userData: string) {
       return { hash, url: `dt://asset/${tool}/${hash}.${e}` };
     },
 
-    /** Skips in-flight temp files and anything put in the last minute: the caller's `keep` may predate it. */
+    /**
+     * Keeps what crashed/ refers to, in-flight temp files and anything put in the last minute (the
+     * caller's `keep` may predate it). A crashed document that can't be read stops it: nothing goes.
+     */
     async gcAssets(tool: ToolId, keep: string[]): Promise<number> {
       const dir = join(toolDir(tool), 'assets');
-      const kept = new Set(keep);
+      // after any quarantine already queued, so its document is on disk
+      const kept = new Set([...keep, ...(await inOrder(statePaths(tool).state, () => crashedHashes(tool)))]);
       const cutoff = Date.now() - ASSET_GRACE_MS;
       let names: string[];
       try {

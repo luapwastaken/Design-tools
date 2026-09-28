@@ -36,6 +36,7 @@ export function setActive(id: ToolId): void {
   if (!rtOf(id)) return;
   if (s.active !== id) endGesture(rtOf(s.active)); // spec §8: hiding a tool commits its gesture
   setState({ active: id, settingsOpen: false, mounted: s.mounted.includes(id) ? s.mounted : [...s.mounted, id] });
+  toast.refresh(); // a Send to toast's Ctrl Z hint follows the tool that took the item
 }
 
 export function openTargetFor(kind: ItemKind) {
@@ -166,10 +167,29 @@ async function deliver(ref: ItemRef, to: ToolId, use: Use, announce: boolean): P
       r.doc.receive(label, next, r.doc.source());
     }
     refreshAll();
-    if (announce) toast.show({ icon: 'input', message: sentMessage(ref.name, use, r.def.label) });
+    if (announce) announceSent(r, next, ref.name, use);
   } finally {
     revoke();
   }
+}
+
+/**
+ * The Send to toast (spec §7.4 step 3, brief §6). Its Undo takes the step back in the tool that got
+ * the item, while that is still the tool's last step. Ctrl+Z means the toast only while that tool
+ * is showing, where it is the tool's own undo anyway; elsewhere Ctrl+Z stays with the tool on screen.
+ */
+function announceSent(r: Runtime, next: unknown, name: string, use: Use): void {
+  const to = r.def.id;
+  const onTop = () => rtOf(to) === r && r.doc.get() === next && !r.doc.inGesture();
+  toast.show({
+    icon: 'input',
+    message: sentMessage(name, use, r.def.label),
+    when: () => getState().active === to && onTop(),
+    undo: () => {
+      if (onTop()) r.doc.undo();
+      else toast.show({ icon: 'info', message: `${receiveLabel(name, use)} is no longer the last step in ${r.def.label}.` });
+    },
+  });
 }
 
 /** read an item and check it (spec §5); null after a toast saying why not */
@@ -180,7 +200,9 @@ async function readItem(id: string, name: string): Promise<LoadedItem | null> {
     if (!problem) return item;
     toast.show({ kind: 'error', message: problem });
   } catch (e) {
-    toast.show({ kind: 'error', message: `Couldn't open ${name}: ${errorText(e)}` });
+    // main's own sentences name the item already ("Night isn't a readable palette.")
+    const why = errorText(e);
+    toast.show({ kind: 'error', message: why.startsWith(name) ? why : `Couldn't open ${name}: ${why}` });
   }
   return null;
 }

@@ -43,7 +43,7 @@ export function registerIpc({ settings, workspace: ws, library: lib, exporter, s
   const handlers: Handlers = {
     'app.info': () => ({ version: app.getVersion(), isPackaged: app.isPackaged, smoke, userData: app.getPath('userData') }),
     'app.log': (level, message, details) => log(level, `renderer: ${message}`, details),
-    'app.closeReply': (busy) => closeReplied(busy),
+    'app.closeReply': (busy, pendingTrash) => closeReplied(busy, pendingTrash),
     'app.smokeDone': (ok, report) => {
       if (smoke) smokeDone(ok, report);
     },

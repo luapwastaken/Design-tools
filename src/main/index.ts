@@ -1,6 +1,6 @@
-import { app, Menu, shell } from 'electron';
+import { app, BrowserWindow, Menu, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, mkdtempSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
@@ -16,10 +16,15 @@ import { createWorkspace } from './workspace.ts';
 
 const SMOKE_TIMEOUT_MS = 120_000;
 
-// --smoke runs against a new temp folder (printed at start); --smoke-dir=<dir> is a smoke run that
-// reuses one, for the relaunch pass.
+// Smoke folders (temp userData and Library): --smoke makes a new one (printed at start) and runs the
+// full smoke pass (src/renderer/smoke.ts); --smoke-dir=<dir> reuses one and runs no pass, for
+// driving the app by hand or by script; --smoke-quiet with it is the relaunch pass. `npm run smoke`
+// (scripts/smoke.mjs) runs --smoke, then --smoke-quiet on the same folder. The two passes run in a
+// window that is never shown; --smoke-dir shows one, unfocused, on a second monitor (window.ts).
+// No test run shows a dialog: --smoke-answer=quit|keep answers "Quit anyway?" (default quit).
 const smokeDirArg = process.argv.find((a) => a.startsWith('--smoke-dir='))?.slice('--smoke-dir='.length);
-const smoke = process.argv.includes('--smoke') || smokeDirArg !== undefined;
+const smokeRun = process.argv.includes('--smoke-quiet') ? 'quiet' : process.argv.includes('--smoke') ? 'full' : null;
+const smoke = smokeRun !== null || smokeDirArg !== undefined;
 const smokeDir = smoke ? (smokeDirArg ? resolve(smokeDirArg) : mkdtempSync(join(tmpdir(), 'dt-smoke-'))) : null;
 
 // Dev and built runs share one data folder, and never touch the old app's %APPDATA%\designtools.
@@ -47,12 +52,20 @@ else start();
 function start() {
   app.on('second-instance', focusWindow);
 
-  if (smokeDir) {
-    console.log(`[smoke] folder ${smokeDir}`);
+  if (smokeDir) console.log(`[smoke] folder ${smokeDir}`);
+  if (smokeDir && smokeRun) {
     setTimeout(() => {
       log('error', `Smoke: no result within ${SMOKE_TIMEOUT_MS / 1000}s`);
       app.exit(2);
     }, SMOKE_TIMEOUT_MS);
+    // the files the full pass imports, beside its userData (smoke.ts looks there)
+    if (smokeRun === 'full') {
+      try {
+        cpSync(join(app.getAppPath(), 'test', 'fixtures'), join(smokeDir, 'fixtures'), { recursive: true });
+      } catch (e) {
+        log('error', 'Smoke: could not copy test/fixtures', errorText(e));
+      }
+    }
   }
 
   const userData = app.getPath('userData');
@@ -69,7 +82,11 @@ function start() {
   const trashItem = smokeDir ? smokeTrash(join(smokeDir, 'trash')) : (path: string) => shell.trashItem(path);
   const workspace = createWorkspace(userData);
   const exporter = createExporter(settings, { trashItem, fixedDir: smokeDir && join(smokeDir, 'exports') });
-  const library = new LibraryService(settings.get().libraryRoot, { trashItem, now: Date.now }, (index) => send('library.changed', index));
+  const library = new LibraryService(
+    settings.get().libraryRoot,
+    { trashItem, now: Date.now, log: (message, details) => log('warn', message, details) },
+    (index) => send('library.changed', index),
+  );
   // pure Node, so the first scan can overlap Electron's start-up
   void library.start().catch((e) => log('error', 'Library failed to start', errorText(e)));
 
@@ -80,10 +97,17 @@ function start() {
     exporter,
     smoke,
     smokeDone(ok, report) {
-      const pass = ok && mainErrors === 0;
-      console.log(`[smoke] ${pass ? 'PASS' : 'FAIL'}${mainErrors ? ` (${mainErrors} main-process errors, see log)` : ''}\n${report}`);
-      log(pass ? 'info' : 'error', `Smoke ${pass ? 'passed' : 'failed'}`, report);
-      app.exit(pass ? 0 : 1);
+      log(ok ? 'info' : 'error', 'Smoke report', report); // unpackaged, log() prints it too
+      const exit = () => {
+        const pass = ok && mainErrors === 0;
+        console.log(`[smoke] ${pass ? 'PASS' : 'FAIL'}${mainErrors ? ` (${mainErrors} main-process errors, see log)` : ''}`);
+        app.exit(pass ? 0 : 1);
+      };
+      // quit as the close button does, so the close handshake (last writes, pending deletes) runs too
+      const w = BrowserWindow.getAllWindows()[0];
+      if (!w) return exit();
+      w.once('closed', exit);
+      w.close();
     },
   });
 
@@ -93,7 +117,15 @@ function start() {
       itemPath: (id) => library.pathOf(id),
       assetPath: workspace.assetPath,
     });
-    const win = createWindow({ theme: settings.get().theme, smoke });
+    const win = createWindow({
+      theme: settings.get().theme,
+      smoke,
+      smokeRun,
+      // trash() is a no-op for an id already gone, so a toast closing during the quit can't clash
+      trashOnQuit: async (ids) => {
+        await Promise.all(ids.map((id) => library.trash(id).catch((e) => log('warn', 'Quit: a pending delete could not be trashed', errorText(e)))));
+      },
+    });
     // spec §6.2: regaining focus rescans everything (changes made in Explorer while away)
     win.on('focus', () => void library.rescanAll());
   });

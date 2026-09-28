@@ -2,10 +2,12 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import type { DocController } from '../../../shared/doc-api.ts';
+import { saveFile } from '../../lib/export.ts';
+import { decodeImage } from '../../lib/load.ts';
 import { shell } from '../../shell/core/index.ts';
-import { Button, EmptyState, IconButton, Module, Slider, SwatchStrip, menu, useDocNumber, type MenuItem } from '../../ui/index.ts';
-import type { ImageDoc } from './index.ts';
-import { decode, fetchBlob, pixels, tint } from './pixels.ts';
+import { Button, EmptyState, IconButton, Module, Slider, SwatchStrip, UndoRedo, menu, toast, useDocNumber, type MenuItem } from '../../ui/index.ts';
+import { type ImageDoc, tool } from './index.ts';
+import { fetchBlob, pixels, tint } from './pixels.ts';
 import s from './View.module.css';
 
 type Doc = DocController<ImageDoc>;
@@ -39,7 +41,9 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         className={s.inspector}
         actions={
           <>
+            <UndoRedo doc={doc} />
             {d.tints.length > 0 && <IconButton icon="format_color_reset" label="Clear tints" size="sm" onClick={clear} />}
+            <IconButton icon="download" label="Export PNG" size="sm" disabled={!d.source} onClick={() => void exportPng(d)} />
             <SendTo disabled={sendKind === null} />
           </>
         }
@@ -53,6 +57,18 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
       </Module>
     </div>
   );
+}
+
+/** the full-resolution render through the save dialog (spec §10.4) */
+async function exportPng(d: ImageDoc): Promise<void> {
+  const out = await tool.render!(d, {}).catch((e: unknown) => {
+    toast.show({ kind: 'error', message: `Couldn't render the image: ${e instanceof Error ? e.message : String(e)}` });
+    return null;
+  });
+  if (!out) return;
+  const data = await out.blob.arrayBuffer();
+  const path = await saveFile({ tool: 'dev-image', suggestedName: `${out.name} · Dev image`, ext: 'png', filterName: 'PNG image', data });
+  if (path) toast.show({ icon: 'download', message: `Exported ${path.split(/[\\/]/).pop()}.` });
 }
 
 /** render() → a new image in Scratch → the target's receive (spec §7.4) */
@@ -82,7 +98,7 @@ function Preview({ url, tints, strength, active }: { url: string; tints: Oklch[]
     let live = true;
     setError(null);
     fetchBlob(url)
-      .then(decode)
+      .then((blob) => decodeImage(blob))
       .then((bmp) => (live ? setBase(pixels(bmp, PREVIEW)) : bmp.close()))
       .catch((e: unknown) => live && setError(e instanceof Error ? e.message : String(e)));
     return () => {

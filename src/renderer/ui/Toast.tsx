@@ -4,7 +4,7 @@ import { cx } from './cx.ts';
 import { Icon } from './Icon.tsx';
 import { IconButton } from './IconButton.tsx';
 import { Kbd } from './Kbd.tsx';
-import { toast, toastStore, type ToastEntry } from './toast.ts';
+import { MAX_SHOWN, toast, toastStore, type ToastEntry } from './toast.ts';
 import { Tooltip } from './Tooltip.tsx';
 import s from './Toast.module.css';
 
@@ -59,20 +59,25 @@ export function ToastHost({ className }: { className?: string }) {
   const ctrlZ = toast.activeCtrlZ()?.id;
   return (
     <div className={cx(s.host, className)} role="status" aria-live="polite">
-      {list.map((t) => (
-        <ToastView
-          key={t.id}
-          entry={t}
-          ctrlZ={t.id === ctrlZ}
-          className={s.floating}
-          style={{ '--slot': t.leaving ? 0 : shown.length - 1 - shown.indexOf(t) } as CSSProperties}
-          data-leaving={t.leaving || undefined}
-          onPointerEnter={() => toastStore.hold(t.id, 'hover')}
-          onPointerLeave={() => toastStore.release(t.id, 'hover')}
-          onUndo={() => toastStore.undo(t.id)}
-          onDismiss={() => toast.dismiss(t.id)}
-        />
-      ))}
+      {list.map((t) => {
+        const slot = t.leaving ? 0 : shown.length - 1 - shown.indexOf(t);
+        return (
+          <ToastView
+            key={t.id}
+            entry={t}
+            ctrlZ={t.id === ctrlZ}
+            className={s.floating}
+            style={{ '--slot': slot } as CSSProperties}
+            data-leaving={t.leaving || undefined}
+            // past the third, a toast waits out of sight (its clock still runs) until newer ones close
+            data-waiting={slot >= MAX_SHOWN || undefined}
+            onPointerEnter={() => toastStore.hold(t.id, 'hover')}
+            onPointerLeave={() => toastStore.release(t.id, 'hover')}
+            onUndo={() => toastStore.undo(t.id)}
+            onDismiss={() => toast.dismiss(t.id)}
+          />
+        );
+      })}
     </div>
   );
 }

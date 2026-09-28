@@ -33,7 +33,7 @@ export function Rail({ collapsed }: { collapsed: boolean }) {
   };
 
   const item = (p: { key: string; icon: IconName; label: string; digit?: string; shortcut?: string; on: boolean; stop?: boolean; current?: boolean; onClick(): void }) => (
-    <Tooltip key={p.key} content={p.label} shortcut={p.shortcut} disabled={!collapsed}>
+    <Tooltip key={p.key} content={p.label} shortcut={p.shortcut} disabled={!collapsed} side="right">
       <button
         type="button"
         className={cx(s.item, p.on && s.on)}

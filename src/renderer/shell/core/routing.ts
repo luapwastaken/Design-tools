@@ -75,11 +75,9 @@ export function receiveLabel(name: string, use: Use): string {
   return what.startsWith('as ') ? `${name} ${what}` : `${sentence(what)} from ${name}`;
 }
 
-/** The Send to toast (spec §7.4 step 3): what happened, and that Ctrl+Z goes back. */
+/** The Send to toast (spec §7.4 step 3): what happened. Its Undo button and Ctrl Z hint say the rest (brief §6). */
 export function sentMessage(name: string, use: Use, toolLabel: string): string {
-  return use.mode === 'open'
-    ? `Opened ${name} in ${toolLabel}. Ctrl+Z goes back.`
-    : `${receiveLabel(name, use)} in ${toolLabel}. Ctrl+Z goes back.`;
+  return use.mode === 'open' ? `Opened ${name} in ${toolLabel}.` : `${receiveLabel(name, use)} in ${toolLabel}.`;
 }
 
 export const toolForShortcut = (n: number, tools: Tool[]): ToolId | null => tools.find((t) => t.shortcut === n)?.id ?? null;
@@ -98,9 +96,15 @@ function listNames(names: string[]): string {
   return `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;
 }
 
-/** Each import says what it made, or why not (spec §6.3). */
-export function importSummary(r: ImportResult, collection: string): { made: string | null; failed: string | null } {
+const stop = (s: string) => (/[.?!]$/.test(s) ? s : `${s}.`);
+
+/** Each import says what it made, or why not, and what the palette readers noticed (spec §6.3). */
+export function importSummary(r: ImportResult, collection: string): { made: string | null; failed: string | null; warned: string | null } {
   const made = r.made.length ? `Added ${listNames(r.made.map((i) => i.name))} to ${collectionLabel(collection)}.` : null;
-  const failed = r.failed.length ? `Couldn't import ${r.failed.map((f) => `${f.name} (${f.reason.replace(/\.$/, '')})`).join(', ')}.` : null;
-  return { made, failed };
+  // one sentence per reason: "Couldn't import a.psd and b.psd. PSD files aren't supported. …"
+  const why = new Map<string, string[]>();
+  for (const f of r.failed) why.set(f.reason, [...(why.get(f.reason) ?? []), f.name]);
+  const failed = why.size ? [...why].map(([reason, names]) => `Couldn't import ${listNames(names)}. ${stop(reason)}`).join(' ') : null;
+  const warned = r.warnings?.length ? r.warnings.map((w) => `${w.name}: ${w.messages.map(stop).join(' ')}`).join(' ') : null;
+  return { made, failed, warned };
 }
