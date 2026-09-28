@@ -86,7 +86,7 @@ test('ASE: groups flatten into names; global and spot flags and original values 
     ]),
     'brand',
   );
-  assert.deepEqual(f.swatches.map((s) => s.name), ['Brand / Ink', 'Brand / Seal', 'Paper']);
+  assert.deepEqual(f.swatches.map((s) => s.name), ['Ink', 'Seal', 'Paper'], 'one group: its folder, not part of the names');
   assert.deepEqual(f.swatches.map((s) => s.type), ['global', 'spot', 'process']);
   const [ink, seal, paper] = f.swatches;
   assert.equal(ink.source?.space, 'cmyk');
@@ -99,6 +99,22 @@ test('ASE: groups flatten into names; global and spot flags and original values 
   assert.equal(toHex(paper.oklch), '#cccccc');
   assert.ok(f.warnings.some((w) => w.includes('XYZ')), 'unsupported model named');
   assert.ok(f.warnings.some((w) => w.includes('CMYK')), 'CMYK estimate noted');
+});
+
+test('ASE: with several groups, each swatch name carries its group', () => {
+  const f = readPaletteFile(
+    'ase',
+    aseFile([
+      aseBlock(0xc001, aseName('Light')),
+      aseColour('Paper', 'Gray', [0.9], 2),
+      aseBlock(0xc002, []),
+      aseBlock(0xc001, aseName('Dark')),
+      aseColour('Paper', 'Gray', [0.1], 2),
+      aseBlock(0xc002, []),
+    ]),
+    'modes',
+  );
+  assert.deepEqual(f.swatches.map((s) => s.name), ['Light / Paper', 'Dark / Paper']);
 });
 
 test('ASE: a truncated file keeps the colours before the cut and says so', () => {

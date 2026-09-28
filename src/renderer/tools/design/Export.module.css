@@ -1,0 +1,11 @@
+/* the result of the work stays one click away: docked at the inspector's foot while Build scrolls
+   under it, with a strip of ground above like any gap between modules. A short window keeps it in
+   the flow, where docking would hide most of the swatch editor. */
+@media (min-height: 900px) {
+  .dock { position: sticky; bottom: 0; z-index: 1; box-shadow: 0 calc(-1 * var(--gap)) 0 var(--ground); }
+}
+.export { display: flex; flex-direction: column; gap: 8px; }
+.desc { min-height: 2.9em; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
+.ext { flex: none; color: var(--ink-3); font: 400 var(--fs-ctl)/1 var(--font-mono); font-stretch: normal; }
+.row { display: flex; gap: 6px; margin-top: 4px; }
+.grow { flex: 1; }

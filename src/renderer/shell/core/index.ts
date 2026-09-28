@@ -83,6 +83,7 @@ export const shell: Shell = {
   renameCollection: library.renameCollection,
   setCollectionLocked: library.setCollectionLocked,
 
+  newDoc: send.newDoc,
   takeBack: send.takeBack,
   reloadFromDisk: send.reloadFromDisk,
   keepMineAsCopy: send.keepMineAsCopy,

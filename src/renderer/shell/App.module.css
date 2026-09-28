@@ -1,5 +1,8 @@
 .app {
   display: grid;
+  /* never wider than the window: an intrinsic column would take the tools' longest unwrapped line
+     (the fr column inside .cols sizes to its max-content when measured) */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: var(--titlebar-h) minmax(0, 1fr) var(--statusbar-h);
   height: 100%;
   background: var(--ground);

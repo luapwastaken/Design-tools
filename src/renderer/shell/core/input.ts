@@ -87,5 +87,7 @@ export async function routeFiles(id: ToolId, files: File[], how: 'drop' | 'paste
   if (!r) return;
   const onFiles = r.def.onFiles;
   const took = onFiles ? await guard(`${r.def.label} couldn't take the files`, () => onFiles(files, how, r.doc)) : false;
-  if (took === false) await offerToLibrary(files); // undefined: it threw, and the toast said so
+  // undefined: it threw, and the toast said so
+  const left = took === false ? files : Array.isArray(took) ? took : [];
+  if (left.length) await offerToLibrary(left);
 }

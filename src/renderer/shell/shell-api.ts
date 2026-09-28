@@ -90,6 +90,8 @@ export interface Shell {
   setCollectionLocked(name: string, locked: boolean): Promise<void>;
 
   // ── documents ──
+  /** a doc-kind tool's New: an empty document in place of the open one, one undoable step */
+  newDoc(id: ToolId): Promise<void>;
   /** the readout actions call these */
   takeBack(id: ToolId): Promise<void>;
   reloadFromDisk(id: ToolId): Promise<void>;

@@ -2,11 +2,14 @@
 // runs scripts/smoke.mjs). It drives the real shell, IPC and Library in the smoke folder, reports
 // each check, and hands the result to main (app.smokeDone), which quits through the close handshake.
 // 'full' runs the smoke list; 'quiet' is the relaunch: it restores, checks, and quits with no input.
+import { contrast, toHex } from '../shared/color/index.ts';
 import type { DocController } from '../shared/doc-api.ts';
-import type { LibraryItemRef, PatternPayload, ToolId } from '../shared/types.ts';
+import type { LibraryItemRef, PatternPayload, Swatch, ToolId } from '../shared/types.ts';
 import { saveFile, saveToFolder } from './lib/export.ts';
 import { decodeImage } from './lib/load.ts';
 import { shell } from './shell/core/index.ts';
+import { newSwatch as designSwatch, type DesignDoc } from './tools/design/doc.ts';
+import { clearProposals, proposals } from './tools/design/proposals.ts';
 import type { ImageDoc } from './tools/dev-image/index.ts';
 import { newSwatch, type PaletteDoc } from './tools/dev-palette/swatches.ts';
 import { toast } from './ui/index.ts';
@@ -48,6 +51,7 @@ const addSwatch = (doc: DocController<PaletteDoc>, name: string) =>
 const press = (key: string, o: KeyboardEventInit = {}) =>
   (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...o }));
 const ctrlZ = () => press('z', { code: 'KeyZ', ctrlKey: true });
+const ctrlY = () => press('y', { code: 'KeyY', ctrlKey: true });
 const host = (id: ToolId) => document.querySelector<HTMLElement>(`[data-tool="${id}"]`);
 /** the size of the image Dev image holds now */
 async function imageSize(di: DocController<ImageDoc>): Promise<[number, number] | null> {
@@ -84,7 +88,7 @@ async function full(): Promise<void> {
   const dir = info.userData.replace(/[\\/]Design Tools$/, '');
 
   const ids = shell.getState().tools.map((t) => t.id);
-  check('two palette tools and an image tool are registered', ['dev-palette', 'dev-image', 'smoke-palette'].every((id) => ids.includes(id as ToolId)), ids);
+  check('Design, two more palette tools and an image tool are registered', ['design', 'dev-palette', 'dev-image', 'smoke-palette'].every((id) => ids.includes(id as ToolId)), ids);
   for (const id of ids) {
     shell.setActive(id);
     await sleep(50);
@@ -199,6 +203,7 @@ async function full(): Promise<void> {
   await fieldUndo(dp);
   const open = dp.source();
   if (check('Dev palette still has its fork open', open && dp.state().t === 'saved', dp.state())) await outsideChange(dp, open!.itemId);
+  await design(dir, image, di);
 
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
   // pending delete is trashed after it (scripts/smoke.mjs checks both)
@@ -248,6 +253,90 @@ async function outsideChange(dp: DocController<PaletteDoc>, id: string): Promise
   check('Reload from disk takes the file', dp.state().t === 'saved' && dp.get().swatches.length === 1 && dp.get().notes === 'from elsewhere', [dp.state(), dp.get().swatches.length]);
   ctrlZ();
   check('Ctrl+Z brings mine back and writes it', await until(async () => dp.get().swatches.length === mine + 1 && (await swatchCount(id)) === mine + 1), [dp.get().swatches.length, mine]);
+}
+
+/** Colour › Design: open, edit, a contrast fix, Export ASE read back, Send to from Dev image (plan: Integrate) */
+async function design(dir: string, image: LibraryItemRef, di: DocController<ImageDoc>): Promise<void> {
+  const dd = shell.doc('design') as DocController<DesignDoc>;
+  const fx = `${dir}\\fixtures\\`;
+  await shell.importFiles([`${fx}glossy-pastic_palette.ase`], 'Design');
+  const palette = await find((i) => i.collection === 'Design' && i.kind === 'palette');
+  if (!check('a second .ase imports for Design', palette)) return;
+  shell.setActive('design');
+  await shell.openItem(palette!); // as a double-click: the active tool takes it
+  check('Open: the palette becomes Design’s document', dd.source()?.itemId === palette!.id && shell.getState().owners[palette!.id] === 'design' && dd.state().t === 'saved', [dd.source(), dd.state()]);
+  const n = dd.get().swatches.length;
+
+  const ground = designSwatch([0.97, 0.01, 90], 'Smoke ground', 'Background');
+  const text = designSwatch([0.66, 0.1, 30], 'Smoke text', 'Text');
+  dd.transact('Add swatches', (d) => ({ ...d, swatches: [...d.swatches, ground, text] }));
+  check('an edit in Design writes the file', await until(async () => (await swatchCount(palette!.id)) === n + 2), n);
+
+  const inDesign = (id: string) => dd.get().swatches.find((w) => w.id === id);
+  const fixButton = await until(() =>
+    [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => /^(Lift|Darken) to L/.test(b.textContent ?? '') && b.parentElement?.parentElement?.textContent?.includes('Smoke text on Smoke ground')),
+  );
+  if (!check('the contrast check offers a fix for Smoke text on Smoke ground', fixButton)) return;
+  const before = dd.get();
+  const depth = dd.depth();
+  fixButton!.click();
+  const fixed = inDesign(text.id)!.oklch;
+  check('a contrast fix is one undo step and reaches 4.5:1', dd.depth() === depth + 1 && contrast(fixed, ground.oklch) >= 4.5 && fixed[2] === text.oklch[2], [dd.depth(), depth, contrast(fixed, ground.oklch)]);
+  ctrlZ();
+  check('Ctrl+Z takes the fix back', dd.get() === before, dd.undoLabel());
+  ctrlY();
+  check('Ctrl+Y redoes it and writes it', await until(async () => {
+    const item = await api.invoke('library.read', palette!.id).catch(() => null);
+    const w = item?.kind === 'palette' ? item.payload.swatches.find((x) => x.id === text.id) : null;
+    return w && JSON.stringify(w.oklch) === JSON.stringify(fixed);
+  }));
+
+  // Export ASE through the Export module, then import the file back through the Library's reader
+  const exportButton = [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export ASE'));
+  if (!check('Design shows Export ASE', exportButton)) return;
+  const shown = toastStore.get().length;
+  exportButton!.click();
+  const done = await until(() => toastStore.get().slice(shown).find((t) => t.icon === 'download'));
+  const file = /^Exported (.+)\.$/.exec(String(done?.message ?? ''))?.[1];
+  if (!check('Export ASE writes a file', file, done?.message)) return;
+  await shell.importFiles([`${dir}\\exports\\${file}`], 'Reimport');
+  const back = await find((i) => i.collection === 'Reimport' && i.kind === 'palette');
+  const read = back && (await api.invoke('library.read', back.id));
+  const got: Swatch[] = read?.kind === 'palette' ? read.payload.swatches : [];
+  const want = dd.get().swatches;
+  const same = got.length === want.length && want.every((w, i) => toHex(w.oklch) === toHex(got[i].oklch) && got[i].type === w.type && (!w.name || got[i].name === w.name));
+  check('its read-back matches the palette (names, colours, global and spot)', same, got.map((w) => [w.name, w.type]));
+
+  // New palette: one step to an empty, unlinked document; each first edit makes its own Scratch
+  // palette (never writes over the last one); Undo goes back to the palette that was open
+  const held = dd.source();
+  const newWithSwatch = async (name: string) => {
+    await shell.newDoc('design');
+    const fresh = dd.get().swatches.length === 0 && !dd.source() && dd.undoLabel() === 'New palette';
+    dd.transact('Add swatch', (d) => ({ ...d, swatches: [designSwatch([0.5, 0.1, 200], name)] }));
+    const made = await until(() => dd.state().t === 'saved' && dd.source()?.collection === 'Scratch' && dd.source());
+    return { fresh, id: made ? made.itemId : null };
+  };
+  const first = await newWithSwatch('Smoke new 1');
+  const second = await newWithSwatch('Smoke new 2');
+  check('New palette: an empty, unlinked document in one step', first.fresh && second.fresh);
+  check('each New palette’s first edit makes its own Scratch item', first.id && second.id && first.id !== second.id && first.id !== held?.itemId && (await swatchCount(first.id)) === 1, [first.id, second.id]);
+  for (let i = 0; i < 4; i++) ctrlZ();
+  check('Undo goes back to the palette that was open', await until(() => dd.source()?.itemId === held?.itemId && dd.state().t === 'saved'), dd.source());
+
+  // Send to Design from Dev image: proposals, the document untouched (untinted, so its four colours show)
+  await shell.sendItem(image, 'dev-image');
+  di.transact('Clear tints', (d) => ({ ...d, tints: [] }));
+  clearProposals();
+  const doc = dd.get();
+  const steps = dd.depth();
+  await shell.sendDoc('dev-image', 'design');
+  const ghosts = proposals.get();
+  check('Send to Design from Dev image proposes its colours', shell.getState().active === 'design' && (ghosts?.items.length ?? 0) >= 2, ghosts?.items.length);
+  check('and leaves the document and its history alone', dd.get() === doc && dd.depth() === steps && di.depth() > 0, [dd.depth(), steps]);
+  const sent = toastStore.get().findLast((t) => t.icon === 'input');
+  check('its toast offers no Undo (there is no step)', sent && !sent.undo, sent?.message);
+  clearProposals();
 }
 
 /** the relaunch: nothing is touched; scripts/smoke.mjs checks no Library or workspace file changed */

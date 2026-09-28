@@ -11,6 +11,7 @@ import {
   filterDeficiencyTrit,
   formatHex,
   interpolate,
+  parse,
   wcagContrast,
   wcagLuminance,
   type Color,
@@ -28,6 +29,7 @@ export type Cvd = 'protan' | 'deutan' | 'tritan' | 'achromat';
 const rgbOf = converter('rgb');
 const p3Of = converter('p3');
 const lrgbOf = converter('lrgb');
+const hsvOf = converter('hsv');
 const oklchOf = converter('oklch');
 const ciede2000 = differenceCiede2000();
 const deltaEOK = differenceEuclidean('oklab');
@@ -54,12 +56,35 @@ export function parseHex(s: string): string | null {
   return '#' + (d.length === 3 ? d.replace(/./g, '$&$&') : d);
 }
 
+/**
+ * Any CSS colour (keywords like `white`, `hwb()`, `color(display-p3 …)`, `lch()`…) to OKLCH; null
+ * for anything else, and for a fully transparent one. Wide-gamut colours stay wide.
+ */
+export function parseCss(text: string): Oklch | null {
+  // culori also reads "beef" as a hex colour; CSS needs the "#"
+  if (/^[0-9a-f]+$/i.test(text.trim())) return null;
+  const c = parse(text.trim());
+  return c && c.alpha !== 0 ? toOklch(c) : null;
+}
+
 /** Throws on junk: callers validate user input with `parseHex` first. */
 export function hexToOklch(hex: string): Oklch {
   return toOklch(hexRgb(hex));
 }
 
 export const toHex = (o: Oklch): string => formatHex(srgb(o));
+
+/** 0-255 per channel: exactly what the hex readout shows. */
+export function rgb255(o: Oklch): [number, number, number] {
+  const hex = toHex(o);
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+}
+
+/** HSB (hue 0-360, saturation and brightness 0-1) of the hex a screen shows; Procreate stores it. */
+export function hsb(o: Oklch): [number, number, number] {
+  const { h = 0, s, v } = hsvOf(toHex(o))!;
+  return [h, s, v];
+}
 export const inSrgb = (o: Oklch): boolean => within(rgbOf(culoriOf(o)));
 export const inP3 = (o: Oklch): boolean => within(p3Of(culoriOf(o)));
 

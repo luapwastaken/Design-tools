@@ -53,3 +53,6 @@
 .menuSub { position: absolute; left: 186px; top: 72px; }
 
 .list { display: flex; flex-direction: column; gap: 1px; max-width: 360px; }
+
+/* the inspector's width, as in the Colour > Design board */
+.pickerMod { width: 380px; max-width: 100%; }

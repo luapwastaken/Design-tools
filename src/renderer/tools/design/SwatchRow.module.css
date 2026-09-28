@@ -1,0 +1,21 @@
+/* the checks keep the rest of the column however many swatches there are */
+.mod { max-height: 54vh; }
+.switches { display: flex; gap: 6px; }
+.switches > * { height: 22px; }
+
+/* brief §5: swatch grids reflow; auto-fit, so a short palette fills the row as the mockup's does,
+   and no column gap, so the mats form one surround band per row */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  row-gap: 8px;
+  overflow: hidden;
+  border-radius: 3px;
+}
+
+.from { min-width: 0; overflow: hidden; color: var(--ink-2); text-overflow: ellipsis; white-space: nowrap; }
+.grow { flex: 1; }
+
+
+.grid[hidden] { display: none; }
+.start { display: flex; gap: 6px; margin-top: 10px; }

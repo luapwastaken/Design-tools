@@ -1,0 +1,18 @@
+/* the picker popover: a floating layer, so it may scale in from the field; nothing fades (hard rule 4) */
+.pop {
+  --picker-ground: var(--popover);
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  z-index: 850; /* over toasts, under menus and tooltips */
+  width: 356px;
+  padding: 10px 10px 12px;
+  border-radius: var(--r-mod);
+  background: var(--popover);
+  box-shadow: 0 10px 28px var(--shadow), 0 1px 3px var(--shadow);
+  color: var(--ink);
+  transition: transform var(--t-move) var(--ease);
+}
+@starting-style {
+  .pop { transform: scale(.98); }
+}

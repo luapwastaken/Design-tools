@@ -16,14 +16,16 @@ export function unsupportedImage(type: string, name = ''): string | null {
 }
 
 /**
- * The image at full resolution with its alpha as stored (no premultiplying, no colour conversion).
+ * The image at full resolution with its alpha as stored (no premultiplying). Its values as stored
+ * too (no colour conversion), which image processing wants; `{ asShown: true }` converts an embedded
+ * profile (a Display P3 screenshot, an Adobe RGB photo) to sRGB, for taking colours as they look.
  * GIFs give their first frame. Rejects with a plain sentence, never hangs, on anything unreadable.
  */
-export async function decodeImage(blob: Blob, name = 'The image'): Promise<ImageBitmap> {
+export async function decodeImage(blob: Blob, name = 'The image', { asShown = false } = {}): Promise<ImageBitmap> {
   const why = unsupportedImage(blob.type, name);
   if (why) throw new Error(why);
   try {
-    if (blob.type !== 'image/svg+xml') return await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+    if (blob.type !== 'image/svg+xml') return await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: asShown ? 'default' : 'none' });
     // createImageBitmap can't read SVG; an <img> can, in a document of its own
     const img = new Image();
     img.src = URL.createObjectURL(blob);

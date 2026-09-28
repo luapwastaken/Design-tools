@@ -12,3 +12,6 @@
 .detail { padding-left: 26px; color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.4; }
 .actions { display: flex; align-items: center; gap: 6px; padding-left: 26px; }
 .grow { flex: 1; }
+.compact { padding: 8px; }
+.compact .detail, .compact .actions { padding-left: 0; }
+.compact .actions { flex-wrap: wrap; }

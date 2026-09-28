@@ -162,12 +162,13 @@ async function deliver(ref: ItemRef, to: ToolId, use: Use, announce: boolean): P
       r.links.set(source.itemId, source);
       quietly(r, () => r.doc.receive(label, next, source));
       void enqueue(r, () => saveWorkspace(r));
-    } else {
+    } else if (next !== current) {
       // an input: the document keeps its own link, whatever it is by now
       r.doc.receive(label, next, r.doc.source());
     }
     refreshAll();
-    if (announce) announceSent(r, next, ref.name, use);
+    // an input the tool took without changing its document (Design's proposals) left no step to undo
+    if (announce) announceSent(r, next, ref.name, use, linking || next !== current);
   } finally {
     revoke();
   }
@@ -178,8 +179,9 @@ async function deliver(ref: ItemRef, to: ToolId, use: Use, announce: boolean): P
  * the item, while that is still the tool's last step. Ctrl+Z means the toast only while that tool
  * is showing, where it is the tool's own undo anyway; elsewhere Ctrl+Z stays with the tool on screen.
  */
-function announceSent(r: Runtime, next: unknown, name: string, use: Use): void {
+function announceSent(r: Runtime, next: unknown, name: string, use: Use, stepped: boolean): void {
   const to = r.def.id;
+  if (!stepped) return void toast.show({ icon: 'input', message: sentMessage(name, use, r.def.label) });
   const onTop = () => rtOf(to) === r && r.doc.get() === next && !r.doc.inGesture();
   toast.show({
     icon: 'input',
@@ -225,6 +227,22 @@ async function reopen(r: Runtime, label: (name: string) => string): Promise<void
   quietly(r, () => r.doc.receive(label(source.name), data, source));
   void enqueue(r, () => saveWorkspace(r));
   refreshAll();
+}
+
+/**
+ * A new, empty document in place of the open one (a doc-kind tool's New): one undoable step, as
+ * opening over a document is (brief rule 3), and nothing is written until its first commit makes
+ * `Scratch/Untitled <kind> N` (spec §7.1). Undo brings the old one back, linked to its item.
+ */
+export async function newDoc(id: ToolId): Promise<void> {
+  const r = runtime(id);
+  endGesture(r);
+  await idle(r);
+  if (!r.doc.source() && isEmptyDoc(r, r.doc.get())) return;
+  // an unlinked snapshot resolves through the '' link to the item the last first commit made; this
+  // document is a new one, so its first commit must make its own (not write over that one)
+  r.links.delete('');
+  r.doc.receive(`New ${r.def.itemKind ?? 'document'}`, r.def.createEmptyDoc(), null);
 }
 
 /** OPEN IN <tool>: reload from the file and move ownership back (spec §7.3) */

@@ -1,7 +1,9 @@
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import { cssColor, type Oklch } from '../../shared/color/index.ts';
+import { createDocController } from '../../shared/doc.ts';
 import type { LibraryItemRef } from '../../shared/types.ts';
 import { Button } from './Button.tsx';
+import { ColorField } from './ColorField.tsx';
 import { ConfirmInline } from './ConfirmInline.tsx';
 import { cx } from './cx.ts';
 import { EmptyState } from './EmptyState.tsx';
@@ -11,7 +13,9 @@ import { LibraryItemRow } from './LibraryItemRow.tsx';
 import { MenuList } from './Menu.tsx';
 import { menu, type MenuAnchor, type MenuItem, type MenuOptions } from './menu.ts';
 import { Module } from './Module.tsx';
+import { useDocColour } from './bind.ts';
 import { NumberField } from './NumberField.tsx';
+import { Picker, PickerModes, type PickerMode } from './Picker.tsx';
 import { Progress } from './Progress.tsx';
 import { SectionHeader } from './SectionHeader.tsx';
 import { Segmented } from './Segmented.tsx';
@@ -23,6 +27,7 @@ import { toast, type ToastEntry } from './toast.ts';
 import { ToastView } from './Toast.tsx';
 import { Toggle } from './Toggle.tsx';
 import { TipBubble, Tooltip } from './Tooltip.tsx';
+import { UndoRedo } from './UndoRedo.tsx';
 import s from './ControlsBoard.module.css';
 
 // Every shared control in every state on one scrolling page, for the design critic (plan unit U).
@@ -104,6 +109,49 @@ function Specimen({ label, children }: { label: string; children: ReactNode }) {
       {children}
       <span className={s.state}>{label}</span>
     </div>
+  );
+}
+
+// the colour demos keep their own state, so a plane drag re-renders only them
+function ColorFields() {
+  const [ember, setEmber] = useState<Oklch>(MONOLITH[3][1]);
+  const [sky, setSky] = useState<Oklch>(MONOLITH[5][1]);
+  return (
+    <>
+      <ColorField value={ember} name="Ember" onChange={setEmber} />
+      <ColorField value={sky} name="Sky" onChange={setSky} forceState="focus" />
+      <ColorField value={MONOLITH[0][1]} name="Ground" onChange={noop} disabled />
+    </>
+  );
+}
+
+// bound to a small document of its own, so each drag, typed value and arrow run shows as one undo step
+function PickerDemo() {
+  const [doc] = useState(() => createDocController<{ ember: Oklch }>('dev-palette', { ember: MONOLITH[3][1] }));
+  const colour = useDocColour(doc, { label: 'change Ember', key: 'board-picker', get: (d) => d.ember, set: (d, ember) => ({ ...d, ember }) });
+  const [mode, setMode] = useState<PickerMode>('oklch');
+  const [lockL, setLockL] = useState(false);
+  const [lockH, setLockH] = useState(false);
+  return (
+    <>
+      <Module
+        title="Picker"
+        sub="Ember"
+        actions={
+          <>
+            <UndoRedo doc={doc} />
+            <PickerModes value={mode} onChange={setMode} />
+          </>
+        }
+        className={s.pickerMod}
+      >
+        <Picker {...colour} mode={mode} onMode={setMode} lockL={lockL} lockH={lockH} />
+      </Module>
+      <div className={s.prow} style={{ gap: 18 }}>
+        <Toggle label="Value lock" checked={lockL} onChange={setLockL} />
+        <Toggle label="Hue lock" checked={lockH} onChange={setLockH} />
+      </div>
+    </>
   );
 }
 
@@ -228,6 +276,10 @@ export function ControlsBoard() {
           <TextInput value="E8643C" label="Hex" mono onCommit={noop} />
         </Group>
 
+        <Group name="Colour field" cap="Type a hex and press Enter, or click the chip for the picker. Rest, focus, off.">
+          <ColorFields />
+        </Group>
+
         <Group name="Toggle" cap="The label toggles it too.">
           <div className={s.prow} style={{ gap: 18 }}>
             <Toggle label="Global swatches" checked={globalSw} onChange={setGlobalSw} />
@@ -330,6 +382,10 @@ export function ControlsBoard() {
             <MenuList className={s.menuRoot} items={ITEM_MENU} hot={1} />
             <MenuList className={s.menuSub} items={SEND_TO} hot={5} />
           </div>
+        </Group>
+
+        <Group name="Picker" cap="Drag the plane or a track: each drag is one step, Esc cancels. Arrows on the plane nudge L and C, Shift ×10. Solid edge sRGB, dashed P3; past sRGB is dimmed." wide>
+          <PickerDemo />
         </Group>
 
         <Group name="Library item" cap="Selected and open, hover with the active tool's use, long names end in an ellipsis (hover shows the full name).">

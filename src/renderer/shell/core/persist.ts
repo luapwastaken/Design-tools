@@ -86,6 +86,7 @@ async function write(r: Runtime, source: Linked, payload: DocPayload, edit: bool
     res = { ok: false, reason: 'error', message: errorText(e) };
   }
   if (res.ok) {
+    patchRef(source.itemId, res.ref);
     // the first write of a doc known only by its path gives it an id of its own
     if (res.ref.id !== source.itemId) follow(source.itemId, res.ref);
     relink(r, sourceOf(res.ref, res.stamp), { ...source, itemId: res.ref.id });
@@ -99,6 +100,17 @@ async function write(r: Runtime, source: Linked, payload: DocPayload, edit: bool
     r.failed = res.message;
     log('warn', `${r.def.label}: writing ${source.name} failed`, res.message);
   }
+}
+
+/**
+ * The Library row of an item this app just wrote takes its new stamp now: main sends no index for
+ * its own writes, and the row's swatch count and thumbnail are keyed by the stamp.
+ */
+function patchRef(id: string, ref: LibraryItemRef): void {
+  const lib = getState().library;
+  if (!lib) return;
+  const collections = lib.collections.map((c) => (c.items.some((i) => i.id === id) ? { ...c, items: c.items.map((i) => (i.id === id ? ref : i)) } : c));
+  setState({ library: { ...lib, collections } });
 }
 
 /** a first commit (`from` null) or a fork of `from` into Scratch */

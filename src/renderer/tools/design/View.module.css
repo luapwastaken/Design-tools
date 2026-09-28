@@ -1,0 +1,73 @@
+/* brief §5: work area at least 540px, inspector 340–460 (380); the inspector gives way first */
+.view {
+  display: grid;
+  grid-template-columns: minmax(min(540px, calc(100% - 340px - var(--gap))), 1fr) minmax(340px, var(--insp));
+  gap: var(--gap);
+  min-width: 0;
+  min-height: 0;
+}
+
+/* the checks keep the room they need to show whole (Checks.module.css); a long palette's swatches
+   give way first and scroll */
+.work {
+  position: relative;
+  display: grid;
+  grid-template-rows: var(--docbar) auto minmax(min(500px, 47vh), 1fr);
+  gap: var(--gap);
+  min-width: 0;
+  min-height: 0;
+}
+.lower { min-height: 0; }
+/* an empty palette: its Start panel takes the room, and the checks wait in one line below it */
+.work.empty { grid-template-rows: var(--docbar) minmax(0, 1fr) auto; }
+.work.empty > section { max-height: none; }
+.work.empty > section > :nth-child(2) { display: grid; align-content: center; }
+.later { padding: 10px 14px; border-radius: var(--r-mod); background: var(--module); color: var(--ink-3); font-size: var(--fs-meta); }
+.pane { height: 100%; min-height: 0; overflow: auto; container: lower / inline-size; }
+.pane[hidden] { display: none; }
+
+.insp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.insp > * { flex: none; }
+
+.docbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 8px 0 14px;
+  overflow: hidden;
+  border-radius: var(--r-mod);
+  background: var(--module);
+}
+.docbar { container-type: inline-size; }
+.docbar > :global(.lbl) { flex: none; white-space: nowrap; }
+/* short of room the collection goes first: the title bar's readout names it too */
+@container (max-width: 880px) {
+  .where { display: none; }
+}
+/* at the work area's 540px minimum: the count goes (the Swatches header reads it too) and Add
+   swatch keeps its icon and tooltip, so Send to stays on screen */
+@container (max-width: 700px) {
+  .count { display: none; }
+  .addText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+.docbar .lowerSwitch { align-self: center; }
+.title {
+  flex: 0 1 auto;
+  min-width: 48px;
+  overflow: hidden;
+  font: 600 var(--fs-title)/1 var(--font-sans);
+  font-stretch: var(--sans-stretch);
+  letter-spacing: -.005em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.grow { flex: 1; }
+.sep { flex: none; width: 1px; height: 16px; margin: 0 2px; background: var(--line); }

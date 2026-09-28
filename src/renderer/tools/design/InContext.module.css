@@ -1,0 +1,191 @@
+/* The chrome around the website uses tokens; everything inside .site takes the palette through the
+   custom properties InContext sets (--pg page, --sf surface, --ln line, --tx text, --mu muted,
+   --pr primary, --on-pr, --ac accent, --hl highlight, --on-hl). */
+
+.root { height: 100%; min-height: 0; container-type: inline-size; }
+.pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+  height: 100%;
+  min-height: 0;
+}
+/* too narrow for two sites side by side: stack them and scroll the pair */
+@container (width < 760px) {
+  .pair { grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; overflow: auto; }
+}
+.frame { min-width: 0; }
+.fail { color: var(--danger); }
+/* the site fills its module like a browser viewport, however short the page */
+.fit { min-height: 100%; container-type: inline-size; display: flex; flex-direction: column; }
+
+/* ── the website ── */
+
+.site {
+  position: relative;
+  flex: 1;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--pg);
+  color: var(--tx);
+  font: 400 12.5px/1.5 var(--font-sans);
+  font-stretch: 100%;
+  font-kerning: normal;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 48px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--ln);
+}
+.brand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  white-space: nowrap;
+}
+/* two discs a hair out of register, as a Riso print would lay them */
+.logo { position: relative; flex: none; width: 21px; height: 14px; }
+.logo::before, .logo::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+.logo::before { left: 0; background: var(--pr); }
+.logo::after { left: 7px; background: var(--ac); }
+.links { display: flex; gap: 18px; margin-left: auto; color: var(--mu); font-size: 12px; }
+.here {
+  color: var(--tx);
+  text-decoration: underline 1.5px var(--pr);
+  text-underline-offset: 6px;
+}
+.signin { position: relative; color: var(--ac); font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+.hero { padding: 34px 22px 28px; }
+.h1 {
+  position: relative;
+  font-size: 38px;
+  font-weight: 700;
+  font-stretch: 76%;
+  line-height: 1.02;
+  letter-spacing: -.015em;
+  text-wrap: balance;
+}
+.mark {
+  position: relative;
+  padding: 0 .08em;
+  border-radius: 2px;
+  background: var(--hl);
+  color: var(--on-hl);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.lede {
+  position: relative;
+  max-width: 40ch;
+  margin-top: 14px;
+  color: var(--mu);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.ctas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.primary, .secondary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 15px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.primary { background: var(--pr); color: var(--on-pr); }
+.secondary { border: 1px solid var(--ac); color: var(--ac); }
+
+.cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 10px;
+  padding: 0 22px 22px;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 12px 14px 12px;
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  background: var(--sf);
+}
+.cardHead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.cardTitle { position: relative; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.meta { position: relative; color: var(--mu); font-size: 11px; font-weight: 400; white-space: nowrap; }
+.total { font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.order {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid var(--ln);
+}
+.order:last-child { padding-bottom: 0; }
+.orderName { display: flex; flex-direction: column; min-width: 0; font-size: 12px; font-weight: 500; line-height: 1.3; }
+.pill {
+  position: relative;
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+/* made for the preview, not a palette colour: a dashed chrome outline says so */
+.made { outline: 1px dashed var(--tick-strong); outline-offset: 2px; }
+
+.chart {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  gap: 6px;
+  min-height: 64px;
+  border-bottom: 1px solid var(--ln);
+}
+.chart i { position: relative; flex: 1; border-radius: 2px 2px 0 0; background: var(--hl); }
+.days { display: flex; gap: 6px; margin-top: 5px; color: var(--mu); font-size: 10px; line-height: 1; }
+.days span { flex: 1; text-align: center; }
+
+@container (width < 440px) {
+  .cards { grid-template-columns: minmax(0, 1fr); }
+  .links { display: none; }
+  .signin { margin-left: auto; }
+  .h1 { font-size: 32px; }
+}
+
+/* ── a failing pair's marker: chrome, so it reads on any content colour ── */
+.flag, .flagInline {
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: var(--danger-ink);
+  box-shadow: 0 0 0 1.5px var(--module);
+}
+.flag { position: absolute; top: -8px; right: -9px; }
+.flagInline { position: relative; margin-left: 6px; vertical-align: -3px; }

@@ -54,8 +54,11 @@ export interface ToolDefinition<Doc = unknown> {
   /** image tools: the full-resolution result from the base settings (spec §7.4) */
   render?(doc: Doc, opts: { maxEdge?: number }): Promise<{ blob: Blob; name: string; ext: string }>;
 
-  /** drop and paste of OS files; return false to let the shell offer them to the Library */
-  onFiles?(files: File[], how: 'drop' | 'paste', doc: DocController<Doc>): Promise<boolean>;
+  /**
+   * drop and paste of OS files: true when it took them all, false to let the shell offer them to
+   * the Library, or the files it left (the shell offers those)
+   */
+  onFiles?(files: File[], how: 'drop' | 'paste', doc: DocController<Doc>): Promise<boolean | File[]>;
   /** active only while the tool is shown; the shell owns the listeners */
   shortcuts?: (doc: DocController<Doc>) => Shortcut[];
   StatusSlot?: ComponentType<{ doc: DocController<Doc> }>;

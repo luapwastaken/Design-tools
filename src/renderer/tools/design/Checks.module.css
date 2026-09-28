@@ -1,0 +1,208 @@
+/* layout: Contrast left, Value and Colour vision right, Print across the foot (folds to its header).
+   Value always shows all of itself (one flag, however many collide) and Colour vision at least its
+   five strips; the top row is never shorter than that, so below it the area scrolls rather than
+   squeeze a check to its header. Contrast, Colour vision past its strips and an open Print take
+   whatever height they are given (size containment: what doesn't fit scrolls inside them instead of
+   setting the row). */
+.checks {
+  --vision-min: 214px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr);
+  grid-template-rows: minmax(min-content, 1fr) min-content;
+  gap: var(--gap);
+  height: 100%;
+  min-height: 0;
+}
+.printOpen { grid-template-rows: minmax(min-content, 1.3fr) minmax(150px, 1fr); }
+.contrast { grid-column: 1; grid-row: 1; contain: size; }
+.vision { contain: size; }
+.right {
+  display: grid;
+  grid-template-rows: auto minmax(var(--vision-min), 1fr);
+  gap: var(--gap);
+  min-width: 0;
+  min-height: 0;
+  grid-column: 2;
+  grid-row: 1;
+}
+.print { grid-column: 1 / -1; grid-row: 2; }
+.printOpen .print { contain: size; }
+.folded > :not(header) { display: none; }
+
+/* too narrow for two columns: the checks stack at their own heights and the area scrolls */
+@container lower (max-width: 1000px) {
+  .checks, .printOpen { display: flex; flex-direction: column; height: auto; }
+  .right { display: flex; flex-direction: column; }
+  .checks > section, .right > section { flex: none; }
+  .contrast, .vision, .printOpen .print { contain: none; }
+}
+
+.none { max-width: 52ch; padding: 2px 0; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
+.contrast .none, .print .none { padding: 12px; }
+.r { text-align: right; }
+
+/* ── contrast ── */
+.ctScale, .ctRow {
+  display: grid;
+  grid-template-columns: 96px minmax(120px, 1.1fr) 62px minmax(80px, 1fr) 92px;
+  gap: 10px;
+  align-items: center;
+  padding: 0 12px;
+}
+.ctScale { align-items: end; padding-top: 9px; padding-bottom: 5px; }
+.scaleNums { position: relative; height: 10px; container-type: inline-size; }
+/* the middle marks only where they can stand apart */
+@container (max-width: 110px) {
+  .scaleNums span:not(:first-child):not(:last-child) { display: none; }
+}
+.scaleNums span { position: absolute; bottom: 0; transform: translateX(-50%); color: var(--ink-3); font: 500 var(--fs-label)/1 var(--font-mono); font-stretch: normal; }
+.scaleNums span:first-child { transform: none; }
+.scaleNums span:last-child { transform: translateX(-100%); }
+.ctRow { height: 64px; }
+.contrast { container: contrast / inline-size; }
+/* narrower: the specimen keeps only its Aa, then the gauge goes; pair, ratio, grade and fix stay */
+@container contrast (max-width: 530px) {
+  .ctScale, .ctRow { grid-template-columns: 52px minmax(110px, 1.1fr) 62px minmax(60px, 1fr) 92px; }
+  .sm { display: none; }
+}
+@container contrast (max-width: 420px) {
+  .ctScale, .ctRow { grid-template-columns: 52px minmax(0, 1fr) 58px 92px; }
+  .ctScale > :nth-child(4), .ctRow > :nth-child(4) { display: none; }
+}
+.ctRow + .ctRow { box-shadow: 0 -1px 0 var(--line); }
+.ctRow:hover { background: var(--well-hover); }
+
+.spec {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 48px;
+  padding: 0 10px;
+  overflow: hidden;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+.aa { font: 600 21px/1 var(--font-sans); font-stretch: var(--sans-stretch); }
+.sm { font: 400 11px/1.2 var(--font-sans); font-stretch: var(--sans-stretch); white-space: nowrap; }
+
+.pair { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.p, .j { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p { color: var(--ink); font-size: var(--fs-ctl); }
+.j { color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-mono); font-stretch: normal; letter-spacing: .03em; text-transform: uppercase; }
+.ratio { font: 500 17px/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; text-align: right; }
+.ratio small { color: var(--ink-3); font-size: 10px; font-weight: 400; }
+
+.gauge { position: relative; height: 18px; }
+.gauge i { position: absolute; }
+.bar { left: 0; right: 0; top: 7px; height: 4px; border-radius: 2px; background: var(--well); }
+.fill { left: 0; top: 7px; height: 4px; border-radius: 2px; background: var(--ink-3); }
+.th { top: 3px; width: 1px; height: 12px; background: var(--tick-strong); }
+/* the threshold this pair must reach */
+.th.target { top: 1px; height: 16px; background: var(--ink-2); }
+.end { top: 4px; width: 3px; height: 10px; margin-left: -1.5px; border-radius: 1px; background: var(--ink); }
+
+.grade {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 4px;
+  color: var(--ink-2);
+  font: 600 var(--fs-label)/1 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.grade.bad { color: var(--danger); }
+.gradeCell { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; min-width: 0; }
+.adviceIcon { color: var(--danger); }
+
+/* ── value ── */
+.vstrip { display: flex; gap: 3px; }
+.vstrip + .vstrip { margin-top: 3px; }
+.vstrip i { flex: 1 1 0; height: 24px; box-shadow: inset 0 0 0 1px var(--edge); }
+.vstrip i:first-child { border-radius: 2px 0 0 2px; }
+.vstrip i:last-child { border-radius: 0 2px 2px 0; }
+/* --ramp: where the ramp sits, below however many label lanes the pins need */
+.vscale { position: relative; height: calc(var(--ramp) + 32px); margin: 10px 4px 0; }
+.vramp { position: absolute; left: 0; right: 0; top: var(--ramp); height: 8px; border-radius: 1px; box-shadow: inset 0 0 0 1px var(--edge); }
+.vticks { position: absolute; left: 0; right: 0; top: calc(var(--ramp) + 9px); height: 6px; }
+.vnum { position: absolute; top: calc(var(--ramp) + 20px); transform: translateX(-50%); color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-mono); font-stretch: normal; }
+.pin { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 2px; transform: translateX(-50%); }
+/* near an edge the label hangs inwards from its stem */
+.pin.rgt { align-items: flex-start; transform: translateX(-.5px); }
+.pin.lft { align-items: flex-end; transform: translateX(calc(-100% + .5px)); }
+/* over the stems of the lanes above: a label hides what runs behind it */
+.pl { position: relative; z-index: 1; padding: 0 1px; background: var(--module); color: var(--ink-2); font: 500 var(--fs-label)/1 var(--font-mono); font-stretch: normal; letter-spacing: .02em; white-space: nowrap; }
+/* no lane to spare: a stem alone, wide enough to hover for its name */
+.pin.bare { padding: 0 3px; }
+.pin.warn .pl { color: var(--ink); }
+.stem { display: block; width: 1px; height: var(--stem); background: var(--tick-strong); }
+.vbracket { position: absolute; top: calc(var(--ramp) - 3px); height: 14px; margin-left: -2px; padding: 0 2px; border: 1px solid var(--danger); border-radius: 2px; box-sizing: content-box; }
+
+.flag { display: flex; align-items: flex-start; gap: 7px; margin-top: 10px; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.4; }
+.flag > :global(.material-symbols-rounded) { margin-top: 1px; color: var(--ink-2); }
+.flag.bad > :global(.material-symbols-rounded) { color: var(--danger); }
+.flag b { color: var(--ink); font-weight: 600; }
+.flagText { flex: 1; min-width: 0; }
+.skipped { padding: 10px 12px; color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
+
+/* ── colour vision ── */
+.cvdRow { display: grid; grid-template-columns: 74px minmax(0, 1fr) 128px; gap: 10px; align-items: center; }
+/* over the strips: label column + gap on the left, readout column + gap on the right */
+.cvdNames { display: grid; margin: 0 138px 2px 84px; }
+.cvdNames span {
+  overflow: hidden;
+  padding: 0 2px;
+  color: var(--ink-3);
+  font: 400 var(--fs-label)/1 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .04em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cvdRow { width: 100%; height: 30px; border-radius: var(--r-ctl); text-align: left; }
+.pick:hover { background: var(--well-hover); }
+.cvdRow.on { background: var(--well); }
+.cvdRow.on :global(.lbl) { color: var(--ink); }
+.strip { display: grid; height: 24px; overflow: hidden; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.strip i { display: block; }
+.rd {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding-right: 6px;
+  overflow: hidden;
+  color: var(--ink-3);
+  font: 400 var(--fs-unit)/1.2 var(--font-mono);
+  font-stretch: normal;
+  white-space: nowrap;
+}
+.rd.worst { color: var(--ink); }
+.rdNames { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.rd > :global(.material-symbols-rounded) { flex: none; }
+.dangerIcon { color: var(--danger); }
+.cvdRow > :global(.lbl) { padding-left: 6px; }
+
+/* ── print ── */
+.ptable { display: flex; flex-direction: column; padding: 4px 0 8px; }
+.prow {
+  display: grid;
+  grid-template-columns: 14px minmax(80px, 1fr) 92px 44px 44px repeat(4, minmax(96px, 1.1fr));
+  gap: 10px;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+}
+.prow:first-child { min-height: 26px; }
+.prow + .prow:not(:nth-child(2)) { box-shadow: 0 -1px 0 var(--line); }
+.pchip { width: 14px; height: 14px; flex: none; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.pname { overflow: hidden; color: var(--ink); font-size: var(--fs-ctl); text-overflow: ellipsis; white-space: nowrap; }
+.pnum { color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gam { display: inline-flex; align-items: center; gap: 3px; color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; }
+.gam.bad { color: var(--danger); }
+.ink { display: flex; align-items: center; gap: 6px; min-width: 0; height: 24px; padding: 0 6px; margin: 0 -6px; border-radius: var(--r-ctl); text-align: left; }
+.ink:hover { background: var(--raise); }
+.inkName { flex: 1; min-width: 0; overflow: hidden; color: var(--ink-2); font-size: var(--fs-base); text-overflow: ellipsis; white-space: nowrap; }

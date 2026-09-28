@@ -35,7 +35,7 @@ const readAse: Read = (bytes, fallbackName) => {
   if (bytes.length < 12 || c.ascii(4) !== 'ASEF') throw new Error("This isn't an Adobe swatch exchange (.ase) file.");
   c.skip(4); // version
   const count = c.u32();
-  const swatches: Swatch[] = [];
+  const read: { group: string; swatch: Swatch }[] = [];
   const skipped = new Set<string>();
   const warnings: string[] = [];
   let group = '';
@@ -46,14 +46,14 @@ const readAse: Read = (bytes, fallbackName) => {
       if (type === 0xc001) group = c.utf16(c.u16());
       else if (type === 0xc002) group = '';
       else if (type === 0x0001) {
-        const name = [group, c.utf16(c.u16())].filter(Boolean).join(' / ');
+        const name = c.utf16(c.u16());
         const model = c.ascii(4);
         const m = ASE_MODELS[model];
         if (!m) skipped.add(model.trim());
         else {
           const values = Array.from({ length: m.n }, () => c.f32());
           if (m.space === 'lab') values[0] *= 100; // ASE stores L as 0..1
-          swatches.push(swatch(name, { space: m.space, values }, ASE_TYPES[c.u16()] ?? 'process'));
+          read.push({ group, swatch: swatch(name, { space: m.space, values }, ASE_TYPES[c.u16()] ?? 'process') });
         }
       }
       c.seek(end);
@@ -61,6 +61,10 @@ const readAse: Read = (bytes, fallbackName) => {
   } catch (e) {
     warnings.push(endsEarly(e));
   }
+  // the group names a swatch only where several groups need telling apart; one group is the
+  // palette's own folder (writeAse makes one), and prefixing it would grow on every round trip
+  const several = new Set(read.map((r) => r.group).filter(Boolean)).size > 1;
+  const swatches = read.map((r) => (several && r.group ? { ...r.swatch, name: `${r.group} / ${r.swatch.name}` } : r.swatch));
   return { name: fallbackName, swatches, warnings: [...skippedNote(skipped), ...warnings] };
 };
 

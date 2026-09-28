@@ -1,0 +1,117 @@
+/* The picker (plan unit F), after the Colour > Design inspector of c-instrument.html. */
+.picker { display: flex; flex-direction: column; min-width: 0; }
+.modes { align-self: flex-start; margin-bottom: 10px; }
+
+/* ── plane ── */
+.planeWrap {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-rows: var(--plane-h, 206px) 16px;
+  column-gap: 6px;
+}
+.yAxis { position: relative; }
+.yAxis span, .xAxis span {
+  position: absolute;
+  color: var(--ink-3);
+  font: 400 var(--fs-label)/1 var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+}
+.yAxis span { right: 0; }
+.yAxis span:first-child { top: 0; }
+.yAxis span:nth-child(2) { top: 50%; transform: translateY(-50%); }
+.yAxis span:last-child { bottom: 0; }
+
+.plane {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--well);
+  cursor: crosshair;
+  touch-action: none;
+}
+.plane[data-lock] { cursor: ew-resize; }
+/* the plane is colour being judged, so its focus ring is neutral and clear of it (brief §4) */
+.plane:focus-visible { outline: 1px solid var(--tick-strong); outline-offset: 2px; }
+.canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.edges path { fill: none; stroke: var(--tick-strong); stroke-width: 1; }
+.edges .p3Edge { stroke-dasharray: 3 3; }
+
+.vline, .hline { position: absolute; left: 0; top: 0; background: var(--cross); opacity: .55; pointer-events: none; }
+.vline { width: 1px; height: 100%; }
+.hline { width: 100%; height: 1px; }
+.ring { position: absolute; left: -10px; top: -10px; width: 20px; height: 20px; overflow: visible; pointer-events: none; }
+.ring circle { fill: none; }
+.halo { stroke: var(--cross-halo); stroke-width: 3; }
+.mark { stroke: var(--cross); stroke-width: 1.5; }
+
+.xAxis { position: relative; grid-column: 2; }
+.xAxis span { top: 5px; transform: translateX(-50%); }
+.xAxis span:first-child { transform: none; }
+.xAxis span:last-child { transform: translateX(-100%); }
+
+.caption { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 0 0 30px; }
+.legend { display: flex; gap: 12px; }
+.legend > span { display: flex; align-items: center; gap: 5px; }
+.legend i { width: 12px; border-top: 1px solid var(--tick-strong); }
+.legend i.dash { border-top-style: dashed; }
+
+/* ── channels ── */
+.chans { margin-top: 12px; }
+.planeNums { display: flex; gap: 6px; margin-bottom: 6px; }
+.planeNum { flex: 1; min-width: 0; }
+.chan { display: grid; grid-template-columns: minmax(0, 1fr) 92px; align-items: center; gap: 10px; height: 38px; }
+.trk { position: relative; height: 26px; touch-action: none; }
+.grad {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 2px;
+  height: 12px;
+  border-radius: 2px;
+  background-color: var(--well);
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+.lim { position: absolute; top: 0; width: 1px; height: 16px; background: var(--ink-3); pointer-events: none; }
+.ndl {
+  position: absolute;
+  top: -1px;
+  width: 4px;
+  height: 18px;
+  margin-left: -2px;
+  border-radius: 1px;
+  background: var(--ink);
+  /* clears the needle from the colours under it; the popover sets its own ground */
+  box-shadow: 0 0 0 1.5px var(--picker-ground, var(--module));
+  pointer-events: none;
+}
+.tk { bottom: 2px; }
+.locked .ndl { background: var(--ink-3); }
+
+.note {
+  margin: 2px 0 4px;
+  color: var(--ink-3);
+  font: 400 var(--fs-label)/1.4 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .03em;
+}
+
+/* ── hex and gamut ── */
+.hexRow { display: flex; align-items: flex-start; gap: 6px; margin-top: 6px; }
+.hex { flex: 1; }
+
+.gam { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.gam > div { display: flex; flex-direction: column; gap: 6px; padding: 8px 9px; border-radius: var(--r-ctl); background: var(--well); }
+.gv {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font: 400 var(--fs-ctl)/1 var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+}
+.gv > :global(.material-symbols-rounded) { color: var(--ink-2); }
