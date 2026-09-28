@@ -1,0 +1,128 @@
+// Types shared by main, preload and renderer. Spec: docs/superpowers/specs/2026-09-27-rewrite-foundation-design.md
+
+export type Theme = 'dark' | 'light';
+
+export type ToolId =
+  | 'design' | 'illustration' | 'pattern' | 'logo' | 'dither' | 'halftone' | 'postfx'
+  /** dev-only stubs used during the foundation (registered only when not packaged) */
+  | 'dev-palette' | 'dev-image';
+
+// ── Library ─────────────────────────────────────────────────────────────────────────────────────
+
+export type ItemKind = 'palette' | 'pattern' | 'logo' | 'image' | 'svg';
+/** Kinds stored as JSON that the app writes, and that can therefore be a tool's document. */
+export type DocKind = 'palette' | 'pattern' | 'logo';
+
+export const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif', 'tif', 'tiff'] as const;
+export const PALETTE_IMPORT_EXTS = ['ase', 'aco', 'gpl'] as const;
+/** file suffix for each JSON kind, e.g. "Monolith core.palette.json" */
+export const DOC_SUFFIX: Record<DocKind, string> = {
+  palette: '.palette.json',
+  pattern: '.pattern.json',
+  logo: '.logo.json',
+};
+
+export type Swatch = {
+  id: string;
+  name: string;
+  role: string | null;
+  /** the truth, full float precision: [L 0..1, C 0..~0.4, H 0..360] */
+  oklch: [number, number, number];
+  type: 'process' | 'global' | 'spot';
+  /** original values from an import (ASE/ACO/GPL); dropped as soon as the swatch is edited */
+  source?: { space: 'rgb' | 'cmyk' | 'lab' | 'gray'; values: number[] };
+};
+
+export type PalettePayload = { kind: 'palette'; id: string; version: 1; swatches: Swatch[]; notes: string };
+export type PatternPayload = {
+  kind: 'pattern';
+  id: string;
+  version: number;
+  preview: { svg: string; tileWidth: number; tileHeight: number };
+  [setting: string]: unknown;
+};
+export type LogoPayload = {
+  kind: 'logo';
+  id: string;
+  version: number;
+  icon: string | null; // SVG markup
+  wordmark: string | null; // SVG markup
+  preview: { svg: string };
+  [setting: string]: unknown;
+};
+export type DocPayload = PalettePayload | PatternPayload | LogoPayload;
+
+/** One entry in the Library index. `id` is the JSON id for doc kinds, and the path for images and SVGs. */
+export type LibraryItemRef = {
+  id: string;
+  kind: ItemKind;
+  /** display name = file name without the kind suffix / extension */
+  name: string;
+  /** collection folder name; '' for the Library root */
+  collection: string;
+  locked: boolean;
+  /** absolute path (main uses it; the renderer only shows it or passes it back) */
+  path: string;
+  ext: string;
+  mtimeMs: number;
+  size: number;
+};
+
+export type Collection = {
+  name: string; // folder name; '' = Library root
+  locked: boolean;
+  items: LibraryItemRef[];
+  /** .ase/.aco/.gpl files sitting in the folder that haven't been imported */
+  notImported: { name: string; path: string }[];
+  /** unknown files and deeper folders, counted for the footer */
+  ignored: number;
+};
+
+export type LibraryIndex = {
+  root: string;
+  /** false when the folder is missing or unreadable; `error` says why */
+  ok: boolean;
+  error?: string;
+  collections: Collection[];
+};
+
+/** What the shell hands a tool: the ref plus its parsed contents. */
+export type LoadedItem =
+  | { ref: LibraryItemRef; kind: 'palette'; payload: PalettePayload }
+  | { ref: LibraryItemRef; kind: 'pattern'; payload: PatternPayload }
+  | { ref: LibraryItemRef; kind: 'logo'; payload: LogoPayload }
+  /** images and SVGs: the renderer fetches `url` (dt://) itself */
+  | { ref: LibraryItemRef; kind: 'image' | 'svg'; url: string };
+
+/** Result of an import. */
+export type ImportResult = { made: LibraryItemRef[]; failed: { name: string; reason: string }[] };
+
+/** State of a doc-kind item on disk, for "changed outside" detection. */
+export type FileStamp = { mtimeMs: number; size: number };
+
+export type WriteResult =
+  | { ok: true; ref: LibraryItemRef; stamp: FileStamp }
+  /** the file changed on disk since `expected`; nothing was written */
+  | { ok: false; reason: 'changed-outside'; stamp: FileStamp | null }
+  /** the file is gone (deleted or moved outside the app); nothing was written */
+  | { ok: false; reason: 'missing' }
+  | { ok: false; reason: 'error'; message: string };
+
+// ── Settings and workspace ──────────────────────────────────────────────────────────────────────
+
+export type Settings = {
+  theme: Theme;
+  libraryRoot: string;
+  /** last folder used by a save dialog, keyed "<tool>:<ext>" */
+  exportFolders: Record<string, string>;
+};
+
+/** Per-tool workspace file (renderer-owned JSON, main just stores it). */
+export type WorkspaceState = {
+  toolId: ToolId;
+  docVersion: number;
+  /** for doc-kind tools: the open item; for image tools: the whole document */
+  itemId?: string | null;
+  doc?: unknown;
+  view?: unknown;
+};

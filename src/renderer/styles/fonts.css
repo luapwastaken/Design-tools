@@ -1,0 +1,6 @@
+/* Bundled fonts (no CDN). The Archivo family is named "Archivo Variable" by Fontsource. */
+@import "@fontsource-variable/archivo/wdth.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "material-symbols/rounded.css";

@@ -21,3 +21,6 @@ graphify-out/cache/
 # Env
 .env
 .env.local
+
+# electron-vite output
+out/
