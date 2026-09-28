@@ -1,0 +1,14 @@
+.handle {
+  position: absolute;
+  top: 0;
+  right: calc(var(--gap) * -1);
+  bottom: 0;
+  z-index: 2;
+  width: var(--gap);
+  cursor: col-resize;
+  touch-action: none;
+}
+.handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; margin-left: -.5px; }
+.handle:hover::after, .handle:active::after { background: var(--tick-strong); }
+.handle:focus-visible { outline: none; }
+.handle:focus-visible::after { background: var(--signal); }

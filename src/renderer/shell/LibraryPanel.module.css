@@ -1,0 +1,36 @@
+.panel { display: flex; flex: 1; min-width: 0; min-height: 0; container-type: inline-size; }
+.mod { flex: 1; min-width: 0; }
+.inner { display: flex; flex-direction: column; height: 100%; }
+.pad { padding: 8px; }
+
+.tools { display: flex; flex: none; flex-direction: column; gap: 6px; padding: 8px 8px 6px; }
+.tools .kinds button { padding: 0 4px; }
+
+.list {
+  flex: 1;
+  min-height: 0;
+  padding: 0 4px 8px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.create { padding: 6px 4px 2px; }
+.none { display: flex; align-items: center; gap: 8px; padding: 12px 10px; color: var(--ink-3); font-size: var(--fs-meta); }
+.emptyCollection { padding: 4px 10px 8px 26px; color: var(--ink-3); font-size: var(--fs-meta); }
+.mono { color: var(--ink); font: 400 var(--fs-unit)/1.45 var(--font-mono); font-stretch: normal; overflow-wrap: anywhere; user-select: text; }
+
+/* footer: the Library folder (clipped from the left, so its own name stays) and the counts */
+.path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-3);
+  font: 400 var(--fs-label)/1.2 var(--font-mono);
+  font-stretch: normal;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+}
+.counts { flex: none; color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; letter-spacing: .04em; text-transform: uppercase; }
+.hint { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: var(--fs-meta); }

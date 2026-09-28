@@ -1,0 +1,22 @@
+/* DEV ONLY (plan unit D) */
+.view {
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr) 320px;
+  gap: var(--gap);
+  height: 100%;
+}
+.board {
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  place-items: center;
+  min-height: 0;
+  padding: 24px;
+  overflow: hidden;
+  border-radius: var(--r-mod);
+  background: var(--pasteboard);
+}
+.canvas { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+.inspector { align-self: start; }
+.strip { margin-bottom: 8px; }
+.hint { margin-bottom: 8px; color: var(--ink-2); font-size: var(--fs-base); }

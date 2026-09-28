@@ -17,6 +17,7 @@
   background: var(--module-head);
 }
 .title {
+  flex: none;
   color: var(--ink);
   font: 600 var(--fs-mod-title)/1 var(--font-mono);
   font-stretch: normal;
@@ -25,6 +26,10 @@
   white-space: nowrap;
 }
 .sub {
+  /* a narrow module gives up its sub-label before its actions */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--ink-3);
   font: 400 var(--fs-mod-sub)/1 var(--font-mono);
   font-stretch: normal;

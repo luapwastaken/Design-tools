@@ -1,0 +1,17 @@
+.app {
+  display: grid;
+  grid-template-rows: var(--titlebar-h) minmax(0, 1fr) var(--statusbar-h);
+  height: 100%;
+  background: var(--ground);
+}
+
+/* the rail sits on the ground; modules keep a --gap of ground between them and the window edge */
+.cols, .colsNoLib { display: grid; gap: var(--gap); min-height: 0; padding: 0 var(--gap) var(--gap) 0; }
+.cols { grid-template-columns: var(--rail) var(--lib) minmax(0, 1fr); }
+.colsNoLib { grid-template-columns: var(--rail) minmax(0, 1fr); }
+
+.lib { position: relative; display: flex; min-width: 0; min-height: 0; }
+.lib[hidden] { display: none; }
+
+/* positioned so tool hosts stack in it and the toast host rides its bottom edge */
+.work { position: relative; min-width: 0; min-height: 0; }

@@ -17,8 +17,10 @@ export type LibraryItemRowProps = {
   selected?: boolean;
   /** the active tool's use label when it accepts this item: INKS, AS SHAPE */
   accepted?: string;
-  /** tool label when the item is open in a tool */
+  /** tool label when the item is open in a tool: the row shows the OPEN tag, the tooltip names the tool */
   openIn?: string;
+  /** why a double-click does nothing here (spec §6.4); the row's tooltip */
+  note?: string;
   onOpen(): void;
   /** right-click, the ContextMenu key, Shift+F10 or More: pass both straight to `menu.open` */
   onMenu(at: MenuAnchor, opts: MenuOptions): void;
@@ -43,9 +45,9 @@ export type LibraryItemRowProps = {
 
 /** One Library item (brief §7 states). Click selects, double-click or Enter opens, right-click or More opens the menu. */
 export function LibraryItemRow(p: LibraryItemRowProps) {
-  const { item, thumb, selected, accepted, openIn, dragData, meta, anchor, actions } = p;
+  const { item, thumb, selected, accepted, openIn, note, dragData, meta, anchor, actions } = p;
   const [dragging, setDragging] = useState(false);
-  return (
+  const row = (
     <div
       id={p.id}
       role="option"
@@ -79,16 +81,21 @@ export function LibraryItemRow(p: LibraryItemRowProps) {
       {openIn && <i className={s.led} />}
       <span className={s.thumb}>{thumb}</span>
       <span className={s.text}>
-        <Tooltip content={item.name} overflowOnly>
+        <Tooltip content={item.name} overflowOnly disabled={!!note}>
           <span className={s.name}>{item.name}</span>
         </Tooltip>
-        <span className={s.meta}>
-          <span className={accepted ? s.lit : undefined}>
+        {/* only the kind and its size shrink: the use label and the OPEN tag are the row's state (brief §7) */}
+        <span className={cx(s.meta, accepted && s.lit)}>
+          <span className={s.kind}>
             {KIND[item.kind]}
             {meta && ` ${meta}`}
-            {accepted && ` · ${accepted}`}
           </span>
-          {openIn && <span className={s.open}>Open in {openIn}</span>}
+          {accepted && <span className={s.keep}>&nbsp;· {accepted}</span>}
+          {openIn && (
+            <Tooltip content={`Open in ${openIn}`}>
+              <span className={cx(s.keep, s.open)}>Open</span>
+            </Tooltip>
+          )}
         </span>
       </span>
       {/* mouse-only: they never take focus, and the row's menu carries the same commands */}
@@ -104,4 +111,5 @@ export function LibraryItemRow(p: LibraryItemRowProps) {
       </span>
     </div>
   );
+  return note ? <Tooltip content={note}>{row}</Tooltip> : row;
 }

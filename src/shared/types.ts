@@ -121,8 +121,16 @@ export type Settings = {
 export type WorkspaceState = {
   toolId: ToolId;
   docVersion: number;
-  /** for doc-kind tools: the open item; for image tools: the whole document */
+  /** for doc-kind tools: the item the document is linked to, owned or detached */
   itemId?: string | null;
+  /**
+   * doc-kind tools, when `doc` is kept because the file may not hold it: the link as it stood
+   * (stamp last read or written, the tool that took the item), so a restart restores that state
+   */
+  link?: { name: string; collection: string; stamp: FileStamp; lostTo?: ToolId };
+  /** doc-kind tools: the last write's error, when that is why `doc` is kept */
+  failed?: string;
+  /** for image tools: the whole document; for doc-kind tools: kept only while not safely in its file */
   doc?: unknown;
   view?: unknown;
 };

@@ -2,10 +2,12 @@ import { useId, type KeyboardEvent } from 'react';
 import type { IconName } from '../shell/tool.ts';
 import { cx } from './cx.ts';
 import { Icon } from './Icon.tsx';
+import { Tooltip } from './Tooltip.tsx';
 import s from './Segmented.module.css';
 
 export type SegmentedProps<T extends string> = {
-  options: { value: T; label: string; icon?: IconName }[];
+  /** `tip`: the full name, for a label shortened to fit (it becomes the tooltip and the accessible name) */
+  options: { value: T; label: string; icon?: IconName; tip?: string }[];
   value: T;
   onChange(v: T): void;
   /** a row label on the left, like a Slider's */
@@ -43,19 +45,21 @@ export function Segmented<T extends string>({ options, value, onChange, label, m
       onKeyDown={disabled ? undefined : onKeyDown}
     >
       {options.map((o, i) => (
-        <button
-          key={o.value}
-          type="button"
-          role="radio"
-          aria-checked={i === at}
-          tabIndex={i === at || (at < 0 && i === 0) ? 0 : -1}
-          disabled={disabled}
-          className={i === at ? s.on : undefined}
-          onClick={() => o.value !== value && onChange(o.value)}
-        >
-          {o.icon && <Icon name={o.icon} size={16} />}
-          {o.label}
-        </button>
+        <Tooltip key={o.value} content={o.tip} disabled={!o.tip}>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={i === at}
+            aria-label={o.tip}
+            tabIndex={i === at || (at < 0 && i === 0) ? 0 : -1}
+            disabled={disabled}
+            className={i === at ? s.on : undefined}
+            onClick={() => o.value !== value && onChange(o.value)}
+          >
+            {o.icon && <Icon name={o.icon} size={16} />}
+            {o.label}
+          </button>
+        </Tooltip>
       ))}
     </div>
   );
