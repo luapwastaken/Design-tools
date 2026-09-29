@@ -1,5 +1,6 @@
-// The paint canvas's pigment tray and mixing well (plan unit C). Click a paint to load the brush;
-// drag it into the well (or use its menu) to add a part; the well's mix, by km.ts, loads the brush.
+// The paint canvas's pigment tray and mixing well (plan unit C), in one row under the paper. Click a
+// paint to load the brush; drag it into the well (or use its menu) to add a part; the well's mix, by
+// km.ts, loads the brush.
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type PointerEvent, type RefObject } from 'react';
 import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { Button, IconButton, menu, NumberField, Tooltip } from '../../ui/index.ts';
@@ -167,12 +168,7 @@ export function Well(p: {
   const name = (id: string) => p.sources.find((x) => x.id === id)?.name ?? 'A paint no longer in the tray';
   const colour = (id: string) => p.sources.find((x) => x.id === id)?.pigment.oklch;
   return (
-    <div ref={p.ref} className={cx(s.well, p.over && s.wellOver)} aria-label="Mixing well">
-      <div className={s.wellHead}>
-        <span className="lbl">Well</span>
-        <span className={s.grow} />
-        <IconButton icon="delete_sweep" label="Empty the well" size="xs" disabled={!p.well.length} onClick={p.onEmpty} />
-      </div>
+    <div ref={p.ref} role="group" className={cx(s.well, p.over && s.wellOver)} aria-label="Mixing well">
       <Tooltip content={p.mix ? 'Load the brush with this mix' : 'Drag paints from the tray into the well to mix them'}>
         <button
           type="button"
@@ -181,35 +177,35 @@ export function Well(p: {
           aria-label={p.mix ? `Well mix ${toHex(p.mix).toUpperCase()}: load the brush` : 'The well is empty'}
           disabled={!p.mix}
           onClick={p.onLoad}
-        >
-          {!p.mix && <span className={s.mixHint}>Drag paints here</span>}
-        </button>
+        />
       </Tooltip>
-      {p.mix ? <span className={s.mixHex}>{toHex(p.mix).toUpperCase()}</span> : <span className={s.rowHint}>Drag paints here to mix them</span>}
-      <div className={s.parts}>
-        {p.well.map((w) => (
-          <div key={w.id} className={s.part}>
-            <i className={s.partChip} style={colour(w.id) ? { background: cssColor(colour(w.id)!) } : undefined} />
-            <Tooltip content={name(w.id)} overflowOnly>
-              <span className={s.partName}>{name(w.id)}</span>
+      <span className={cx('lbl', s.trayLabel)}>Well</span>
+      {p.well.length ? (
+        p.well.map((w) => (
+          <span key={w.id} className={s.part}>
+            <Tooltip content={name(w.id)}>
+              <i className={s.partChip} style={colour(w.id) ? { background: cssColor(colour(w.id)!) } : undefined} />
             </Tooltip>
             <NumberField
               label={`Parts of ${name(w.id)}`}
               hideLabel
               size="sm"
-              width={40}
+              width={36}
               value={w.parts}
               min={1}
               max={PARTS_MAX}
               onChange={(parts) => p.onChange(p.well.map((x) => (x.id === w.id ? { ...x, parts } : x)))}
             />
             <IconButton icon="close" label={`Take ${name(w.id)} out`} size="xs" onClick={() => p.onChange(p.well.filter((x) => x.id !== w.id))} />
-          </div>
-        ))}
-      </div>
-      <Button size="xs" icon="brush" disabled={!p.mix || p.loaded} onClick={p.onLoad} className={s.loadBtn}>
+          </span>
+        ))
+      ) : (
+        <span className={s.hint}>Drag paints here to mix</span>
+      )}
+      <Button size="xs" icon="brush" disabled={!p.mix || p.loaded} onClick={p.onLoad}>
         {p.loaded ? 'On the brush' : 'Load brush'}
       </Button>
+      {p.well.length > 0 && <IconButton icon="delete_sweep" label="Empty the well" size="xs" onClick={p.onEmpty} />}
     </div>
   );
 }

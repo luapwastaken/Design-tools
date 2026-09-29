@@ -119,8 +119,8 @@ export function PickerPlane({ value, lockL, onBegin, onChange, onCommit, onCance
     <>
       <div className={s.planeWrap}>
         <div className={s.yAxis} aria-hidden="true">
-          <span>1</span>
-          <span>.5</span>
+          <span>100</span>
+          <span>50</span>
           <span>0</span>
         </div>
         <div

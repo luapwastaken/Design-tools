@@ -1,17 +1,18 @@
-// "How do I mix this?" (spec §3.3): recipes from the paints you own, for the selected colour or
-// for every ramp's base, each with its parts, the mix beside the target, and ΔE.
+// Mix it, "how do I mix this?" (spec §3.3): recipes from the paints you own, for the selected
+// colour or for every ramp's base, each with its parts, the mix beside the target, and ΔE.
 import { useMemo } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import type { Pigment } from '../../../shared/paint/pigments.ts';
 import { recipes, type Recipe } from '../../../shared/paint/recipe.ts';
 import { Module, Segmented, Tooltip } from '../../ui/index.ts';
 import { baseOf, nameOf, rampName, type IllustrationDoc } from './doc.ts';
+import { PaintsButton } from './Paints.tsx';
 import { patchView, type IllustrationView } from './view-state.ts';
 import s from './Paint.module.css';
 
 const FOR: { value: IllustrationView['recipesFor']; label: string; tip: string }[] = [
   { value: 'selected', label: 'Selected', tip: 'Three recipes for the selected colour' },
-  { value: 'bases', label: 'Bases', tip: 'The best recipe for every ramp’s base' },
+  { value: 'bases', label: 'Every base', tip: 'The best recipe for every ramp’s base' },
 ];
 const MAX: { value: '1' | '2' | '3'; label: string; tip: string }[] = [
   { value: '1', label: '1', tip: 'One paint, straight from the tube' },
@@ -25,10 +26,10 @@ const FAR = 10;
 const verdict = (e: number) => (e < 2 ? 'Match' : e < 5 ? 'Close' : 'Near');
 const partsText = (r: Recipe) => r.parts.map((p) => `${p.parts} ${p.pigment.name}`).join(' + ');
 
-type Props = { d: IllustrationDoc; v: IllustrationView; sel: { id: string; name: string; oklch: Oklch } | null; owned: Pigment[]; hidden: boolean };
+type Props = { d: IllustrationDoc; v: IllustrationView; sel: { id: string; name: string; oklch: Oklch } | null; owned: Pigment[]; hidden: boolean; className?: string };
 
 /** `d`: the settled document, so a picker drag doesn't solve recipes on every frame */
-export function Recipes({ d, v, sel, owned, hidden }: Props) {
+export function Recipes({ d, v, sel, owned, hidden, className }: Props) {
   const targets = v.recipesFor === 'bases' ? d.ramps.flatMap((r) => (baseOf(d, r.id) ? [{ id: r.id, name: rampName(d, r), oklch: baseOf(d, r.id)!.oklch }] : [])) : sel ? [sel] : [];
   const key = `${v.recipesFor}|${v.maxPaints}|${owned.map((p) => p.id).join()}|${targets.map((t) => `${t.name}:${t.oklch.join()}`).join('|')}`;
   // the solver runs only while the Paint side shows (~25ms a colour)
@@ -38,23 +39,20 @@ export function Recipes({ d, v, sel, owned, hidden }: Props) {
   );
   return (
     <Module
-      title="Recipes"
+      title="Mix it"
       sub={v.recipesFor === 'bases' ? 'Every base' : sel ? sel.name : undefined}
-      actions={<Segmented options={FOR} value={v.recipesFor} onChange={(recipesFor) => patchView({ recipesFor })} mono fit className={s.small} />}
+      actions={<PaintsButton v={v} />}
       scroll
       flush
-      className={s.recipes}
+      className={className}
       footer={<span className={s.fine}>Parts by volume, tinting strength included. Tube colours vary: mix, then adjust by eye.</span>}
     >
-      <Segmented
-        label="Paints per mix"
-        options={MAX}
-        value={String(v.maxPaints) as '1' | '2' | '3'}
-        onChange={(m) => patchView({ maxPaints: Number(m) as 1 | 2 | 3 })}
-        className={s.maxRow}
-      />
+      <div className={s.opts}>
+        <Segmented label="Paints per mix" options={MAX} value={String(v.maxPaints) as '1' | '2' | '3'} onChange={(m) => patchView({ maxPaints: Number(m) as 1 | 2 | 3 })} />
+        <Segmented label="For" options={FOR} value={v.recipesFor} onChange={(recipesFor) => patchView({ recipesFor })} />
+      </div>
       {!owned.length ? (
-        <p className={s.none}>Tick the paints you own below. Recipes use only those.</p>
+        <p className={s.none}>Recipes use only the paints you own: tick them under the paints button above.</p>
       ) : !targets.length ? (
         <p className={s.none}>{v.recipesFor === 'bases' ? 'Add a base colour to find how to mix it.' : 'Select a colour to find how to mix it.'}</p>
       ) : (
@@ -64,7 +62,7 @@ export function Recipes({ d, v, sel, owned, hidden }: Props) {
             const close = list.filter((r) => r.deltaE < FAR);
             // three wrong answers would read as three answers: say it plainly, with the nearest
             if (!close.length && list[0]) return [<FarRow key={t.id} target={t.oklch} name={name} r={list[0]} more={v.maxPaints < 3} />];
-            return close.map((r, i) => <RecipeRow key={`${t.id}:${i}`} target={t.oklch} name={name} rank={name === null ? i + 1 : null} r={r} />);
+            return close.map((r, i) => <RecipeRow key={`${t.id}:${i}`} target={t.oklch} name={name} r={r} />);
           })}
           {found.every((f) => !f.list.length) && <p className={s.none}>No mix of your paints comes near. Tick more paints, or allow more per mix.</p>}
         </div>
@@ -73,7 +71,8 @@ export function Recipes({ d, v, sel, owned, hidden }: Props) {
   );
 }
 
-function RecipeRow({ target, name, rank, r }: { target: Oklch; name: string | null; rank: number | null; r: Recipe }) {
+/** best first: the target and the mix side by side, then each paint by its parts, one a line */
+function RecipeRow({ target, name, r }: { target: Oklch; name: string | null; r: Recipe }) {
   return (
     <div className={s.recipe}>
       <Tooltip content="Target, then the mix">
@@ -83,16 +82,14 @@ function RecipeRow({ target, name, rank, r }: { target: Oklch; name: string | nu
         </span>
       </Tooltip>
       <div className={s.parts}>
-        {name !== null ? <span className={s.rname}>{name}</span> : <span className="lbl">Recipe {rank}</span>}
-        <span className={s.mix}>
-          {r.parts.map((p, i) => (
-            <span key={p.pigment.id} className={s.part}>
-              {i > 0 && <span className={s.plus}>+</span>}
-              <i className={s.pchip} style={{ background: cssColor(p.pigment.oklch) }} />
-              <b>{p.parts}</b> {p.pigment.name}
-            </span>
-          ))}
-        </span>
+        {name !== null && <span className={s.rname}>{name}</span>}
+        {r.parts.map((p) => (
+          <span key={p.pigment.id} className={s.part}>
+            <b>{p.parts}</b>
+            <i className={s.pchip} style={{ background: cssColor(p.pigment.oklch) }} />
+            {p.pigment.name}
+          </span>
+        ))}
       </div>
       <span className={s.de}>
         <span className={s.deNum}>ΔE {r.deltaE.toFixed(1)}</span>

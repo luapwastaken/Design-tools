@@ -1,11 +1,11 @@
-// Under the ramps, Paint (spec §3.3): the scratch canvas, and how to mix each colour from the paints
-// you own.
+// Paint (spec §3.3, UX pass): the scratch canvas with its tool bar and tray, and beside it how to mix
+// the selected colour from the paints you own (the paint box is behind Mix it's paints button).
 import { useMemo, useSyncExternalStore } from 'react';
 import { useSettled } from '../common/settled.ts';
 import { selected, type Doc } from './actions.ts';
 import { looseOf, named, rampName, stepsOf, type IllustrationDoc } from './doc.ts';
 import { PaintCanvas } from './PaintCanvas.tsx';
-import { ownedPaints, Paints } from './Paints.tsx';
+import { ownedPaints } from './Paints.tsx';
 import { paintSettings, type PaletteSet } from './paint-sources.ts';
 import { pickFromCanvas } from './proposals.ts';
 import { recipeTarget, Recipes } from './Recipes.tsx';
@@ -38,10 +38,7 @@ export function PaintPane({ doc, d, v, hidden }: { doc: Doc; d: IllustrationDoc;
         onPaintings={(paintings) => patchView({ paintings })}
         onPick={pickFromCanvas}
       />
-      <div className={s.side}>
-        <Recipes d={settled} v={v} sel={recipeTarget(settled, selected(settled, v.selected))} owned={owned} hidden={hidden} />
-        <Paints v={v} />
-      </div>
+      <Recipes d={settled} v={v} sel={recipeTarget(settled, selected(settled, v.selected))} owned={owned} hidden={hidden} className={s.recipes} />
     </div>
   );
 }

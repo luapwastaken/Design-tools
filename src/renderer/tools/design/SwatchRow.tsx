@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState, type CSSProperties, type DragEvent, type MouseEvent } from 'react';
 import { toHex } from '../../../shared/color/index.ts';
 import type { Swatch } from '../../../shared/types.ts';
-import { Button, EmptyState, menu, Module, Segmented, toast, type MenuAnchor } from '../../ui/index.ts';
+import { Button, EmptyState, IconButton, menu, toast, type MenuAnchor, type MenuItem } from '../../ui/index.ts';
 import { SURROUNDS, surroundOf } from '../common/surround.ts';
 import { useWidth } from '../common/useWidth.ts';
-import { startWith } from './Build.tsx';
 import { addProposals, armDelete, clickSelect, duplicate, select, selection, type Doc } from './actions.ts';
+import { runGenerate } from './build.ts';
 import { DeleteConfirm } from './DeleteConfirm.tsx';
 import { moveIds, namesOf, plural, type DesignDoc, type DesignView } from './doc.ts';
 import { clearProposals, proposals, toggleLock } from './proposals.ts';
@@ -17,12 +17,25 @@ import s from './SwatchRow.module.css';
 const REORDER_MIME = 'application/x-designtools-reorder';
 const MIN_CHIP = 140;
 
-const DATA: { value: DesignView['chipData']; label: string; tip: string }[] = [
-  { value: 'short', label: 'Chips', tip: 'Hex and L C H' },
-  { value: 'full', label: 'Table', tip: 'Adds RGB and ≈CMYK rows' },
+const DATA: { value: DesignView['chipData']; label: string }[] = [
+  { value: 'short', label: 'Hex and L C H' },
+  { value: 'full', label: 'Table: adds RGB and ≈CMYK' },
 ];
 
-const FIELD = ['min(232px, 22vh)', 'min(100px, 10vh)', '72px'];
+/** the colour's height for one, two, and three or more rows of chips */
+const FIELD = ['150px', 'min(96px, 10vh)', '64px'];
+
+/** The palette's corner button: the surround it's judged on and how much each chip says. */
+function openView(e: MouseEvent<HTMLButtonElement>, v: DesignView) {
+  const items: MenuItem[] = [
+    { header: 'Surround' },
+    ...SURROUNDS.map((o) => ({ label: o.tip, checked: v.surround === o.value, onSelect: () => patchView({ surround: o.value }) })),
+    'separator',
+    { header: 'Chips' },
+    ...DATA.map((o) => ({ label: o.label, checked: v.chipData === o.value, onSelect: () => patchView({ chipData: o.value }) })),
+  ];
+  menu.open(e.currentTarget.getBoundingClientRect(), items, { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined });
+}
 
 export function SwatchRow({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView }) {
   const ghosts = proposals.use();
@@ -101,62 +114,24 @@ export function SwatchRow({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView
     return at === d.swatches.length && i === d.swatches.length - 1 ? 'after' : undefined;
   };
 
+  const empty = count === 0;
+  const startGenerate = () => {
+    patchView({ tab: 'build', build: 'generate' });
+    runGenerate(d.swatches);
+  };
   return (
-    <Module
-      title="Swatches"
-      sub="Drag to reorder · Ctrl click for several"
-      readout={d.swatches.length ? `${sel.length} of ${d.swatches.length} selected` : undefined}
-      scroll
-      className={s.mod}
-      actions={
-        <span className={s.switches}>
-          <Segmented options={SURROUNDS} value={v.surround} onChange={(surround) => patchView({ surround })} mono fit />
-          <Segmented options={DATA} value={v.chipData} onChange={(chipData) => patchView({ chipData })} mono fit />
-        </span>
-      }
-      footer={
-        ghosts && (
-          <>
-            <span className="lbl">Proposed</span>
-            <span className={s.from}>
-              {ghosts.label} · {plural(ghosts.items.length, 'colour')}
-            </span>
-            <span className={s.grow} />
-            <Button size="xs" icon="add" onClick={() => addProposals(doc, ghosts.items)}>
-              Add all
-            </Button>
-            <Button size="xs" variant="ghost" onClick={clearProposals}>
-              Clear
-            </Button>
-          </>
-        )
-      }
-    >
-      {count === 0 && (
+    <section className={s.pal} style={{ background: empty ? undefined : surround }} aria-label="Palette">
+      {empty && (
         <EmptyState
           icon="palette"
-          title="Start a palette"
-          detail={
-            <>
-              Generate one, paste colour codes, or pull colours from an image. You can also drop an image or SVG here, or open a palette from the Library.
-              <span className={s.start}>
-                <Button icon="casino" onClick={startWith.generate}>
-                  Generate
-                </Button>
-                <Button icon="content_paste" onClick={startWith.paste}>
-                  Paste
-                </Button>
-                <Button icon="add_photo_alternate" onClick={startWith.image}>
-                  From image
-                </Button>
-              </span>
-            </>
-          }
+          title="An empty palette"
+          detail="Build one below: generate it, pull colours from an image or a logo, or paste colour codes. You can also drop an image or SVG here, or open a palette from the Library."
+          action={{ label: 'Generate a palette', icon: 'casino', onClick: startGenerate }}
         />
       )}
       <div
         ref={ref}
-        hidden={count === 0}
+        hidden={empty}
         role="listbox"
         aria-label="Swatches"
         aria-multiselectable="true"
@@ -172,7 +147,6 @@ export function SwatchRow({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView
             swatch={w}
             name={names.get(w.id) ?? w.name}
             index={i}
-            surround={surround}
             full={full}
             selected={sel.includes(w.id)}
             anchor={sel[0] === w.id}
@@ -188,9 +162,30 @@ export function SwatchRow({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView
           />
         ))}
         {ghosts?.items.map((p) => (
-          <GhostChip key={p.id} p={p} surround={surround} full={full} lockable={ghosts.from === 'generate'} onAdd={() => addProposals(doc, [p])} onLock={() => toggleLock(p.id)} />
+          <GhostChip key={p.id} p={p} full={full} lockable={ghosts.from === 'generate'} onAdd={() => addProposals(doc, [p])} onLock={() => toggleLock(p.id)} />
         ))}
       </div>
-    </Module>
+      {!empty && (
+        <span className={s.corner}>
+          {sel.length > 1 && <span className={s.readout}>{sel.length} of {d.swatches.length} selected</span>}
+          <IconButton icon="tune" label="View: the surround and what each chip shows" size="sm" onContent onClick={(e) => openView(e, v)} />
+        </span>
+      )}
+      {ghosts && (
+        <div className={s.foot}>
+          <span className="lbl">Proposed</span>
+          <span className={s.from}>
+            {ghosts.label} · {plural(ghosts.items.length, 'colour')}
+          </span>
+          <span className={s.grow} />
+          <Button size="xs" icon="add" onClick={() => addProposals(doc, ghosts.items)}>
+            Add all
+          </Button>
+          <Button size="xs" variant="ghost" onClick={clearProposals}>
+            Clear
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }

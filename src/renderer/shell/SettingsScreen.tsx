@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Theme } from '../../shared/types.ts';
-import { Button, FieldError, IconButton, Module, Segmented, Tooltip } from '../ui/index.ts';
+import { Button, FieldError, IconButton, Module, PICKER_STYLE_OPTIONS, Segmented, Tooltip, usePickerStyle } from '../ui/index.ts';
 import { shell, useShell } from './core/index.ts';
 import { ipc } from './core/ipc.ts';
 import s from './SettingsScreen.module.css';
@@ -10,9 +10,10 @@ const THEMES: { value: Theme; label: string; icon: 'dark_mode' | 'light_mode' }[
   { value: 'light', label: 'Light', icon: 'light_mode' },
 ];
 
-/** Theme, Library folder and version (spec §4). Shown in the work area in place of the tools. */
+/** Theme, colour picker, Library folder and version (spec §4). Shown in the work area in place of the tools. */
 export function SettingsScreen() {
   const settings = useShell((st) => st.settings);
+  const pickerStyle = usePickerStyle();
   const library = useShell((st) => st.library);
   const [version, setVersion] = useState<string | null>(null);
   const page = useRef<HTMLDivElement>(null);
@@ -46,6 +47,10 @@ export function SettingsScreen() {
             <Row label="Theme">
               <Segmented options={THEMES} value={settings?.theme ?? 'dark'} fit onChange={(t) => void shell.setTheme(t)} />
             </Row>
+            <Row label="Colour picker">
+              <Segmented options={PICKER_STYLE_OPTIONS} value={pickerStyle} fit onChange={(style) => void shell.setPicker({ pickerStyle: style })} />
+            </Row>
+            <p className={s.hint}>Every colour picker in the app uses this style. The switch at the top of any picker changes it too.</p>
           </Section>
 
           <Section title="Library">

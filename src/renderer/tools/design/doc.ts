@@ -11,7 +11,9 @@ export { displayName, listNames, named, plural } from '../common/names.ts';
 /** `ramps`: Illustration's ramp settings, kept so they go back into the file unchanged */
 export type DesignDoc = { swatches: Swatch[]; notes: string; ramps?: RampSpec[] };
 
-export type BuildTab = 'harmony' | 'generate' | 'image' | 'logo' | 'gradient' | 'paste';
+export type BuildMethod = 'harmony' | 'generate' | 'image' | 'logo' | 'gradient' | 'paste';
+export type DesignTab = 'build' | 'check' | 'preview';
+export type CheckId = 'contrast' | 'value' | 'vision' | 'print';
 
 /** Never in history: saved with the workspace through shell.setView (spec §7.1). */
 export type DesignView = {
@@ -20,12 +22,13 @@ export type DesignView = {
   surround: Surround;
   /** short = Hex + L C H; full adds RGB and ≈CMYK rows */
   chipData: 'short' | 'full';
-  lower: 'checks' | 'context';
-  print: boolean;
+  /** the job under the palette (UX pass): Build · Check · Preview, each keeping its state */
+  tab: DesignTab;
+  /** the open check; null opens the first failing one */
+  check: CheckId | null;
   cvd: Cvd;
-  build: BuildTab;
-  picker: 'oklch' | 'rgb' | 'cmyk';
-  /** Value and Hue lock: picker drags keep L or H; typed values still change them (spec §5) */
+  build: BuildMethod;
+  /** Value and Hue lock: the OKLCH picker's drags keep L or H; typed values still change them (spec §5) */
   lockL: boolean;
   lockH: boolean;
   /** Value check: flag pairs closer than this, in L × 100 */

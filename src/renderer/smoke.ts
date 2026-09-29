@@ -22,6 +22,7 @@ import { shell } from './shell/core/index.ts';
 import { select as selectInDesign } from './tools/design/actions.ts';
 import { newSwatch as designSwatch, recolour as recolourInDesign, type DesignDoc } from './tools/design/doc.ts';
 import { clearProposals, proposals } from './tools/design/proposals.ts';
+import { getView as designView, patchView as patchDesign } from './tools/design/view-state.ts';
 import { used, type DitherDoc } from './tools/dither/doc.ts';
 import { lookOf as ditherLook, withLook } from './tools/dither/looks.ts';
 import { dithered, ready as ditherReady, type Result } from './tools/dither/pipeline.ts';
@@ -88,6 +89,22 @@ const press = (key: string, o: KeyboardEventInit = {}) =>
 const ctrlZ = () => press('z', { code: 'KeyZ', ctrlKey: true });
 const ctrlY = () => press('y', { code: 'KeyY', ctrlKey: true });
 const host = (id: ToolId) => document.querySelector<HTMLElement>(`[data-tool="${id}"]`);
+const shows = (el: Element | null | undefined) => !!el && el.getClientRects().length > 0;
+/** a tool's showing button whose text ends with `text` (an icon's name comes first) */
+const button = (id: ToolId, text: string) => [...(host(id)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith(text) && shows(b));
+/** the Check list that shows: its open row, its first row that fails ('' when none does), and its first row */
+function openCheck(id: ToolId): { open: string; bad: string; first: string } | null {
+  const list = [...(host(id)?.querySelectorAll('[role="tablist"][aria-orientation="vertical"]') ?? [])].find(shows);
+  const rows = [...(list?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [])];
+  if (!rows.length) return null;
+  const label = (r?: HTMLElement) => r?.children[1]?.textContent ?? '';
+  return { open: label(rows.find((r) => r.ariaSelected === 'true')), bad: label(rows.find((r) => r.firstElementChild?.textContent === 'error')), first: label(rows[0]) };
+}
+/** a textarea's text as typing leaves it (React hears the input event) */
+function type(el: HTMLTextAreaElement, text: string): void {
+  Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(el, text);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
 /** the size of the image Dither holds now, read from its file */
 async function imageSize(dt: DocController<DitherDoc>): Promise<[number, number] | null> {
   const url = dt.get().source?.assets[0];
@@ -135,6 +152,7 @@ async function full(): Promise<void> {
   const dp = designDoc();
   shell.setActive('design');
   check('Design starts new', dp.state().t === 'new' && dp.depth() === 0, dp.state());
+  check('an empty Design palette opens on Build', (await until(() => button('design', 'Generate'))) && designView().tab === 'build', designView().tab);
   addSwatch(dp, 'Smoke 1');
   const first = await until(() => (dp.state().t === 'saved' ? dp.source() : null));
   if (!check('the first commit creates a palette in Scratch', first?.collection === 'Scratch', first ?? dp.state())) return;
@@ -320,6 +338,12 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   dd.transact('Add swatches', (d) => ({ ...d, swatches: [...d.swatches, ground, text] }));
   check('an edit in Design writes the file', await until(async () => (await swatchCount(palette!.id)) === n + 2), n);
 
+  // a visit to Check with no check chosen opens on the first that fails (Smoke text on Smoke ground)
+  patchDesign({ tab: 'check', check: null });
+  const opened = await until(() => (openCheck('design')?.first === 'Contrast' ? openCheck('design') : null));
+  check('Check opens on the first failing check', opened?.bad === 'Contrast' && opened.open === opened.bad, opened);
+  patchDesign({ check: 'contrast' });
+
   const inDesign = (id: string) => dd.get().swatches.find((w) => w.id === id);
   const fixButton = await until(() =>
     [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => /^(Lift|Darken) to L/.test(b.textContent ?? '') && b.parentElement?.parentElement?.textContent?.includes('Smoke text on Smoke ground')),
@@ -339,14 +363,17 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     return w && JSON.stringify(w.oklch) === JSON.stringify(fixed);
   }));
 
-  // Export ASE through the Export module, then import the file back through the Library's reader
-  const exportButton = [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export ASE'));
-  if (!check('Design shows Export ASE', exportButton)) return;
+  // Export ASE through the doc bar's Export popover, then import the file back through the Library's reader
+  patchDesign({ format: 'ase' });
+  button('design', 'Export')?.click();
+  const popover = () => document.querySelector<HTMLElement>('[role="dialog"][aria-label="Export"]');
+  const exportAse = await until(() => [...(popover()?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export ASE')));
+  if (!check('the doc bar’s Export opens its popover, holding Export ASE', exportAse)) return;
   const shown = toastStore.get().length;
-  exportButton!.click();
+  exportAse!.click();
   const done = await until(() => toastStore.get().slice(shown).find((t) => t.icon === 'download'));
   const file = /^Exported (.+)\.$/.exec(String(done?.message ?? ''))?.[1];
-  if (!check('Export ASE writes a file', file, done?.message)) return;
+  if (!check('Export ASE writes a file, and the popover closes', file && (await until(() => !popover())), done?.message)) return;
   await shell.importFiles([`${dir}\\exports\\${file}`], 'Reimport');
   const back = await find((i) => i.collection === 'Reimport' && i.kind === 'palette');
   const read = back && (await api.invoke('library.read', back.id));
@@ -355,19 +382,53 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   const same = got.length === want.length && want.every((w, i) => toHex(w.oklch) === toHex(got[i].oklch) && got[i].type === w.type && (!w.name || got[i].name === w.name));
   check('its read-back matches the palette (names, colours, global and spot)', same, got.map((w) => [w.name, w.type]));
 
-  // New palette: one step to an empty, unlinked document; each first edit makes its own Scratch
-  // palette (never writes over the last one); Undo goes back to the palette that was open
+  // each tab keeps its state when switched: Build's half-typed paste is still there after Check and Preview
+  patchDesign({ tab: 'build', build: 'paste' });
+  const box = await until(() => host('design')?.querySelector<HTMLTextAreaElement>('textarea[aria-label="Colours to parse"]'));
+  if (box) type(box, 'Half typed');
+  for (const tab of ['check', 'preview', 'build'] as const) {
+    patchDesign({ tab });
+    await sleep(50);
+  }
+  const typed = host('design')?.querySelector<HTMLTextAreaElement>('textarea[aria-label="Colours to parse"]');
+  check('a tab switch keeps each tab’s state: Build’s typed paste outlasts Check and Preview', box && typed === box && shows(box) && box.value === 'Half typed', typed?.value);
+  if (box) type(box, '');
+  patchDesign({ build: 'generate' });
+
+  // ≈CMYK's four fields fit their values (100 on a black) at the inspector's narrowest
+  const black = designSwatch([0, 0, 0], 'Smoke black');
+  dd.transact('Add black', (d) => ({ ...d, swatches: [...d.swatches, black] }));
+  selectInDesign([black.id]);
+  patchDesign({ inspector: 340 });
+  await shell.setPicker({ pickerStyle: 'square', pickerModel: 'cmyk' });
+  const inputs = () => [...(host('design')?.querySelectorAll<HTMLInputElement>('aside[aria-label="Inspector"] input') ?? [])].filter(shows);
+  const cut = await until(() => (inputs().filter((i) => i.value === '100').length === 1 ? inputs().filter((i) => i.scrollWidth > i.clientWidth).map((i) => i.value) : null));
+  check('≈CMYK’s fields fit 100% at the inspector’s narrowest', cut && cut.length === 0, cut ?? inputs().map((i) => i.value));
+  patchDesign({ inspector: 380 });
+  ctrlZ();
+  check('and Ctrl+Z takes the black back out', !dd.get().swatches.some((w) => w.id === black.id));
+
+  // the picker style is one app-wide setting: the inspector header's switch is saved (the relaunch pass looks)
+  const wheel = host('design')?.querySelector<HTMLElement>('[role="radio"][aria-label="Wheel"]');
+  wheel?.click();
+  await shell.setPicker({ pickerModel: 'rgb' });
+  const prefs = await api.invoke('settings.get');
+  check('the inspector’s Wheel switch draws the wheel and saves it, as the model is saved', wheel && (await until(() => host('design')?.querySelector('[data-picker="wheel"]'))) && prefs.pickerStyle === 'wheel' && prefs.pickerModel === 'rgb', [prefs.pickerStyle, prefs.pickerModel]);
+
+  // New palette: one step to an empty, unlinked document that opens on Build; each first edit makes
+  // its own Scratch palette (never writes over the last one); Undo goes back to the palette that was open
   const held = dd.source();
+  patchDesign({ tab: 'preview' });
   const newWithSwatch = async (name: string) => {
     await shell.newDoc('design');
-    const fresh = dd.get().swatches.length === 0 && !dd.source() && dd.undoLabel() === 'New palette';
+    const fresh = dd.get().swatches.length === 0 && !dd.source() && dd.undoLabel() === 'New palette' && !!(await until(() => designView().tab === 'build' && button('design', 'Generate')));
     dd.transact('Add swatch', (d) => ({ ...d, swatches: [designSwatch([0.5, 0.1, 200], name)] }));
     const made = await until(() => dd.state().t === 'saved' && dd.source()?.collection === 'Scratch' && dd.source());
     return { fresh, id: made ? made.itemId : null };
   };
   const first = await newWithSwatch('Smoke new 1');
   const second = await newWithSwatch('Smoke new 2');
-  check('New palette: an empty, unlinked document in one step', first.fresh && second.fresh);
+  check('New palette: an empty, unlinked document in one step, open on Build', first.fresh && second.fresh);
   check('each New palette’s first edit makes its own Scratch item', first.id && second.id && first.id !== second.id && first.id !== held?.itemId && (await swatchCount(first.id)) === 1, [first.id, second.id]);
   for (let i = 0; i < 4; i++) ctrlZ();
   check('Undo goes back to the palette that was open', await until(() => dd.source()?.itemId === held?.itemId && dd.state().t === 'saved'), dd.source());
@@ -1198,6 +1259,9 @@ async function illustration(): Promise<void> {
     return p?.ramps?.length === 2 && p.swatches.length === 10 && p.swatches.every((w) => typeof w.group === 'string' && Number.isInteger(w.step));
   });
   check('its file holds two 5-step ramps, each swatch with its ramp and step', whole, await payload());
+  patchIllustration({ tab: 'check', check: null });
+  const opened = await until(() => openCheck('illustration'));
+  check('Illustration’s Check lists problems first and opens on the first, or on its first check', opened && opened.open === (opened.bad || opened.first) && (!opened.bad || opened.first === opened.bad), opened);
 
   // a hand-edited step stays put when its ramp regenerates; the others follow the new settings
   const ramp = il.get().ramps[0].id;
@@ -1238,10 +1302,15 @@ async function illustration(): Promise<void> {
 
   // the painting: one gouache stroke, kept as a workspace PNG under the palette's id
   shell.setActive('illustration');
-  patchIllustration({ lower: 'paint', canvas: { ...illustrationView().canvas, tool: 'paint', medium: 'dry' } });
+  patchIllustration({ tab: 'paint', canvas: { ...illustrationView().canvas, tool: 'paint', medium: 'dry' } });
   if (!check('Paint shows the canvas', await stroke(0.5))) return;
   check('the stroke is on the canvas', await until(() => paintedPixels() > 500), paintedPixels());
   check('and is saved under its palette', await until(() => illustrationView().paintings[id], 6000), illustrationView().paintings);
+  for (const tab of ['light', 'check', 'paint'] as const) {
+    patchIllustration({ tab });
+    await sleep(50);
+  }
+  check('a tab switch keeps the painting: Paint, Light, Check, Paint', paintedPixels() > 500, paintedPixels());
   patchIllustration({ canvas: { ...illustrationView().canvas, medium: 'wet' } });
   // the brush reads its medium from the last render
   await until(() => host('illustration')?.querySelector('[role="radio"][aria-label^="Wet"]')?.getAttribute('aria-checked') === 'true');
@@ -1262,10 +1331,12 @@ async function illustration(): Promise<void> {
 
   // a new palette's first stroke: the quit, straight after this pass, must save it (the quiet pass looks)
   shell.setActive('illustration');
+  patchIllustration({ check: 'vision' });
   await shell.newDoc('illustration');
   il.transact('Add base colours', (d) => addRamp(d, [0.62, 0.12, 40]).doc);
   const last = await until(() => (il.state().t === 'saved' ? il.source() : null));
   if (!check('a new Illustration palette for the last painting', last && last.itemId !== id && last.itemId !== fork?.itemId, il.state())) return;
+  check('it lets the check chosen on the last palette go, so Check opens on its own first problem', await until(() => illustrationView().check === null), illustrationView().check);
   check('its canvas starts blank', await until(() => paintedPixels() === 0), paintedPixels());
   await stroke(0.5);
   check('the last stroke is on the canvas', await until(() => paintedPixels() > 500), paintedPixels());
@@ -1320,6 +1391,9 @@ async function quiet(): Promise<void> {
     const body = t.toItem!(doc.get()) as Record<string, unknown>;
     check(`${t.label}: the document is its file`, Object.keys(body).every((k) => JSON.stringify(body[k]) === JSON.stringify(file[k])));
   }
+  const prefs = shell.getState().settings;
+  shell.setActive('design');
+  check('the picker style and model chosen in the first pass came back', prefs?.pickerStyle === 'wheel' && prefs.pickerModel === 'rgb' && (await until(() => host('design')?.querySelector('[data-picker="wheel"]'), 5000)), [prefs?.pickerStyle, prefs?.pickerModel]);
   // the GIF comes back from the workspace, as it was left, and every frame dithers again
   const dt = ditherDoc();
   shell.setActive('dither');

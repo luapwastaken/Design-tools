@@ -58,6 +58,8 @@ export interface Shell {
   toggleLibrary(open?: boolean): void;
   openSettings(open?: boolean): void;
   setTheme(theme: Theme): Promise<void>;
+  /** the app-wide colour picker style and model (every picker follows at once) */
+  setPicker(patch: Partial<Pick<Settings, 'pickerStyle' | 'pickerModel'>>): Promise<void>;
   chooseLibraryRoot(): Promise<void>;
 
   // ── items ──

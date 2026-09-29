@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { clamp } from './scrub.ts';
 
-/** Where the pointer is on the element, 0..1 on each axis. */
-export type At = { x: number; y: number; shift: boolean };
+/** Where the pointer is on the element, 0..1 on each axis; `free` runs on past its edges (a ring's angle). */
+export type At = { x: number; y: number; shift: boolean; free: { x: number; y: number } };
 
 type Drag = { id: number; el: Element; rect: DOMRect; onKey(e: KeyboardEvent): void };
 
@@ -22,11 +22,10 @@ export function useDrag(o: {
   const drag = useRef<Drag | null>(null);
   const [active, setActive] = useState(false);
 
-  const at = (d: Drag, e: PointerEvent<Element>): At => ({
-    x: clamp((e.clientX - d.rect.left) / d.rect.width, 0, 1),
-    y: clamp((e.clientY - d.rect.top) / d.rect.height, 0, 1),
-    shift: e.shiftKey,
-  });
+  const at = (d: Drag, e: PointerEvent<Element>): At => {
+    const free = { x: (e.clientX - d.rect.left) / d.rect.width, y: (e.clientY - d.rect.top) / d.rect.height };
+    return { x: clamp(free.x, 0, 1), y: clamp(free.y, 0, 1), shift: e.shiftKey, free };
+  };
 
   const end = (commit: boolean) => {
     const d = drag.current;

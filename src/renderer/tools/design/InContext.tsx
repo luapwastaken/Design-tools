@@ -4,7 +4,7 @@
 import { memo, useMemo, useRef, type CSSProperties } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
 import type { Swatch } from '../../../shared/types.ts';
-import { EmptyState, Icon, Module, Tooltip } from '../../ui/index.ts';
+import { Icon, Module, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { describe, scene, type Pair, type Scene, type Slot, type Status } from './context-slots.ts';
 import s from './InContext.module.css';
@@ -27,9 +27,8 @@ export const InContext = memo(function InContext({ swatches, hidden = false }: {
     () => (hidden && last.current ? last.current : (last.current = [scene(swatches, 'light'), scene(swatches, 'dark')])),
     [swatches, hidden],
   );
-  if (!light || !dark) {
-    return <EmptyState icon="web" title="No colours yet" detail="Add a few, and they show up here on a small website, light and dark." />;
-  }
+  // no colours: the tool keeps Preview shut (Build shows), so there is nothing to say here
+  if (!light || !dark) return null;
   return (
     <div className={s.root}>
       <div className={s.pair}>

@@ -1,4 +1,5 @@
-// Build (spec §3): everything here proposes; ghost chips join the palette only when added.
+// The Build tab (spec §3, UX pass): the ways to make colours as a list, the chosen one's settings
+// beside it. Everything here proposes; ghost chips join the palette only when added.
 import { useEffect, useRef, useState } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
 import { PRESETS } from '../../../shared/palette/generate.ts';
@@ -6,32 +7,27 @@ import { gradientStops } from '../../../shared/palette/gradient.ts';
 import { harmony } from '../../../shared/palette/harmony.ts';
 import type { LoadedItem } from '../../../shared/types.ts';
 import { useShell } from '../../shell/core/index.ts';
+import type { IconName } from '../../shell/tool.ts';
 import { Button, IconButton, Module, NumberField, Segmented, Select, SwatchStrip, toast } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
+import { ListDetail } from '../common/ListDetail.tsx';
 import { activeSwatch, selection } from './actions.ts';
 import { HARMONIES, runGenerate, runGradient, runHarmony } from './build.ts';
-import { displayName, type BuildTab, type DesignDoc, type DesignView } from './doc.ts';
+import { displayName, type BuildMethod, type DesignDoc, type DesignView } from './doc.ts';
 import { proposals } from './proposals.ts';
 import { extract, picture, takeImage, takeSvg, takeText } from './sources.ts';
 import { patchView } from './view-state.ts';
 import s from './Build.module.css';
 
-const TABS: { value: BuildTab; label: string }[] = [
-  { value: 'harmony', label: 'Harmony' },
-  { value: 'generate', label: 'Generate' },
-  { value: 'image', label: 'Image' },
-  { value: 'logo', label: 'Logo' },
-  { value: 'gradient', label: 'Gradient' },
-  { value: 'paste', label: 'Paste' },
+/** in the list: what each makes; in its detail's header: how */
+const METHODS: { id: BuildMethod; label: string; icon: IconName; verdict: string; sub: string }[] = [
+  { id: 'generate', label: 'Generate', icon: 'casino', verdict: 'A fresh palette in a style', sub: 'Seeded, with locks' },
+  { id: 'harmony', label: 'Harmony', icon: 'join', verdict: 'From the selected colour', sub: 'From the selected swatch' },
+  { id: 'image', label: 'From image', icon: 'image', verdict: 'Pull colours from a picture', sub: 'K-means in OKLab' },
+  { id: 'logo', label: 'From logo', icon: 'web_asset', verdict: 'A logo’s fill colours', sub: 'Its fill and stroke colours' },
+  { id: 'gradient', label: 'Gradient', icon: 'gradient', verdict: 'Steps between two swatches', sub: 'OKLCH or OKLab' },
+  { id: 'paste', label: 'Paste', icon: 'content_paste', verdict: 'Hex, RGB, HSL or OKLCH codes', sub: 'One per line, or comma separated' },
 ];
-const SUB: Record<BuildTab, string> = {
-  harmony: 'From the selected swatch',
-  generate: 'Seeded, with locks',
-  image: 'K-means in OKLab',
-  logo: 'Its fill colours',
-  gradient: 'Between two swatches',
-  paste: 'Hex, RGB, HSL, OKLCH',
-};
 
 const failed = (what: string) => (e: unknown) => toast.show({ kind: 'error', message: `${what}: ${e instanceof Error ? e.message : String(e)}` });
 
@@ -41,54 +37,41 @@ async function takeFile(file: File): Promise<void> {
   else await takeImage(file, name);
 }
 
-/** the empty state's three ways in */
-export const startWith = {
-  generate(): void {
-    patchView({ build: 'generate' });
-    runGenerate([]);
-  },
-  paste(): void {
-    patchView({ build: 'paste' });
-    requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('[data-design-paste]')?.focus());
-  },
-  image(): void {
-    patchView({ build: 'image' });
-    document.querySelector<HTMLInputElement>('[data-design-image]')?.click();
-  },
-};
-
 export function Build({ d, v }: { d: DesignDoc; v: DesignView }) {
-  return (
-    <Module title="Build" sub={SUB[v.build]}>
-      <div className={s.build}>
-        <Segmented options={TABS} value={v.build} onChange={(build) => patchView({ build })} className={s.tabs} />
-        {v.build === 'harmony' && <Harmony d={d} v={v} />}
-        {v.build === 'generate' && <Generate d={d} v={v} />}
-        {v.build === 'image' && <Image v={v} />}
-        {v.build === 'logo' && <Logo />}
-        {v.build === 'gradient' && <Gradient d={d} v={v} />}
-        {v.build === 'paste' && <Paste />}
-      </div>
-      {/* outside the tabs, so the empty state's "From image" can open it from any tab */}
-      <input
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/avif,image/svg+xml,.svg"
-        hidden
-        data-design-image=""
-        onChange={(e) => {
-          const file = e.currentTarget.files?.[0];
-          e.currentTarget.value = '';
-          if (file) void takeFile(file).catch(failed(`Couldn't take colours from ${file.name}`));
-        }}
-      />
-    </Module>
-  );
+  const items = METHODS.map((m) => ({
+    ...m,
+    detail: m.id === v.build && (
+      <Module title={m.label} sub={m.sub} scroll>
+        <div className={s.body}>
+          <Method id={m.id} d={d} v={v} />
+        </div>
+      </Module>
+    ),
+  }));
+  return <ListDetail items={items} value={v.build} onChange={(id) => patchView({ build: id as BuildMethod })} />;
+}
+
+function Method({ id, d, v }: { id: BuildMethod; d: DesignDoc; v: DesignView }) {
+  switch (id) {
+    case 'generate':
+      return <Generate d={d} v={v} />;
+    case 'harmony':
+      return <Harmony d={d} v={v} />;
+    case 'image':
+      return <Image v={v} />;
+    case 'logo':
+      return <Logo />;
+    case 'gradient':
+      return <Gradient d={d} v={v} />;
+    case 'paste':
+      return <Paste />;
+  }
 }
 
 function Harmony({ d, v }: { d: DesignDoc; v: DesignView }) {
   const base = activeSwatch(d, v);
   const shown = proposals.use();
-  if (!base) return <p className={s.hint}>Select a swatch to build harmonies from it.</p>;
+  if (!base) return <p className={s.hint}>Add or pick a colour first: harmonies build from the selected swatch.</p>;
   return (
     <div className={s.list} role="list">
       {HARMONIES.map((h) => {
@@ -122,10 +105,10 @@ function Generate({ d, v }: { d: DesignDoc; v: DesignView }) {
         <IconButton icon="casino" label="Reroll: a new seed, locked proposals kept" onClick={() => set({ seed: 1 + Math.floor(Math.random() * 99999) })} />
       </div>
       <div className={s.row}>
-        <Button icon="add" onClick={() => runGenerate(d.swatches, v)}>
+        <Button variant="primary" size="lg" icon="star_shine" onClick={() => runGenerate(d.swatches, v)}>
           Generate
         </Button>
-        <span className={s.dim}>New colours leave room for the palette's own. Lock one to keep it through a reroll.</span>
+        <span className={s.dim}>New colours land at the end of the palette as proposals, leaving room for its own. Add the ones you like; lock one to keep it through a reroll.</span>
       </div>
     </>
   );
@@ -134,6 +117,7 @@ function Generate({ d, v }: { d: DesignDoc; v: DesignView }) {
 function Image({ v }: { v: DesignView }) {
   const pic = picture.use();
   const canvas = useRef<HTMLCanvasElement>(null);
+  const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const c = canvas.current;
     if (!c || !pic) return;
@@ -164,10 +148,21 @@ function Image({ v }: { v: DesignView }) {
           }}
           className={s.grow}
         />
-        <Button icon="upload_file" onClick={() => document.querySelector<HTMLInputElement>('[data-design-image]')?.click()}>
+        <Button icon="upload_file" onClick={() => input.current?.click()}>
           Choose image
         </Button>
       </div>
+      <input
+        ref={input}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/avif,image/svg+xml,.svg"
+        hidden
+        onChange={(e) => {
+          const file = e.currentTarget.files?.[0];
+          e.currentTarget.value = '';
+          if (file) void takeFile(file).catch(failed(`Couldn't take colours from ${file.name}`));
+        }}
+      />
     </>
   );
 }
@@ -249,7 +244,6 @@ function Paste() {
         className={s.paste}
         value={text}
         spellCheck={false}
-        data-design-paste=""
         aria-label="Colours to parse"
         onChange={(e) => {
           setText(e.target.value);

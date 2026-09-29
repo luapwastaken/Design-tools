@@ -32,9 +32,11 @@
 .flagText { flex: 1; min-width: 0; }
 
 /* ── colour vision ── */
-.cvdRow { display: grid; grid-template-columns: 74px minmax(0, 1fr) 128px; gap: 10px; align-items: center; }
+/* the pair readout has room for two short names ("Ember 1/5 / Copper 1/5") where the detail is wide */
+.cvdRow, .cvdNames { --rd: clamp(128px, 30%, 220px); }
+.cvdRow { display: grid; grid-template-columns: 74px minmax(0, 1fr) var(--rd); gap: 10px; align-items: center; }
 /* over the strips: label column + gap on the left, readout column + gap on the right */
-.cvdNames { display: grid; margin: 0 138px 2px 84px; }
+.cvdNames { display: grid; margin: 0 calc(var(--rd) + 10px) 2px 84px; }
 .cvdNames span {
   overflow: hidden;
   padding: 0 2px;

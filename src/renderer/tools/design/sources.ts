@@ -15,7 +15,7 @@ export async function takeImage(blob: Blob, name: string): Promise<void> {
   const pixels = await pixelsOf(blob, name);
   if (!pixels.data.some((a, i) => i % 4 === 3 && a >= 128)) throw new Error(`${name} has no opaque pixels to take colours from.`);
   picture.set({ name, pixels });
-  patchView({ build: 'image' });
+  patchView({ tab: 'build', build: 'image' });
   extract();
 }
 
@@ -32,7 +32,7 @@ export function takeSvg(svgs: (string | null | undefined)[], name: string): void
   const colours = svgs.filter(Boolean).flatMap((s) => svgColours(s!));
   if (!colours.length) throw new Error(`${name} draws nothing with a colour to take.`);
   propose('logo', `From ${name}`, unique(colours));
-  patchView({ build: 'logo' });
+  patchView({ tab: 'build', build: 'logo' });
 }
 
 /** pasted text: hex lists, rgb(), hsl(), oklch()… (shared/palette/paste) */

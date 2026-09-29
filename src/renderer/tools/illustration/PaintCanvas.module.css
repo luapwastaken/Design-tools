@@ -1,5 +1,5 @@
-/* The paint canvas (plan unit C): a canvas module, the paper on the pasteboard with the mixing well
-   beside it, then the tray and the brush. */
+/* The paint canvas (plan unit C): a canvas module, its tool bar, the paper on the pasteboard, then
+   the tray with the mixing well first. */
 .paint {
   display: flex;
   flex-direction: column;
@@ -11,29 +11,29 @@
   background: var(--module);
   container: paint / size;
 }
-.head, .foot {
+/* one bar: it wraps onto a second line in a narrow window rather than hiding a control */
+.head {
+  --label-w: auto;
   display: flex;
   flex: none;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  height: var(--canvas-bar);
+  gap: 4px 8px;
+  min-height: var(--canvas-bar);
   min-width: 0;
-  padding: 0 6px 0 8px;
+  padding: 5px 6px 5px 8px;
   background: var(--module-head);
 }
 .grow { flex: 1; }
-
-.body {
-  display: grid;
-  flex: 1 1 auto;
-  grid-template-columns: minmax(0, 1fr) 164px;
-  min-height: 0;
-}
+.group { display: flex; flex: none; align-items: center; gap: 8px; min-width: 0; }
+.sep { flex: none; width: 1px; height: 16px; margin: 0 2px; background: var(--line); }
+.slider { flex: none; width: 180px; }
 
 /* ── the paper ── */
 .view {
   position: relative;
   display: grid;
+  flex: 1 1 auto;
   place-items: center;
   min-width: 0;
   min-height: 0;
@@ -87,57 +87,56 @@
   transform: translateX(-50%);
 }
 
-/* ── the mixing well ── */
-.well {
+/* ── the tray: the well, then the paints and the palette's ramps, wrapping ── */
+.trayRow {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  min-height: 0;
-  padding: 8px 10px 10px;
-  overflow: auto;
-  box-shadow: inset 1px 0 0 var(--line);
-}
-.wellOver { background: var(--signal-soft); box-shadow: inset 0 0 0 1px var(--signal); }
-.wellHead { display: flex; align-items: center; height: var(--btn-xs); }
-.mix {
-  position: relative;
-  display: grid;
   flex: none;
-  place-items: center;
-  align-self: center;
-  width: 92px;
-  height: 92px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px var(--edge);
+  align-items: flex-start;
+  gap: 8px 14px;
+  padding: 8px 10px 10px;
+  box-shadow: inset 0 1px 0 var(--line);
 }
-.mix.on { box-shadow: inset 0 0 0 1px var(--edge), 0 0 0 3px var(--module), 0 0 0 4px var(--tick-strong); }
-.mixEmpty { background: var(--well); box-shadow: inset 0 0 0 1px var(--tick); }
-.mixHint { max-width: 60px; color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.25; text-align: center; }
-.mixHex {
-  align-self: center;
-  margin-top: 2px;
-  color: var(--ink-2);
-  font: 400 var(--fs-unit)/1 var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
-}
-.rowHint { display: none; color: var(--ink-3); font-size: var(--fs-meta); }
-.parts { display: flex; flex-direction: column; gap: 3px; }
-.part { display: flex; align-items: center; gap: 5px; min-width: 0; height: var(--ib-sm); }
-.partChip { flex: none; width: 10px; height: 10px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
-.partName { flex: 1; min-width: 0; overflow: hidden; color: var(--ink-2); font-size: var(--fs-meta); text-overflow: ellipsis; white-space: nowrap; }
-.loadBtn { align-self: stretch; margin-top: auto; }
-
-/* ── the tray ── */
-.tray {
+.well {
   display: flex;
   flex: none;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 5px;
-  padding: 7px 10px 9px;
-  box-shadow: inset 0 1px 0 var(--line);
+  gap: 6px 8px;
+  max-width: 50%;
+  padding: 2px 12px 2px 2px;
+  border-radius: var(--r-ctl);
+  box-shadow: inset -1px 0 0 var(--line);
+}
+.wellOver { background: var(--signal-soft); box-shadow: inset 0 0 0 1px var(--signal); }
+.mix {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+.mix.on { box-shadow: inset 0 0 0 1px var(--edge), 0 0 0 2px var(--module), 0 0 0 3px var(--tick-strong); }
+.mixEmpty { background: var(--well); box-shadow: inset 0 0 0 1px var(--tick); }
+.part { display: inline-flex; flex: none; align-items: center; gap: 3px; }
+.partChip { flex: none; width: 14px; height: 14px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+
+/* ── the tray ── */
+/* three rows at most, then it scrolls (the wheel works on it), so a palette of many ramps doesn't
+   take the paper's height; the padding keeps the chips' rings and focus bars inside the scroll */
+.tray {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: flex-start;
+  gap: 8px 4px;
+  min-width: 0;
+  min-height: 38px;
+  max-height: 98px;
+  margin: -4px 0 -8px -4px;
+  padding: 4px 4px 8px;
+  overflow-y: auto;
 }
 .trayLabel { margin-right: 3px; }
 /* one ramp: its name and its steps, kept on one line */
@@ -147,8 +146,8 @@
 .chip {
   position: relative;
   flex: none;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 2px;
   box-shadow: inset 0 0 0 1px var(--edge);
   touch-action: none;
@@ -184,12 +183,10 @@
 }
 .ghost[hidden] { display: none; }
 
-/* ── the brush ── */
-.foot { --label-w: 58px; gap: 14px; padding: 0 12px 0 10px; }
-.slider { flex: 0 1 250px; min-width: 150px; }
+/* ── the brush, in the bar ── */
 .readout { display: flex; flex: 0 1 auto; align-items: center; gap: 7px; min-width: 0; }
 .brushChip { flex: none; width: 14px; height: 14px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
-.brushName { min-width: 0; overflow: hidden; color: var(--ink); font-size: var(--fs-ctl); text-overflow: ellipsis; white-space: nowrap; }
+.brushName { min-width: 0; max-width: 180px; overflow: hidden; color: var(--ink); font-size: var(--fs-ctl); text-overflow: ellipsis; white-space: nowrap; }
 /* the colour under the cursor: a live readout */
 .under {
   display: inline-flex;
@@ -211,22 +208,11 @@
 
 /* a smaller window: smaller chips, so the tray gives the paper more of the height */
 @container paint (max-width: 600px) {
-  .tray { gap: 7px 4px; }
+  .tray { gap: 7px 4px; max-height: 76px; }
   .chip { width: 16px; height: 16px; }
   .set { gap: 4px; margin-left: 6px; }
-}
-/* tall or narrow: the well moves under the paper as a row, so the paper gets the width */
-@container paint (max-aspect-ratio: 1 / 1) or (max-width: 440px) {
-  .body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
-  .well { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 14px; box-shadow: inset 0 1px 0 var(--line); }
-  .wellHead { gap: 6px; }
-  .mix { width: 40px; height: 40px; }
-  .mixHint { display: none; }
-  .rowHint { display: inline; }
-  .parts { flex-direction: row; flex-wrap: wrap; gap: 4px 14px; }
-  .part { width: 150px; }
-  .loadBtn { align-self: center; margin: 0 0 0 auto; }
-}
-@container paint (max-width: 620px) {
-  .readout { display: none; }
+  .trayRow { flex-direction: column; }
+  .well { max-width: none; box-shadow: none; }
+  /* stacked, the tray's height is its own: a zero basis would clip its rows */
+  .tray { flex: none; }
 }

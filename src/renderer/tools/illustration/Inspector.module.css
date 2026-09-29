@@ -1,5 +1,4 @@
 .hint { color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
-.dim { min-width: 0; overflow: hidden; color: var(--ink-3); font-size: var(--fs-meta); text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── the selected colour ── */
 .editor { display: flex; flex-direction: column; gap: 12px; }
@@ -10,17 +9,3 @@
 .dot { color: var(--ink-4); }
 .where .edited { color: var(--ink-2); }
 .note { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
-
-/* ── Light ── */
-.light { display: flex; flex-direction: column; gap: 10px; }
-.pair { display: flex; flex-direction: column; gap: 6px; }
-.every { align-self: flex-end; }
-.row { display: flex; align-items: center; gap: 10px; min-height: var(--row); }
-.lab { flex: none; width: var(--label-w, 86px); }
-.grow { flex: 1; min-width: 0; }
-.block { display: flex; flex-direction: column; gap: 6px; }
-.describe { min-height: 2.9em; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
-.hero { display: flex; align-items: center; gap: 12px; }
-.hero > button { flex: none; }
-.hero .dim { white-space: normal; line-height: 1.35; }
-.loose { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }

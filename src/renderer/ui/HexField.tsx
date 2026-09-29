@@ -114,9 +114,14 @@ export function HexField(p: HexFieldProps) {
           onBlur={() => tryCommit() || revert()}
           onKeyDown={onKeyDown}
         />
-        <Tooltip content={name ?? 'Hex'} overflowOnly>
-          <span className={s.name}>{name ?? 'Hex'}</span>
-        </Tooltip>
+        {/* unnamed, the slot is the field's own mono label, as the mockups draw it */}
+        {name === undefined ? (
+          <span className="lbl">Hex</span>
+        ) : (
+          <Tooltip content={name} overflowOnly>
+            <span className={s.name}>{name}</span>
+          </Tooltip>
+        )}
       </div>
       {problem && <FieldError id={errId}>{problem}</FieldError>}
     </div>

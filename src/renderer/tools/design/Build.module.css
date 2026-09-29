@@ -1,9 +1,9 @@
-.build { display: flex; flex-direction: column; gap: 10px; }
-.build .tabs button { padding: 0 4px; }
-.row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+/* a method's settings: a readable column, not the whole width of the work area */
+.body { display: flex; flex-direction: column; gap: 12px; max-width: 560px; padding: 2px 2px 4px; }
+.row { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .grow { flex: 1; min-width: 0; }
 .hint { color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
-.dim { min-width: 0; color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.35; }
+.dim { min-width: 0; color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
 
 .list { display: flex; flex-direction: column; gap: 2px; margin: 0 -4px; }
 .hrow {

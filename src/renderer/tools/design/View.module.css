@@ -7,23 +7,17 @@
   min-height: 0;
 }
 
-/* the checks keep the room they need to show whole (Checks.module.css); a long palette's swatches
-   give way first and scroll */
+/* the doc bar, the palette at its own height, then the open job in the rest (a long palette
+   scrolls inside itself first) */
 .work {
   position: relative;
   display: grid;
-  grid-template-rows: var(--docbar) auto minmax(min(500px, 47vh), 1fr);
+  grid-template-rows: var(--docbar) auto minmax(260px, 1fr);
   gap: var(--gap);
   min-width: 0;
   min-height: 0;
 }
-.lower { min-height: 0; }
-/* an empty palette: its Start panel takes the room, and the checks wait in one line below it */
-.work.empty { grid-template-rows: var(--docbar) minmax(0, 1fr) auto; }
-.work.empty > section { max-height: none; }
-.work.empty > section > :nth-child(2) { display: grid; align-content: center; }
-.later { padding: 10px 14px; border-radius: var(--r-mod); background: var(--module); color: var(--ink-3); font-size: var(--fs-meta); }
-.pane { height: 100%; min-height: 0; overflow: auto; container: lower / inline-size; }
+.pane { min-width: 0; min-height: 0; }
 .pane[hidden] { display: none; }
 
 .insp {

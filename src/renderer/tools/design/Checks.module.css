@@ -1,42 +1,4 @@
-/* layout: Contrast left, Value and Colour vision right, Print across the foot (folds to its header).
-   Value always shows all of itself (one flag, however many collide) and Colour vision at least its
-   five strips; the top row is never shorter than that, so below it the area scrolls rather than
-   squeeze a check to its header. Contrast, Colour vision past its strips and an open Print take
-   whatever height they are given (size containment: what doesn't fit scrolls inside them instead of
-   setting the row). */
-.checks {
-  --vision-min: 214px;
-  display: grid;
-  grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr);
-  grid-template-rows: minmax(min-content, 1fr) min-content;
-  gap: var(--gap);
-  height: 100%;
-  min-height: 0;
-}
-.printOpen { grid-template-rows: minmax(min-content, 1.3fr) minmax(150px, 1fr); }
-.contrast { grid-column: 1; grid-row: 1; contain: size; }
-.vision { contain: size; }
-.right {
-  display: grid;
-  grid-template-rows: auto minmax(var(--vision-min), 1fr);
-  gap: var(--gap);
-  min-width: 0;
-  min-height: 0;
-  grid-column: 2;
-  grid-row: 1;
-}
-.print { grid-column: 1 / -1; grid-row: 2; }
-.printOpen .print { contain: size; }
-.folded > :not(header) { display: none; }
-
-/* too narrow for two columns: the checks stack at their own heights and the area scrolls */
-@container lower (max-width: 1000px) {
-  .checks, .printOpen { display: flex; flex-direction: column; height: auto; }
-  .right { display: flex; flex-direction: column; }
-  .checks > section, .right > section { flex: none; }
-  .contrast, .vision, .printOpen .print { contain: none; }
-}
-
+/* The Contrast and Print checks' detail (the Value and Colour vision ones are in common/). */
 .none { max-width: 52ch; padding: 2px 0; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
 .contrast .none, .print .none { padding: 12px; }
 .r { text-align: right; }
@@ -71,6 +33,9 @@
 }
 .ctRow + .ctRow { box-shadow: 0 -1px 0 var(--line); }
 .ctRow:hover { background: var(--well-hover); }
+/* below its target: a real failure (brief §4) */
+.ctRow.failing { background: var(--danger-soft); box-shadow: inset 2px 0 0 var(--danger); }
+.ctRow + .ctRow.failing { box-shadow: inset 2px 0 0 var(--danger), 0 -1px 0 var(--line); }
 
 .spec {
   display: flex;
@@ -115,9 +80,23 @@
 }
 .grade.bad { color: var(--danger); }
 .gradeCell { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; min-width: 0; }
-.adviceIcon { color: var(--danger); }
 
-.skipped { padding: 10px 12px; color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
+/* what the table can't say in a row: the worst pair's advice, the swatches left out */
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 12px 12px 0;
+  padding: 10px 12px;
+  border-radius: var(--r-ctl);
+  background: var(--well);
+  color: var(--ink-2);
+  font-size: var(--fs-base);
+  line-height: 1.45;
+}
+.note:last-child { margin-bottom: 12px; }
+.note > :global(.material-symbols-rounded) { margin-top: 1px; color: var(--ink-3); }
+.note.bad > :global(.material-symbols-rounded) { color: var(--danger); }
 
 /* ── print ── */
 .ptable { display: flex; flex-direction: column; padding: 4px 0 8px; }

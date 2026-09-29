@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import { ROLES } from '../../../shared/palette/roles.ts';
 import type { Swatch } from '../../../shared/types.ts';
-import { IconButton, Module, Picker, PickerModes, Segmented, Select, TextInput, Toggle, Tooltip, useDocColour } from '../../ui/index.ts';
+import { IconButton, Module, Picker, PickerStyles, Segmented, Select, TextInput, Tooltip, useDocColour } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { fmtL } from '../common/names.ts';
 import { select, selection, type Doc } from './actions.ts';
@@ -19,7 +19,7 @@ const TYPES: { value: Swatch['type']; label: string; tip: string }[] = [
   { value: 'spot', label: 'Spot', tip: 'Spot colour: printed as its own ink (ASE)' },
 ];
 
-/** The active swatch: name, role, the picker, tints of its hue to add, and delete. */
+/** The selected swatch only (UX pass): name, role, the picker, tints of its hue to add, type, and delete. */
 export function Inspector({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView }) {
   const sel = selection(d, v);
   const w = d.swatches.find((x) => x.id === sel[0]);
@@ -32,7 +32,7 @@ export function Inspector({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView
       actions={
         w && (
           <>
-            <PickerModes value={v.picker} onChange={(picker) => patchView({ picker })} />
+            <PickerStyles />
             <IconButton icon="delete" label={sel.length > 1 ? `Delete ${sel.length} swatches` : 'Delete swatch'} shortcut="Delete" size="sm" onClick={() => armed.set(true)} />
           </>
         )
@@ -72,18 +72,10 @@ function Editor({ doc, w, v, name }: { doc: Doc; w: Swatch; v: DesignView; name:
         </div>
       </div>
 
-      <Picker {...colour} mode={v.picker} onMode={(picker) => patchView({ picker })} lockL={v.lockL} lockH={v.lockH} />
-      <div className={s.locks}>
-        <Toggle label="Value lock" checked={v.lockL} onChange={(lockL) => patchView({ lockL })} />
-        <Toggle label="Hue lock" checked={v.lockH} onChange={(lockH) => patchView({ lockH })} />
-        <span className={s.dim}>Picker drags only</span>
-      </div>
+      <Picker {...colour} styles={false} lockL={v.lockL} lockH={v.lockH} onLock={(which, on) => patchView(which === 'L' ? { lockL: on } : { lockH: on })} />
 
       <div className={s.section}>
-        <div className={s.head}>
-          <span className="lbl">Tints</span>
-          <span className={s.dim}>Same hue down the scale. Click one to add it.</span>
-        </div>
+        <span className="lbl">Tints · click to add</span>
         <div className={s.tints}>
           {tints(w.oklch).map((t, i) => (
             <Tooltip key={i} content={`Add L ${fmtL(t[0])}`}>

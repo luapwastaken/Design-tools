@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { cx } from './cx.ts';
 import { useDrag } from './drag.ts';
 import { NumberField } from './NumberField.tsx';
@@ -22,11 +22,16 @@ export type PickerChannelProps = {
   limit?: number;
   /** a Value or Hue lock: the track doesn't drag; the field still takes typing */
   locked?: boolean;
+  /** between the track and the field: a lock button, or a blank keeping the rows aligned */
+  aside?: ReactNode;
+  /** the track alone: its value is typed elsewhere (the Square's hue bar, in the number row) */
+  bare?: boolean;
+  className?: string;
 } & NumberGesture;
 
 /** One picker channel: a colour track with a needle, and its NumberField (hard rule 5). */
 export function PickerChannel(p: PickerChannelProps) {
-  const { label, value, min, max, step, unit, track, limit, locked } = p;
+  const { label, value, min, max, step, unit, track, limit, locked, aside, bare, className } = p;
   const [lo, hi] = p.span ?? [min, max];
   const precision = p.precision ?? decimalsOf(step);
   const live = useRef(p);
@@ -45,15 +50,20 @@ export function PickerChannel(p: PickerChannelProps) {
 
   const at = hi > lo ? clamp((value - lo) / (hi - lo), 0, 1) : 0;
   const size = limit === undefined ? undefined : `${limit * 100}% 100%`;
+  const trk = (
+    <div className={cx(s.trk, locked && s.locked, bare && className)} data-track={label} {...drag.handlers}>
+      <i className={s.grad} style={{ backgroundImage: track, backgroundSize: size }} />
+      {limit !== undefined && <i className={s.lim} style={{ left: `${limit * 100}%` }} />}
+      <i className={s.ndl} style={{ left: `${at * 100}%` }} />
+      <Ticks className={s.tk} />
+    </div>
+  );
+  if (bare) return trk;
 
   return (
-    <div className={s.chan}>
-      <div className={cx(s.trk, locked && s.locked)} {...drag.handlers}>
-        <i className={s.grad} style={{ backgroundImage: track, backgroundSize: size }} />
-        {limit !== undefined && <i className={s.lim} style={{ left: `${limit * 100}%` }} />}
-        <i className={s.ndl} style={{ left: `${at * 100}%` }} />
-        <Ticks className={s.tk} />
-      </div>
+    <div className={cx(s.chan, className)} data-aside={aside === undefined ? undefined : ''}>
+      {trk}
+      {aside}
       <NumberField
         label={label}
         value={value}

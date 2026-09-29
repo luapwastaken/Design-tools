@@ -3,12 +3,12 @@ import { cssColor, hexToOklch, toSrgbGamut } from '../../../shared/color/index.t
 import { printInfo, type PrintInfo } from '../../../shared/palette/checks.ts';
 import type { InkMatch } from '../../../shared/palette/inks.ts';
 import type { Swatch } from '../../../shared/types.ts';
-import { Button, Icon, IconButton, Module, toast, Tooltip } from '../../ui/index.ts';
+import { Button, Icon, Module, toast, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { setColours } from './actions.ts';
 import type { CheckProps } from './Checks.tsx';
 import { displayName } from './doc.ts';
-import { patchView, pointAt } from './view-state.ts';
+import { pointAt } from './view-state.ts';
 import s from './Checks.module.css';
 
 const LIB = { riso: 'Riso', ral: 'RAL', hks: 'HKS', ncs: 'NCS' } as const;
@@ -16,8 +16,8 @@ const inkLabel = (m: InkMatch) => (m.library === 'ral' ? m.id.replace(/^RAL/, 'R
 /** with its library, which RAL, HKS and NCS names already carry ("HKS 5 K") */
 const fullInk = (m: InkMatch) => (inkLabel(m).startsWith(LIB[m.library]) ? inkLabel(m) : `${LIB[m.library]} ${inkLabel(m)}`);
 
-/** ≈CMYK per swatch, sRGB and P3 flags, and the nearest reference inks (collapsible). */
-export function Print({ doc, d, v, out }: CheckProps & { out: Swatch[] }) {
+/** ≈CMYK per swatch, sRGB and P3 flags, and the nearest reference inks. */
+export function Print({ doc, d, out }: CheckProps & { out: Swatch[] }) {
   const toSrgb = () =>
     setColours(doc, out.length === 1 ? `Bring ${displayName(out[0])} into sRGB` : `Bring ${out.length} colours into sRGB`, Object.fromEntries(out.map((w) => [w.id, toSrgbGamut(w.oklch)])));
   return (
@@ -26,32 +26,23 @@ export function Print({ doc, d, v, out }: CheckProps & { out: Swatch[] }) {
       sub="≈CMYK estimate · reference inks"
       readout={d.swatches.length ? (out.length ? `${out.length} out of sRGB` : 'All in sRGB') : undefined}
       actions={
-        <>
-          {out.length > 0 && (
-            <Button size="xs" onClick={toSrgb} tooltip="Reduce chroma until each shows exactly on an sRGB screen">
-              Map into sRGB
-            </Button>
-          )}
-          <IconButton
-            icon={v.print ? 'keyboard_arrow_down' : 'keyboard_arrow_right'}
-            label={v.print ? 'Hide the print check' : 'Show the print check'}
-            size="sm"
-            latched={v.print}
-            onClick={() => patchView({ print: !v.print })}
-          />
-        </>
+        out.length > 0 && (
+          <Button size="xs" onClick={toSrgb} tooltip="Reduce chroma until each shows exactly on an sRGB screen">
+            Map into sRGB
+          </Button>
+        )
       }
       scroll
       flush
-      className={cx(s.print, !v.print && s.folded)}
+      className={s.print}
     >
-      {v.print && <PrintTable doc={doc} swatches={d.swatches} />}
+      <PrintTable doc={doc} swatches={d.swatches} />
     </Module>
   );
 }
 
 function PrintTable({ doc, swatches }: { doc: CheckProps['doc']; swatches: Swatch[] }) {
-  // nearest inks search every library with CIEDE2000: only while the check is open
+  // nearest inks search every library with CIEDE2000: only while the check is the one open
   const rows = useMemo(() => swatches.map((w) => [w, printInfo(w)] as [Swatch, PrintInfo]), [swatches]);
   if (!rows.length) return <p className={s.none}>Each colour's ≈CMYK and nearest Riso, RAL, HKS and NCS inks show here.</p>;
   // a click in a table you read changes a colour: the toast says so and takes it back

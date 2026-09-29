@@ -1,14 +1,14 @@
-/* One chip: the colour on its surround mat, then the data rows on the module. Mats touch, so a row of
-   chips reads as one continuous surround band (brief §9.1). */
+/* One chip: a card on the palette's surround, the colour on top and its data below. */
 .chip {
   position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   border-radius: 3px;
+  background: var(--module);
 }
 .chip:focus-visible { outline: none; }
-/* the neutral ring (brief §4), drawn over the mat */
+/* the neutral ring (brief §4), drawn over the card, 4px clear of the colour */
 .chip::after {
   content: "";
   position: absolute;
@@ -18,11 +18,11 @@
   pointer-events: none;
 }
 
-.mat { display: block; padding: 8px 6px; }
 .field {
   position: relative;
   display: block;
-  height: var(--field, 180px);
+  height: var(--field, 150px);
+  margin: 4px 4px 0;
   border-radius: 2px;
   box-shadow: inset 0 0 0 1px var(--edge);
 }
@@ -31,9 +31,9 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
-  padding: 9px 8px 10px;
+  padding: 8px 8px 9px;
   border-radius: 0 0 3px 3px;
   text-align: left;
 }
@@ -45,35 +45,31 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* a long free role stays on one line, so every chip's data rows line up */
-.role { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* a long free role stays on one line, clear of the More button, so every chip's rows line up */
+.role { overflow: hidden; margin-right: 22px; text-overflow: ellipsis; white-space: nowrap; }
 /* a blank name shows the nearest colour name, one step quieter */
 .auto { color: var(--ink-2); }
 .unlit { color: var(--ink-4); }
-.hex {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--ink-2);
-  font: 400 var(--fs-ctl)/1 var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
-}
-.gamut { display: inline-flex; color: var(--danger); }
+/* "#6B6F76 · L 54.1 · .012 · 262", wrapping between its parts on a narrow chip */
 .data {
   display: flex;
-  gap: 6px;
-  overflow: hidden;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1px 5px;
+  min-width: 0;
   color: var(--ink-3);
-  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font: 400 var(--fs-unit)/1.3 var(--font-mono);
   font-stretch: normal;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
+.data > * { white-space: nowrap; }
+.part { display: inline-flex; align-items: center; gap: 5px; }
 .data b { font-weight: 500; }
+.hex { color: var(--ink-2); }
+.gamut { display: inline-flex; color: var(--danger); }
 
-/* controls drawn on the colour use the on-content tokens (brief §10); the grip sits on the same
-   plate as the More button, so both read on a near-white swatch too */
+/* the drag grip on the colour uses the on-content tokens (brief §10), so it reads on a near-white
+   swatch too; its tooltip carries the hints the old header said */
 .grip {
   position: absolute;
   top: 6px;
@@ -87,14 +83,13 @@
   background: var(--on-content-bg);
   color: var(--on-content-ink-2);
 }
-.corner { position: absolute; top: 14px; right: 12px; z-index: 2; display: none; gap: 2px; }
+.more { position: absolute; top: 4px; right: 4px; z-index: 2; display: none; }
 .chip:hover .grip, .sel .grip { display: inline-flex; }
-.chip:hover .corner, .sel .corner, .chip:focus-within .corner, .locked .corner { display: flex; }
-.chip .field .corner { top: 6px; right: 6px; }
+.chip:hover .more, .sel .more, .chip:focus-within .more { display: flex; }
 
 /* selected: --raise and the neutral ring on each; the anchor (the one the inspector edits) gets the
    strong ring (brief §4, §7) */
-.sel .meta { background: var(--raise); }
+.sel { background: var(--raise); }
 .sel::after { box-shadow: inset 0 0 0 1px var(--tick); }
 .anchor::after { box-shadow: inset 0 0 0 1px var(--tick-strong); }
 /* pointed at by a check row or a ruler pin: a dashed ring, so it never reads as selected */
@@ -122,13 +117,15 @@
   border-radius: 1px;
   background: var(--signal);
 }
-.chip[data-insert="before"]::before { left: -1px; }
-.chip[data-insert="after"]::before { right: -1px; }
+.chip[data-insert="before"]::before { left: -2px; }
+.chip[data-insert="after"]::before { right: -2px; }
 
 /* a proposal: the colour held inside a dashed frame, not yet part of the palette */
 .add { display: flex; flex-direction: column; width: 100%; min-width: 0; border-radius: 3px; }
 .add:focus-visible { outline-offset: -1px; }
-.ghost .field { margin: 3px; height: calc(var(--field, 180px) - 6px); outline: 1px dashed var(--tick-strong); outline-offset: 3px; }
+.ghost .field { margin: 7px 7px 3px; height: calc(var(--field, 150px) - 6px); outline: 1px dashed var(--tick-strong); outline-offset: 3px; }
+.ghost .meta { padding-bottom: 2px; }
 /* one step quieter than a palette swatch's data: offered, not yet in */
 .ghost .name, .ghost .hex { color: var(--ink-3); }
 .add:hover .meta { background: var(--well-hover); }
+.acts { display: flex; gap: 2px; padding: 0 3px 5px; }

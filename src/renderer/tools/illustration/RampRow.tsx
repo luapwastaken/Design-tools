@@ -25,7 +25,6 @@ type RowProps = {
   /** the shared columns: step `lo` sits in the first */
   lo: number;
   cols: number;
-  surround: string;
   sel: Swatch | null;
   lit: string[];
   armed: boolean;
@@ -87,17 +86,21 @@ export function RampRow(p: RowProps) {
         openMenu(e.button === 2 ? { x: e.clientX, y: e.clientY } : e.currentTarget.getBoundingClientRect(), e.button !== 2);
       }}
     >
-      <span className={s.grip} draggable onDragStart={onDragStart} onDragEnd={p.onDragEnd} aria-hidden="true">
-        <Icon name="drag_indicator" size={16} />
-      </span>
+      <Tooltip content="Drag to reorder">
+        <span className={s.grip} draggable onDragStart={onDragStart} onDragEnd={p.onDragEnd} aria-hidden="true">
+          <Icon name="drag_indicator" size={16} />
+        </span>
+      </Tooltip>
       <div className={s.ident}>
         <Tooltip content={name} overflowOnly>
           <span className={s.name}>{name}</span>
         </Tooltip>
-        <span className={cx('lbl', s.meta)}>
-          {material} · {plural(steps.length, 'step')}
-        </span>
-        {edited > 0 && <span className={cx('lbl', s.meta, s.editedCount)}>{edited} edited by hand</span>}
+        <Tooltip content={edited ? `${plural(edited, 'step')} edited by hand: the ramp leaves ${edited === 1 ? 'it' : 'them'} when it changes` : ''} disabled={!edited}>
+          <span className={cx('lbl', s.meta)}>
+            {material} · {plural(steps.length, 'step')}
+            {edited > 0 && <span className={s.editedCount}> · {edited} edited</span>}
+          </span>
+        </Tooltip>
         {baseless && (
           <Button size="xs" icon="restart_alt" onClick={() => doc.transact(`Rebuild ${name}`, (x) => regen(x, r.id))} tooltip="Another tool removed this ramp's base. Rebuild makes it again from the ramp's own colour." className={s.make}>
             Rebuild base
@@ -128,7 +131,7 @@ export function RampRow(p: RowProps) {
           />
         </div>
       ) : (
-        <Steps d={d} list={steps} place={(w) => w.step! - p.lo + 1} cols={p.cols} surround={p.surround} sel={p.sel} lit={p.lit} broken={broken} />
+        <Steps d={d} list={steps} place={(w) => w.step! - p.lo + 1} cols={p.cols} sel={p.sel} lit={p.lit} broken={broken} />
       )}
       <div className={s.acts}>
         <IconButton
@@ -158,22 +161,20 @@ type StepsProps = {
   /** the 1-based column each swatch sits in */
   place(w: Swatch, i: number): number;
   cols: number;
-  surround: string;
   sel: Swatch | null;
   lit: string[];
   broken?: Set<string>;
 };
 
-/** Colours on the surround, each over its value in greyscale, with its lightness below. */
-function Steps({ d, list, place, cols, surround, sel, lit, broken }: StepsProps) {
+/** Colours on the surround, each over its value in greyscale; the lightness is in its tooltip. */
+function Steps({ d, list, place, cols, sel, lit, broken }: StepsProps) {
   const onKeyDown = (w: Swatch) => (e: KeyboardEvent<HTMLButtonElement>) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault();
     select(w.id);
   };
   return (
-    <div className={s.steps}>
-      <div className={s.mat} style={{ ...cells(cols), background: surround }}>
+    <div className={s.mat} style={cells(cols)}>
         {list.map((w, i) => {
           // a step named by hand still says where it sits
           const word = w.name.trim() ? wordOf(d, w) : null;
@@ -187,7 +188,7 @@ function Steps({ d, list, place, cols, surround, sel, lit, broken }: StepsProps)
                 aria-label={`${nameOf(d, w)}, ${toHex(w.oklch)}${w.edited ? ', edited' : ''}`}
                 data-step={w.id}
                 tabIndex={sel?.id === w.id ? 0 : -1}
-                className={cx(s.step, sel?.id === w.id && s.sel, lit.includes(w.id) && s.hot, w.edited && s.edited, broken?.has(w.id) && s.broken)}
+                className={cx(s.step, sel?.id === w.id && s.sel, lit.includes(w.id) && s.hot, w.edited && s.edited, broken?.has(w.id) && s.broken, w.step === 0 && s.base)}
                 style={{ gridColumn: place(w, i) }}
                 onClick={(e) => {
                   select(w.id);
@@ -201,22 +202,14 @@ function Steps({ d, list, place, cols, surround, sel, lit, broken }: StepsProps)
             </Tooltip>
           );
         })}
-      </div>
-      <div className={s.nums} style={cells(cols)} aria-hidden="true">
-        {list.map((w, i) => (
-          <span key={w.id} className={cx(w.step === 0 && s.base, sel?.id === w.id && s.selNum)} style={{ gridColumn: place(w, i) }}>
-            {fmtL(w.oklch[0])}
-          </span>
-        ))}
-      </div>
     </div>
   );
 }
 
-type LooseProps = { doc: Doc; d: IllustrationDoc; list: Swatch[]; cols: number; surround: string; sel: Swatch | null; lit: string[]; armed: string | null };
+type LooseProps = { doc: Doc; d: IllustrationDoc; list: Swatch[]; cols: number; sel: Swatch | null; lit: string[]; armed: string | null };
 
 /** colours in no ramp (a flat palette opened here): each can become a ramp, or go */
-export function LooseRow({ doc, d, list, cols, surround, sel, lit, armed: armedId }: LooseProps) {
+export function LooseRow({ doc, d, list, cols, sel, lit, armed: armedId }: LooseProps) {
   const n = Math.max(cols, list.length);
   const mine = list.find((w) => w.id === sel?.id) ?? null;
   const gone = list.find((w) => w.id === armedId);
@@ -271,7 +264,7 @@ export function LooseRow({ doc, d, list, cols, surround, sel, lit, armed: armedI
           />
         </div>
       ) : (
-        <Steps d={d} list={list} place={(_, i) => i + 1} cols={n} surround={surround} sel={sel} lit={lit} />
+        <Steps d={d} list={list} place={(_, i) => i + 1} cols={n} sel={sel} lit={lit} />
       )}
       <div className={s.acts}>
         <IconButton icon="more_horiz" label="More" size="sm" onClick={(e) => openMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
@@ -281,7 +274,7 @@ export function LooseRow({ doc, d, list, cols, surround, sel, lit, armed: armedI
 }
 
 /** proposals (plan unit V): colours offered as new bases, never in the palette until added */
-export function GhostRow({ label, items, cols, surround, onAdd, footer }: { label: string; items: Proposal[]; cols: number; surround: string; onAdd(p: Proposal): void; footer: ReactNode }) {
+export function GhostRow({ label, items, cols, onAdd, footer }: { label: string; items: Proposal[]; cols: number; onAdd(p: Proposal): void; footer: ReactNode }) {
   return (
     <div role="group" aria-label={`Proposed: ${label}`} className={cx(s.row, s.ghostRow)} data-ghost-row="">
       <span />
@@ -290,7 +283,7 @@ export function GhostRow({ label, items, cols, surround, onAdd, footer }: { labe
         <span className={cx('lbl', s.meta)}>Click one to add it</span>
       </div>
       <div className={s.steps}>
-        <div className={s.mat} style={{ ...cells(Math.max(cols, items.length)), background: surround }}>
+        <div className={s.mat} style={cells(Math.max(cols, items.length))}>
           {items.map((it) => (
             <Tooltip key={it.id} content={`Add ${toHex(it.oklch).toUpperCase()} as a base colour`}>
               <button type="button" className={cx(s.step, s.ghost)} data-ghost={it.id} aria-label={`Add ${toHex(it.oklch)} as a base colour`} onClick={() => onAdd(it)}>

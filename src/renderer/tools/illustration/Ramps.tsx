@@ -1,13 +1,15 @@
-// The ramps (spec §2): one row per base colour, highlight to deep shadow on the neutral surround,
-// a value strip under each. Bases line up in one column, so the rows read as one chart.
-import { useEffect, useState, type DragEvent, type MouseEvent } from 'react';
+// The ramps (spec §2, UX pass): one compact row per base colour, highlight to deep shadow on the
+// neutral surround, a value strip under each. Bases line up in one column, so the rows read as one
+// chart, and the surround runs down the rows as one band. No header: the surround is the corner button.
+import { useEffect, useState, type CSSProperties, type DragEvent, type MouseEvent } from 'react';
 import type { LibraryItemRef } from '../../../shared/types.ts';
 import { shell, useShell } from '../../shell/core/index.ts';
-import { Button, EmptyState, menu, Module, Segmented, toast, type MenuItem } from '../../ui/index.ts';
+import { cx } from '../../ui/cx.ts';
+import { Button, EmptyState, IconButton, menu, toast, type MenuItem } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
 import { SURROUNDS, surroundOf } from '../common/surround.ts';
 import { addBase, addProposals, move, newPalette, reorder, select, selected, type Doc } from './actions.ts';
-import { fromPayload, looseOf, makeRamps, nameOf, rampOf, stepsOf, type IllustrationDoc } from './doc.ts';
+import { fromPayload, looseOf, makeRamps, rampOf, stepsOf, type IllustrationDoc } from './doc.ts';
 import { clearProposals, proposals } from './proposals.ts';
 import { GhostRow, LooseRow, RampRow, REORDER_MIME } from './RampRow.tsx';
 import { armed, hot, patchView, type IllustrationView } from './view-state.ts';
@@ -69,80 +71,81 @@ export function Ramps({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illustra
     return at === d.ramps.length && i === d.ramps.length - 1 ? 'after' : undefined;
   };
 
-  return (
-    <Module
-      title="Ramps"
-      sub="Highlight to deep shadow · drag a row to reorder"
-      readout={sel ? nameOf(d, sel) : undefined}
-      scroll
-      flush
-      className={s.mod}
-      actions={<Segmented options={SURROUNDS} value={v.surround} onChange={(surround) => patchView({ surround })} mono fit className={s.surround} />}
-    >
-      {empty ? (
+  const openView = (e: MouseEvent<HTMLButtonElement>) =>
+    menu.open(
+      e.currentTarget.getBoundingClientRect(),
+      [{ header: 'Surround' }, ...SURROUNDS.map((o) => ({ label: o.tip, checked: v.surround === o.value, onSelect: () => patchView({ surround: o.value }) }))],
+      { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined },
+    );
+
+  if (empty)
+    return (
+      <section className={cx(s.ramps, s.start)} aria-label="Ramps">
         <Start doc={doc} />
-      ) : (
-        <div
-          role="listbox"
-          aria-label="Ramps"
-          className={s.list}
-          onDragOver={onDragOver}
-          onDrop={onDrop}
-          onDragLeave={(e) => drag && !e.currentTarget.contains(e.relatedTarget as Node) && setDrag({ ...drag, at: null })}
-          onKeyDown={(e) => {
-            // on a step, up and down go to the next ramp as well (left and right also work from anywhere: the tool's shortcuts)
-            const by = ARROWS[e.key];
-            if (!by || !(e.target as Element).closest('[data-step]')) return;
-            e.preventDefault();
-            move(doc, by[0], by[1]);
-          }}
-        >
-          {d.ramps.map((r, i) => (
-            <RampRow
-              key={r.id}
-              doc={doc}
-              d={d}
-              r={r}
-              index={i}
-              steps={stepsOf(d, r.id)}
-              lo={lo}
-              cols={cols}
-              surround={surround}
-              sel={sel}
-              lit={lit}
-              armed={armedId === r.id}
-              dragging={drag?.id === r.id}
-              insert={insertOf(i)}
-              onDragStart={() => setDrag({ id: r.id, at: null })}
-              onDragEnd={() => setDrag(null)}
-            />
-          ))}
-          {loose.length > 0 && <LooseRow doc={doc} d={d} list={loose} cols={cols} surround={surround} sel={sel} lit={lit} armed={armedId} />}
-          {ghosts && (
-            <GhostRow
-              label={ghosts.label}
-              items={ghosts.items}
-              cols={cols}
-              surround={surround}
-              onAdd={(p) => addProposals(doc, [p])}
-              footer={
-                <>
-                  <span className={s.from}>
-                    {ghosts.label} · {plural(ghosts.items.length, 'colour')}
-                  </span>
-                  <Button size="xs" icon="add" onClick={() => addProposals(doc, ghosts.items)}>
-                    Add all
-                  </Button>
-                  <Button size="xs" variant="ghost" onClick={clearProposals}>
-                    Clear
-                  </Button>
-                </>
-              }
-            />
-          )}
-        </div>
-      )}
-    </Module>
+      </section>
+    );
+  return (
+    <section className={s.ramps} aria-label="Ramps">
+      <div
+        role="listbox"
+        aria-label="Ramps"
+        className={s.list}
+        style={{ '--surround': surround } as CSSProperties}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onDragLeave={(e) => drag && !e.currentTarget.contains(e.relatedTarget as Node) && setDrag({ ...drag, at: null })}
+        onKeyDown={(e) => {
+          // on a step, up and down go to the next ramp as well (left and right also work from anywhere: the tool's shortcuts)
+          const by = ARROWS[e.key];
+          if (!by || !(e.target as Element).closest('[data-step]')) return;
+          e.preventDefault();
+          move(doc, by[0], by[1]);
+        }}
+      >
+        {d.ramps.map((r, i) => (
+          <RampRow
+            key={r.id}
+            doc={doc}
+            d={d}
+            r={r}
+            index={i}
+            steps={stepsOf(d, r.id)}
+            lo={lo}
+            cols={cols}
+            sel={sel}
+            lit={lit}
+            armed={armedId === r.id}
+            dragging={drag?.id === r.id}
+            insert={insertOf(i)}
+            onDragStart={() => setDrag({ id: r.id, at: null })}
+            onDragEnd={() => setDrag(null)}
+          />
+        ))}
+        {loose.length > 0 && <LooseRow doc={doc} d={d} list={loose} cols={cols} sel={sel} lit={lit} armed={armedId} />}
+        {ghosts && (
+          <GhostRow
+            label={ghosts.label}
+            items={ghosts.items}
+            cols={cols}
+            onAdd={(p) => addProposals(doc, [p])}
+            footer={
+              <>
+                <span className={s.from}>
+                  {ghosts.label} · {plural(ghosts.items.length, 'colour')}
+                </span>
+                <Button size="xs" icon="add" onClick={() => addProposals(doc, ghosts.items)}>
+                  Add all
+                </Button>
+                <Button size="xs" variant="ghost" onClick={clearProposals}>
+                  Clear
+                </Button>
+              </>
+            }
+          />
+        )}
+      </div>
+      <IconButton icon="tune" label="View: what the ramps sit on" size="xs" onContent onClick={openView} className={s.viewBtn} />
+    </section>
   );
 }
 
@@ -163,7 +166,7 @@ function Start({ doc }: { doc: Doc }) {
       detail={
         <>
           Each base colour grows a ramp from highlight to deep shadow, lit by a light and a shadow colour you choose. You can also drop an image here to pick colours from it.
-          <span className={s.start}>
+          <span className={s.actions}>
             <Button icon="add" onClick={() => addBase(doc)}>
               Add a base colour
             </Button>

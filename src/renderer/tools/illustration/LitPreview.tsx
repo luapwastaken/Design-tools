@@ -1,5 +1,6 @@
 // The lit preview (spec §2, plan unit P): the selected ramp on a sphere, a cube and a cloth fold
-// under one light, or every ramp on a small sphere. The light is a dial and two typed numbers.
+// under one light, or every ramp on a small sphere. The light is a dial and two typed numbers, in a
+// foot under the shapes so they never cover each other.
 import { memo, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { cssColor, toOklch, type Oklch } from '../../../shared/color/index.ts';
 import { cx } from '../../ui/cx.ts';
@@ -93,7 +94,7 @@ export function LitPreview({ ramps: all, selected, view: raw, onView: onNext, on
       actions={
         ramp && (
           <span className={s.actions}>
-            <Toggle label="Banded" checked={view.banded} onChange={(banded) => onView({ banded })} />
+            <Toggle label="Banded" checked={view.banded} onChange={(banded) => onView({ banded })} className={s.banded} />
             <Segmented options={[...MODES]} value={view.all ? 'all' : 'shapes'} onChange={(m) => onView({ all: m === 'all' })} fit className={s.modes} />
           </span>
         )
@@ -114,6 +115,7 @@ export function LitPreview({ ramps: all, selected, view: raw, onView: onNext, on
           <div className={s.light}>
             <Dial light={light} onBegin={() => gesture.move({})} onMove={gesture.move} onCommit={gesture.commit} onCancel={gesture.cancel} onKey={(l) => onView(l)} />
             <div className={s.fields}>
+              <span className="lbl">Light from</span>
               <NumberField
                 label="Azimuth"
                 value={light.azimuth}

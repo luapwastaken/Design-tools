@@ -11,11 +11,13 @@ export type SelectProps<T extends string> = {
   value: T;
   onChange(v: T): void;
   disabled?: boolean;
+  /** the list's least width, for a field narrower than its options (the picker's model menu) */
+  menuWidth?: number;
   className?: string;
 };
 
 /** Our own dropdown (hard rule 6: never a native <select>). The list is the shared menu popover. */
-export function Select<T extends string>({ label, options, value, onChange, disabled, className }: SelectProps<T>) {
+export function Select<T extends string>({ label, options, value, onChange, disabled, menuWidth = 0, className }: SelectProps<T>) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLButtonElement>(null);
   const at = options.findIndex((o) => o.value === value);
@@ -28,7 +30,7 @@ export function Select<T extends string>({ label, options, value, onChange, disa
     menu.open(
       r,
       options.map((o) => ({ label: o.label, swatch: o.swatch, checked: o.value === value, onSelect: () => o.value !== value && onChange(o.value) })),
-      { width: r.width, initial: Math.max(at, 0), owner: el, role: 'listbox', onClose: () => setOpen(false) },
+      { width: Math.max(r.width, menuWidth), initial: Math.max(at, 0), owner: el, role: 'listbox', onClose: () => setOpen(false) },
     );
   };
 

@@ -1,18 +1,20 @@
-// The four checks (spec §2), always visible under the swatches. Each points at the swatches it is
-// about (hover lights them in the row) and carries its own one-click fix, one history step each.
-import { memo } from 'react';
+// The Check tab (UX pass): the four checks as a list, problems first, the open one's detail beside
+// it. Each points at the swatches it is about (hover lights them in the palette) and carries its
+// own one-click fix, one history step each.
+import { memo, type ReactNode } from 'react';
 import type { ContrastPair } from '../../../shared/palette/checks.ts';
 import { isGround, isInk } from '../../../shared/palette/roles.ts';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import { Button, Icon, Module, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
+import { ListDetail } from '../common/ListDetail.tsx';
 import { fmtL } from '../common/names.ts';
 import { Value } from '../common/Value.tsx';
-import { Vision } from '../common/Vision.tsx';
+import { mergingCvd, Vision } from '../common/Vision.tsx';
 import { setColours, type Doc } from './actions.ts';
-import { displayName, listNames, type DesignDoc, type DesignView } from './doc.ts';
+import { displayName, listNames, type CheckId, type DesignDoc, type DesignView } from './doc.ts';
 import { Print } from './Print.tsx';
-import { results } from './results.ts';
+import { results, visionVerdict } from './results.ts';
 import { patchView, pointAt } from './view-state.ts';
 import s from './Checks.module.css';
 
@@ -21,17 +23,18 @@ export type CheckProps = { doc: Doc; d: DesignDoc; v: DesignView };
 /** memo: mid-drag on a long palette the view re-renders every frame while the settled document it passes stays put */
 export const Checks = memo(function Checks(p: CheckProps) {
   const r = results(p.d.swatches, p.d.ramps, p.v.flagL, p.v.flagE);
+  // a simulation chosen in Colour vision stays; otherwise it shows one that merges, so it opens on the fix
+  const cvd = p.v.check === 'vision' ? p.v.cvd : mergingCvd(r.vision, p.v.cvd);
   const host = { swatches: r.shown, pointAt, onFix: (label: string, changes: Record<string, Oklch>) => setColours(p.doc, label, changes) };
-  return (
-    <div className={cx(s.checks, p.v.print && s.printOpen)}>
-      <Contrast {...p} pairs={r.contrast} failing={r.failing} />
-      <div className={s.right}>
-        <Value {...host} collisions={r.collisions} contrast={r.contrast} flagL={p.v.flagL} onFlagL={(flagL) => patchView({ flagL })} />
-        <Vision {...host} vision={r.vision} flagE={p.v.flagE} onFlagE={(flagE) => patchView({ flagE })} cvd={p.v.cvd} onCvd={(cvd) => patchView({ cvd })} className={s.vision} />
-      </div>
-      <Print {...p} out={r.outOfSrgb} />
-    </div>
-  );
+  const detail: Record<CheckId, ReactNode> = {
+    contrast: <Contrast {...p} pairs={r.contrast} failing={r.failing} />,
+    value: <Value {...host} collisions={r.collisions} contrast={r.contrast} flagL={p.v.flagL} onFlagL={(flagL) => patchView({ flagL })} />,
+    vision: <Vision {...host} vision={r.vision} flagE={p.v.flagE} onFlagE={(flagE) => patchView({ flagE })} cvd={cvd} onCvd={(k) => patchView({ check: 'vision', cvd: k })} />,
+    print: <Print {...p} out={r.outOfSrgb} />,
+  };
+  const open = (check: CheckId) => patchView(check === 'vision' ? { check, cvd } : { check });
+  const items = r.verdicts.map((x) => ({ ...(x.id === 'vision' ? visionVerdict(r, cvd) : x), detail: detail[x.id] }));
+  return <ListDetail items={items} value={p.v.check} onChange={(id) => open(id as CheckId)} />;
 });
 
 // ── contrast ─────────────────────────────────────────────────────────────────────────────────────
@@ -57,11 +60,10 @@ function Contrast({ doc, d, pairs, failing }: CheckProps & { pairs: ContrastPair
     <Module
       title="Contrast"
       sub="Text on background · WCAG 2.2"
-      readout={pairs.length ? `${body} of ${pairs.length} pass body text` : undefined}
+      readout={pairs.length ? `${body} OF ${pairs.length} PASS BODY TEXT` : undefined}
       scroll
       flush
       className={s.contrast}
-      footer={worst && <Advice p={worst} several={several(worst)} />}
     >
       {pairs.length === 0 ? (
         <p className={s.none}>{d.swatches.length < 2 ? 'Add a text colour and a background to check them as a pair.' : 'Give swatches a Background or Surface role, or add a lighter or darker one, to pair text with grounds.'}</p>
@@ -83,9 +85,17 @@ function Contrast({ doc, d, pairs, failing }: CheckProps & { pairs: ContrastPair
           {pairs.map((p) => (
             <ContrastRow key={`${p.text.id}:${p.ground.id}`} doc={doc} p={p} lightest={p.ground.oklch[0] === lightest} />
           ))}
+          {worst && (
+            <p className={cx(s.note, s.bad)}>
+              <Advice p={worst} several={several(worst)} />
+            </p>
+          )}
           {free.length > 0 && (
-            <p className={s.skipped}>
-              Not checked as text: {listNames(free.map((w) => `${displayName(w)} (${w.role})`))}. Custom roles are left out; give a swatch a job role or none to check it.
+            <p className={s.note}>
+              <Icon name="info" size={16} />
+              <span>
+                Not checked as text: {listNames(free.map((w) => `${displayName(w)} (${w.role})`))}. Custom roles are left out; give a swatch a job role or none to check it.
+              </span>
             </p>
           )}
         </>
@@ -97,12 +107,12 @@ function Contrast({ doc, d, pairs, failing }: CheckProps & { pairs: ContrastPair
 function Advice({ p, several }: { p: ContrastPair; several: boolean }) {
   const pair = `${displayName(p.text)} on ${displayName(p.ground)}`;
   const size = p.grade === 'Fail' ? `${displayName(p.text)} fails as text on ${displayName(p.ground)} at any size.` : `${pair} passes only for large text and shapes.`;
+  // the row's own button says the fix; with none, say why not
   const none = several ? ' No lightness of this hue passes on every ground it sits on.' : ' No lightness of this hue reaches the target here.';
-  const fix = p.fix ? ` ${fixVerb(p)} it to L ${fmtL(p.fix.oklch[0])} for ${p.target}:1.` : none;
   return (
     <>
-      <Icon name="error" size={16} className={s.adviceIcon} />
-      <span>{size + fix}</span>
+      <Icon name="error" size={16} />
+      <span>{p.fix ? size : size + none}</span>
     </>
   );
 }
@@ -126,7 +136,7 @@ function Grade({ p }: { p: ContrastPair }) {
 function ContrastRow({ doc, p, lightest }: { doc: Doc; p: ContrastPair; lightest: boolean }) {
   const fix = () => p.fix && setColours(doc, `${fixVerb(p)} ${displayName(p.text)} for contrast`, { [p.fix.swatchId]: p.fix.oklch });
   return (
-    <div className={s.ctRow} {...pointAt([p.text.id, p.ground.id])}>
+    <div className={cx(s.ctRow, p.ratio < p.target && s.failing)} {...pointAt([p.text.id, p.ground.id])}>
       <div className={s.spec} style={{ background: cssColor(p.ground.oklch), color: cssColor(p.text.oklch) }} aria-hidden="true">
         <span className={s.aa}>Aa</span>
         <span className={s.sm}>

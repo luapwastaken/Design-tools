@@ -12,9 +12,11 @@ const ID = 'illustration';
 export type IllustrationView = {
   /** the selected step or loose swatch (swatch id); null: the first ramp's base */
   selected: string | null;
-  lower: 'light' | 'paint';
+  /** the job under the ramps (UX pass: Light, Check, Paint in working order) */
+  tab: 'light' | 'check' | 'paint';
+  /** the open check's id; null opens the first failing one */
+  check: string | null;
   surround: Surround;
-  picker: 'oklch' | 'rgb' | 'cmyk';
   inspector: number;
   format: ExportFormat;
   /** Value check: flag pairs closer than this, in L × 100 */
@@ -39,9 +41,9 @@ export type IllustrationView = {
 
 export const DEFAULT_VIEW: IllustrationView = {
   selected: null,
-  lower: 'light',
+  tab: 'light',
+  check: null,
   surround: 'grey',
-  picker: 'oklch',
   inspector: 380,
   format: 'ase',
   // lower than Design's 6 and 10: a painting's bases often sit close in value (skin and cloth mid-tones),
@@ -59,9 +61,8 @@ export const DEFAULT_VIEW: IllustrationView = {
 };
 
 const ENUMS: Partial<Record<keyof IllustrationView, readonly unknown[]>> = {
-  lower: ['light', 'paint'],
+  tab: ['light', 'check', 'paint'],
   surround: ['grey', 'ground', 'plain'],
-  picker: ['oklch', 'rgb', 'cmyk'],
   format: EXPORT_FORMATS,
   cvd: ['protan', 'deutan', 'tritan', 'achromat'],
   recipesFor: ['selected', 'bases'],
@@ -83,12 +84,14 @@ const customOf = (raw: unknown): CustomPigment[] =>
 
 /** what a saved workspace holds, field by field; anything odd falls back to the default */
 function sanitize(raw: unknown): IllustrationView {
-  const r = isObj(raw) ? raw : {};
+  const saved = isObj(raw) ? raw : {};
+  // before the UX pass the switch was `lower` (Light | Paint), and the picker's mode lived here
+  const r = 'tab' in saved || !('lower' in saved) ? saved : { ...saved, tab: saved.lower };
   const out: Record<string, unknown> = { ...DEFAULT_VIEW };
   for (const [key, def] of Object.entries(DEFAULT_VIEW) as [keyof IllustrationView, unknown][]) {
     const v = r[key];
     const ok =
-      key === 'selected'
+      key === 'selected' || key === 'check'
         ? v === null || typeof v === 'string'
         : Array.isArray(def)
           ? Array.isArray(v) && v.every((x) => typeof x === 'string')

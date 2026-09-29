@@ -1,0 +1,57 @@
+/* one module: the list on the left, the chosen item's detail beside it */
+.ld {
+  display: grid;
+  /* 300px, giving way before the detail does in a narrow work area */
+  grid-template-columns: clamp(168px, 30%, 300px) minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--r-mod);
+  background: var(--module);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  padding: 6px;
+  overflow: auto;
+  border-right: 1px solid var(--line);
+}
+.row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 5px 10px;
+  align-items: center;
+  flex: none;
+  padding: 10px;
+  border-radius: var(--r-ctl);
+  text-align: left;
+}
+/* a short window: tighter rows, so Build's six methods fit under a wrapped palette */
+@media (max-height: 860px) {
+  .row { gap: 3px 10px; padding: 7px 10px; }
+}
+.row:hover { background: var(--well-hover); }
+.row.on { background: var(--raise); }
+.icon { color: var(--ink-3); }
+.on .icon { color: var(--ink-2); }
+.icon.bad { color: var(--danger); }
+.label {
+  overflow: hidden;
+  color: var(--ink-2);
+  font: 500 var(--fs-row)/1.2 var(--font-sans);
+  font-stretch: var(--sans-stretch);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.on .label { color: var(--ink); }
+.chev { color: var(--ink-4); }
+.verdict { grid-column: 2 / 4; color: var(--ink-3); font-size: var(--fs-base); line-height: 1.35; }
+
+/* a Module as the detail sits flat on the list's module: its header strip goes */
+.detail { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.detail > section { flex: 1; border-radius: 0; background: none; }
+.detail > section > header { height: 34px; padding-left: 14px; background: none; }
+.detail > section > footer { background: none; box-shadow: 0 -1px 0 var(--line); }

@@ -16,6 +16,7 @@ import { ACTION_LABELS, type ReadoutAction, readoutOf } from './readout.ts';
 import { targetsFor } from './routing.ts';
 import { rtOf } from './runtime.ts';
 import * as send from './send.ts';
+import { setPicker } from './settings.ts';
 import { getState, setState, subscribe } from './store.ts';
 
 // The shell's logic (unit S-core). Views read state through useShell(select) and act through
@@ -64,6 +65,7 @@ export const shell: Shell = {
   toggleLibrary: (open) => setState({ libraryOpen: open ?? !getState().libraryOpen }),
   openSettings: (open) => setState({ settingsOpen: open ?? !getState().settingsOpen }),
   setTheme: library.setTheme,
+  setPicker,
   chooseLibraryRoot: library.chooseLibraryRoot,
 
   targetsFor: (kind) => targetsFor(kind, getState().tools),

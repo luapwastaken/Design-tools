@@ -2,31 +2,32 @@ import type { DragEvent, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { cmykEstimate, cssColor, inSrgb, rgb255, toHex, type Oklch } from '../../../shared/color/index.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
-import { Icon, IconButton, Tooltip } from '../../ui/index.ts';
+import { Button, Icon, IconButton, Tooltip } from '../../ui/index.ts';
 import { fmtC, fmtH, fmtL } from '../common/names.ts';
 import { displayName } from './doc.ts';
 import type { Proposal } from './proposals.ts';
 import s from './SwatchChip.module.css';
 
 function Readouts({ oklch, full }: { oklch: Oklch; full: boolean }) {
-  const hex = toHex(oklch);
   const out = !inSrgb(oklch);
   return (
     <>
-      <span className={s.hex}>
-        {hex.toUpperCase()}
-        {out && (
-          <Tooltip content="Outside sRGB: the hex is the nearest colour a screen shows">
-            <span className={s.gamut}>
-              <Icon name="warning" size={14} />
-            </span>
-          </Tooltip>
-        )}
-      </span>
+      {/* each part carries its separator, so a narrow chip wraps between them */}
       <span className={s.data}>
-        <span>L {fmtL(oklch[0])}</span>
-        <span>C {fmtC(oklch[1])}</span>
-        <span>H {fmtH(oklch[2])}</span>
+        <span className={s.part}>
+          <span className={s.hex}>{toHex(oklch).toUpperCase()}</span>
+          {out && (
+            <Tooltip content="Outside sRGB: the hex is the nearest colour a screen shows">
+              <span className={s.gamut}>
+                <Icon name="warning" size={14} />
+              </span>
+            </Tooltip>
+          )}
+          ·
+        </span>
+        <span>L {fmtL(oklch[0])} ·</span>
+        <span>{fmtC(oklch[1])} ·</span>
+        <span>{fmtH(oklch[2])}</span>
       </span>
       {full && (
         <>
@@ -47,7 +48,6 @@ type ChipProps = {
   /** its name as the palette shows it (a blank one filled in) */
   name: string;
   index: number;
-  surround: string;
   full: boolean;
   selected: boolean;
   anchor: boolean;
@@ -63,7 +63,7 @@ type ChipProps = {
   confirm?: ReactNode;
 };
 
-/** One swatch on the surround: name, role, Hex and L C H; the Table view adds RGB and ≈CMYK. */
+/** One swatch: its colour, then role, name, Hex and L C H on the card; the Table view adds RGB and ≈CMYK. */
 export function SwatchChip(p: ChipProps) {
   const { swatch: w } = p;
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -93,13 +93,12 @@ export function SwatchChip(p: ChipProps) {
       onDragStart={p.onDragStart}
       onDragEnd={p.onDragEnd}
     >
-      <div className={s.mat} style={{ background: p.surround }}>
-        <div className={s.field} style={{ background: cssColor(w.oklch) }}>
-          <Icon name="drag_indicator" size={16} className={s.grip} />
-          <span className={s.corner} onClick={(e) => e.stopPropagation()}>
-            <IconButton icon="more_horiz" label="More" size="xs" onContent tabIndex={-1} onClick={(e) => p.onMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
+      <div className={s.field} style={{ background: cssColor(w.oklch) }}>
+        <Tooltip content="Drag to reorder. Ctrl or Shift click to select several.">
+          <span className={s.grip}>
+            <Icon name="drag_indicator" size={16} />
           </span>
-        </div>
+        </Tooltip>
       </div>
       {p.confirm ? (
         // its clicks are the confirm's, not a selection
@@ -115,6 +114,9 @@ export function SwatchChip(p: ChipProps) {
             <span className={cx(s.name, !w.name.trim() && s.auto)}>{p.name}</span>
           </Tooltip>
           <Readouts oklch={w.oklch} full={p.full} />
+          <span className={s.more} onClick={(e) => e.stopPropagation()}>
+            <IconButton icon="more_horiz" label="More" size="xs" tabIndex={-1} onClick={(e) => p.onMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
+          </span>
         </div>
       )}
     </div>
@@ -122,23 +124,27 @@ export function SwatchChip(p: ChipProps) {
 }
 
 /** A Build proposal at the end of the row: never in the document until added. */
-export function GhostChip({ p, surround, full, lockable, onAdd, onLock }: { p: Proposal; surround: string; full: boolean; lockable: boolean; onAdd(): void; onLock(): void }) {
+export function GhostChip({ p, full, lockable, onAdd, onLock }: { p: Proposal; full: boolean; lockable: boolean; onAdd(): void; onLock(): void }) {
   const name = p.name ?? displayName({ name: '', oklch: p.oklch });
   return (
-    <div className={cx(s.chip, s.ghost, p.locked && s.locked)} data-ghost={p.id}>
+    <div className={cx(s.chip, s.ghost)} data-ghost={p.id}>
       <button type="button" className={s.add} aria-label={`Add ${name}`} onClick={onAdd}>
-        <span className={s.mat} style={{ background: surround }}>
-          <span className={s.field} style={{ background: cssColor(p.oklch) }} />
-        </span>
+        <span className={s.field} style={{ background: cssColor(p.oklch) }} />
         <span className={s.meta}>
           <span className="lbl">Proposed</span>
           <span className={cx(s.name, s.auto)}>{name}</span>
           <Readouts oklch={p.oklch} full={full} />
         </span>
       </button>
-      <span className={s.corner}>
-        {lockable && <IconButton icon={p.locked ? 'lock' : 'lock_open'} label={p.locked ? 'Unlock: reroll changes it' : 'Lock: reroll keeps it'} size="xs" onContent latched={p.locked} onClick={onLock} />}
-        <IconButton icon="add" label={`Add ${name}`} size="xs" onContent tabIndex={-1} onClick={onAdd} />
+      <span className={s.acts}>
+        <Button size="xs" variant="ghost" icon="add" tabIndex={-1} onClick={onAdd}>
+          Add
+        </Button>
+        {lockable && (
+          <Button size="xs" variant="ghost" icon={p.locked ? 'lock' : 'lock_open'} onClick={onLock} tooltip={p.locked ? 'Unlock: a reroll changes it' : 'Lock: a reroll keeps it'}>
+            {p.locked ? 'Locked' : 'Lock'}
+          </Button>
+        )}
       </span>
     </div>
   );

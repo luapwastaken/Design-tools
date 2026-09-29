@@ -15,6 +15,9 @@ export const VISIONS: Kind[] = ['typical', 'protan', 'deutan', 'tritan', 'achrom
 const LABEL: Record<Kind, string> = { typical: 'Typical', protan: 'Protan', deutan: 'Deutan', tritan: 'Tritan', achromat: 'Achromat' };
 const CVDS = VISIONS.slice(1) as Cvd[];
 
+/** the simulation a check opened on its own shows (and its list line names): this one while it merges a pair, else the first that does */
+export const mergingCvd = (vision: Record<Kind, CvdClosest | null>, cvd: Cvd): Cvd => (vision[cvd]?.flag ? cvd : (CVDS.find((k) => vision[k]?.flag) ?? cvd));
+
 /** one Tab stop; the arrows move and choose (brief §6) */
 function pickByKey(e: KeyboardEvent<HTMLDivElement>, cur: Cvd, onCvd: (k: Cvd) => void) {
   const dir = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0;

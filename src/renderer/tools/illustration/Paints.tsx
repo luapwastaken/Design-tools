@@ -1,10 +1,11 @@
-// The paints you own (spec §5.4: the 14 generic pigments, plus your own by colour and name). View
-// state, not the document: it is your paint box, the same for every palette.
+// The paints you own (spec §5.4: the 14 generic pigments, plus your own by colour and name), behind
+// an "N paints" button in Mix it. View state, not the document: it is your paint box, the same for
+// every palette.
 import { useRef, useState } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import { customPigment, PIGMENTS, type CustomPigment, type Pigment } from '../../../shared/paint/pigments.ts';
 import { cx } from '../../ui/cx.ts';
-import { Button, ColorField, ConfirmInline, Icon, IconButton, Module, TextInput, toast } from '../../ui/index.ts';
+import { Button, ColorField, ConfirmInline, Icon, IconButton, Popover, TextInput, toast } from '../../ui/index.ts';
 import { displayName } from '../common/names.ts';
 import { getView, patchView, type IllustrationView } from './view-state.ts';
 import s from './Paint.module.css';
@@ -12,7 +13,30 @@ import s from './Paint.module.css';
 /** the paints recipes and the canvas may use, in the box's order */
 export const ownedPaints = (v: IllustrationView): Pigment[] => [...PIGMENTS, ...v.custom].filter((p) => v.owned.includes(p.id));
 
-export function Paints({ v }: { v: IllustrationView }) {
+/** The "14 paints" button and the paint box it opens. */
+export function PaintsButton({ v }: { v: IllustrationView }) {
+  const [open, setOpen] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  const ticked = ownedPaints(v).length;
+  const close = (refocus: boolean) => {
+    setOpen(false);
+    if (refocus) btn.current?.focus({ preventScroll: true });
+  };
+  return (
+    <>
+      <Button ref={btn} size="xs" icon="palette" onClick={() => setOpen(!open)} tooltip="The paints you own: recipes and the tray use only these">
+        {ticked === 1 ? '1 paint' : `${ticked} paints`}
+      </Button>
+      {open && btn.current && (
+        <Popover anchor={btn.current} label="Your paints" align="end" focus='[role="checkbox"]' onClose={close} className={s.pop}>
+          <Box v={v} />
+        </Popover>
+      )}
+    </>
+  );
+}
+
+function Box({ v }: { v: IllustrationView }) {
   const all: Pigment[] = [...PIGMENTS, ...v.custom];
   const owned = new Set(v.owned);
   const ticked = all.filter((p) => owned.has(p.id)).length;
@@ -35,17 +59,16 @@ export function Paints({ v }: { v: IllustrationView }) {
   };
 
   return (
-    <Module
-      title="Your paints"
-      readout={`${ticked} of ${all.length} ticked`}
-      actions={
+    <>
+      <div className={s.popHead}>
+        <span className={s.popTitle}>Your paints</span>
+        <span className={s.popCount}>
+          {ticked} of {all.length} ticked
+        </span>
         <Button size="xs" variant="ghost" disabled={ticked === all.length} onClick={() => tickAll(all)}>
           Tick all
         </Button>
-      }
-      scroll
-      className={s.paints}
-    >
+      </div>
       <div className={s.plist} role="group" aria-label="Paints you own">
         {all.map((p) =>
           armed === p.id && 'custom' in p ? (
@@ -74,7 +97,7 @@ export function Paints({ v }: { v: IllustrationView }) {
         )}
       </div>
       <AddPaint />
-    </Module>
+    </>
   );
 }
 

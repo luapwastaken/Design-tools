@@ -1,5 +1,7 @@
 // The paint canvas (spec §3.3, plan unit C): a scratch pad where paints mix as paint, wet
 // (watercolour) or dry (gouache), with Paint, Smudge and Pick, a pigment tray and a mixing well.
+// Layout (UX pass): one tool bar over the paper (tools, medium, brush, size, load, undo, clear),
+// the tray under it with the well first.
 // Its painting is a PNG workspace asset per Library item, saved a moment after each stroke
 // settles. Its undo is its own (the last strokes), never the document's.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
@@ -7,7 +9,7 @@ import { cssColor, toHex, toOklch, type Oklch } from '../../../shared/color/inde
 import type { Pigment } from '../../../shared/paint/pigments.ts';
 import { decodeImage } from '../../lib/load.ts';
 import { shell } from '../../shell/core/index.ts';
-import { Button, ConfirmInline, IconButton, Segmented, Slider, toast } from '../../ui/index.ts';
+import { ConfirmInline, IconButton, Segmented, Slider, toast, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { CANVAS_H, CANVAS_W, PaintSim, type Loaded } from './paint-sim.ts';
 import { addToWell, LOAD, loadedOf, SIZE, sourcesOf, WELL_MAX, wellMix, type PaintSettings, type PaintTool, type PaletteSet } from './paint-sources.ts';
@@ -229,85 +231,12 @@ export function PaintCanvas(p: PaintCanvasProps) {
   const ringSize = Math.max(6, v.size * scale);
   return (
     <section className={s.paint} aria-label="Paint canvas">
+      {/* in groups, so a narrow bar wraps between them rather than through them */}
       <header className={s.head}>
-        <Segmented options={TOOLS} value={v.tool} onChange={(tool) => p.onSettings({ tool })} fit />
-        <Segmented options={MEDIA} value={v.medium} onChange={(medium) => p.onSettings({ medium })} mono fit />
-        <span className={s.grow} />
-        <IconButton icon="undo" label="Undo on the canvas: the last strokes, or a Clear" size="sm" disabled={!depth} onClick={undo} />
-        <Button ref={clearBtn} variant="ghost" icon="delete_sweep" disabled={!painted} onClick={() => setArmed(true)}>
-          Clear
-        </Button>
-      </header>
-
-      <div className={s.body}>
-        <div ref={view} className={cx(s.view, v.tool === 'pick' && s.picking)} style={{ '--ring': `${ringSize}px` } as CSSProperties}>
-          <canvas
-            ref={canvas}
-            width={CANVAS_W}
-            height={CANVAS_H}
-            className={s.canvas}
-            tabIndex={0}
-            aria-label="Painting. Drag to paint; the [ and ] keys change the brush size; Ctrl+Z undoes a stroke."
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={() => endStroke(true)}
-            onLostPointerCapture={() => endStroke(true)}
-            onPointerEnter={(e) => {
-              moveRing(e);
-              ring.current!.hidden = false;
-            }}
-            onPointerLeave={() => {
-              ring.current!.hidden = true;
-            }}
-            onKeyDown={onKeyDown}
-          />
-          <div ref={ring} className={s.ring} hidden aria-hidden="true">
-            <i />
-          </div>
-          {armed && (
-            <div className={s.confirm}>
-              <ConfirmInline
-                icon="delete_sweep"
-                title="Clear the painting?"
-                detail="The canvas goes back to blank paper. Undo brings the painting back."
-                confirmLabel="Clear"
-                danger
-                onConfirm={clear}
-                onKeep={() => {
-                  setArmed(false);
-                  clearBtn.current?.focus({ preventScroll: true });
-                }}
-              />
-            </div>
-          )}
-        </div>
-        <Well
-          ref={wellEl}
-          well={v.well}
-          sources={sources}
-          mix={mix?.oklch ?? null}
-          loaded={brush?.id === 'well'}
-          over={over}
-          onChange={(well) => p.onSettings({ well })}
-          onEmpty={emptyWell}
-          onLoad={() => load('well')}
-        />
-      </div>
-
-      <Tray sources={sources} current={brush?.id ?? ''} onLoad={load} onAddToWell={intoWell} well={wellEl} onOver={setOver} />
-
-      <footer className={s.foot}>
-        <Slider label="Size" value={v.size} min={SIZE.min} max={SIZE.max} unit="px" fieldWidth={70} className={s.slider} onChange={(size) => p.onSettings({ size })} />
-        <Slider
-          label={v.tool === 'smudge' ? 'Strength' : 'Load'}
-          value={v.load}
-          min={LOAD.min}
-          max={LOAD.max}
-          unit="%"
-          fieldWidth={70}
-          className={s.slider}
-          onChange={(load) => p.onSettings({ load })}
-        />
+        <span className={s.group}>
+          <Segmented options={TOOLS} value={v.tool} onChange={(tool) => p.onSettings({ tool })} fit />
+          <Segmented options={MEDIA} value={v.medium} onChange={(medium) => p.onSettings({ medium })} mono fit />
+        </span>
         <span className={s.grow} />
         {v.tool === 'pick' ? (
           <span className={s.readout}>
@@ -320,10 +249,86 @@ export function PaintCanvas(p: PaintCanvasProps) {
           <span className={s.readout}>
             <span className="lbl">Brush</span>
             <i className={s.brushChip} style={brush ? { background: cssColor(brush.oklch) } : undefined} />
-            <span className={s.brushName}>{brush?.name ?? 'Tick a paint you own to load the brush'}</span>
+            <Tooltip overflowOnly>
+              <span className={s.brushName}>{brush?.name ?? 'Tick a paint you own to load the brush'}</span>
+            </Tooltip>
           </span>
         )}
-      </footer>
+        <span className={s.group}>
+          <span className={s.sep} />
+          <Slider label="Size" value={v.size} min={SIZE.min} max={SIZE.max} unit="px" fieldWidth={64} className={s.slider} onChange={(size) => p.onSettings({ size })} />
+          <Slider
+            label={v.tool === 'smudge' ? 'Strength' : 'Load'}
+            value={v.load}
+            min={LOAD.min}
+            max={LOAD.max}
+            unit="%"
+            fieldWidth={64}
+            className={s.slider}
+            onChange={(load) => p.onSettings({ load })}
+          />
+          <span className={s.sep} />
+          <IconButton icon="undo" label="Undo on the canvas: the last strokes, or a Clear" size="sm" disabled={!depth} onClick={undo} />
+          <IconButton ref={clearBtn} icon="delete_sweep" label="Clear the painting" size="sm" disabled={!painted} onClick={() => setArmed(true)} />
+        </span>
+      </header>
+
+      <div ref={view} className={cx(s.view, v.tool === 'pick' && s.picking)} style={{ '--ring': `${ringSize}px` } as CSSProperties}>
+        <canvas
+          ref={canvas}
+          width={CANVAS_W}
+          height={CANVAS_H}
+          className={s.canvas}
+          tabIndex={0}
+          aria-label="Painting. Drag to paint; the [ and ] keys change the brush size; Ctrl+Z undoes a stroke."
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={() => endStroke(true)}
+          onLostPointerCapture={() => endStroke(true)}
+          onPointerEnter={(e) => {
+            moveRing(e);
+            ring.current!.hidden = false;
+          }}
+          onPointerLeave={() => {
+            ring.current!.hidden = true;
+          }}
+          onKeyDown={onKeyDown}
+        />
+        <div ref={ring} className={s.ring} hidden aria-hidden="true">
+          <i />
+        </div>
+        {armed && (
+          <div className={s.confirm}>
+            <ConfirmInline
+              icon="delete_sweep"
+              title="Clear the painting?"
+              detail="The canvas goes back to blank paper. Undo brings the painting back."
+              confirmLabel="Clear"
+              danger
+              onConfirm={clear}
+              onKeep={() => {
+                setArmed(false);
+                clearBtn.current?.focus({ preventScroll: true });
+              }}
+            />
+          </div>
+        )}
+      </div>
+
+      <div className={s.trayRow}>
+        <Well
+          ref={wellEl}
+          well={v.well}
+          sources={sources}
+          mix={mix?.oklch ?? null}
+          loaded={brush?.id === 'well'}
+          over={over}
+          onChange={(well) => p.onSettings({ well })}
+          onEmpty={emptyWell}
+          onLoad={() => load('well')}
+        />
+        <Tray sources={sources} current={brush?.id ?? ''} onLoad={load} onAddToWell={intoWell} well={wellEl} onOver={setOver} />
+      </div>
     </section>
   );
 }

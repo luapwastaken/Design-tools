@@ -1,21 +1,54 @@
-/* the checks keep the rest of the column however many swatches there are */
-.mod { max-height: 54vh; }
-.switches { display: flex; gap: 6px; }
-.switches > * { height: 22px; }
+/* the palette, always on top: the chips as cards on the surround they're judged on (brief §9.1) */
+.pal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  padding: 10px;
+  border-radius: var(--r-mod);
+  background: var(--module);
+}
 
-/* brief §5: swatch grids reflow; auto-fit, so a short palette fills the row as the mockup's does,
-   and no column gap, so the mats form one surround band per row */
+/* brief §5: swatch grids reflow; auto-fit, so a short palette fills the row as the mockup's does.
+   A long palette scrolls here, so the job below keeps its room. */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  row-gap: 8px;
-  overflow: hidden;
+  gap: 2px;
+  max-height: 44vh;
+  overflow: auto;
   border-radius: 3px;
 }
-
-.from { min-width: 0; overflow: hidden; color: var(--ink-2); text-overflow: ellipsis; white-space: nowrap; }
-.grow { flex: 1; }
-
-
 .grid[hidden] { display: none; }
-.start { display: flex; gap: 6px; margin-top: 10px; }
+
+/* over the colour of the first row's last chip, on the on-content plate */
+.corner { position: absolute; top: 18px; right: 18px; z-index: 3; display: flex; align-items: center; gap: 4px; }
+.readout {
+  display: flex;
+  align-items: center;
+  height: var(--ib-sm);
+  padding: 0 7px;
+  border-radius: var(--r-ctl);
+  background: var(--on-content-bg);
+  color: var(--on-content-ink);
+  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* the proposals' own line, on the module so it reads on any surround */
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 6px 5px 10px;
+  border-radius: 3px;
+  background: var(--module);
+  color: var(--ink-2);
+  font-size: var(--fs-base);
+}
+.from { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grow { flex: 1; }

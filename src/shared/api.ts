@@ -34,7 +34,7 @@ export type Api = {
   // ── settings ──
   'settings.get': () => Promise<Settings>;
   /** also applies side effects: theme → window background + caption overlay colours */
-  'settings.set': (patch: Partial<Pick<Settings, 'theme' | 'libraryRoot'>>) => Promise<Settings>;
+  'settings.set': (patch: Partial<Pick<Settings, 'theme' | 'libraryRoot' | 'pickerStyle' | 'pickerModel'>>) => Promise<Settings>;
 
   // ── library ──
   'library.index': () => Promise<LibraryIndex>;

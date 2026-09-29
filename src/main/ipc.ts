@@ -25,9 +25,10 @@ export function registerIpc({ settings, workspace: ws, library: lib, exporter, s
   // What the window and the LibraryService were last given. One settings.set at a time, each applying
   // the saved result, so overlapping calls (a quick theme toggle, chooseRoot) can't leave them out of step.
   let applied = settings.get();
-  const setSettings = (patch: Partial<Pick<Settings, 'theme' | 'libraryRoot'>>): Promise<Settings> =>
+  const setSettings = (patch: Parameters<Api['settings.set']>[0]): Promise<Settings> =>
     inOrder('settings.set', async () => {
-      const next = await settings.update({ theme: patch.theme, libraryRoot: patch.libraryRoot });
+      const { theme, libraryRoot, pickerStyle, pickerModel } = patch;
+      const next = await settings.update({ theme, libraryRoot, pickerStyle, pickerModel });
       if (next.theme !== applied.theme) applyTheme(next.theme);
       if (next.libraryRoot !== applied.libraryRoot) await lib.setRoot(next.libraryRoot);
       applied = next;

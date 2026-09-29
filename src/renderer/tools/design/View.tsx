@@ -1,27 +1,27 @@
-// The Design tool's screen (spec §2): swatch row on its surround, then Checks | In context, with the
-// inspector (swatch, Build, Export) on the right. One screen, no tabs.
+// The Design tool's screen (UX pass): the doc bar with the jobs as tabs, the palette always on top,
+// one job under it at a time (Build · Check · Preview), and the selected colour in the inspector.
 import { useEffect, useMemo, useSyncExternalStore, type CSSProperties } from 'react';
 import { isTextField } from '../../shell/core/keys.ts';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
-import { cx } from '../../ui/cx.ts';
 import { toast } from '../../ui/index.ts';
-import { DocBar } from '../common/DocBar.tsx';
-import { ExportPalette } from '../common/ExportPalette.tsx';
+import { DocBar, type DocTab } from '../common/DocBar.tsx';
 import { useSettled } from '../common/settled.ts';
 import { addSwatch, eyedrop, newPalette, type Doc } from './actions.ts';
 import { Build } from './Build.tsx';
 import { Checks } from './Checks.tsx';
-import { named, plural, type DesignView } from './doc.ts';
+import { named, plural, type DesignTab } from './doc.ts';
 import { InContext } from './InContext.tsx';
 import { Inspector } from './Inspector.tsx';
+import { results } from './results.ts';
 import { takeText } from './sources.ts';
 import { SwatchRow } from './SwatchRow.tsx';
 import { hot, patchView, useView } from './view-state.ts';
 import s from './View.module.css';
 
-const LOWER: { value: DesignView['lower']; label: string }[] = [
-  { value: 'checks', label: 'Checks' },
-  { value: 'context', label: 'In context' },
+const TABS: DocTab<DesignTab>[] = [
+  { value: 'build', label: 'Build', icon: 'star_shine' },
+  { value: 'check', label: 'Check', icon: 'fact_check' },
+  { value: 'preview', label: 'Preview', icon: 'web' },
 ];
 const INSPECTOR = { min: 340, max: 460, reset: 380 };
 
@@ -50,30 +50,46 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   useEffect(() => void (hot.get().length && hot.set([])), [d.swatches]);
   // blank names filled in, as the checks' sentences name them
   const shown = useMemo(() => named(settled.swatches, settled.ramps), [settled.swatches, settled.ramps]);
+  // each palette opens its checks on its own first problem
+  const source = useSyncExternalStore(doc.subscribe, () => doc.source()?.itemId ?? null);
+  useEffect(() => patchView({ check: null }), [source]);
   const empty = d.swatches.length === 0;
+  // Build is where a palette starts: with no colours, Check and Preview have nothing to show
+  useEffect(() => void (empty && patchView({ tab: 'build' })), [empty]);
+  const tab = empty ? 'build' : v.tab;
+  const toLookAt = results(settled.swatches, settled.ramps, v.flagL, v.flagE).toLookAt;
+  const tabs = TABS.map((t) => {
+    if (t.value === 'build') return t;
+    if (empty) return { ...t, off: 'Add colours first: Build makes them' };
+    return t.value === 'check' && toLookAt ? { ...t, badge: toLookAt } : t;
+  });
   return (
     <div className={s.view} style={{ '--insp': `${v.inspector}px` } as CSSProperties}>
-      <div className={cx(s.work, empty && s.empty)}>
+      <div className={s.work}>
         <DocBar
           tool="design"
           doc={doc}
           count={plural(d.swatches.length, 'swatch', 'swatches')}
           onNew={() => void newPalette()}
-          lower={{ options: LOWER, value: v.lower, onChange: (lower) => patchView({ lower }) }}
+          tabs={{ options: tabs, value: tab, onChange: (next) => patchView({ tab: next }) }}
           onPick={() => void eyedrop(doc)}
           add={{ label: 'Add swatch', tooltip: 'Add the selected hue at the lightness the palette lacks most', run: () => addSwatch(doc) }}
           empty="Add a colour first: an empty palette has nothing to send"
+          exportPalette={{ tool: 'design', swatches: d.swatches, named: (list) => named(list, doc.get().ramps), format: v.format, onFormat: (format) => patchView({ format }) }}
         />
         <SwatchRow doc={doc} d={d} v={v} />
-        {/* both stay mounted, so each keeps its state when switched (spec §6.3) */}
-        <div className={s.lower}>
-          {empty && <p className={s.later}>Checks and the website preview show here once the palette has colours.</p>}
-          <div className={s.pane} hidden={empty || v.lower !== 'checks'}>
-            <Checks doc={doc} d={settled} v={v} />
+        {/* Build and Preview stay mounted, so each keeps its state when switched */}
+        <div className={s.pane} hidden={tab !== 'build'}>
+          <Build d={d} v={v} />
+        </div>
+        {/* mounted only while it shows: with no check chosen it opens on the first that fails, each visit */}
+        {tab === 'check' && (
+          <div className={s.pane}>
+            <Checks key={source} doc={doc} d={settled} v={v} />
           </div>
-          <div className={s.pane} hidden={empty || v.lower !== 'context'}>
-            <InContext swatches={shown} hidden={v.lower !== 'context'} />
-          </div>
+        )}
+        <div className={s.pane} hidden={tab !== 'preview'}>
+          <InContext swatches={shown} hidden={tab !== 'preview'} />
         </div>
         <ResizeHandle
           value={v.inspector}
@@ -87,8 +103,6 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
       </div>
       <aside className={s.insp} aria-label="Inspector">
         <Inspector doc={doc} d={d} v={v} />
-        <Build d={d} v={v} />
-        <ExportPalette tool="design" swatches={d.swatches} named={(list) => named(list, doc.get().ramps)} format={v.format} onFormat={(format) => patchView({ format })} />
       </aside>
     </div>
   );

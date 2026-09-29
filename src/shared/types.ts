@@ -147,11 +147,20 @@ export type WriteResult =
 
 // ── Settings and workspace ──────────────────────────────────────────────────────────────────────
 
+/** How every colour picker in the app looks: Square (Photoshop, Figma), Wheel (Krita), Sliders (Illustrator), OKLCH. */
+export const PICKER_STYLES = ['square', 'wheel', 'sliders', 'oklch'] as const;
+export type PickerStyle = (typeof PICKER_STYLES)[number];
+/** The numbers the Square, Wheel and Sliders show. */
+export const PICKER_MODELS = ['hsb', 'rgb', 'hsl', 'cmyk', 'oklch'] as const;
+export type PickerModel = (typeof PICKER_MODELS)[number];
+
 export type Settings = {
   theme: Theme;
   libraryRoot: string;
   /** last folder used by a save dialog, keyed "<tool>:<ext>" */
   exportFolders: Record<string, string>;
+  pickerStyle: PickerStyle;
+  pickerModel: PickerModel;
 };
 
 /** Per-tool workspace file (renderer-owned JSON, main just stores it). */

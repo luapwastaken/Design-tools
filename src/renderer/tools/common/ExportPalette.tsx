@@ -1,11 +1,11 @@
 // Export (Design spec §4, Illustration spec §2): every format through the shared export path
-// (lib/export saveFile). Design docks it at the foot of its inspector.
-import { useState } from 'react';
+// (lib/export saveFile), in a popover under the doc bar's Export button.
+import { useRef, useState } from 'react';
 import { writeAco, writeAse, writeCss, writeGpl, writeJson, writeProcreate, writeSheetSvg, writeTailwind } from '../../../shared/palette/writers.ts';
 import type { Swatch, ToolId } from '../../../shared/types.ts';
 import { saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
-import { Button, Module, Select, TextInput, toast } from '../../ui/index.ts';
+import { Button, Popover, Select, TextInput, toast } from '../../ui/index.ts';
 import { plural } from './names.ts';
 import s from './ExportPalette.module.css';
 
@@ -45,21 +45,41 @@ async function sheetPng(svg: string): Promise<Uint8Array> {
 const bytesOf = (out: string | Uint8Array): string | ArrayBuffer =>
   typeof out === 'string' ? out : (out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength) as ArrayBuffer);
 
-type Props = {
+export type ExportPaletteProps = {
   tool: ToolId;
   swatches: Swatch[];
   /** the swatches as the file gets them: blank names filled in (asked only when exporting) */
   named(list: Swatch[]): Swatch[];
   format: ExportFormat;
   onFormat(f: ExportFormat): void;
-  /** false: stays in the flow, for an inspector whose own controls it would cover (Illustration's Light) */
-  dock?: boolean;
 };
 
-export function ExportPalette({ tool, swatches, named, format, onFormat, dock = true }: Props) {
-  const docName = useShell((st) => st.docNames[tool]) ?? 'Palette';
-  // null: the file takes the palette's name, following renames
+/** The doc bar's Export: a button, and the export settings in a popover under it. */
+export function ExportPalette(p: ExportPaletteProps) {
+  const [open, setOpen] = useState(false);
+  // null: the file takes the palette's name, following renames; kept while the popover is closed
   const [name, setName] = useState<string | null>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const close = (refocus: boolean) => {
+    setOpen(false);
+    if (refocus) button.current?.focus({ preventScroll: true });
+  };
+  return (
+    <>
+      <Button ref={button} icon="download" disabled={!p.swatches.length} onClick={() => setOpen(!open)} tooltip={p.swatches.length ? 'Export the whole palette' : 'Add a colour first: an empty palette has nothing to export'}>
+        <span className={s.label}>Export</span>
+      </Button>
+      {open && p.swatches.length > 0 && button.current && (
+        <Popover anchor={button.current} label="Export" align="end" onClose={close} className={s.pop}>
+          <ExportBody {...p} name={name} onName={setName} onDone={() => close(true)} />
+        </Popover>
+      )}
+    </>
+  );
+}
+
+function ExportBody({ tool, swatches, named, format, onFormat, name, onName, onDone }: ExportPaletteProps & { name: string | null; onName(n: string | null): void; onDone(): void }) {
+  const docName = useShell((st) => st.docNames[tool]) ?? 'Palette';
   const file = name ?? docName;
   const f = FORMATS[format];
   const list = () => named(swatches);
@@ -71,29 +91,33 @@ export function ExportPalette({ tool, swatches, named, format, onFormat, dock = 
     });
     if (out === null) return;
     const path = await saveFile({ tool, suggestedName: file, ext: f.ext, filterName: f.filter, data: bytesOf(out) });
-    if (path) toast.show({ icon: 'download', message: `Exported ${path.split(/[\\/]/).pop()}.` });
+    if (!path) return;
+    toast.show({ icon: 'download', message: `Exported ${path.split(/[\\/]/).pop()}.` });
+    onDone();
   };
   const copyCss = () =>
     navigator.clipboard.writeText(writeCss(list())).then(
-      () => toast.show({ icon: 'content_copy', message: `Copied CSS for ${plural(swatches.length, 'colour')}.` }),
+      () => {
+        toast.show({ icon: 'content_copy', message: `Copied CSS for ${plural(swatches.length, 'colour')}.` });
+        onDone();
+      },
       () => toast.show({ kind: 'error', message: "Couldn't copy to the clipboard." }),
     );
 
   return (
-    <Module title="Export" sub="Whole palette" className={dock ? s.dock : undefined}>
-      <div className={s.export}>
-        <Select label="Format" options={OPTIONS} value={format} onChange={onFormat} />
-        <p className={s.desc}>{f.desc}</p>
-        <TextInput mono value={file} onCommit={(t) => setName(t.trim() && t.trim() !== docName ? t.trim() : null)} end={<span className={s.ext}>.{f.ext}</span>} />
-        <div className={s.row}>
-          <Button variant="primary" size="lg" icon="download" disabled={!swatches.length} onClick={() => void save()} className={s.grow}>
-            Export {f.label}
-          </Button>
-          <Button size="lg" disabled={!swatches.length} onClick={() => void copyCss()}>
-            Copy CSS
-          </Button>
-        </div>
+    <div className={s.export}>
+      <span className={s.head}>Export the whole palette</span>
+      <Select label="Format" options={OPTIONS} value={format} onChange={onFormat} />
+      <p className={s.desc}>{f.desc}</p>
+      <TextInput mono value={file} onCommit={(t) => onName(t.trim() && t.trim() !== docName ? t.trim() : null)} end={<span className={s.ext}>.{f.ext}</span>} />
+      <div className={s.row}>
+        <Button variant="primary" size="lg" icon="download" disabled={!swatches.length} onClick={() => void save()} className={s.grow}>
+          Export {f.label}
+        </Button>
+        <Button size="lg" disabled={!swatches.length} onClick={() => void copyCss()}>
+          Copy CSS
+        </Button>
       </div>
-    </Module>
+    </div>
   );
 }

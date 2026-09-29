@@ -1,11 +1,15 @@
 // The colour picker's maths (plan unit F): gamut edges and pixels of the L-by-C plane at one hue,
-// and the RGB and ≈CMYK channel views. Pure, so it runs in tests; the renderer only draws it.
-import { convertOklabToRgb } from 'culori';
-import { hexToOklch, inP3, inSrgb, toOklch, type Oklch } from './index.ts';
+// and the RGB, HSB, HSL and ≈CMYK channel views. Pure, so it runs in tests; the renderer only draws it.
+import { clampRgb, convertOklabToRgb, converter, type Rgb } from 'culori';
+import { hexToOklch, inP3, inSrgb, toHex, toOklch, toSrgbGamut, type Oklch } from './index.ts';
 
 export type Gamut = 'srgb' | 'p3';
 export type Rgb255 = [number, number, number];
 export type Cmyk = [number, number, number, number];
+/** hue 0-360, saturation and brightness 0-100, as Photoshop and Figma show them */
+export type Hsb = [number, number, number];
+/** hue 0-360, saturation and lightness 0-100 */
+export type Hsl = [number, number, number];
 
 const INSIDE = { srgb: inSrgb, p3: inP3 };
 /** below this chroma the hue is noise, so a picked or typed grey keeps the hue you were on */
@@ -85,6 +89,15 @@ export function planeAxis(h: number): number {
 
 const keepHue = (o: Oklch, hue: number): Oklch => (o[1] < GREY ? [o[0], o[1], hue] : o);
 
+/**
+ * The same colour as far as a picker can tell: the same hex, and for a grey the same stored hue,
+ * which the hex can't show (so an undone hue drag on a grey reads as a change).
+ */
+export function sameColour(a: Oklch, b: Oklch): boolean {
+  if (toHex(a) !== toHex(b)) return false;
+  return (a[1] >= GREY && b[1] >= GREY) || Math.abs(((a[2] - b[2] + 540) % 360) - 180) < 0.5;
+}
+
 /** A hex to OKLCH; a grey keeps `hue`, so the plane doesn't jump to red. */
 export const fromHex = (hex: string, hue: number): Oklch => keepHue(hexToOklch(hex), hue);
 
@@ -98,3 +111,73 @@ export function fromCmyk([c, m, y, k]: Cmyk, hue: number): Oklch {
   const ink = (v: number) => (1 - v / 100) * (1 - k / 100);
   return keepHue(toOklch({ mode: 'rgb', r: ink(c), g: ink(m), b: ink(y) }, hue), hue);
 }
+
+// ── HSB and HSL: the Square, Wheel and Sliders styles work in sRGB ──
+
+const toRgb = converter('rgb');
+const toHsv = converter('hsv');
+const toHsl = converter('hsl');
+
+/** the sRGB colour the hex shows (gamut mapped), unrounded, so typed and dragged values stay put */
+function shown(o: Oklch): Rgb {
+  const [l, c, h] = toSrgbGamut(o);
+  return clampRgb(toRgb({ mode: 'oklch', l, c, h }));
+}
+
+/**
+ * The OKLCH hue a near-grey of this HSB hue leans to. Near grey the mapping runs once round the
+ * circle as the HSB hue does (the pure colours' OKLCH hues fold back near blue), so it inverts.
+ */
+const leanHue = (h: number) => toOklch({ mode: 'hsv', h, s: 0.01, v: 1 })[2];
+const RED = leanHue(0);
+/** an OKLCH hue as a turn from red's lean, 0..360 */
+const fromRed = (h: number) => (((h - RED) % 360) + 360) % 360;
+
+/**
+ * The HSB hue a grey shows. A grey has no HSB hue of its own: this is the one its stored OKLCH hue
+ * stands for, so a grey made on the square opens where it was made.
+ */
+export function hsbHue(okHue: number): number {
+  // a hue of exactly 0 was never chosen (a hex or imported grey carries no hue): it opens at red, as elsewhere
+  if (okHue === 0) return 0;
+  const want = fromRed(okHue);
+  let lo = 0;
+  let hi = 360;
+  for (let i = 0; i < 32; i++) {
+    const m = (lo + hi) / 2;
+    if (fromRed(leanHue(m)) < want) lo = m;
+    else hi = m;
+  }
+  return ((lo + hi) / 2) % 360;
+}
+
+/** a grey from HSB or HSL keeps the OKLCH hue its HSB hue stands for */
+const fromSrgbModel = (c: Parameters<typeof toOklch>[0], hue: number): Oklch => keepHue(toOklch(c), leanHue(hue));
+/** below this spread of the channels (0-1) the sRGB hue and saturation are float noise */
+const FLAT = 1e-6;
+
+/** HSV or HSL of what the screen shows; a grey takes the hue its OKLCH hue stands for, and no saturation */
+function srgbModel(o: Oklch, read: (rgb: Rgb) => [number | undefined, number, number]): [number, number, number] {
+  const rgb = shown(o);
+  const [h, s, third] = read(rgb);
+  const flat = Math.max(rgb.r, rgb.g, rgb.b) - Math.min(rgb.r, rgb.g, rgb.b) < FLAT;
+  return [h === undefined || flat || o[1] < GREY ? hsbHue(o[2]) : h, flat ? 0 : s * 100, third * 100];
+}
+
+/** HSB of what the screen shows; a colour outside sRGB reads as its clipped colour. */
+export const hsbOf = (o: Oklch): Hsb =>
+  srgbModel(o, (c) => {
+    const { h, s, v } = toHsv(c);
+    return [h, s, v];
+  });
+
+export const fromHsb = ([h, s, b]: Hsb): Oklch => fromSrgbModel({ mode: 'hsv', h, s: s / 100, v: b / 100 }, h);
+
+/** HSL of what the screen shows; a colour outside sRGB reads as its clipped colour. */
+export const hslOf = (o: Oklch): Hsl =>
+  srgbModel(o, (c) => {
+    const { h, s, l } = toHsl(c);
+    return [h, s, l];
+  });
+
+export const fromHsl = ([h, s, l]: Hsl): Oklch => fromSrgbModel({ mode: 'hsl', h, s: s / 100, l: l / 100 }, h);

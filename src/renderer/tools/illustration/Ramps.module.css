@@ -1,32 +1,44 @@
-/* the lower panes keep the rest of the column however many ramps there are; four rows fit whole */
-.mod { max-height: calc(40vh + 4px); container-type: inline-size; }
-.surround { height: 22px; }
+/* The ramps: no header, compact rows, six fit before the list scrolls. The steps sit on the surround,
+   which runs down every row as one band; names and actions stay on the module, so text never sits
+   on a judging colour. */
+.ramps {
+  --acts: 50px;
+  --pad-r: 8px;
+  --col-gap: 10px;
+  --gutter: 8px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* six rows, and at least four in a short window, where the job below needs the height more */
+  max-height: min(calc(6 * 54px + 8px), 42vh, max(calc(4 * 54px + 8px), 100vh - 640px));
+  overflow: hidden;
+  border-radius: var(--r-mod);
+  background: var(--module);
+}
+/* an empty palette: its start panel sits where the ramps will be, at the top (as Design's does) */
+.ramps.start { display: grid; align-content: start; max-height: none; padding: 12px 14px; container-type: inline-size; }
 
-.list { display: flex; flex-direction: column; padding: 3px 0; }
+.list { display: flex; flex-direction: column; min-height: 0; padding: 4px 0; overflow: auto; scrollbar-gutter: stable; }
 
-/* One row: grip, name, the steps on their surround, then the hero star and More. */
+/* the palette's corner, on the band: it stays put while the rows scroll under it */
+.viewBtn { position: absolute; top: 9px; right: calc(var(--gutter) + var(--pad-r) + var(--acts) + var(--col-gap) + 6px); z-index: 1; }
+
+/* One row: grip, name, the steps on the band, then the hero star and More. */
 .row {
   position: relative;
   display: grid;
-  /* fixed outer columns, so every row's mat is as wide and the step columns line up */
-  grid-template-columns: 16px 132px minmax(0, 1fr) 50px;
-  align-items: center;
-  gap: 10px;
-  min-height: 84px;
-  padding: 6px 8px 6px 6px;
+  flex: none;
+  /* fixed outer columns, so every row's band is as wide and the step columns line up */
+  grid-template-columns: 16px 132px minmax(0, 1fr) var(--acts);
+  align-items: stretch;
+  column-gap: var(--col-gap);
+  min-height: 54px;
+  padding: 0 var(--pad-r) 0 6px;
 }
-.row + .row::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 12px;
-  left: 12px;
-  height: 1px;
-  background: var(--line);
-}
-/* the ramp the Light controls set (brief §7: selected row) */
+.row > :not(.mat, .steps, .confirm) { align-self: center; }
+/* the ramp the Lighting controls set (brief §7: selected row); the band stays the surround */
 .row.on { background: var(--raise); }
-.row.on::after, .row.on + .row::after { display: none; }
 .dragging { outline: 1px dashed var(--tick); outline-offset: -1px; }
 .row[data-insert]::before {
   content: "";
@@ -43,9 +55,9 @@
 
 .grip {
   display: flex;
-  align-self: stretch;
   align-items: center;
   justify-content: center;
+  height: 40px;
   border-radius: var(--r-ctl);
   color: var(--ink-4);
   cursor: grab;
@@ -53,7 +65,7 @@
 .row:hover .grip { color: var(--ink-3); }
 .grip:hover { background: var(--well-hover); color: var(--ink-2); }
 
-.ident { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.ident { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 6px 0; }
 .name {
   overflow: hidden;
   color: var(--ink);
@@ -77,11 +89,14 @@
 }
 
 .acts { display: flex; align-items: center; gap: 2px; }
-.confirm { min-width: 0; }
+.confirm { align-self: center; min-width: 0; padding: 4px 0; }
 
-/* ── the steps: colour over value, on the surround; the mats of every row line up ── */
+/* ── the steps: colour over value, on the band; every row's band lines up ── */
 .steps { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.mat { display: grid; padding: 3px; border-radius: 3px; }
+.mat { display: grid; align-content: center; padding: 3px 4px; background: var(--surround); }
+.row:first-child .mat { border-radius: 3px 3px 0 0; }
+.row:last-child .mat { border-radius: 0 0 3px 3px; }
+.row:only-child .mat { border-radius: 3px; }
 .step {
   position: relative;
   display: flex;
@@ -91,12 +106,13 @@
   padding: 3px;
   border-radius: 3px;
 }
-.colour { display: block; height: 38px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
-.value { display: block; height: 9px; border-radius: 1px; box-shadow: inset 0 0 0 1px var(--edge); }
-/* neutral rings, clear of the colour (brief §4): hover, the selected step, one a check points at */
+.colour { position: relative; display: block; height: 34px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.value { display: block; height: 6px; border-radius: 1px; box-shadow: inset 0 0 0 1px var(--edge); }
+/* rings clear of the colour (brief §4): hover, one a check points at, and the selected step, drawn
+   in ink so it reads on the grey band in both themes */
 .step:hover { box-shadow: inset 0 0 0 1px var(--tick); }
-.step.sel { box-shadow: inset 0 0 0 1px var(--tick-strong); }
 .step.hot { outline: 1px dashed var(--tick-strong); outline-offset: -1px; }
+.step.sel, .step.sel:hover { box-shadow: inset 0 0 0 2px var(--ink); }
 .step:focus-visible { outline: none; }
 .step:focus-visible::before {
   content: "";
@@ -108,8 +124,19 @@
   border-radius: 1px;
   background: var(--signal);
 }
-/* a hand-edited step: a mark on the colour, drawn with the on-content tokens (brief §10) */
-.edited .colour { position: relative; }
+/* marks on the colour, drawn with the on-content tokens (brief §10): the base, and a hand edit */
+.base .colour::before {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--on-content-ink);
+  box-shadow: 0 0 0 1px var(--on-content-bg);
+}
 .edited .colour::after {
   content: "";
   position: absolute;
@@ -124,28 +151,15 @@
 /* a step that breaks the ramp's value order: a real failure */
 .step.broken .value { box-shadow: inset 0 0 0 1.5px var(--danger); }
 
-.nums { display: grid; padding: 0 3px; }
-.nums span {
-  overflow: hidden;
-  color: var(--ink-3);
-  font: 400 var(--fs-label)/1 var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-  white-space: nowrap;
-}
-.nums .base { color: var(--ink-2); font-weight: 600; }
-.nums .selNum { color: var(--ink); }
-
 /* ── colours in no ramp, and proposals ── */
 .loose .name { color: var(--ink-2); }
 .make { align-self: flex-start; margin-top: 2px; }
-.ghostRow { min-height: 0; }
+.ghostRow { padding-bottom: 6px; }
 .ghost { padding: 3px; }
-.ghost .colour { height: 32px; margin: 3px; outline: 1px dashed var(--tick-strong); outline-offset: 3px; }
+.ghost .colour { height: 30px; margin: 3px; outline: 1px dashed var(--tick-strong); outline-offset: 3px; }
 .ghost:hover { box-shadow: inset 0 0 0 1px var(--tick-strong); }
 .ghostFoot { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .from { flex: 1; min-width: 0; overflow: hidden; color: var(--ink-2); font-size: var(--fs-base); text-overflow: ellipsis; white-space: nowrap; }
 
 /* wider than the sentence above it: the three ways in stay on one line */
-.start { display: flex; flex-wrap: wrap; gap: 6px; width: max-content; max-width: calc(100cqw - 28px); margin-top: 10px; }
+.start .actions { display: flex; flex-wrap: wrap; gap: 6px; width: max-content; max-width: calc(100cqw - 28px); margin-top: 10px; }

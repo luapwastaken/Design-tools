@@ -12,11 +12,10 @@ export const DEFAULT_VIEW: DesignView = {
   selected: [],
   surround: 'grey',
   chipData: 'short',
-  lower: 'checks',
-  print: false,
+  tab: 'check',
+  check: null,
   cvd: 'deutan',
   build: 'generate',
-  picker: 'oklch',
   lockL: false,
   lockH: false,
   flagL: 6,
@@ -34,23 +33,28 @@ export const DEFAULT_VIEW: DesignView = {
 const ENUMS: Partial<Record<keyof DesignView, readonly string[]>> = {
   surround: ['grey', 'ground', 'plain'],
   chipData: ['short', 'full'],
-  lower: ['checks', 'context'],
+  tab: ['build', 'check', 'preview'],
+  check: ['contrast', 'value', 'vision', 'print'],
   cvd: ['protan', 'deutan', 'tritan', 'achromat'],
   build: ['harmony', 'generate', 'image', 'logo', 'gradient', 'paste'],
-  picker: ['oklch', 'rgb', 'cmyk'],
   format: EXPORT_FORMATS,
   space: ['oklch', 'oklab'],
 };
 
-/** what a saved workspace holds, field by field; anything odd falls back to the default */
+/** before the UX pass the work area's switch was `lower` */
+const LOWER: Record<string, DesignView['tab']> = { checks: 'check', context: 'preview' };
+
+/** what a saved workspace holds, field by field; anything odd falls back to the default (a dropped field, like `picker`, is left behind) */
 function sanitize(raw: unknown): DesignView {
   const r = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
-  const out: Record<string, unknown> = { ...DEFAULT_VIEW };
+  const out: Record<string, unknown> = { ...DEFAULT_VIEW, ...(typeof r.lower === 'string' && LOWER[r.lower] && { tab: LOWER[r.lower] }) };
   for (const [key, def] of Object.entries(DEFAULT_VIEW) as [keyof DesignView, unknown][]) {
     const v = r[key];
     const ok = Array.isArray(def)
       ? Array.isArray(v) && v.every((x) => typeof x === 'string')
-      : typeof v === typeof def && (typeof v !== 'number' || Number.isFinite(v)) && (!ENUMS[key] || ENUMS[key]!.includes(v as string));
+      : def === null
+        ? ENUMS[key]!.includes(v as string)
+        : typeof v === typeof def && (typeof v !== 'number' || Number.isFinite(v)) && (!ENUMS[key] || ENUMS[key]!.includes(v as string));
     if (ok) out[key] = v;
   }
   if (!PRESETS.some((p) => p.id === out.preset)) out.preset = DEFAULT_VIEW.preset;
