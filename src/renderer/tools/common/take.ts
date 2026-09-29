@@ -1,5 +1,6 @@
-// Taking colours from outside a palette: an image's pixels, an SVG's paints. Shared by the colour tools.
-import { parseCss, toHex, type Oklch } from '../../../shared/color/index.ts';
+// Taking colours from outside a palette: an image's pixels (an SVG's paints are shared/svg's
+// svgColours). Shared by the colour tools.
+import { toHex, type Oklch } from '../../../shared/color/index.ts';
 import { decodeImage } from '../../lib/load.ts';
 
 /** a Library item's file (dt://) */
@@ -24,33 +25,6 @@ export async function pixelsOf(blob: Blob, name: string): Promise<ImageData> {
   ctx.drawImage(bmp, 0, 0, w, h);
   bmp.close();
   return ctx.getImageData(0, 0, w, h);
-}
-
-const PAINT = /(?:^|[;\s{])(?:fill|stroke|stop-color|flood-color)\s*:\s*([^;}]+)/g;
-const SKIP = /^(none|transparent|inherit|currentcolor|context-fill|context-stroke)$|^url\(/i;
-
-const SHAPES = 'path, rect, circle, ellipse, polygon, polyline, text';
-const BLACK: Oklch = [0, 0, 0];
-
-/**
- * Every paint an SVG names, as colours, read with DOMParser (it never enters the page, spec §10.3).
- * Any CSS colour counts, keywords too (Figma writes fill="white"). Shapes that name no paint at
- * all draw black, the SVG default.
- */
-export function paints(svg: string): Oklch[] {
-  const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
-  const found: Oklch[] = [];
-  const take = (v: string | null | undefined) => {
-    const t = v?.trim();
-    const o = t && !SKIP.test(t) ? parseCss(t) : null;
-    if (o) found.push(o);
-  };
-  for (const el of doc.querySelectorAll('*')) {
-    for (const a of ['fill', 'stroke', 'stop-color', 'flood-color']) take(el.getAttribute(a));
-    for (const m of (el.getAttribute('style') ?? '').matchAll(PAINT)) take(m[1]);
-  }
-  for (const st of doc.querySelectorAll('style')) for (const m of (st.textContent ?? '').matchAll(PAINT)) take(m[1]);
-  return found.length || !doc.querySelector(SHAPES) ? found : [BLACK];
 }
 
 export const unique = (list: Oklch[]): Oklch[] => [...new Map(list.map((o) => [toHex(o), o])).values()];

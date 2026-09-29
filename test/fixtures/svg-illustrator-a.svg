@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 120 120">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: url(#linear-gradient);
+      }
+
+      .cls-2 {
+        clip-path: url(#clippath);
+      }
+
+      .cls-3 {
+        fill: none;
+        stroke: #1d1d1b;
+        stroke-miterlimit: 10;
+        stroke-width: 4px;
+      }
+
+      .cls-4 {
+        fill: url(#linear-gradient-2);
+      }
+    </style>
+    <clipPath id="clippath">
+      <rect x="10" y="10" width="100" height="100"/>
+    </clipPath>
+    <linearGradient id="linear-gradient" x1="10" y1="60" x2="110" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e6007e"/>
+      <stop offset="1" stop-color="#312783"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-2" data-name="linear-gradient" x1="30" y1="30" x2="90" y2="90" xlink:href="#linear-gradient"/>
+  </defs>
+  <g id="Layer_1-2" data-name="Layer 1">
+    <g class="cls-2">
+      <circle class="cls-1" cx="60" cy="60" r="60"/>
+    </g>
+    <rect class="cls-4" x="30" y="30" width="60" height="60"/>
+    <path class="cls-3" d="M20,100L100,20"/>
+  </g>
+</svg>

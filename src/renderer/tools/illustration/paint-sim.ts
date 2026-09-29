@@ -1,6 +1,8 @@
 // The paint canvas's simulation (plan unit C). Per pixel it keeps the colour a screen shows (sRGB,
-// 0..1) and water. A stroke lays dabs along the pointer's path; while the paper is wet, a flow
-// step each frame lets colour bleed through the water and darkens a wash's rim as it dries.
+// 0..1) and water. A stroke lays dabs along the pointer's path. When it ends, its water settles
+// off-screen: colour bleeds through the water and the wash's rim darkens as it dries, and the
+// canvas shows only the settled result, in one go. Nothing on the canvas changes slowly over
+// time: Luap gets motion sickness from that.
 // Paint mixes as paint through km.ts once per dab, never per pixel per frame: the brush carries K
 // and S curves (pickup mixes curves), and each pixel blends straight, then takes the dab's
 // Kubelka-Munk correction, so a blue glaze over yellow reads green while the texture under it stays.
@@ -31,11 +33,19 @@ export const UNDO_STEPS = 20;
 const TILE = 64;
 const DRY = 0.015;
 const WATER = 0.9;
-/** per flow step: water evening out, colour bleeding through it, drying (a full wash stays wet
- *  about 8s at 60 steps a second: long enough to drop paint into it) */
+/** per tick of flow: water evening out, colour bleeding through it, drying (a full wash stays wet
+ *  about 470 ticks) */
 const DIFFUSE = 0.9;
 const BLEED = 0.2;
 const EVAPORATE = 0.0019;
+/** A settle step covers as many ticks as keeps a pixel's pull toward its neighbours' colour under
+ *  BLEED_MAX (past that the flow overshoots); washes bleed slower as they dry, so steps grow, up
+ *  to DT_MAX ticks so the last water dries within a step of when it would. A full wash settles in
+ *  about 46 steps, its look within a few levels of 470 single ticks. */
+const BLEED_MAX = 0.73;
+const DT_MAX = 16;
+/** rows of a settle step between checks of the frame budget */
+const SLICE_ROWS = 32;
 /** a dried wash's rim: how much denser its edge gets, the interior a little paler, and the rim's width */
 const RIM = 0.75;
 const HOLLOW = 0.12;
@@ -122,6 +132,9 @@ export class PaintSim {
   private wetBox: Rect | null = null;
   private readonly spanL: Int32Array;
   private readonly spanR: Int32Array;
+  /** the settle under way, a slice at a time, and the most water any pixel held after its last step */
+  private flowing: Generator<void, void> | null = null;
+  private top = WATER;
   private history: Step[] = [];
   private bytes = 0;
   private live: Live | null = null;
@@ -147,7 +160,7 @@ export class PaintSim {
     this.dirty = this.all();
   }
 
-  /** anything still wet (the flow keeps running) */
+  /** anything still wet: the stroke being painted, or one still settling */
   get wet(): boolean {
     return this.wetBox !== null;
   }
@@ -176,10 +189,34 @@ export class PaintSim {
     return d;
   }
 
+  /**
+   * A frame's work for the canvas: settles a lifted stroke for up to `budgetMs`, then the region to
+   * redraw. Null while it settles, so the canvas holds the stroke as painted and then shows the
+   * settled wash at once.
+   */
+  frame(budgetMs: number): Rect | null {
+    return this.live || this.settle(budgetMs) ? this.takeDirty() : null;
+  }
+
+  /** runs the lifted stroke's flow until it's dry, or for about `budgetMs`; true once dry */
+  settle(budgetMs = Infinity): boolean {
+    if (this.live) return false;
+    const t0 = performance.now();
+    while (this.wetBox) {
+      (this.flowing ??= this.flow()).next();
+      if (performance.now() - t0 >= budgetMs) break;
+    }
+    if (!this.wetBox) this.flowing = null;
+    return !this.wetBox;
+  }
+
   // ── strokes ──────────────────────────────────────────────────────────────────────────────────
 
   begin(o: StrokeOptions, x: number, y: number, pressure = 1): void {
     this.end();
+    // a stroke started before the last one settled: that one dries first, so each wash settles
+    // on its own and nothing wet is left to run into
+    this.settle();
     this.push('stroke');
     const r = Math.max(0.75, o.size / 2);
     const wet = o.medium === 'wet';
@@ -523,16 +560,32 @@ export class PaintSim {
   }
 
   /**
-   * One tick while anything is wet (`dt` ticks' worth, when the canvas runs it less often). Water
-   * evens out between wet pixels but never soaks into dry paper, so a wash keeps its edge; colour
-   * bleeds through the water (wet-in-wet); as it dries, pigment gathers at the rim and leaves the
-   * middle a little paler. Only each row's wet span is visited.
+   * The flow until everything is dry, a step at a time, pausing every few rows so a settle can
+   * spread over frames. Water evens out between wet pixels but never soaks into dry paper, so a
+   * wash keeps its edge; colour bleeds through the water; as it dries, pigment gathers at the rim
+   * and leaves the middle a little paler. Only each row's wet span is visited. Anything that
+   * rewrites the water (undo, clear, load) drops it through findWet.
    */
-  step(dt = 1): boolean {
-    const box = this.wetBox;
-    if (!box) return false;
-    const { w, h, col, water, edge, tmpW, tmpC, spanL, spanR } = this;
-    // the old values the neighbours read: each row over its own and its neighbours' spans
+  private *flow(): Generator<void, void> {
+    while (this.wetBox) {
+      const box = this.wetBox;
+      const dt = Math.min(DT_MAX, Math.max(1, BLEED_MAX / (BLEED * this.top * this.top)));
+      this.keepOld(box);
+      const next = { x0: this.w, y0: this.h, x1: -1, y1: -1, top: 0 };
+      for (let y = box.y0; y <= box.y1; y += SLICE_ROWS) {
+        this.flowRows(y, Math.min(box.y1, y + SLICE_ROWS - 1), dt, next);
+        yield;
+      }
+      this.markDirty(box);
+      this.wetBox = next.y1 >= 0 ? { x0: next.x0, y0: next.y0, x1: next.x1, y1: next.y1 } : null;
+      this.top = next.top;
+    }
+  }
+
+  /** before a step: the old values the neighbours read (each row over its own and its neighbours'
+   *  spans), and the undo step's copy of the tiles it will change */
+  private keepOld(box: Rect): void {
+    const { w, h, col, water, tmpW, tmpC, spanL, spanR } = this;
     const reach = (y: number): [number, number] => {
       let a = w, z = -1;
       for (let r = Math.max(box.y0, y - 1); r <= Math.min(box.y1, y + 1); r++) {
@@ -548,13 +601,18 @@ export class PaintSim {
       tmpC.set(col.subarray((y * w + a) * 3, (y * w + z + 1) * 3), (y * w + a) * 3);
     }
     this.touchWet(box);
+  }
+
+  /** `dt` ticks of flow over rows y0..y1; where it's still wet, and the most water, go into `next` */
+  private flowRows(y0: number, y1: number, dt: number, next: Rect & { top: number }): void {
+    const { w, h, col, water, edge, tmpW, tmpC, spanL, spanR } = this;
 
     const evaporate = EVAPORATE * dt;
     const drying = evaporate / WATER;
     const share = Math.min(1, DIFFUSE * dt) / 4;
-    const bleed = Math.min(0.9, BLEED * dt);
-    let nx0 = w, ny0 = h, nx1 = -1, ny1 = -1;
-    for (let y = box.y0; y <= box.y1; y++) {
+    const bleed = BLEED * dt;
+    let top = next.top;
+    for (let y = y0; y <= y1; y++) {
       const from = spanL[y];
       const to = spanR[y];
       spanL[y] = w;
@@ -597,7 +655,7 @@ export class PaintSim {
             s1 += tmpC[o + 1] * nd;
             s2 += tmpC[o + 2] * nd;
           }
-          const k = (bleed * w0 * w0) / sum;
+          const k = Math.min(BLEED_MAX, bleed * w0 * w0) / sum;
           v0 += s0 * k;
           v1 += s1 * k;
           v2 += s2 * k;
@@ -616,18 +674,17 @@ export class PaintSim {
           continue;
         }
         water[i] = nw;
+        if (nw > top) top = nw;
         if (x < spanL[y]) spanL[y] = x;
         spanR[y] = x;
       }
       if (spanR[y] < 0) continue;
-      if (ny1 < 0) ny0 = y;
-      ny1 = y;
-      if (spanL[y] < nx0) nx0 = spanL[y];
-      if (spanR[y] > nx1) nx1 = spanR[y];
+      if (next.y1 < 0) next.y0 = y;
+      next.y1 = y;
+      if (spanL[y] < next.x0) next.x0 = spanL[y];
+      if (spanR[y] > next.x1) next.x1 = spanR[y];
     }
-    this.markDirty(box);
-    this.wetBox = ny1 >= 0 ? { x0: nx0, y0: ny0, x1: nx1, y1: ny1 } : null;
-    return this.wetBox !== null;
+    next.top = top;
   }
 
   /** the undo step keeps the tiles the flow is about to change: per band of tiles, its rows' spans */
@@ -647,6 +704,7 @@ export class PaintSim {
 
   /** the colour at a point, averaged over 3×3 so granulation doesn't decide it */
   pick(x: number, y: number): Rgb {
+    this.settle();
     const cx = Math.min(this.w - 2, Math.max(1, Math.round(x)));
     const cy = Math.min(this.h - 2, Math.max(1, Math.round(y)));
     const out: Rgb = [0, 0, 0];
@@ -688,6 +746,8 @@ export class PaintSim {
   clear(undoable: boolean): void {
     this.end();
     if (undoable) {
+      // the step brings back the painting as it settles, not half way
+      this.settle();
       this.push('clear');
       this.touch(this.all());
     }
@@ -729,9 +789,11 @@ export class PaintSim {
     this.markDirty(this.all());
   }
 
-  /** where the water is, from scratch (after undo, load or clear) */
+  /** where the water is, from scratch (after undo, load or clear); a settle under way read the old water */
   private findWet(): void {
     const { w, h, water, spanL, spanR } = this;
+    this.flowing = null;
+    this.top = WATER;
     let box: Rect | null = null;
     for (let y = 0; y < h; y++) {
       spanL[y] = w;
@@ -802,6 +864,7 @@ export class PaintSim {
 
   private markWet(r: Rect): void {
     this.wetBox = union(this.wetBox, r);
+    this.top = WATER;
     for (let y = r.y0; y <= r.y1; y++) {
       if (r.x0 < this.spanL[y]) this.spanL[y] = r.x0;
       if (r.x1 > this.spanR[y]) this.spanR[y] = r.x1;

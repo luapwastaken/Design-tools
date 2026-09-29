@@ -28,6 +28,8 @@ import { ToastView } from './Toast.tsx';
 import { Toggle } from './Toggle.tsx';
 import { TipBubble, Tooltip } from './Tooltip.tsx';
 import { UndoRedo } from './UndoRedo.tsx';
+import { Viewport } from './Viewport.tsx';
+import type { Zoom } from './viewport.ts';
 import s from './ControlsBoard.module.css';
 
 // Every shared control in every state on one scrolling page, for the design critic (plan unit U).
@@ -151,6 +153,59 @@ function PickerDemo() {
         <Toggle label="Value lock" checked={lockL} onChange={setLockL} />
         <Toggle label="Hue lock" checked={lockH} onChange={setLockH} />
       </div>
+    </>
+  );
+}
+
+// a 3 × 2 repeat of one tile, drawn (the way Pattern repeats) or as a scaled element (the way an image tool shows its result)
+const TILE = 160;
+const DOTS: [number, number, number, number][] = [[40, 40, 26, 3], [118, 58, 18, 4], [82, 122, 30, 5], [142, 142, 12, 0]];
+const drawDots = (ctx: CanvasRenderingContext2D) => {
+  ctx.fillStyle = monolith[1];
+  ctx.fillRect(0, 0, TILE * 3, TILE * 2);
+  for (let ty = 0; ty < TILE * 2; ty += TILE)
+    for (let tx = 0; tx < TILE * 3; tx += TILE)
+      for (const [x, y, r, c] of DOTS) {
+        ctx.fillStyle = monolith[c];
+        ctx.beginPath();
+        ctx.arc(tx + x, ty + y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+};
+
+function ViewportDemo() {
+  const [mode, setMode] = useState<'canvas' | 'element'>('canvas');
+  const [zoom, setZoom] = useState<Zoom>('fit');
+  const [tile, setTile] = useState(true);
+  return (
+    <>
+      <Segmented<'canvas' | 'element'>
+        mono
+        fit
+        options={[
+          { value: 'canvas', label: 'Drawn', tip: 'Drawn by render() on a view-sized canvas' },
+          { value: 'element', label: 'Element', tip: 'An element at content size, scaled' },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
+      <Viewport
+        contentWidth={TILE * 3}
+        contentHeight={TILE * 2}
+        zoom={zoom}
+        onZoom={setZoom}
+        render={mode === 'canvas' ? drawDots : undefined}
+        overlay={tile ? (t) => <div className={s.tileLine} style={{ left: t.x, top: t.y, width: TILE * t.scale, height: TILE * t.scale }} /> : undefined}
+        bar={<Toggle label="Tile" checked={tile} onChange={setTile} />}
+        className={s.viewport}
+      >
+        {mode === 'element' ? (
+          <svg width={TILE * 3} height={TILE * 2} className={s.block}>
+            <rect width={TILE * 3} height={TILE * 2} fill={monolith[1]} />
+            {[0, 1, 2].flatMap((i) => [0, 1].flatMap((j) => DOTS.map(([x, y, r, c], k) => <circle key={`${i}${j}${k}`} cx={i * TILE + x} cy={j * TILE + y} r={r} fill={monolith[c]} />)))}
+          </svg>
+        ) : undefined}
+      </Viewport>
     </>
   );
 }
@@ -386,6 +441,10 @@ export function ControlsBoard() {
 
         <Group name="Picker" cap="Drag the plane or a track: each drag is one step, Esc cancels. Arrows on the plane nudge L and C, Shift ×10. Solid edge sRGB, dashed P3; past sRGB is dimmed." wide>
           <PickerDemo />
+        </Group>
+
+        <Group name="Viewport" cap="Wheel zooms around the pointer. Space-drag or middle-drag pans. Ctrl 0 fits, Ctrl Alt 0 is 100%, Ctrl = and Ctrl - step. The outline is an overlay: 1px at any zoom." wide>
+          <ViewportDemo />
         </Group>
 
         <Group name="Library item" cap="Selected and open, hover with the active tool's use, long names end in an ellipsis (hover shows the full name).">

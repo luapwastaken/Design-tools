@@ -32,8 +32,8 @@ export type PaintCanvasProps = {
 
 const TOOL = 'illustration';
 const SAVE_MS = 1000;
-/** a flow step slower than this runs every other frame, twice as far */
-const SLOW_STEP_MS = 5;
+/** a lifted stroke settles off-screen, about this much work a frame, so the UI keeps 60fps */
+const SETTLE_MS = 8;
 
 const TOOLS: { value: PaintTool; label: string; icon: 'brush' | 'gesture' | 'colorize'; tip?: string }[] = [
   { value: 'paint', label: 'Paint', icon: 'brush' },
@@ -41,7 +41,7 @@ const TOOLS: { value: PaintTool; label: string; icon: 'brush' | 'gesture' | 'col
   { value: 'pick', label: 'Pick', icon: 'colorize', tip: 'Pick: the colour under the cursor goes to the proposals. Alt-click picks while painting.' },
 ];
 const MEDIA: { value: PaintSettings['medium']; label: string; tip: string }[] = [
-  { value: 'wet', label: 'Wet', tip: 'Wet: watercolour. Transparent, bleeds while wet, dries with a darker edge.' },
+  { value: 'wet', label: 'Wet', tip: 'Wet: watercolour. Transparent; as you lift the brush the wash bleeds and dries with a darker edge.' },
   { value: 'dry', label: 'Dry', tip: 'Dry: gouache. Opaque and matte; a brush low on paint drags dry.' },
 ];
 
@@ -328,29 +328,23 @@ export function PaintCanvas(p: PaintCanvasProps) {
   );
 }
 
-/** Draws the simulation into the canvas each frame while there's anything to draw or anything wet. */
+/**
+ * Draws the simulation into the canvas: a stroke as it's painted, then, once the lifted stroke has
+ * settled (a few frames of work, off-screen), the settled wash in one go.
+ */
 function usePainter(sim: PaintSim, canvas: RefObject<HTMLCanvasElement | null>) {
-  const st = useRef({ raf: 0, ctx: null as CanvasRenderingContext2D | null, img: null as ImageData | null, slow: false, odd: false });
+  const st = useRef({ raf: 0, ctx: null as CanvasRenderingContext2D | null, img: null as ImageData | null });
 
-  const draw = () => {
+  const draw = (budgetMs: number) => {
     const { ctx, img } = st.current;
-    const d = ctx && img ? sim.takeDirty() : null;
+    const d = ctx && img ? sim.frame(budgetMs) : null;
     if (!d) return;
     sim.render(img!.data, d);
     ctx!.putImageData(img!, 0, 0, d.x0, d.y0, d.x1 - d.x0 + 1, d.y1 - d.y0 + 1);
   };
   const tick = () => {
-    const t = st.current;
-    t.raf = 0;
-    if (sim.wet) {
-      t.odd = !t.odd;
-      if (!t.slow || t.odd) {
-        const t0 = performance.now();
-        sim.step(t.slow ? 2 : 1);
-        t.slow = performance.now() - t0 > SLOW_STEP_MS;
-      }
-    }
-    draw();
+    st.current.raf = 0;
+    draw(SETTLE_MS);
     if (sim.wet || sim.stroking) kick();
   };
   const kick = () => {
@@ -362,15 +356,15 @@ function usePainter(sim: PaintSim, canvas: RefObject<HTMLCanvasElement | null>) 
     const img = ctx.createImageData(CANVAS_W, CANVAS_H);
     img.data.fill(255);
     Object.assign(st.current, { ctx, img });
-    draw();
+    draw(Infinity);
     return () => cancelAnimationFrame(st.current.raf);
   }, []);
 
   return {
     kick,
-    /** the whole painting as it stands, copied */
+    /** the whole painting, copied (a stroke still settling settles first) */
     snapshot(): ImageData {
-      draw();
+      draw(Infinity);
       return new ImageData(new Uint8ClampedArray(st.current.img!.data), CANVAS_W, CANVAS_H);
     },
   };
@@ -378,7 +372,7 @@ function usePainter(sim: PaintSim, canvas: RefObject<HTMLCanvasElement | null>) 
 
 /**
  * The painting as a workspace asset per Library item: loaded when the item changes, saved a
- * second after the last stroke once the paint has stopped moving. A document with no item yet
+ * second after the last stroke once it has settled. A document with no item yet
  * keeps its painting in memory and saves it under the item its first commit makes, and one that
  * moves to another item (a fork, a rename) keeps the painting on screen and saves it there.
  */
@@ -483,7 +477,7 @@ function usePainting(
     // anything under a minute old, and whatever a quarantined workspace refers to)
     const keep = Object.values(props.current.paintings).flatMap((url) => /[0-9a-f]{64}/.exec(url) ?? []);
     void window.api.invoke('workspace.gcAssets', TOOL, keep).catch(() => {});
-    // a quit inside the save's delay keeps the last strokes (still wet paint is saved as it stands)
+    // a quit inside the save's delay keeps the last strokes (one still settling settles first)
     const off = shell.beforeClose(() => {
       clearTimeout(timer.current);
       return write(owner.current ?? null);

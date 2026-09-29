@@ -53,3 +53,6 @@
   transform: translateY(calc(100% + 12px));
   transition-duration: var(--t-fast);
 }
+/* over a canvas tool the bottom chrome is the Viewport's bar, which holds the cursor readout and
+   counts: toasts rise from its top edge instead, 12px above it as above the status bar */
+:global([data-region="work"]:has(> :not([inert]) [data-viewport])) > .host { bottom: var(--canvas-bar); }

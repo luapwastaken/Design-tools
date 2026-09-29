@@ -20,10 +20,10 @@ const at = (sim: PaintSim, x: number, y: number): Rgb => {
   const j = (y * sim.w + x) * 3;
   return [sim.col[j], sim.col[j + 1], sim.col[j + 2]];
 };
-const dry = (sim: PaintSim) => {
-  let n = 0;
-  while (sim.step() && n < 2000) n++;
-  return n;
+const dry = (sim: PaintSim) => assert.ok(sim.settle() && !sim.wet);
+const same = (a: ArrayLike<number>, b: ArrayLike<number>) => {
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return a.length === b.length;
 };
 const hueOf = (c: Rgb) => toOklch({ mode: 'rgb', r: c[0], g: c[1], b: c[2] })[2];
 
@@ -56,12 +56,11 @@ test('a blue glaze over dry yellow mixes as paint: green, not the grey a straigh
   assert.ok(hue > 110 && hue < 200, `green: hue ${hue.toFixed(0)} (${glazed.map((v) => v.toFixed(2))} over ${yellow.map((v) => v.toFixed(2))})`);
 });
 
-test('a wash dries: the flow stops, and its rim ends up denser than its middle', () => {
+test('a lifted wash settles: dry, and its rim denser than its middle', () => {
   const sim = new PaintSim(200, 120);
   stroke(sim, opts('ultra', { medium: 'wet', size: 60 }), [30, 60], [170, 60]);
   assert.ok(sim.wet);
-  const steps = dry(sim);
-  assert.ok(!sim.wet && steps > 20 && steps < 600, `dried in ${steps} steps`);
+  dry(sim);
   // the edge of the wash, a pixel or two in, against its middle
   let rim = 1;
   for (let y = 30; y < 45; y++) rim = Math.min(rim, at(sim, 100, y)[0]);
@@ -100,31 +99,37 @@ test('smudge drags paint along, and a clean finger on bare paper lays nothing', 
   assert.deepEqual(at(sim, 75, 10), [1, 1, 1]);
 });
 
-test('undo puts strokes back exactly, Esc mid-stroke leaves nothing, and only the last strokes are kept', () => {
+test('undo puts strokes back exactly, mid-settle too; Esc mid-stroke leaves nothing; only the last strokes are kept', () => {
   const sim = new PaintSim(160, 100);
   stroke(sim, opts('cadred'), [10, 30], [150, 30]);
   const before = sim.col.slice();
   stroke(sim, opts('ultra', { medium: 'wet' }), [80, 5], [80, 95]);
-  sim.step();
+  sim.settle(0);
+  assert.ok(sim.wet, 'still settling');
+  assert.ok(sim.undo());
+  assert.deepEqual(sim.col, before);
+  assert.ok(!sim.wet && sim.settle(), 'an undone wash is gone, water and all');
+  stroke(sim, opts('ultra', { medium: 'wet' }), [80, 5], [80, 95]);
   sim.begin(opts('hansa'), 10, 70);
   sim.to(150, 70);
   sim.cancel();
   assert.equal(sim.depth, 2);
   assert.ok(sim.undo());
   assert.deepEqual(sim.col, before);
-  assert.ok(!sim.wet, 'an undone wash comes back dry');
   for (let i = 0; i < UNDO_STEPS + 5; i++) stroke(sim, opts('ultra'), [10 + i, 50], [20 + i, 50]);
   assert.equal(sim.depth, UNDO_STEPS);
 });
 
-test('Clear is one undo step that brings the painting back', () => {
+test('Clear is one undo step that brings the painting back, settled', () => {
   const sim = new PaintSim(120, 80);
-  stroke(sim, opts('viridian'), [10, 40], [110, 40]);
-  const painted = sim.col.slice();
+  const twin = new PaintSim(120, 80);
+  for (const s of [sim, twin]) stroke(s, opts('viridian', { medium: 'wet' }), [10, 40], [110, 40]);
+  twin.settle();
+  sim.settle(0);
   sim.clear(true);
-  assert.ok(sim.blank && sim.lastIsClear);
+  assert.ok(sim.blank && sim.lastIsClear && !sim.wet);
   sim.undo();
-  assert.deepEqual(sim.col, painted);
+  assert.deepEqual(sim.col, twin.col);
   sim.clear(false);
   assert.ok(sim.blank && sim.depth === 0);
 });
@@ -143,20 +148,89 @@ test('pick averages a 3×3 patch; a saved painting loads back as rendered', () =
   assert.equal(copy.depth, 0);
 });
 
-test('a scripted wet stroke with its flow stays well inside a frame budget', () => {
+test('painting a wet stroke stays well inside a frame budget', () => {
   const sim = new PaintSim();
   const out = new Uint8ClampedArray(sim.w * sim.h * 4);
   sim.begin(opts('ultra', { medium: 'wet', size: 60, load: 0.8 }), 60, 320);
   const t0 = performance.now();
   for (let i = 1; i <= 60; i++) {
     sim.to(60 + i * 14, 320 + Math.sin(i / 6) * 150);
-    sim.step();
-    const d = sim.takeDirty();
+    const d = sim.frame(8);
     if (d) sim.render(out, d);
   }
   sim.end();
   const perFrame = (performance.now() - t0) / 60;
   assert.ok(perFrame < 12, `${perFrame.toFixed(1)}ms per frame`);
+});
+
+// ── settling: nothing on the canvas changes slowly over time ─────────────────────────────────────
+
+test('after the brush lifts, the canvas changes once: the settled wash, all at once', () => {
+  const sim = new PaintSim(240, 160);
+  const shown = new Uint8ClampedArray(sim.w * sim.h * 4);
+  // the smallest slice of work a frame: as many frames as it can take
+  const present = () => {
+    const d = sim.frame(0);
+    if (d) sim.render(shown, d);
+  };
+  const o = opts('ultra', { medium: 'wet', size: 70, loaded: { ...loaded('ultra'), granulation: 1 } });
+  sim.begin(o, 30, 80);
+  for (let i = 1; i <= 20; i++) {
+    sim.to(30 + i * 9, 80 + (i % 5) * 4);
+    present();
+  }
+  sim.end();
+  const lifted = shown.slice();
+  let last = shown.slice();
+  let frames = 0;
+  let changes = 0;
+  while (sim.wet && frames < 5000) {
+    present();
+    frames++;
+    if (!same(shown, last)) {
+      changes++;
+      last = shown.slice();
+    }
+  }
+  for (let i = 0; i < 3; i++) present();
+  assert.ok(!sim.wet && frames > 20, `settled over ${frames} frames`);
+  assert.equal(changes, 1);
+  assert.ok(same(shown, last) && !same(shown, lifted), 'one swap, and it is the settled wash');
+  // what it shows is the whole settle, exactly: the same strokes settled in one go
+  const whole = new PaintSim(240, 160);
+  whole.begin(o, 30, 80);
+  for (let i = 1; i <= 20; i++) whole.to(30 + i * 9, 80 + (i % 5) * 4);
+  whole.end();
+  whole.settle();
+  assert.ok(same(whole.col, sim.col));
+});
+
+test('a stroke started while the last one settles waits for it: that wash dries as it would alone', () => {
+  const [a, b] = [new PaintSim(200, 120), new PaintSim(200, 120)];
+  for (const sim of [a, b]) stroke(sim, opts('ultra', { medium: 'wet', size: 50 }), [20, 60], [180, 60]);
+  a.settle(0);
+  b.settle();
+  for (const sim of [a, b]) stroke(sim, opts('cadred', { medium: 'wet', size: 30 }), [100, 10], [100, 110]);
+  assert.ok(same(a.col, b.col));
+  a.settle();
+  b.settle();
+  assert.ok(same(a.col, b.col));
+});
+
+test('a large wash settles in well under 300ms of work, in slices that leave a frame room', () => {
+  const sim = new PaintSim();
+  stroke(sim, opts('ultra', { medium: 'wet', size: 200, load: 0.8 }), [100, 320], [924, 320]);
+  let total = 0;
+  let worst = 0;
+  while (sim.wet) {
+    const t0 = performance.now();
+    sim.settle(4);
+    const t = performance.now() - t0;
+    total += t;
+    worst = Math.max(worst, t);
+  }
+  assert.ok(total < 300, `${total.toFixed(0)}ms in all`);
+  assert.ok(worst < 10, `${worst.toFixed(1)}ms at most in one frame`);
 });
 
 // ── the tray, the well and the settings ──────────────────────────────────────────────────────────

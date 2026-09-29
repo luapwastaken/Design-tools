@@ -17,6 +17,8 @@ export type SliderProps = {
   className?: string;
   /** width of the number field; default 88 */
   fieldWidth?: number;
+  /** where the fill starts: 0 for a signed value (an angle, a gap), so it reads as a direction and a size; default min */
+  origin?: number;
 } & NumberGesture;
 
 /**
@@ -57,7 +59,9 @@ export function Slider(p: SliderProps) {
   // unmounting mid-drag commits what's there rather than leaving a gesture (and its Esc) open
   useEffect(() => () => end(true), []);
 
-  const frac = max > min ? clamp((value - min) / (max - min), 0, 1) : 0;
+  const fracOf = (v: number) => (max > min ? clamp((v - min) / (max - min), 0, 1) : 0);
+  const frac = fracOf(value);
+  const from = fracOf(p.origin ?? min);
   const pct = `${frac * 100}%`;
 
   return (
@@ -88,7 +92,7 @@ export function Slider(p: SliderProps) {
         onLostPointerCapture={() => end(true)}
       >
         <i className={s.bar} />
-        <i className={s.fill} style={{ width: pct }} />
+        <i className={s.fill} style={{ left: `${Math.min(from, frac) * 100}%`, width: `${Math.abs(frac - from) * 100}%` }} />
         <i className={s.needle} style={{ left: pct }} />
         <Ticks />
       </div>

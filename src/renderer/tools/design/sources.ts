@@ -1,7 +1,8 @@
 // Where Build's proposals come from outside the palette: an image, a logo or SVG, pasted text.
 import { extractColours } from '../../../shared/palette/extract.ts';
 import { parseColours } from '../../../shared/palette/paste.ts';
-import { paints, pixelsOf, unique } from '../common/take.ts';
+import { svgColours } from '../../../shared/svg/index.ts';
+import { pixelsOf, unique } from '../common/take.ts';
 import { createStore } from '../common/store.ts';
 import { propose } from './proposals.ts';
 import { getView, patchView } from './view-state.ts';
@@ -28,7 +29,7 @@ export function extract(k = getView().k): void {
 
 /** a logo's or SVG's fill and stroke colours become proposals; throws when it has none */
 export function takeSvg(svgs: (string | null | undefined)[], name: string): void {
-  const colours = svgs.filter(Boolean).flatMap((s) => paints(s!));
+  const colours = svgs.filter(Boolean).flatMap((s) => svgColours(s!));
   if (!colours.length) throw new Error(`${name} draws nothing with a colour to take.`);
   propose('logo', `From ${name}`, unique(colours));
   patchView({ build: 'logo' });

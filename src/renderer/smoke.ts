@@ -4,6 +4,7 @@
 // 'full' runs the smoke list; 'quiet' is the relaunch: it restores, checks, and quits with no input.
 import { contrast, toHex, type Oklch } from '../shared/color/index.ts';
 import type { DocController } from '../shared/doc-api.ts';
+import { layoutTile, reachOf } from '../shared/pattern/layout.ts';
 import type { LibraryItemRef, PatternPayload, Swatch, ToolId } from '../shared/types.ts';
 import { saveFile, saveToFolder } from './lib/export.ts';
 import { decodeImage } from './lib/load.ts';
@@ -15,6 +16,8 @@ import type { ImageDoc } from './tools/dev-image/index.ts';
 import { addRamp, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
 import { clearProposals as clearBases, proposals as bases } from './tools/illustration/proposals.ts';
 import { getView as illustrationView, patchView as patchIllustration } from './tools/illustration/view-state.ts';
+import { PX_PER, toPayload, withUnit, type PatternDoc } from './tools/pattern/doc.ts';
+import { patchView as patchPattern } from './tools/pattern/view-state.ts';
 import { toast } from './ui/index.ts';
 import { toastStore } from './ui/toast.ts';
 
@@ -49,6 +52,7 @@ const swatchCount = async (id: string) => {
 };
 const designDoc = () => shell.doc('design') as DocController<DesignDoc>;
 const illustrationDoc = () => shell.doc('illustration') as DocController<IllustrationDoc>;
+const patternDoc = () => shell.doc('pattern') as DocController<PatternDoc>;
 const addSwatch = (doc: DocController<DesignDoc>, name: string) =>
   doc.transact('Add swatch', (d) => ({ ...d, swatches: [...d.swatches, designSwatch([0.6, 0.12, 40], name)] }));
 /** a key as the keyboard sends it (to the focused element), so it goes through the keymap's routing (spec §8) */
@@ -92,7 +96,7 @@ async function full(): Promise<void> {
   const dir = info.userData.replace(/[\\/]Design Tools$/, '');
 
   const ids = shell.getState().tools.map((t) => t.id);
-  check('Design, Illustration and the dev image tool are registered, and nothing else', JSON.stringify(ids) === JSON.stringify(['design', 'illustration', 'dev-image']), ids);
+  check('Design, Illustration, Pattern and the dev image tool are registered, and nothing else', JSON.stringify(ids) === JSON.stringify(['design', 'illustration', 'pattern', 'dev-image']), ids);
   for (const id of ids) {
     shell.setActive(id);
     await sleep(50);
@@ -211,6 +215,7 @@ async function full(): Promise<void> {
   const open = dp.source();
   if (check('Design still has its fork open', open && dp.state().t === 'saved', dp.state())) await outsideChange(dp, open!.itemId);
   await design(dir, image, di);
+  await pattern(dir, palette, di);
   await illustration();
 
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
@@ -349,6 +354,207 @@ async function design(dir: string, image: LibraryItemRef, di: DocController<Imag
   clearProposals();
 }
 
+/** Export in the Pattern tool, then the file it wrote, read back through the Library (import copies it in) */
+async function patternExport(dir: string, collection: string): Promise<(row: string) => Promise<Response | null>> {
+  await shell.createCollection(collection);
+  return async (row) => {
+    const button = [...(host('pattern')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export') && b.parentElement?.querySelector('b')?.textContent === row);
+    if (!button) return null;
+    const shown = toastStore.get().length;
+    button.click();
+    const done = await until(() => toastStore.get().slice(shown).find((t) => t.icon === 'download'));
+    const file = /^Exported (.+)\.$/.exec(String(done?.message ?? ''))?.[1];
+    if (!file) return null;
+    await shell.importFiles([`${dir}\\exports\\${file}`], collection);
+    const ref = await until(() => find((i) => i.collection === collection && `${i.name}.${i.ext}` === file));
+    const item = ref && (await api.invoke('library.read', ref.id));
+    return item && 'url' in item ? fetch(item.url) : null;
+  };
+}
+
+/** a PNG's pixel size and its pHYs resolution in dpi (null without one) */
+function pngInfo(bytes: Uint8Array): { w: number; h: number; dpi: number | null } {
+  const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let dpi: number | null = null;
+  for (let at = 8; at + 12 <= bytes.length; at += 12 + v.getUint32(at)) {
+    if (String.fromCharCode(...bytes.subarray(at + 4, at + 8)) === 'pHYs' && bytes[at + 16] === 1) dpi = v.getUint32(at + 8) * 0.0254;
+  }
+  return { w: v.getUint32(16), h: v.getUint32(20), dpi };
+}
+
+/**
+ * Make › Pattern (plan: Then): the first edit saves the pattern with its preview, a Library SVG and
+ * a palette come in, the Illustrator swatch repeats exactly, the artboard is in mm, the PNG carries
+ * its DPI, Surprise me leaves shapes and colours alone, and Dev image takes the pattern as an image.
+ */
+async function pattern(dir: string, palette: LibraryItemRef, di: DocController<ImageDoc>): Promise<void> {
+  const pd = patternDoc();
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  shell.setActive('pattern');
+  check('Pattern starts new, one shape on screen', pd.state().t === 'new' && pd.depth() === 0 && pd.get().slots.length === 1, pd.state());
+  // a layout whose shapes run over the tile's edges: odd half-drop columns, overlap, jitter, turns
+  pd.transact('Smoke layout', (d) => ({ ...d, arrangement: 'halfdrop', cols: 3, rows: 2, gapX: -6, gapY: 10, jitter: 18, rotation: { ...d.rotation, mode: 'random', min: -40, max: 40 } }));
+  const made = await until(() => (pd.state().t === 'saved' ? pd.source() : null));
+  if (!check('the first Pattern edit makes a pattern in Scratch', made?.collection === 'Scratch', made ?? pd.state())) return;
+  const id = made!.itemId;
+  const read = async () => {
+    const item = await api.invoke('library.read', id).catch(() => null);
+    return item?.kind === 'pattern' ? item.payload : null;
+  };
+  const preview = toPayload(pd.get()).preview;
+  const file = await until(read);
+  check('its file holds the settings and a preview tile', file?.arrangement === 'halfdrop' && file.preview.svg.includes('<svg') && file.preview.tileWidth > 0 && same(file.preview, preview), file?.preview.tileWidth);
+
+  // a Library SVG with its own ids comes in as a shape: namespaced, measured by its artwork
+  const stop = (at: number, c: Oklch) => `<stop offset="${at}" stop-color="${toHex(c)}"/>`;
+  const art = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80"><defs><linearGradient id="g">${stop(0, [0.6, 0.2, 25])}${stop(1, [0.5, 0.2, 265])}</linearGradient></defs><rect x="10" y="20" width="100" height="40" fill="url(#g)"/></svg>`;
+  const mark = await api.invoke('library.createImage', 'Scratch', 'Smoke shape', 'svg', new TextEncoder().encode(art).buffer);
+  const depth = pd.depth();
+  await shell.sendItem(mark, 'pattern');
+  const shape = pd.get().slots.at(-1)!;
+  const b = shape.bounds;
+  const near = (v: number, w: number) => Math.abs(v - w) < 0.5;
+  check(
+    'an SVG sent from the Library becomes a shape in one step, its ids its own, measured by its artwork',
+    pd.get().slots.length === 2 && shape.name === 'Smoke shape' && !shape.recolour && !/id="g"/.test(shape.svg) && /url\(#s\w+-g\)/.test(shape.svg) && near(b.x, 10) && near(b.y, 20) && near(b.w, 100) && near(b.h, 40) && pd.depth() === depth + 1,
+    [shape.name, b, pd.depth() - depth],
+  );
+  check('and the file holds it', await until(async () => ((await read())?.slots as unknown[] | undefined)?.length === 2));
+
+  // a palette: its colours go to the shape that takes palette colours; the SVG keeps its own
+  const swatches = await api.invoke('library.read', palette.id).then((i) => (i.kind === 'palette' ? i.payload.swatches : []));
+  await shell.sendItem(palette, 'pattern');
+  const pc = pd.get();
+  check(
+    'a palette sent to Pattern becomes its shape colours, the SVG shape keeping its own',
+    pc.palette.length > 0 && pc.palette.every((c) => swatches.some((w) => same(w.oklch, c))) && pc.slots[0].recolour && !pc.slots[1].recolour && pd.depth() === depth + 2,
+    [pc.palette.length, pd.undoLabel()],
+  );
+
+  // the Illustrator swatch, read back from its file: every shape over an edge is on the far side too
+  const exported = await patternExport(dir, 'Pattern out');
+  const swatch = await exported('Illustrator swatch');
+  const svg = swatch && new DOMParser().parseFromString(await swatch.text(), 'image/svg+xml').documentElement;
+  if (!check('Export writes the Illustrator swatch', svg?.nodeName === 'svg')) return;
+  const d = pd.get();
+  const tile = layoutTile(d);
+  const reach = reachOf(d.slots);
+  const uses = [...svg!.querySelectorAll('use')].flatMap((u) => {
+    const m = /translate\(([-\d.e]+) ([-\d.e]+)\)/.exec(u.getAttribute('transform') ?? '');
+    return m ? [[+m[1], +m[2]]] : [];
+  });
+  const at = (x: number, y: number) => uses.some(([ux, uy]) => Math.abs(ux - x) < 0.01 && Math.abs(uy - y) < 0.01);
+  let crossing = 0;
+  let missing = 0;
+  for (const it of tile.items) {
+    const r = reach(it);
+    if (it.x - r < 0 || it.x + r > tile.width || it.y - r < 0 || it.y + r > tile.height) crossing++;
+    for (const i of [-1, 0, 1]) {
+      for (const j of [-1, 0, 1]) {
+        const [x, y] = [it.x + i * tile.width, it.y + j * tile.height];
+        if (x + r > 0 && x - r < tile.width && y + r > 0 && y - r < tile.height && !at(x, y)) missing++;
+      }
+    }
+  }
+  const edge = svg!.querySelector(':scope > rect');
+  const box = `0 0 ${+tile.width.toFixed(3)} ${+tile.height.toFixed(3)}`;
+  check(
+    'the swatch repeats exactly: its tile is the layout’s, and every shape over an edge comes back on the opposite one',
+    crossing > 0 && !missing && svg!.getAttribute('viewBox') === box && edge?.getAttribute('fill') === 'none' && edge.getAttribute('stroke') === 'none',
+    { crossing, missing, viewBox: svg!.getAttribute('viewBox'), box },
+  );
+
+  // the artboard in mm: its size on paper, one clip at its edge
+  pd.transact('Export in mm', (x) => withUnit(x, 'mm'));
+  pd.transact('Change the artboard', (x) => ({ ...x, artboard: { w: 210 * PX_PER.mm, h: 297 * PX_PER.mm } }));
+  await until(() => host('pattern')?.querySelector('input[value="210.0"]'));
+  const board = await exported('Artboard SVG');
+  const boardSvg = board && new DOMParser().parseFromString(await board.text(), 'image/svg+xml').documentElement;
+  check('the artboard SVG is written in mm, clipped once at its edge', boardSvg?.getAttribute('width') === '210mm' && boardSvg.getAttribute('height') === '297mm' && boardSvg.querySelectorAll('clipPath').length === 1, boardSvg?.getAttribute('width'));
+
+  // one tile as a PNG at 300 dpi: that many pixels, and the DPI written into the file
+  patchPattern({ png: 'tile' });
+  pd.transact('Change the DPI', (x) => ({ ...x, dpi: 300 }));
+  const px = [Math.round((tile.width * 300) / 96), Math.round((tile.height * 300) / 96)];
+  await until(() => host('pattern')?.textContent?.includes(`${px[0]} × ${px[1]} px`));
+  const png = await exported('PNG');
+  const info = png && pngInfo(new Uint8Array(await png.arrayBuffer()));
+  check('the PNG carries its DPI in a pHYs chunk and is that many pixels', info && Math.round(info.dpi ?? 0) === 300 && info.w === px[0] && info.h === px[1], [info, px]);
+
+  // Surprise me: a new layout, the shapes and colours as they were
+  const before = pd.get();
+  const steps = pd.depth();
+  const kept = (x: PatternDoc) => JSON.stringify([x.slots, x.palette, x.background, x.paletteMode]);
+  const layout = (x: PatternDoc) => JSON.stringify([x.arrangement, x.cols, x.rows, x.gapX, x.gapY, x.sizeMin, x.sizeMax, x.rotation, x.jitter, x.seed]);
+  [...(host('pattern')?.querySelectorAll('button') ?? [])].find((x) => x.textContent?.trim().endsWith('Surprise me'))?.click();
+  const after = pd.get();
+  check('Surprise me changes the layout in one step and leaves the shapes and colours alone', pd.depth() === steps + 1 && pd.undoLabel() === 'Surprise me' && kept(after) === kept(before) && layout(after) !== layout(before), [pd.depth() - steps, pd.undoLabel()]);
+  check('and writes the file', await until(async () => (await read())?.seed === after.seed));
+
+  // Send to: Dev image takes the pattern as a 4096 square of its tile; over a background, not one clear pixel at a seam
+  const name = (await find((i) => i.id === id))?.name;
+  await shell.sendDoc('pattern', 'dev-image');
+  const url = di.get().source?.url;
+  const bmp = url ? await decodeImage(await (await fetch(url)).blob()) : null;
+  let clear = -1;
+  if (bmp) {
+    const c = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d')!;
+    c.drawImage(bmp, 0, 0);
+    const rgba = c.getImageData(0, 0, bmp.width, bmp.height).data;
+    clear = 0;
+    for (let i = 3; i < rgba.length; i += 4) if (rgba[i] < 255) clear++;
+  }
+  check(
+    'Send to: Dev image receives the pattern as an image, a 4096 square with no gap at the seams',
+    shell.getState().active === 'dev-image' && di.get().source?.name === name && bmp?.width === 4096 && bmp.height === 4096 && after.background && clear === 0,
+    [di.get().source?.name, name, bmp?.width, bmp?.height, clear],
+  );
+  bmp?.close();
+}
+
+/**
+ * One wet stroke; how many times the canvas changes once the brush lifts (unit D: the settled wash
+ * swaps in once). Counted in frames, not time: the smoke window is never shown, so its frames come
+ * about once a second, and the settle runs a slice a frame.
+ */
+async function settleSwaps(y: number): Promise<number | null> {
+  const canvas = await until(() => {
+    const c = host('illustration')?.querySelector<HTMLCanvasElement>('canvas[aria-label^="Painting"]');
+    return c && c.getBoundingClientRect().width > 0 ? c : null;
+  });
+  if (!canvas) return null;
+  const ctx = canvas.getContext('2d')!;
+  const sum = () => {
+    const px = new Uint32Array(ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer);
+    let h = 0;
+    for (let i = 0; i < px.length; i++) h = (Math.imul(h, 31) + px[i]) | 0;
+    return h;
+  };
+  const frame = () => new Promise((r) => requestAnimationFrame(r));
+  const r = canvas.getBoundingClientRect();
+  const pointer = (type: string, x: number) =>
+    canvas.dispatchEvent(
+      new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerup' ? 0 : 1, clientX: r.left + x * r.width, clientY: r.top + y * r.height }),
+    );
+  pointer('pointerdown', 0.2);
+  for (let i = 1; i <= 20; i++) pointer('pointermove', 0.2 + i * 0.03);
+  // the stroke as painted, all on screen; then the lift
+  for (let i = 0; i < 3; i++) await frame();
+  let last = sum();
+  pointer('pointerup', 0.8);
+  // until it has changed and then held still for 5 frames (a settle drawn as it goes changes every frame)
+  let changes = 0;
+  let still = 0;
+  for (let n = 0; n < 120 && (!changes || still < 5); n++) {
+    await frame();
+    const now = sum();
+    still = now === last ? still + 1 : 0;
+    if (now !== last) changes++;
+    last = now;
+  }
+  return changes;
+}
+
 /**
  * Colour › Illustration (plan: Integrate): an edit writes the file, regenerating keeps hand-edited
  * steps, Design writes an Illustration palette back whole, and a painting is kept with its palette.
@@ -418,6 +624,12 @@ async function illustration(): Promise<void> {
   if (!check('Paint shows the canvas', await stroke(0.5))) return;
   check('the stroke is on the canvas', await until(() => paintedPixels() > 500), paintedPixels());
   check('and is saved under its palette', await until(() => illustrationView().paintings[id], 6000), illustrationView().paintings);
+  patchIllustration({ canvas: { ...illustrationView().canvas, medium: 'wet' } });
+  // the brush reads its medium from the last render
+  await until(() => host('illustration')?.querySelector('[role="radio"][aria-label^="Wet"]')?.getAttribute('aria-checked') === 'true');
+  const swaps = await settleSwaps(0.75);
+  check('a wet stroke changes nothing on the canvas after the lift but the one settled wash', swaps === 1, swaps);
+  patchIllustration({ canvas: { ...illustrationView().canvas, medium: 'dry' } });
 
   // an edit while Design holds the palette forks it: the painting stays on screen and goes with the fork
   await shell.sendItem(ref!, 'design');

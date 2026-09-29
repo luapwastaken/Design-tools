@@ -4,7 +4,8 @@
 import type { Oklch } from '../../../shared/color/index.ts';
 import { extractColours } from '../../../shared/palette/extract.ts';
 import { createStore } from '../common/store.ts';
-import { paints, pixelsOf, unique } from '../common/take.ts';
+import { svgColours } from '../../../shared/svg/index.ts';
+import { pixelsOf, unique } from '../common/take.ts';
 
 export type Proposal = { id: string; oklch: Oklch; name: string | null };
 export type Proposals = { label: string; items: Proposal[] };
@@ -53,7 +54,7 @@ export async function takeImage(blob: Blob, name: string): Promise<void> {
 
 /** a logo's or SVG's fill and stroke colours; throws when it has none */
 export function takeSvg(svgs: (string | null | undefined)[], name: string): void {
-  const colours = unique(svgs.filter(Boolean).flatMap((s) => paints(s!)));
+  const colours = unique(svgs.filter(Boolean).flatMap((s) => svgColours(s!)));
   if (!colours.length) throw new Error(`${name} draws nothing with a colour to take.`);
   propose(`From ${name}`, colours);
 }

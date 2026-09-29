@@ -56,3 +56,8 @@
 
 /* the inspector's width, as in the Colour > Design board */
 .pickerMod { width: 380px; max-width: 100%; }
+
+/* the viewport specimen: a canvas tool's work area in miniature */
+.viewport { height: 340px; }
+.block { display: block; }
+.tileLine { position: absolute; outline: 1px solid var(--cross); box-shadow: 0 0 0 2px var(--cross-halo); }

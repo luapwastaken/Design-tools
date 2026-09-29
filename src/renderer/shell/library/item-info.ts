@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
+import { toDataUrl } from '../../../shared/svg/index.ts';
 import type { LibraryItemRef, LoadedItem } from '../../../shared/types.ts';
 import { ipc } from '../core/ipc.ts';
 
@@ -32,8 +33,6 @@ const subscribe = (fn: () => void) => {
   return () => void listeners.delete(fn);
 };
 
-const svgUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-
 function describe(item: LoadedItem): ItemInfo {
   switch (item.kind) {
     case 'palette': {
@@ -43,10 +42,10 @@ function describe(item: LoadedItem): ItemInfo {
     case 'pattern': {
       const { svg, tileWidth: w, tileHeight: h } = item.payload.preview;
       const [pw, ph] = [Math.round(w), Math.round(h)];
-      return { svg: svgUrl(svg), tile: { w, h }, meta: pw === ph ? `${pw} px tile` : `${pw} × ${ph} px tile` };
+      return { svg: toDataUrl(svg), tile: { w, h }, meta: pw === ph ? `${pw} px tile` : `${pw} × ${ph} px tile` };
     }
     case 'logo':
-      return { svg: svgUrl(item.payload.preview.svg) };
+      return { svg: toDataUrl(item.payload.preview.svg) };
     default:
       return {};
   }

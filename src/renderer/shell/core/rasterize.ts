@@ -1,3 +1,4 @@
+import { framed, parseSize, type ViewBox } from '../../../shared/svg/index.ts';
 import type { LoadedItem } from '../../../shared/types.ts';
 
 // "As an image" (spec §7.4): a pattern is its preview tile repeated over a maxEdge square at the
@@ -16,7 +17,11 @@ export async function rasterize(item: LoadedItem, maxEdge = MAX_EDGE): Promise<B
     }
     case 'pattern': {
       const { svg, tileWidth, tileHeight } = item.payload.preview;
-      const tile = await drawSvg(svg, () => [Math.max(1, Math.round(tileWidth)), Math.max(1, Math.round(tileHeight))]);
+      // a tile bigger than the square shows only its top left there, so only that much is drawn
+      // (a whole 30,000 px tile is past what a canvas holds and came out blank)
+      const [x, y] = parseSize(svg).viewBox;
+      const box: ViewBox = [x, y, Math.min(maxEdge, tileWidth), Math.min(maxEdge, tileHeight)];
+      const tile = await drawSvg(svg, () => [Math.max(1, Math.round(box[2])), Math.max(1, Math.round(box[3]))], box);
       const out = new OffscreenCanvas(maxEdge, maxEdge);
       const ctx = out.getContext('2d')!;
       ctx.fillStyle = ctx.createPattern(tile, 'repeat')!;
@@ -35,25 +40,15 @@ const fit = (w: number, h: number, edge: number): [number, number] => {
   return [Math.max(1, Math.round(w * k)), Math.max(1, Math.round(h * k))];
 };
 
-/** Draw SVG markup at the size `size(intrinsic w, h)` returns. The markup is given that size, so the vector renders sharp at it. */
-async function drawSvg(markup: string, size: (w: number, h: number) => [number, number]): Promise<OffscreenCanvas> {
-  const doc = new DOMParser().parseFromString(markup, 'image/svg+xml');
-  const root = doc.documentElement;
-  if (root.nodeName !== 'svg' || doc.getElementsByTagName('parsererror').length) throw new Error("The SVG couldn't be read.");
-  const box = root.getAttribute('viewBox')?.trim().split(/[\s,]+/).map(Number);
-  const length = (name: string) => {
-    const v = root.getAttribute(name) ?? '';
-    return /%/.test(v) ? NaN : parseFloat(v);
-  };
-  const iw = length('width') || box?.[2] || 300;
-  const ih = length('height') || box?.[3] || 150;
-  // without a viewBox, a new width/height would crop the drawing instead of scaling it
-  if (!box || box.length !== 4) root.setAttribute('viewBox', `0 0 ${iw} ${ih}`);
-  const [w, h] = size(iw, ih);
-  root.setAttribute('width', String(w));
-  root.setAttribute('height', String(h));
-
-  const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(root)], { type: 'image/svg+xml' }));
+/**
+ * Draw SVG markup at the size `size(viewBox w, h)` returns, its viewBox (or `box`) filling it exactly. The markup
+ * is given that size, so the vector renders sharp at it; parseSize reads mm and in, and framed never
+ * letterboxes, so a pattern tile rounded to whole pixels still meets its neighbours with no gap.
+ */
+async function drawSvg(markup: string, size: (w: number, h: number) => [number, number], box?: ViewBox): Promise<OffscreenCanvas> {
+  const [, , vw, vh] = parseSize(markup).viewBox;
+  const [w, h] = size(vw, vh);
+  const url = URL.createObjectURL(new Blob([framed(markup, w, h, box)], { type: 'image/svg+xml' }));
   try {
     const img = new Image();
     img.src = url;

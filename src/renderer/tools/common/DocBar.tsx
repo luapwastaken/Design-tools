@@ -56,8 +56,8 @@ export function DocBar<L extends string>({ tool, doc, count, onNew, lower, onPic
   );
 }
 
-/** A colour tool's palette to another tool (foundation spec §7.4). `empty`: why it's off while the palette is. */
-function SendTo({ tool, doc, empty }: { tool: ToolId; doc: DocController<unknown>; empty: string }) {
+/** A tool's item to another tool (foundation spec §7.4). `empty`: why it's off while the document is; `noun`: what it sends. */
+export function SendTo({ tool, doc, empty, noun = 'palette' }: { tool: ToolId; doc: DocController<unknown>; empty: string; noun?: string }) {
   const kind = useSyncExternalStore(doc.subscribe, () => shell.sendKind(tool));
   const open = (e: MouseEvent<HTMLButtonElement>) => {
     if (!kind) return;
@@ -66,7 +66,7 @@ function SendTo({ tool, doc, empty }: { tool: ToolId; doc: DocController<unknown
       .filter((t) => t.tool.id !== tool)
       .map(({ tool: to, use }) => ({ label: to.label, icon: to.icon, hint: use.label, onSelect: () => void shell.sendDoc(tool, to.id) }));
     // detail 0: opened from the keyboard, so start on the first row
-    menu.open(e.currentTarget.getBoundingClientRect(), items.length ? items : [{ label: 'No other tool takes a palette yet', disabled: true }], {
+    menu.open(e.currentTarget.getBoundingClientRect(), items.length ? items : [{ label: `No other tool takes a ${noun} yet`, disabled: true }], {
       owner: e.currentTarget,
       initial: e.detail === 0 ? 0 : undefined,
     });
