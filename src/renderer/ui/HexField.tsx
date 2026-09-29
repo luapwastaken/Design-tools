@@ -19,8 +19,6 @@ export type HexFieldProps = {
   chipRef?: Ref<HTMLButtonElement>;
   className?: string;
   ref?: Ref<HTMLDivElement>;
-  /** controls board only */
-  forceState?: 'focus';
 } & ColourGesture;
 
 const PROBLEM = 'Type a hex colour: 3 or 6 digits, # optional.';
@@ -30,7 +28,7 @@ const PROBLEM = 'Type a hex colour: 3 or 6 digits, # optional.';
  * that doesn't parse stays with its message and is never committed; blur then reverts it.
  */
 export function HexField(p: HexFieldProps) {
-  const { value, name, disabled, onChip, open, chipRef, className, ref, forceState } = p;
+  const { value, name, disabled, onChip, open, chipRef, className, ref } = p;
   const hex = toHex(value);
   const [text, setText] = useState<string | null>(null); // non-null while holding an uncommitted edit
   const [problem, setProblem] = useState<string | null>(null);
@@ -77,7 +75,6 @@ export function HexField(p: HexFieldProps) {
       <div
         ref={ref}
         className={s.cf}
-        data-state={forceState}
         data-open={open ? '' : undefined}
         data-error={problem ? '' : undefined}
         data-disabled={disabled ? '' : undefined}

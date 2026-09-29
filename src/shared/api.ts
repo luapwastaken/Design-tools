@@ -86,6 +86,11 @@ export type Api = {
   'export.save': (req: { tool: ToolId; suggestedName: string; ext: string; filterName: string; data: ArrayBuffer | string }) => Promise<string | null>;
   /** pick a folder once, write every file into it with the same overwrite rule */
   'export.toFolder': (req: { tool: ToolId; files: { name: string; data: ArrayBuffer | string }[] }) => Promise<{ folder: string; written: string[] } | null>;
+  /** the same, for files made one at a time (an animation's frames): pick the folder, or null if cancelled */
+  'export.openFolder': (tool: ToolId) => Promise<{ id: number; folder: string } | null>;
+  /** one file into an open folder, with the same overwrite and naming rules; its path */
+  'export.intoFolder': (id: number, name: string, data: ArrayBuffer | string) => Promise<string>;
+  'export.closeFolder': (id: number) => Promise<void>;
   'shell.reveal': (path: string) => Promise<void>;
 };
 

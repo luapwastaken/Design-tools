@@ -61,7 +61,7 @@ const exported = ['smoke export.png', join('design', 'one.txt'), join('design', 
 check('the exports are on disk', exported.every((f) => existsSync(join(exports, f))), exported.filter((f) => !existsSync(join(exports, f))).join(', '));
 const trash = existsSync(join(dir, 'trash')) ? readdirSync(join(dir, 'trash')) : [];
 check('the deleted palette is in the trash', trash.some((f) => f.endsWith(' Untitled palette.palette.json')), trash.join(', '));
-check('the delete pending at the quit is in the trash', trash.some((f) => f.endsWith(' Dev image.png')), trash.join(', '));
+check('the delete pending at the quit is in the trash', trash.some((f) => f.endsWith(' Dither.png')), trash.join(', '));
 
 const watched = [join(dir, 'Library'), join(dir, 'Design Tools', 'workspace')];
 const snapshot = () => new Map(watched.flatMap((d) => [...mtimes(d)]));

@@ -16,7 +16,7 @@ type ViewProps = {
   onDismiss?(): void;
 } & Omit<HTMLAttributes<HTMLDivElement>, 'children'>;
 
-/** One toast. The host stacks and moves them; the controls board draws one in place. */
+/** One toast. The host stacks and moves them. */
 export function ToastView({ entry: t, ctrlZ, onUndo, onDismiss, className, ...div }: ViewProps) {
   const error = t.kind === 'error';
   return (

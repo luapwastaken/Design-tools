@@ -11,14 +11,21 @@ import { lockupSvg } from '../shared/logo/svg.ts';
 import type { Rect } from '../shared/logo/types.ts';
 import { layoutTile, reachOf } from '../shared/pattern/layout.ts';
 import { parseSize } from '../shared/svg/index.ts';
+import { ALGORITHMS } from '../shared/dither/algorithms.ts';
 import type { LibraryItemRef, PatternPayload, Swatch, ToolId } from '../shared/types.ts';
 import { saveFile, saveToFolder } from './lib/export.ts';
+import { decodeFrames } from './lib/frames.ts';
+import { gifWriter, readGif } from './lib/gif.ts';
 import { decodeImage } from './lib/load.ts';
+import type { Rgba8 } from './lib/png-indexed.ts';
 import { shell } from './shell/core/index.ts';
 import { select as selectInDesign } from './tools/design/actions.ts';
 import { newSwatch as designSwatch, recolour as recolourInDesign, type DesignDoc } from './tools/design/doc.ts';
 import { clearProposals, proposals } from './tools/design/proposals.ts';
-import type { ImageDoc } from './tools/dev-image/index.ts';
+import { used, type DitherDoc } from './tools/dither/doc.ts';
+import { lookOf as ditherLook, withLook } from './tools/dither/looks.ts';
+import { dithered, ready as ditherReady, type Result } from './tools/dither/pipeline.ts';
+import { status as ditherStatus } from './tools/dither/view-state.ts';
 import { mapInk, spotInk, type HalftoneDoc } from './tools/halftone/doc.ts';
 import { lookOf, Painter } from './tools/halftone/draw.ts';
 import { platesFor, pngBlob } from './tools/halftone/exports.ts';
@@ -70,6 +77,9 @@ const swatchCount = async (id: string) => {
 const designDoc = () => shell.doc('design') as DocController<DesignDoc>;
 const illustrationDoc = () => shell.doc('illustration') as DocController<IllustrationDoc>;
 const patternDoc = () => shell.doc('pattern') as DocController<PatternDoc>;
+const ditherDoc = () => shell.doc('dither') as DocController<DitherDoc>;
+/** one of Dither's looks by id, over `d` */
+const withLookId = (d: DitherDoc, id: string) => withLook(d, ditherLook(id)!);
 const addSwatch = (doc: DocController<DesignDoc>, name: string) =>
   doc.transact('Add swatch', (d) => ({ ...d, swatches: [...d.swatches, designSwatch([0.6, 0.12, 40], name)] }));
 /** a key as the keyboard sends it (to the focused element), so it goes through the keymap's routing (spec §8) */
@@ -78,9 +88,9 @@ const press = (key: string, o: KeyboardEventInit = {}) =>
 const ctrlZ = () => press('z', { code: 'KeyZ', ctrlKey: true });
 const ctrlY = () => press('y', { code: 'KeyY', ctrlKey: true });
 const host = (id: ToolId) => document.querySelector<HTMLElement>(`[data-tool="${id}"]`);
-/** the size of the image Dev image holds now */
-async function imageSize(di: DocController<ImageDoc>): Promise<[number, number] | null> {
-  const url = di.get().source?.url;
+/** the size of the image Dither holds now, read from its file */
+async function imageSize(dt: DocController<DitherDoc>): Promise<[number, number] | null> {
+  const url = dt.get().source?.assets[0];
   if (!url) return null;
   const bmp = await decodeImage(await (await fetch(url)).blob());
   const size: [number, number] = [bmp.width, bmp.height];
@@ -113,7 +123,7 @@ async function full(): Promise<void> {
   const dir = info.userData.replace(/[\\/]Design Tools$/, '');
 
   const ids = shell.getState().tools.map((t) => t.id);
-  check('Design, Illustration, Pattern, Logo, Halftone and the dev image tool are registered, and nothing else', JSON.stringify(ids) === JSON.stringify(['design', 'illustration', 'pattern', 'logo', 'halftone', 'dev-image']), ids);
+  check('Design, Illustration, Pattern, Logo, Dither and Halftone are registered, and nothing else', JSON.stringify(ids) === JSON.stringify(['design', 'illustration', 'pattern', 'logo', 'dither', 'halftone']), ids);
   for (const id of ids) {
     shell.setActive(id);
     await sleep(50);
@@ -146,25 +156,28 @@ async function full(): Promise<void> {
   check('the .ase imports as a palette', palette && (await swatchCount(palette.id)) > 0, palette);
   if (!check('the PNG imports as an image', image) || !palette || !image) return;
 
-  // Send to between tools
-  const di = shell.doc('dev-image') as DocController<ImageDoc>;
-  await shell.sendDoc('design', 'dev-image');
-  check('Send to: Design tints Dev image as one step', di.get().tints.length === 1 && di.depth() === 1, di.get().tints);
+  // Send to between tools: a dither needs two colours, so the palette gets a second
+  const dt = ditherDoc();
+  dp.transact('Add swatch', (d) => ({ ...d, swatches: [...d.swatches, designSwatch([0.3, 0.08, 250], 'Smoke dark')] }));
+  await shell.sendDoc('design', 'dither');
+  const got = dt.get().palette;
+  check('Send to: Design gives Dither its palette as one step', got.name === first!.name && got.colours.length === 2 && dt.get().paletteSource.kind === 'library' && dt.depth() === 1, got);
   const sent = toastStore.get().findLast((t) => t.icon === 'input');
   check('its toast has Undo and says nothing about Ctrl+Z', sent?.undo && !/Ctrl/.test(String(sent.message)), sent?.message);
-  check('Ctrl+Z goes to that toast while Dev image shows', toast.activeCtrlZ()?.id === sent?.id);
+  check('Ctrl+Z goes to that toast while Dither shows', toast.activeCtrlZ()?.id === sent?.id);
   shell.setActive('design');
   check('and not once another tool shows', toast.activeCtrlZ()?.id !== sent?.id);
-  shell.setActive('dev-image');
-  check("the undo button's tooltip names the step", host('dev-image')?.querySelector('[aria-label^="Undo: "]')?.getAttribute('aria-label') === 'Undo: Tint from Untitled palette');
-  await shell.sendItem(image, 'dev-image');
-  check('Send to: the image opens in Dev image', di.get().source?.name === image.name, di.get().source);
+  shell.setActive('dither');
+  const undoLabel = () => host('dither')?.querySelector('[aria-label^="Undo: "]')?.getAttribute('aria-label');
+  check("the undo button's tooltip names the step", await until(() => undoLabel() === `Undo: Palette from ${first!.name}`, 2000), undoLabel());
+  await shell.sendItem(image, 'dither');
+  check('Send to: the image opens in Dither', dt.get().source?.name === image.name, dt.get().source);
   const il = illustrationDoc();
   const plain = il.get();
   clearBases();
-  await shell.sendDoc('dev-image', 'illustration');
+  await shell.sendDoc('dither', 'illustration');
   const render = await find((i) => i.collection === 'Scratch' && i.kind === 'image');
-  check('Send to: Dev image renders into Scratch and Illustration offers its colours as bases', render && shell.getState().active === 'illustration' && (bases.get()?.items.length ?? 0) > 0, bases.get()?.items.length);
+  check('Send to: Dither renders into Scratch and Illustration offers its colours as bases', render && shell.getState().active === 'illustration' && (bases.get()?.items.length ?? 0) > 0, bases.get()?.items.length);
   check('and leaves the Illustration document alone', il.get() === plain && il.depth() === 0, il.depth());
   clearBases();
 
@@ -219,22 +232,23 @@ async function full(): Promise<void> {
 
   // export, through renderer/lib/export (spec §10.4)
   const exports = `${dir}\\exports\\`;
-  const out = await shell.tool('dev-image').render!(di.get(), {});
+  const out = await shell.tool('dither').render!(dt.get(), {});
   const bytes = await out.blob.arrayBuffer();
-  const saved = await saveFile({ tool: 'dev-image', suggestedName: 'smoke export', ext: 'png', filterName: 'PNG image', data: bytes });
+  const saved = await saveFile({ tool: 'dither', suggestedName: 'smoke export', ext: 'png', filterName: 'PNG image', data: bytes });
   check('export.save writes into the smoke exports folder', saved?.startsWith(exports), saved);
   const files = [{ name: 'one.txt', data: 'one' }, { name: 'two.txt', data: 'two' }];
   const folder = await saveToFolder({ tool: 'design', files });
   check('export.toFolder writes every file there', folder?.written.length === 2 && folder.written.every((p) => p.startsWith(exports)), folder);
 
-  await asImage(di);
+  await asImage(dt);
   await fieldUndo(dp);
   const open = dp.source();
   if (check('Design still has its fork open', open && dp.state().t === 'saved', dp.state())) await outsideChange(dp, open!.itemId);
-  await design(dir, image, di);
-  await pattern(dir, palette, di);
+  await design(dir, image, dt);
+  await pattern(dir, palette, dt);
   await logo(dir);
-  await halftone(dir, di);
+  await halftone(dir, dt);
+  await dither(dir);
   await illustration();
 
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
@@ -243,16 +257,16 @@ async function full(): Promise<void> {
 }
 
 /** spec §7.4 "as an image": an SVG at 4096 on its long side, a pattern tiled over a 4096 square */
-async function asImage(di: DocController<ImageDoc>): Promise<void> {
+async function asImage(dt: DocController<DitherDoc>): Promise<void> {
   const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100"><rect width="200" height="100"/></svg>');
   const mark = await api.invoke('library.createImage', 'Scratch', 'Smoke mark', 'svg', svg.buffer);
-  await shell.sendItem(mark, 'dev-image');
-  check('an SVG comes into Dev image at 4096 on its long side', JSON.stringify(await imageSize(di)) === '[4096,2048]', await imageSize(di));
+  await shell.sendItem(mark, 'dither');
+  check('an SVG comes into Dither at 4096 on its long side', JSON.stringify(await imageSize(dt)) === '[4096,2048]', await imageSize(dt));
   const tile = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="20"/></svg>';
   const pattern: PatternPayload = { kind: 'pattern', id: '', version: 1, preview: { svg: tile, tileWidth: 64, tileHeight: 64 } };
   const { ref } = await api.invoke('library.create', 'Scratch', 'Smoke tile', pattern);
-  await shell.sendItem(ref, 'dev-image');
-  check('a pattern comes in as a 4096 square of its tile', JSON.stringify(await imageSize(di)) === '[4096,4096]', await imageSize(di));
+  await shell.sendItem(ref, 'dither');
+  check('a pattern comes in as a 4096 square of its tile', JSON.stringify(await imageSize(dt)) === '[4096,4096]', await imageSize(dt));
 }
 
 /** spec §8 step 1: a text field holding an unsaved edit keeps Ctrl+Z; the tool's history is untouched */
@@ -289,8 +303,8 @@ async function outsideChange(dp: DocController<DesignDoc>, id: string): Promise<
   check('Ctrl+Z brings mine back and writes it', await until(async () => dp.get().swatches.length === mine + 1 && (await swatchCount(id)) === mine + 1), [dp.get().swatches.length, mine]);
 }
 
-/** Colour › Design: open, edit, a contrast fix, Export ASE read back, Send to from Dev image (plan: Integrate) */
-async function design(dir: string, image: LibraryItemRef, di: DocController<ImageDoc>): Promise<void> {
+/** Colour › Design: open, edit, a contrast fix, Export ASE read back, Send to from Dither (plan: Integrate) */
+async function design(dir: string, image: LibraryItemRef, dt: DocController<DitherDoc>): Promise<void> {
   const dd = shell.doc('design') as DocController<DesignDoc>;
   const fx = `${dir}\\fixtures\\`;
   await shell.importFiles([`${fx}glossy-pastic_palette.ase`], 'Design');
@@ -358,16 +372,17 @@ async function design(dir: string, image: LibraryItemRef, di: DocController<Imag
   for (let i = 0; i < 4; i++) ctrlZ();
   check('Undo goes back to the palette that was open', await until(() => dd.source()?.itemId === held?.itemId && dd.state().t === 'saved'), dd.source());
 
-  // Send to Design from Dev image: proposals, the document untouched (untinted, so its four colours show)
-  await shell.sendItem(image, 'dev-image');
-  di.transact('Clear tints', (d) => ({ ...d, tints: [] }));
+  // Send to Design from Dither: the dithered colours as proposals, the document untouched (the CGA
+  // look, so four colours show)
+  await shell.sendItem(image, 'dither');
+  dt.transact('Use the CGA look', (d) => withLookId(d, 'cga'));
   clearProposals();
   const doc = dd.get();
   const steps = dd.depth();
-  await shell.sendDoc('dev-image', 'design');
+  await shell.sendDoc('dither', 'design');
   const ghosts = proposals.get();
-  check('Send to Design from Dev image proposes its colours', shell.getState().active === 'design' && (ghosts?.items.length ?? 0) >= 2, ghosts?.items.length);
-  check('and leaves the document and its history alone', dd.get() === doc && dd.depth() === steps && di.depth() > 0, [dd.depth(), steps]);
+  check('Send to Design from Dither proposes its colours', shell.getState().active === 'design' && (ghosts?.items.length ?? 0) >= 2, ghosts?.items.length);
+  check('and leaves the document and its history alone', dd.get() === doc && dd.depth() === steps && dt.depth() > 0, [dd.depth(), steps]);
   const sent = toastStore.get().findLast((t) => t.icon === 'input');
   check('its toast offers no Undo (there is no step)', sent && !sent.undo, sent?.message);
   clearProposals();
@@ -377,7 +392,7 @@ async function design(dir: string, image: LibraryItemRef, di: DocController<Imag
 async function toolExport(dir: string, tool: ToolId, collection: string): Promise<(row: string) => Promise<Response | null>> {
   await shell.createCollection(collection);
   return async (row) => {
-    const button = [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export') && b.parentElement?.querySelector('b')?.textContent === row);
+    const button = await until(() => [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export') && !b.disabled && b.parentElement?.querySelector('b')?.textContent === row));
     if (!button) return null;
     const shown = toastStore.get().length;
     button.click();
@@ -404,9 +419,9 @@ function pngInfo(bytes: Uint8Array): { w: number; h: number; dpi: number | null 
 /**
  * Make › Pattern (plan: Then): the first edit saves the pattern with its preview, a Library SVG and
  * a palette come in, the Illustrator swatch repeats exactly, the artboard is in mm, the PNG carries
- * its DPI, Surprise me leaves shapes and colours alone, and Dev image takes the pattern as an image.
+ * its DPI, Surprise me leaves shapes and colours alone, and Dither takes the pattern as an image.
  */
-async function pattern(dir: string, palette: LibraryItemRef, di: DocController<ImageDoc>): Promise<void> {
+async function pattern(dir: string, palette: LibraryItemRef, dt: DocController<DitherDoc>): Promise<void> {
   const pd = patternDoc();
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
   shell.setActive('pattern');
@@ -510,10 +525,10 @@ async function pattern(dir: string, palette: LibraryItemRef, di: DocController<I
   check('Surprise me changes the layout in one step and leaves the shapes and colours alone', pd.depth() === steps + 1 && pd.undoLabel() === 'Surprise me' && kept(after) === kept(before) && layout(after) !== layout(before), [pd.depth() - steps, pd.undoLabel()]);
   check('and writes the file', await until(async () => (await read())?.seed === after.seed));
 
-  // Send to: Dev image takes the pattern as a 4096 square of its tile; over a background, not one clear pixel at a seam
+  // Send to: Dither takes the pattern as a 4096 square of its tile; over a background, not one clear pixel at a seam
   const name = (await find((i) => i.id === id))?.name;
-  await shell.sendDoc('pattern', 'dev-image');
-  const url = di.get().source?.url;
+  await shell.sendDoc('pattern', 'dither');
+  const url = dt.get().source?.assets[0];
   const bmp = url ? await decodeImage(await (await fetch(url)).blob()) : null;
   let clear = -1;
   if (bmp) {
@@ -524,9 +539,9 @@ async function pattern(dir: string, palette: LibraryItemRef, di: DocController<I
     for (let i = 3; i < rgba.length; i += 4) if (rgba[i] < 255) clear++;
   }
   check(
-    'Send to: Dev image receives the pattern as an image, a 4096 square with no gap at the seams',
-    shell.getState().active === 'dev-image' && di.get().source?.name === name && bmp?.width === 4096 && bmp.height === 4096 && after.background && clear === 0,
-    [di.get().source?.name, name, bmp?.width, bmp?.height, clear],
+    'Send to: Dither receives the pattern as an image, a 4096 square with no gap at the seams',
+    shell.getState().active === 'dither' && dt.get().source?.name === name && bmp?.width === 4096 && bmp.height === 4096 && after.background && clear === 0,
+    [dt.get().source?.name, name, bmp?.width, bmp?.height, clear],
   );
   bmp?.close();
 }
@@ -754,10 +769,10 @@ async function pixelsOf(blob: Blob): Promise<{ w: number; h: number; px: Uint8Cl
 /**
  * Image › Halftone (plan: Then): pure cyan separates to C alone and a 50% grey to half black, the
  * SVG holds one path per visible ink and none for a hidden one, its dots are the view's, the TIFF
- * plates carry the print DPI and the meters' coverage, a 16-bit TIFF opens, and Dev image takes the
- * screen PNG. Leaves Halftone with its image, so the quiet pass sees the document come back.
+ * plates carry the print DPI and the meters' coverage, a 16-bit TIFF opens, and Dither takes the
+ * screen PNG. Leaves Halftone with an image, so the quiet pass sees the document come back.
  */
-async function halftone(dir: string, di: DocController<ImageDoc>): Promise<void> {
+async function halftone(dir: string, dt: DocController<DitherDoc>): Promise<void> {
   const hd = shell.doc('halftone') as DocController<HalftoneDoc>;
   shell.setActive('halftone');
   const d0 = hd.get();
@@ -868,14 +883,14 @@ async function halftone(dir: string, di: DocController<ImageDoc>): Promise<void>
   check("and each carries its meter's coverage too, light tones included", bits.every((v, i) => Math.abs(v - stats[[0, 1, 3][i]].mean) < 0.01), bits.map((v, i) => [v.toFixed(4), stats[[0, 1, 3][i]].mean.toFixed(4)]));
   await halftonePrint(d, greySource);
 
-  // Send to: Dev image gets the screen PNG at the image's own resolution
+  // Send to: Dither gets the screen PNG at the image's own resolution
   const want = await pixelsOf((await shell.tool('halftone').render!(d, {})).blob);
-  await shell.sendDoc('halftone', 'dev-image');
-  const url = di.get().source?.url;
+  await shell.sendDoc('halftone', 'dither');
+  const url = dt.get().source?.assets[0];
   const got = url ? await pixelsOf(await (await fetch(url)).blob()) : null;
   let diff = got && got.px.length === want.px.length ? 0 : 255;
   for (let p = 0; got && p < got.px.length && diff < 255; p++) diff = Math.max(diff, Math.abs(got.px[p] - want.px[p]));
-  check('Send to: Dev image receives the screen PNG, at the image’s own resolution', shell.getState().active === 'dev-image' && got?.w === 240 && got.h === 160 && diff <= 1, [got?.w, got?.h, diff]);
+  check('Send to: Dither receives the screen PNG, at the image’s own resolution', shell.getState().active === 'dither' && got?.w === 240 && got.h === 160 && diff <= 1, [got?.w, got?.h, diff]);
 }
 
 /** a plate's ink, 0..1, from its decoded pixels (black is ink) */
@@ -945,6 +960,174 @@ async function halftonePrint(d: HalftoneDoc, grey: HalftoneDoc['source']): Promi
   }
   painter.release();
   check('a flat tint keeps its tone in the view at 20%, 50%, 100% and 400%, every shape (within 2 of 255)', !misses.length, misses);
+}
+
+/** a PNG's chunks by type, the first of each */
+function pngChunks(b: Uint8Array): Map<string, Uint8Array> {
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const out = new Map<string, Uint8Array>();
+  for (let at = 8; at + 12 <= b.length; at += 12 + v.getUint32(at)) {
+    const type = String.fromCharCode(...b.subarray(at + 4, at + 8));
+    if (!out.has(type)) out.set(type, b.subarray(at + 8, at + 8 + v.getUint32(at)));
+  }
+  return out;
+}
+
+/** pixels of `img` that aren't their block's colour in the result drawn at `k` px a block; -1 at the wrong size */
+function offBlocks(img: { w: number; h: number; px: Uint8ClampedArray }, r: Result, k: number): number {
+  if (img.w !== r.w * k || img.h !== r.h * k) return -1;
+  const rgb = r.colours.map(rgb255);
+  let off = 0;
+  for (let y = 0; y < img.h; y++) {
+    for (let x = 0; x < img.w; x++) {
+      const c = rgb[r.indices[Math.floor(y / k) * r.w + Math.floor(x / k)]];
+      const p = (y * img.w + x) * 4;
+      if (img.px[p] !== c[0] || img.px[p + 1] !== c[1] || img.px[p + 2] !== c[2]) off++;
+    }
+  }
+  return off;
+}
+
+/** an animated GIF of a bar crossing a ramp, a frame for each delay (hundredths) */
+function barGif(w: number, h: number, delays: number[]): ArrayBuffer {
+  const greys: Rgba8[] = Array.from({ length: 16 }, (_, i) => [i * 17, i * 17, i * 17]);
+  const gif = gifWriter();
+  delays.forEach((cs, i) => {
+    const indices = Uint8Array.from({ length: w * h }, (_, p) => (Math.abs((p % w) - 8 - i * 10) < 4 ? 15 : Math.floor(((p % w) / w) * 12)));
+    gif.add({ indices, w, h, palette: greys }, cs);
+  });
+  return gif.finish().slice().buffer;
+}
+
+/** an image's pixels as one number, to tell frames apart */
+const hashOf = (px: Uint8ClampedArray) => new Uint32Array(px.buffer, px.byteOffset, px.length / 4).reduce((h, v) => (Math.imul(h, 31) + v) | 0, 7);
+
+/**
+ * Image › Dither (plan: Then): pixel size 8 exports 8 px blocks, the indexed PNG is a true palette
+ * file of the palette, every algorithm renders through the view, an animated GIF round-trips with
+ * its frame count and loop length, a second paste of another picture with the same name re-renders,
+ * and Halftone takes the result. Leaves Dither with the GIF, so the quiet pass sees it come back.
+ */
+async function dither(dir: string): Promise<void> {
+  const dt = ditherDoc();
+  shell.setActive('dither');
+  await shell.createCollection('Dither in');
+  const put = async (name: string, ext: string, bytes: ArrayBuffer) => api.invoke('library.createImage', 'Dither in', name, ext, bytes);
+  /** the view's result for the document as it is now */
+  const shown = (frame = 0) => until(() => ditherReady(dt.get(), frame), 20_000);
+  const why = () => ditherStatus.get() ?? 'no status';
+
+  // a grey ramp under a hue sweep, 96 × 64: at pixel size 8, 12 × 8 blocks
+  const hue = (t: number, o: number) => Math.round(255 * Math.min(1, Math.max(0, Math.abs(((6 * t + o) % 6) - 3) - 1)));
+  const ramp = await put('Smoke dither ramp', 'png', await pngFrom(96, 64, (x, y) => (y < 32 ? [hue(x / 96, 0), hue(x / 96, 4), hue(x / 96, 2)] : [0, 1, 2].map(() => Math.round((x / 95) * 255)))));
+  await shell.sendItem(ramp, 'dither');
+  dt.transact('Game Boy at 8 px', (d) => ({ ...withLookId(d, 'gameboy'), pixel: 8 }));
+  const r = await shown();
+  if (!check('Dither dithers the image in its view', r && r.w === 12 && r.h === 8 && new Set(r.indices).size >= 3, [r?.w, r?.h, why()])) return;
+
+  const exported = await toolExport(dir, 'dither', 'Dither out');
+  const png = await exported('PNG');
+  const img = png && (await pixelsOf(await png.blob()));
+  const off = img ? offBlocks(img, r!, 8) : null;
+  check('pixel size 8 exports 8 px blocks: 96 × 64 px, every pixel its block’s colour in the view', off === 0, [img?.w, img?.h, off]);
+
+  const indexed = await exported('Indexed PNG');
+  const bytes = indexed && new Uint8Array(await indexed.arrayBuffer());
+  const chunks = bytes ? pngChunks(bytes) : null;
+  const [ihdr, plte] = [chunks?.get('IHDR'), chunks?.get('PLTE')];
+  const greens = used(dt.get()).flatMap(rgb255);
+  check(
+    'the indexed PNG is a true palette file: 2 bit, its PLTE the four Game Boy greens in order, the same pixels',
+    ihdr?.[8] === 2 && ihdr[9] === 3 && plte && JSON.stringify([...plte]) === JSON.stringify(greens) && bytes && offBlocks(await pixelsOf(new Blob([bytes])), r!, 8) === 0,
+    [ihdr?.[8], ihdr?.[9], plte && [...plte], greens],
+  );
+
+  // every algorithm, through the view, on the ramp at 2 px blocks
+  dt.transact('Pixel size 2', (d) => ({ ...d, pixel: 2 }));
+  const bad: string[] = [];
+  for (const a of ALGORITHMS) {
+    dt.transact(`Dither with ${a.label}`, (d) => ({ ...d, algorithm: a.id }));
+    const x = await shown();
+    const n = x ? new Set(x.indices).size : 0;
+    if (!x || x.w !== 48 || x.indices.some((v) => v >= x.colours.length) || n < 2) bad.push(`${a.id}: ${x ? `${n} colours` : JSON.stringify(why())}`);
+  }
+  check(`all ${ALGORITHMS.length} algorithms render through the view, each with more than one colour on the ramp`, ALGORITHMS.length === 18 && !bad.length, bad);
+
+  // an animated GIF with its own uneven timing, 6 frames
+  const CS = [7, 13, 10, 10, 20, 6];
+  const anim = await put('Smoke anim', 'gif', barGif(64, 40, CS));
+  await shell.sendItem(anim, 'dither');
+  const src = dt.get().source;
+  check('an animated GIF opens with its frames and its own timing', src?.frames === 6 && JSON.stringify(src.delays) === JSON.stringify(CS.map((c) => c * 10)), src && [src.frames, src.delays]);
+  dt.transact('Mac 1-bit at 2 px', (d) => ({ ...withLookId(d, 'mac'), pixel: 2 }));
+  await shown();
+  const gif = await exported('GIF');
+  const back = gif && new Uint8Array(await gif.arrayBuffer());
+  const info = back && readGif(back);
+  check(
+    'its GIF has every frame, each timed as the source so the loop is exactly as long, looping forever',
+    info?.frames.length === 6 && JSON.stringify(info.frames.map((f) => f.delay)) === JSON.stringify(CS) && info.loop === 0 && info.w === 64 && info.h === 40,
+    info && [info.frames.map((f) => f.delay), info.loop, info.w, info.h],
+  );
+  if (back) {
+    const frames = await decodeFrames(new Blob([back], { type: 'image/gif' }));
+    const offs: number[] = [];
+    const seen = new Set<number>();
+    for (let i = 0; i < frames.count; i++) {
+      const bmp = await frames.frame(i);
+      const c = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d', { willReadFrequently: true })!;
+      c.drawImage(bmp, 0, 0);
+      bmp.close();
+      const px = c.getImageData(0, 0, 64, 40).data;
+      offs.push(offBlocks({ w: 64, h: 40, px }, await dithered(dt.get(), i, 'export'), 2));
+      seen.add(hashOf(px));
+    }
+    frames.close();
+    check('each GIF frame is that frame’s dither pixel for pixel, and no two are the same', offs.length === 6 && offs.every((o) => o === 0) && seen.size === 6, offs);
+  }
+  const shown0 = toastStore.get().length;
+  [...(host('dither')?.querySelectorAll('button') ?? [])].find((b) => b.parentElement?.querySelector('b')?.textContent === 'PNG frames')?.click();
+  const done = await until(() => toastStore.get().slice(shown0).find((t) => t.icon === 'download'), 20_000);
+  check('PNG frames writes all six into one folder', /^Exported 6 frames into /.test(String(done?.message)), done?.message);
+  await shell.importFiles([1, 6].map((n) => `${dir}\\exports\\dither\\Smoke anim dither 000${n}.png`), 'Dither out');
+  const frameOff = await Promise.all(
+    [1, 6].map(async (n) => {
+      const ref = await until(() => find((x) => x.collection === 'Dither out' && x.name === `Smoke anim dither 000${n}`));
+      const item = ref && (await api.invoke('library.read', ref.id));
+      return item && 'url' in item ? offBlocks(await pixelsOf(await (await fetch(item.url)).blob()), await dithered(dt.get(), n - 1, 'export'), 2) : null;
+    }),
+  );
+  check('and the first and last are those frames’ dithers', frameOff.every((o) => o === 0), frameOff);
+
+  // a second paste of another picture, both named image.png as a browser names them, re-renders
+  const paste = (bytes: ArrayBuffer) => {
+    const data = new DataTransfer();
+    data.items.add(new File([bytes], 'image.png', { type: 'image/png' }));
+    (document.activeElement as HTMLElement | null)?.blur();
+    window.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, cancelable: true }));
+  };
+  const rendered = async () => new Uint8Array(await (await shell.tool('dither').render!(dt.get(), {})).blob.arrayBuffer()).join();
+  const was = dt.get().source;
+  paste(await pngFrom(64, 48, (x) => [0, 1, 2].map(() => x * 4)));
+  const one = await until(() => (dt.get().source !== was && dt.get().source?.name === 'image' ? dt.get().source : null));
+  const [r1, png1] = [await shown(), await rendered()];
+  paste(await pngFrom(64, 48, (_, y) => [0, 1, 2].map(() => 255 - y * 5)));
+  const two = await until(() => (dt.get().source !== one && dt.get().source?.name === 'image' ? dt.get().source : null));
+  const [r2, png2] = [await shown(), await rendered()];
+  check(
+    'a second paste named image.png, another picture, opens as its own image and re-renders, and the render follows',
+    one && two && one.assets[0] !== two.assets[0] && r1 && r2 && r1.src !== r2.src && r1.indices.join() !== r2.indices.join() && png1 !== png2,
+    [one?.assets, two?.assets, r1?.src, r2?.src],
+  );
+
+  // Send to Halftone: the dithered PNG, each block the pixel size
+  const hd = shell.doc('halftone') as DocController<HalftoneDoc>;
+  await shell.sendDoc('dither', 'halftone');
+  const hs = hd.get().source;
+  const got = hs && (await pixelsOf(await (await fetch(hs.asset)).blob()));
+  check('Send to Halftone: it opens the dithered PNG at the export size, every block as the view has it', shell.getState().active === 'halftone' && r2 && got && offBlocks(got, r2, 2) === 0, [hs?.name, got?.w, got?.h, got && r2 && offBlocks(got, r2, 2)]);
+
+  await shell.sendItem(anim, 'dither');
 }
 
 /**
@@ -1137,6 +1320,12 @@ async function quiet(): Promise<void> {
     const body = t.toItem!(doc.get()) as Record<string, unknown>;
     check(`${t.label}: the document is its file`, Object.keys(body).every((k) => JSON.stringify(body[k]) === JSON.stringify(file[k])));
   }
+  // the GIF comes back from the workspace, as it was left, and every frame dithers again
+  const dt = ditherDoc();
+  shell.setActive('dither');
+  check('Dither: the GIF comes back with its six frames and its own timing', dt.get().source?.frames === 6 && dt.get().source?.delays?.length === 6, dt.get().source);
+  const frames = await until(() => [0, 1, 2, 3, 4, 5].every((i) => ditherReady(dt.get(), i)), 20_000);
+  check('Dither: and every frame dithers again', frames, ditherStatus.get());
   const id = illustrationDoc().source()?.itemId;
   check("Illustration: the quit saved the last stroke as its palette's painting", id && illustrationView().paintings[id], illustrationView().paintings);
   // showing a tool is no edit: smoke.mjs still finds every file as it was

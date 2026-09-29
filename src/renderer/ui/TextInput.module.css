@@ -12,7 +12,7 @@
   cursor: text;
 }
 .tf:hover { background: var(--well-hover); }
-.tf:focus-within, .tf[data-state="focus"] { background: var(--well); box-shadow: inset 0 0 0 1px var(--signal); }
+.tf:focus-within { background: var(--well); box-shadow: inset 0 0 0 1px var(--signal); }
 .tf[data-error] { background: var(--danger-soft); box-shadow: inset 0 0 0 1px var(--danger); }
 .tf > :global(.material-symbols-rounded) { color: var(--ink-3); }
 .tf > :global(.lbl) { flex: none; }

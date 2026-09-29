@@ -44,8 +44,6 @@ export type LibraryItemRowProps = {
   id?: string;
   tabIndex?: number;
   onKeyDown?(e: KeyboardEvent<HTMLDivElement>): void;
-  /** controls board only */
-  forceState?: 'hover';
 };
 
 /** One Library item (brief §7 states). Click selects, double-click or Enter opens, right-click or More opens the menu. */
@@ -67,7 +65,6 @@ export function LibraryItemRow(p: LibraryItemRowProps) {
       aria-selected={!!selected}
       tabIndex={p.tabIndex ?? -1}
       className={cx(s.item, selected && s.sel, anchor && s.anchor, dragging && s.dragging)}
-      data-force={p.forceState}
       draggable={dragData !== undefined}
       onDragStart={(e) => {
         if (dragData === undefined) return;

@@ -12,12 +12,10 @@ export type SelectProps<T extends string> = {
   onChange(v: T): void;
   disabled?: boolean;
   className?: string;
-  /** controls board only */
-  forceState?: 'open';
 };
 
 /** Our own dropdown (hard rule 6: never a native <select>). The list is the shared menu popover. */
-export function Select<T extends string>({ label, options, value, onChange, disabled, className, forceState }: SelectProps<T>) {
+export function Select<T extends string>({ label, options, value, onChange, disabled, className }: SelectProps<T>) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLButtonElement>(null);
   const at = options.findIndex((o) => o.value === value);
@@ -39,7 +37,7 @@ export function Select<T extends string>({ label, options, value, onChange, disa
       ref={ref}
       type="button"
       className={cx(s.dd, className)}
-      data-state={forceState ?? (open ? 'open' : undefined)}
+      data-state={open ? 'open' : undefined}
       aria-haspopup="listbox"
       aria-expanded={open}
       aria-label={label ? `${label}: ${current?.label ?? ''}` : undefined}

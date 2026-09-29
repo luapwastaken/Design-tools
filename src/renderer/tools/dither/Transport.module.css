@@ -1,0 +1,36 @@
+/* the timeline strip under the image, the height of the canvas bar, as a docked module */
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--canvas-bar);
+  padding: 0 12px 0 6px;
+  overflow: hidden;
+  border-radius: var(--r-mod);
+  background: var(--module);
+  container-type: inline-size;
+}
+.scrub { flex: 1; min-width: 180px; --label-w: 44px; }
+.of { flex: none; color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sep { flex: none; width: 1px; height: 16px; margin: 0 2px; background: var(--line); }
+
+/* the GIF's own frame lengths are in use: kept at every width, since typing a rate replaces them */
+.own { flex: none; color: var(--ink-3); font: 500 var(--fs-label)/1 var(--font-mono); font-stretch: normal; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+
+/* a live readout: how much of the loop is made, then how long the loop is */
+.readout {
+  flex: none;
+  min-width: 13ch;
+  color: var(--ink-3);
+  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.readout b { font-weight: 400; color: var(--signal); }
+.dim b { color: var(--ink); }
+
+@container (max-width: 620px) {
+  .readout { display: none; }
+}

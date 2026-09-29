@@ -18,7 +18,7 @@ import type { LibraryItemRef, LoadedItem } from '../src/shared/types.ts';
 
 const tool = (o: Partial<ToolDefinition<any>> & Pick<ToolDefinition<any>, 'id' | 'accepts'>): ToolDefinition<any> => ({
   label: o.id,
-  group: 'dev',
+  group: 'image',
   icon: 'palette',
   shortcut: 0,
   docVersion: 1,
@@ -152,6 +152,6 @@ test('an item file is checked before a tool gets it', () => {
 
 test('a double-click nothing takes says where the kind does open', () => {
   assert.equal(cantOpen('image', ['Dither', 'Halftone', 'Post FX']), 'Images open in Dither, Halftone or Post FX. Switch to one, or use Send to.');
-  assert.equal(cantOpen('svg', ['Dev image']), 'SVGs open in Dev image. Switch to it, or use Send to.');
+  assert.equal(cantOpen('svg', ['Dither']), 'SVGs open in Dither. Switch to it, or use Send to.');
   assert.equal(cantOpen('logo', []), 'No tool opens logos yet.');
 });

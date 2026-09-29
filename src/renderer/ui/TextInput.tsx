@@ -29,8 +29,6 @@ export type TextInputProps = {
   error?: string;
   className?: string;
   ref?: Ref<HTMLInputElement>;
-  /** controls board only */
-  forceState?: 'focus';
 };
 
 /**
@@ -38,7 +36,7 @@ export type TextInputProps = {
  * in the field with its message and isn't committed; blur then reverts it.
  */
 export function TextInput(p: TextInputProps) {
-  const { value, placeholder, label, autoFocus, selectOnFocus, icon, end, mono, className, ref, forceState } = p;
+  const { value, placeholder, label, autoFocus, selectOnFocus, icon, end, mono, className, ref } = p;
   const [text, setText] = useState<string | null>(null); // non-null while holding an uncommitted edit
   const [problem, setProblem] = useState<string | null>(null);
   const errId = useId();
@@ -85,7 +83,7 @@ export function TextInput(p: TextInputProps) {
 
   return (
     <div className={cx(s.wrap, className)}>
-      <label className={cx(s.tf, mono && s.mono)} data-state={forceState} data-error={message ? '' : undefined}>
+      <label className={cx(s.tf, mono && s.mono)} data-error={message ? '' : undefined}>
         {icon && <Icon name={icon} size={16} />}
         {label && <span className="lbl">{label}</span>}
         <input

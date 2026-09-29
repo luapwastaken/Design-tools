@@ -10,7 +10,7 @@ const CRC = Uint32Array.from({ length: 256 }, (_, n) => {
   return c >>> 0;
 });
 
-function crc32(bytes: Uint8Array): number {
+export function crc32(bytes: Uint8Array): number {
   let c = ~0;
   for (const b of bytes) c = CRC[(c ^ b) & 0xff] ^ (c >>> 8);
   return ~c >>> 0;

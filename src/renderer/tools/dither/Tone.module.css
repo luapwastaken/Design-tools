@@ -1,0 +1,8 @@
+/* the frame's histogram on the well, the tone curve over it, the level points as ticks */
+.hist { display: block; width: 100%; height: 64px; border-radius: var(--r-ctl); background: var(--well); }
+.bars { stroke: var(--tick); stroke-width: 1; }
+.ident { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.curve { fill: none; stroke: var(--ink); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.mark { stroke: var(--tick-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+/* the ramp the gradient map lays the tones along, in the palette's order */
+.map { flex: none; width: 120px; }

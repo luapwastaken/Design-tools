@@ -29,11 +29,30 @@ export type NumberFieldProps = {
   ref?: Ref<HTMLInputElement>;
   /** a Slider's track or label drag is setting the value: a typed edit it would overwrite is dropped */
   dragging?: boolean;
-  /** controls board only */
-  forceState?: 'hover' | 'scrub' | 'focus';
 } & NumberGesture;
 
 const format = (v: number, precision: number) => roundTo(v, precision).toFixed(precision);
+
+// A press elsewhere blurs the field before its click lands; a refused entry's message going then
+// would move the rows under the pointer and lose that click. So the revert waits for the press to end.
+let pressing = false;
+let watching = false;
+function watchPresses() {
+  if (watching) return;
+  watching = true;
+  addEventListener('pointerdown', () => (pressing = true), true);
+  for (const type of ['pointerup', 'pointercancel']) addEventListener(type, () => (pressing = false), true);
+}
+function afterPress(fn: () => void) {
+  if (!pressing) return fn();
+  const done = () => {
+    removeEventListener('pointerup', done, true);
+    removeEventListener('pointercancel', done, true);
+    setTimeout(fn);
+  };
+  addEventListener('pointerup', done, true);
+  addEventListener('pointercancel', done, true);
+}
 
 /** Lenient: comma decimals, a typed unit, spaces. null when it isn't a number. */
 function parse(text: string, unit?: string): number | null {
@@ -50,7 +69,7 @@ function parse(text: string, unit?: string): number | null {
  * stays in the field with a message and is never committed; blur then reverts it.
  */
 export function NumberField(p: NumberFieldProps) {
-  const { label, value, min, max, step = 1, unit, disabled, hideLabel, size = 'md', width, className, onError, ref, forceState } = p;
+  const { label, value, min, max, step = 1, unit, disabled, hideLabel, size = 'md', width, className, onError, ref } = p;
   const precision = p.precision ?? decimalsOf(step);
   const [text, setText] = useState<string | null>(null); // non-null while holding an uncommitted edit
   const [problem, setProblem] = useState<string | null>(null);
@@ -61,6 +80,7 @@ export function NumberField(p: NumberFieldProps) {
   const scrub = useScrub({ ...p, step, precision, onClick: () => input.current?.focus() });
 
   useEffect(() => onError?.(message), [message]);
+  useEffect(watchPresses, []);
 
   // a drag drops a typed edit; otherwise the next blur would commit the stale text over it
   useEffect(() => {
@@ -118,7 +138,7 @@ export function NumberField(p: NumberFieldProps) {
     }
   };
 
-  const state = forceState ?? (scrub.active ? 'scrub' : undefined);
+  const state = scrub.active ? 'scrub' : undefined;
 
   return (
     <div className={cx(s.wrap, className)} style={width === undefined ? undefined : { width }}>
@@ -165,7 +185,7 @@ export function NumberField(p: NumberFieldProps) {
             setProblem(null);
           }}
           onFocus={(e) => e.target.select()}
-          onBlur={() => tryCommit() || revert()}
+          onBlur={() => tryCommit() || afterPress(revert)}
           onKeyDown={onKeyDown}
         />
         {unit && <span className={s.unit}>{unit}</span>}

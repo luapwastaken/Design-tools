@@ -7,7 +7,7 @@ import { NumberField } from './NumberField.tsx';
 import { Rulers, useHover, type Hover } from './Rulers.tsx';
 import type { RulerUnit } from './rulers.ts';
 import { Segmented } from './Segmented.tsx';
-import { clampView, MAX_SCALE, MIN_SCALE, originOf, panBy, resolveZoom, sameZoom, stepScale, wheelFactor, zoomAt, zoomKey, type Point, type Size, type View, type Zoom, type ZoomKey } from './viewport.ts';
+import { clampScale, clampView, fitView, MAX_SCALE, MIN_SCALE, originOf, panBy, sameZoom, snapScale, stepScale, wheelFactor, zoomAt, zoomKey, type Point, type Size, type View, type Zoom, type ZoomKey } from './viewport.ts';
 import s from './Viewport.module.css';
 
 /** Where the content is on screen, handed to `render` and `overlay`. */
@@ -46,6 +46,9 @@ export type ViewportProps = {
   cursor?: false | ((p: Point | null) => ReactNode);
   /** the tool's own controls in the bar, after the zoom (a Seams toggle) */
   bar?: ReactNode;
+  /** content px in a cell of a pixel grid (Dither's block): Fit, the wheel and the zoom steps land
+   *  where a cell is a whole number of device pixels; a typed zoom and 100% stay as asked */
+  cell?: number;
   /** rulers along the top and left in this unit, 0 at the content's top left, marking the pointer */
   rulers?: RulerUnit;
   /** a screen-space layer that follows the pointer (an ink readout beside it), with the crosshair
@@ -68,7 +71,7 @@ const SETTLE_MS = 250;
  * It takes its keys only while it is on screen, so a hidden tool's viewport never moves.
  */
 export function Viewport(p: ViewportProps) {
-  const { contentWidth, contentHeight, children, render, overlay, cursor = cursorXY, bar, rulers, probe, className } = p;
+  const { contentWidth, contentHeight, children, render, overlay, cursor = cursorXY, bar, rulers, probe, className, cell } = p;
   const content: Size = { w: contentWidth, h: contentHeight };
   const viewEl = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -88,13 +91,20 @@ export function Viewport(p: ViewportProps) {
   const space = useRef(false);
   const pan = useRef<{ id: number; x: number; y: number; from: View } | null>(null);
   const settle = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /** where the wheel is heading before snapping, so a pinch's small steps add up */
+  const wheelWant = useRef<number | null>(null);
 
-  const view = box && resolveZoom(own, content, box);
+  const snap = (scale: number, b: Box, dir: -1 | 0 | 1) => (cell ? snapScale(scale, cell, b.pw / b.w, dir) : scale);
+  const fit = (b: Box): View => {
+    const f = fitView(content, b);
+    return { ...f, scale: snap(f.scale, b, -1) };
+  };
+  const view = box && (own === 'fit' ? fit(box) : own);
   const t = view && box && transformOf(view, box, viewEl);
 
   // what the window listeners and the settle timer read: this render's state, plus changes made since
-  const live = useRef({ view, box, content, own, told, onZoom: p.onZoom, change, act });
-  Object.assign(live.current, { view, box, content, own, told, onZoom: p.onZoom, change, act });
+  const live = useRef({ view, box, content, own, told, onZoom: p.onZoom, change, act, snap });
+  Object.assign(live.current, { view, box, content, own, told, onZoom: p.onZoom, change, act, snap });
 
   function report(z: Zoom) {
     clearTimeout(settle.current);
@@ -120,9 +130,10 @@ export function Viewport(p: ViewportProps) {
     if (v && b) change(zoomAt(v, scale, { x: b.w / 2, y: b.h / 2 }, b), 'now');
   }
   function act(k: ZoomKey) {
-    const v = live.current.view;
+    const { view: v, box: b } = live.current;
+    const dir = k === 'in' ? 1 : -1;
     if (k === 'fit') change('fit', 'now');
-    else if (v) zoomTo(k === 'actual' ? 1 : stepScale(v.scale, k === 'in' ? 1 : -1));
+    else if (v && b) zoomTo(k === 'actual' ? 1 : live.current.snap(stepScale(v.scale, dir), b, dir));
   }
 
   // size: a hidden tool reports 0×0, which is ignored (the view keeps its place) and frees the canvas
@@ -199,10 +210,14 @@ export function Viewport(p: ViewportProps) {
     // the wheel zooms here and never scrolls a panel behind (spec §9)
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const { view: v, box: b } = live.current;
+      const { view: v, box: b, snap: to } = live.current;
       if (!v || !b || !e.deltaY) return;
+      // carry on from the wheel's own heading while the view is still where it led
+      const from = wheelWant.current !== null && to(wheelWant.current, b, 0) === v.scale ? wheelWant.current : v.scale;
+      const want = clampScale(from * wheelFactor(e));
+      wheelWant.current = want;
       const r = el.getBoundingClientRect();
-      const next = zoomAt(v, v.scale * wheelFactor(e), { x: e.clientX - r.left, y: e.clientY - r.top }, b);
+      const next = zoomAt(v, to(want, b, 0), { x: e.clientX - r.left, y: e.clientY - r.top }, b);
       if (next.scale !== v.scale) live.current.change(next, 'later');
     };
     addEventListener('keydown', onKeyDown);

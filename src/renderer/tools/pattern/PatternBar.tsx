@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react';
 import { useShell } from '../../shell/core/index.ts';
 import { Button, IconButton, UndoRedo } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { SendTo } from '../common/DocBar.tsx';
+import { DocTitle, SendTo } from '../common/DocBar.tsx';
 import { plural } from '../common/names.ts';
 import { newPattern, surprise, type Doc } from './actions.ts';
 import type { PatternDoc } from './doc.ts';
@@ -15,7 +15,7 @@ export function PatternBar({ doc, d }: { doc: Doc; d: PatternDoc }) {
   const collection = useSyncExternalStore(doc.subscribe, () => doc.source()?.collection ?? null);
   return (
     <div className={s.docbar}>
-      <h1 className={s.title}>{name}</h1>
+      <DocTitle>{name}</DocTitle>
       {collection !== null && (
         <>
           <span className={cx('lbl', s.where)}>{collection || 'Library'}</span>

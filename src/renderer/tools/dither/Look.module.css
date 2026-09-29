@@ -1,0 +1,40 @@
+/* the looks as keys, two across: the image in that look, its name and its colours; the lit one
+   raised in the neutral ring, clear of the thumbnail (brief §4: nothing signal round a colour) */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--r-ctl);
+  background: var(--well);
+}
+.key {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 8px 4px 4px;
+  border-radius: 2px;
+  color: var(--ink-3);
+  text-align: left;
+}
+.key:hover { background: var(--well-hover); color: var(--ink); }
+.key.on { background: var(--raise); color: var(--ink); box-shadow: inset 0 0 0 1px var(--tick-strong); }
+/* keyboard focus: a signal bar under the name and colours, never a ring round the thumbnail */
+.key:focus-visible { outline: none; }
+.key:focus-visible .text::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -3px;
+  left: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--signal);
+}
+/* 30 × 20 blocks at 2 px: big enough to read the pattern, small enough for ten */
+.thumb { flex: none; width: 60px; }
+.text { position: relative; display: flex; flex: 1; flex-direction: column; gap: 5px; min-width: 0; }
+.name { overflow: hidden; font: 500 var(--fs-meta)/1.1 var(--font-sans); font-stretch: var(--sans-stretch); text-overflow: ellipsis; white-space: nowrap; }
+.strip { width: 100%; }

@@ -3,7 +3,7 @@ import type { DocController } from '../../../shared/doc-api.ts';
 import type { ToolId } from '../../../shared/types.ts';
 import { shell, useShell } from '../../shell/core/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { Button, IconButton, menu, Segmented, UndoRedo, type MenuItem, type SegmentedProps } from '../../ui/index.ts';
+import { Button, IconButton, menu, Segmented, Tooltip, UndoRedo, type MenuItem, type SegmentedProps } from '../../ui/index.ts';
 import s from './DocBar.module.css';
 
 const CAN_PICK = 'EyeDropper' in globalThis;
@@ -28,7 +28,7 @@ export function DocBar<L extends string>({ tool, doc, count, onNew, lower, onPic
   const collection = useSyncExternalStore(doc.subscribe, () => doc.source()?.collection ?? null);
   return (
     <div className={s.docbar}>
-      <h1 className={s.title}>{name}</h1>
+      <DocTitle>{name}</DocTitle>
       {collection !== null && (
         <>
           <span className={cx('lbl', s.where)}>{collection || 'Library'}</span>
@@ -56,8 +56,18 @@ export function DocBar<L extends string>({ tool, doc, count, onNew, lower, onPic
   );
 }
 
-/** A tool's item to another tool (foundation spec §7.4). `empty`: why it's off while the document is; `noun`: what it sends. */
-export function SendTo({ tool, doc, empty, noun = 'palette' }: { tool: ToolId; doc: DocController<unknown>; empty: string; noun?: string }) {
+/** The document's name at the head of a tool's bar; cut off, it shows whole in a tooltip (brief §7). */
+export const DocTitle = ({ children }: { children: string }) => (
+  <Tooltip overflowOnly>
+    <h1 className={s.title}>{children}</h1>
+  </Tooltip>
+);
+
+/**
+ * A tool's item to another tool (foundation spec §7.4). `empty`: why it's off while the document is;
+ * `noun`: what it sends; `tip`: what it hands on, when that isn't plain.
+ */
+export function SendTo({ tool, doc, empty, noun = 'palette', tip }: { tool: ToolId; doc: DocController<unknown>; empty: string; noun?: string; tip?: string }) {
   const kind = useSyncExternalStore(doc.subscribe, () => shell.sendKind(tool));
   const open = (e: MouseEvent<HTMLButtonElement>) => {
     if (!kind) return;
@@ -72,7 +82,7 @@ export function SendTo({ tool, doc, empty, noun = 'palette' }: { tool: ToolId; d
     });
   };
   return (
-    <Button icon="send" disabled={!kind} onClick={open} tooltip={kind ? undefined : empty}>
+    <Button icon="send" disabled={!kind} onClick={open} tooltip={kind ? tip : empty}>
       Send to
     </Button>
   );

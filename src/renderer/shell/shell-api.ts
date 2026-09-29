@@ -23,7 +23,7 @@ export type ShellState = {
   /** false until every DocController has been created and restored (spec §4 start-up) */
   ready: boolean;
   active: ToolId;
-  /** registered tools in rail order (dev stubs only when not packaged) */
+  /** registered tools in rail order */
   tools: ToolDefinition<any>[];
   /** tools whose views have mounted; a tool mounts on first activation and never unmounts */
   mounted: ToolId[];

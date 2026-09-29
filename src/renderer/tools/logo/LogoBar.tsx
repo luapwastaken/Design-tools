@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react';
 import { useShell } from '../../shell/core/index.ts';
 import { IconButton, Segmented, UndoRedo } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { SendTo } from '../common/DocBar.tsx';
+import { DocTitle, SendTo } from '../common/DocBar.tsx';
 import { plural } from '../common/names.ts';
 import { newLogo, type Doc } from './actions.ts';
 import { shownLockups, type LogoDoc } from './doc.ts';
@@ -22,7 +22,7 @@ export function LogoBar({ doc, d, v }: { doc: Doc; d: LogoDoc; v: LogoView }) {
   const empty = !d.icon && !d.wordmark;
   return (
     <div className={s.docbar}>
-      <h1 className={s.title}>{name}</h1>
+      <DocTitle>{name}</DocTitle>
       {collection !== null && (
         <>
           <span className={cx('lbl', s.where)}>{collection || 'Library'}</span>

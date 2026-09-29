@@ -2,7 +2,7 @@
 // Result | Separations | Original switch, another image, undo and Send to.
 import { IconButton, Segmented, UndoRedo } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { SendTo } from '../common/DocBar.tsx';
+import { DocTitle, SendTo } from '../common/DocBar.tsx';
 import { pickImage, type Doc } from './actions.ts';
 import type { HalftoneDoc } from './doc.ts';
 import { sourcePpi } from './Output.tsx';
@@ -21,7 +21,7 @@ export function HalftoneBar({ doc, d, v }: { doc: Doc; d: HalftoneDoc; v: Halfto
   const ppi = sourcePpi(d);
   return (
     <div className={s.docbar}>
-      <h1 className={s.title}>{src?.name ?? 'No image'}</h1>
+      <DocTitle>{src?.name ?? 'No image'}</DocTitle>
       {src && (
         <span className={cx('lbl', own.imageSize)}>
           {src.w.toLocaleString('en')} × {src.h.toLocaleString('en')} px{ppi ? ` · ${Math.round(ppi)} ppi` : ''}

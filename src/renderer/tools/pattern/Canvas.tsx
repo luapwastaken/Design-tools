@@ -74,7 +74,8 @@ export function PatternCanvas({ d, tile, preview, v, active }: { d: PatternDoc; 
         if (q.current.on) hold({ img, kx: j.w / j.tw, ky: j.h / j.th });
         else img.close();
       } catch (e) {
-        if (!q.current.next) toast.show({ kind: 'error', message: `The pattern couldn't be drawn: ${e instanceof Error ? e.message : String(e)}` });
+        // hidden mid-draw, the tool freed the sprites it was drawing with: nothing was lost
+        if (!q.current.next && q.current.on) toast.show({ kind: 'error', message: `The pattern couldn't be drawn: ${e instanceof Error ? e.message : String(e)}` });
       }
     }
     q.current.busy = false;

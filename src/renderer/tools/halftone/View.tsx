@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { Icon } from '../../ui/index.ts';
+import { useHeld } from '../common/held.ts';
 import type { Doc } from './actions.ts';
 import { HalftoneCanvas } from './Canvas.tsx';
 import { ExportModule } from './Export.tsx';
@@ -75,6 +76,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const d = useSyncExternalStore(doc.subscribe, doc.get);
   const v = useView();
   const { screened, busy, error: screenError } = useScreen(d, active);
+  const slow = useHeld(busy);
   const [drawError, setDrawError] = useState<string | null>(null);
   const error = screenError ?? drawError;
   // the meters' totals follow only what shows (an angle drag leaves them be)
@@ -100,7 +102,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         <HalftoneBar doc={doc} d={d} v={v} />
         {d.source ? (
           <div className={s.stage}>
-            <HalftoneCanvas d={d} v={v} screened={screened} dots={sum?.dots ?? 0} stats={sum?.stats ?? null} busy={busy} active={active} onDrawError={setDrawError} />
+            <HalftoneCanvas d={d} v={v} screened={screened} dots={sum?.dots ?? 0} stats={sum?.stats ?? null} busy={slow} active={active} onDrawError={setDrawError} />
             {error && (
               <p className={s.error} role="alert">
                 <Icon name="error" size={16} />

@@ -22,7 +22,7 @@ export type Shortcut = {
 export interface ToolDefinition<Doc = unknown> {
   id: ToolId;
   label: string;
-  group: 'colour' | 'make' | 'image' | 'dev';
+  group: 'colour' | 'make' | 'image';
   icon: IconName;
   /** Ctrl+<shortcut> switches to it; 0 = none */
   shortcut: number;

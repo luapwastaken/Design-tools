@@ -11,8 +11,6 @@ export type ColorFieldProps = {
   name?: string;
   disabled?: boolean;
   className?: string;
-  /** controls board only */
-  forceState?: 'focus';
 } & ColourGesture;
 
 /**

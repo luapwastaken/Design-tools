@@ -37,6 +37,25 @@ export function createExporter(settings: SettingsStore, o: { trashItem: Trash; f
     return r.canceled ? null : (r.filePaths[0] ?? null);
   };
 
+  // folders chosen for files that arrive one at a time, each with the names written so far
+  const open = new Map<number, { folder: string; used: Set<string> }>();
+  let opened = 0;
+  const openFolder = async (tool: string): Promise<{ id: number; folder: string } | null> => {
+    const key = `${tool}:folder`;
+    const folder = await chooseFolder(lastFolder(key), tool);
+    if (!folder) return null;
+    await remember(key, folder);
+    open.set(++opened, { folder, used: new Set() });
+    return { id: opened, folder };
+  };
+  const intoFolder = async (id: number, name: string, data: ArrayBuffer | string): Promise<string> => {
+    const f = open.get(id);
+    if (!f) throw new Error('That export folder was closed.');
+    const path = join(f.folder, batchName(safeName(name), f.used));
+    await writeReplacing(path, data, o.trashItem);
+    return path;
+  };
+
   return {
     async save(req: SaveReq): Promise<string | null> {
       const ext = req.ext.replace(/^\./, '').toLowerCase();
@@ -52,19 +71,20 @@ export function createExporter(settings: SettingsStore, o: { trashItem: Trash; f
     },
 
     async toFolder(req: FolderReq): Promise<{ folder: string; written: string[] } | null> {
-      const key = `${req.tool}:folder`;
-      const folder = await chooseFolder(lastFolder(key), req.tool);
-      if (!folder) return null;
-      const used = new Set<string>();
-      const written: string[] = [];
-      for (const f of req.files) {
-        const path = join(folder, batchName(safeName(f.name), used));
-        await writeReplacing(path, f.data, o.trashItem);
-        written.push(path);
+      const got = await openFolder(req.tool);
+      if (!got) return null;
+      try {
+        const written: string[] = [];
+        for (const f of req.files) written.push(await intoFolder(got.id, f.name, f.data));
+        return { folder: got.folder, written };
+      } finally {
+        open.delete(got.id);
       }
-      await remember(key, folder);
-      return { folder, written };
     },
+
+    openFolder,
+    intoFolder,
+    closeFolder: (id: number): void => void open.delete(id),
   };
 }
 

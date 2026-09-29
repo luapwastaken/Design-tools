@@ -28,6 +28,19 @@ export function fitView(content: Size, box: Size): View {
   return { scale: clampScale(Math.min(room(box.w) / w, room(box.h) / h)), x: w / 2, y: h / 2 };
 }
 
+/**
+ * With a grid of `cell` content px (Dither's blocks), the scale that makes a cell a whole number of
+ * device pixels: the nearest, or the next up or down (`dir`), so nearest-neighbour draws every cell
+ * the same size. Below one device pixel a cell, where the view smooths, any scale is kept.
+ */
+export function snapScale(scale: number, cell: number, dpr: number, dir: -1 | 0 | 1 = 0): number {
+  const k = cell * dpr;
+  const px = scale * k;
+  if (!(px >= 1)) return scale;
+  const whole = dir > 0 ? Math.ceil(px - 1e-9) : dir < 0 ? Math.floor(px + 1e-9) : Math.round(px);
+  return clampScale(Math.max(1, whole) / k);
+}
+
 export const resolveZoom = (z: Zoom, content: Size, box: Size): View => (z === 'fit' ? fitView(content, box) : z);
 
 /** where content (0, 0) sits on screen */

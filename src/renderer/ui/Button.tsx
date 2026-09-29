@@ -23,19 +23,16 @@ export type ButtonProps = {
   tabIndex?: number;
   className?: string;
   ref?: Ref<HTMLButtonElement>;
-  /** controls board only: draw a pointer state without the pointer */
-  forceState?: 'hover';
 };
 
 const ICON = { xs: 14, md: 16, lg: 16 } as const;
 
-export function Button({ variant = 'secondary', size = 'md', icon, iconEnd, children, onClick, disabled, tooltip, shortcut, type = 'button', autoFocus, tabIndex, className, ref, forceState }: ButtonProps) {
+export function Button({ variant = 'secondary', size = 'md', icon, iconEnd, children, onClick, disabled, tooltip, shortcut, type = 'button', autoFocus, tabIndex, className, ref }: ButtonProps) {
   const button = (
     <button
       ref={ref}
       type={type}
       className={cx(s.btn, s[variant], s[size], className)}
-      data-force={forceState}
       disabled={disabled}
       autoFocus={autoFocus}
       tabIndex={tabIndex}

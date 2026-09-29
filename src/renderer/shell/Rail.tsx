@@ -7,7 +7,7 @@ import { GROUP_LABEL } from './TitleBar.tsx';
 import type { IconName, ToolDefinition } from './tool.ts';
 import s from './Rail.module.css';
 
-const GROUPS: ToolDefinition['group'][] = ['colour', 'make', 'image', 'dev'];
+const GROUPS: ToolDefinition['group'][] = ['colour', 'make', 'image'];
 const NEXT: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
 
 /** Tools by group, then SHARED (Library, Settings). One Tab stop; arrow keys move inside (brief §6). */

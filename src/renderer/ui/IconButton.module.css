@@ -6,7 +6,7 @@
   color: var(--ink-3);
   transition: transform var(--t-fast) var(--ease);
 }
-.ib:hover, .ib[data-force="hover"], .ib[aria-pressed="true"] { background: var(--raise); color: var(--ink); }
+.ib:hover, .ib[aria-pressed="true"] { background: var(--raise); color: var(--ink); }
 .ib:not(:disabled):active { transform: translateY(1px); }
 .ib:disabled { background: none; color: var(--ink-4); }
 

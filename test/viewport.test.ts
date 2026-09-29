@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { asZoom, clampView, fitView, MAX_SCALE, MIN_SCALE, originOf, panBy, stepScale, toContent, wheelFactor, zoomAt, zoomKey } from '../src/renderer/ui/viewport.ts';
+import { asZoom, clampView, fitView, MAX_SCALE, MIN_SCALE, originOf, panBy, snapScale, stepScale, toContent, wheelFactor, zoomAt, zoomKey } from '../src/renderer/ui/viewport.ts';
 import type { KeyLike } from '../src/renderer/shell/core/keys.ts';
 
 const box = { w: 800, h: 600 };
@@ -16,6 +16,20 @@ test('Fit centres the content with pasteboard around it, and shrinks or enlarges
   // a zero-size content or view never divides by zero
   assert.ok(Number.isFinite(fitView({ w: 0, h: 0 }, box).scale));
   assert.ok(fitView({ w: 1e9, h: 1 }, box).scale >= MIN_SCALE);
+});
+
+test('on a pixel grid, zoom lands where each cell is a whole number of device pixels', () => {
+  // Dither at 2 px blocks: Fit at 65.6% would draw blocks 1 or 2 screen pixels wide
+  near(snapScale(0.656, 2, 1, -1), 0.5);
+  near(snapScale(2.1, 2, 1, 0), 2);
+  near(snapScale(2.1, 2, 1, 1), 2.5);
+  // at 125% display scaling a 2 px block at 100% is 2.5 device pixels: the nearest whole is 3
+  near(snapScale(1, 2, 1.25, 0), 1.2);
+  // below one device pixel a block the view smooths, so any zoom stands
+  near(snapScale(0.3, 2, 1, -1), 0.3);
+  // a step always moves: down from 1 device pixel a block goes below it, up from 2 goes to 3
+  assert.ok(snapScale(stepScale(0.5, -1), 2, 1, -1) < 0.5);
+  near(snapScale(stepScale(1, 1), 2, 1, 1), 1.5);
 });
 
 test('zooming keeps the content point under the pointer where it was', () => {

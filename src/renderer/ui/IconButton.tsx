@@ -22,20 +22,17 @@ export type IconButtonProps = {
   ref?: Ref<HTMLButtonElement>;
   /** draw on top of a content colour (a swatch) with the --on-content tokens */
   onContent?: boolean;
-  /** controls board only */
-  forceState?: 'hover';
 };
 
 const ICON = { md: 18, sm: 16, xs: 14 } as const;
 
-export function IconButton({ icon, label, size = 'md', latched, onClick, disabled, shortcut, tabIndex, className, ref, onContent, forceState }: IconButtonProps) {
+export function IconButton({ icon, label, size = 'md', latched, onClick, disabled, shortcut, tabIndex, className, ref, onContent }: IconButtonProps) {
   return (
     <Tooltip content={label} shortcut={shortcut}>
       <button
         ref={ref}
         type="button"
         className={cx(s.ib, s[size], onContent && s.onContent, className)}
-        data-force={forceState}
         aria-label={label}
         aria-pressed={latched}
         aria-keyshortcuts={shortcut && ariaKeys(shortcut)}

@@ -16,14 +16,14 @@
 .btn:not(:disabled):active { transform: translateY(1px); }
 
 .secondary { background: var(--raise); color: var(--ink); }
-.secondary:hover, .secondary[data-force="hover"] { background: var(--raise-hover); }
+.secondary:hover { background: var(--raise-hover); }
 .secondary:not(:disabled):active { background: var(--press); }
 
 .primary { background: var(--primary); color: var(--primary-ink); }
-.primary:hover, .primary[data-force="hover"] { background: var(--primary-hover); }
+.primary:hover { background: var(--primary-hover); }
 
 .ghost { background: none; color: var(--ink-2); }
-.ghost:hover, .ghost[data-force="hover"] { background: var(--raise); color: var(--ink); }
+.ghost:hover { background: var(--raise); color: var(--ink); }
 .ghost:not(:disabled):active { background: var(--press); }
 
 .danger { background: var(--danger); color: var(--danger-ink); }

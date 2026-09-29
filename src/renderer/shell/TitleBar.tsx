@@ -3,7 +3,7 @@ import { shell, useShell } from './core/index.ts';
 import type { ToolDefinition } from './tool.ts';
 import s from './TitleBar.module.css';
 
-export const GROUP_LABEL: Record<ToolDefinition['group'], string> = { colour: 'Colour', make: 'Make', image: 'Image', dev: 'Dev' };
+export const GROUP_LABEL: Record<ToolDefinition['group'], string> = { colour: 'Colour', make: 'Make', image: 'Image' };
 
 /**
  * App mark, breadcrumb and the document-state readout (spec §4, §7.5). The bar is a window drag

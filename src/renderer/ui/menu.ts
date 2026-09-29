@@ -15,6 +15,8 @@ export type MenuAction = {
   submenu?: MenuItem[];
   /** a content colour leading the row (Select options) */
   swatch?: string;
+  /** a palette leading the row, as a strip of its colours */
+  strip?: string[];
   /** the current option (Select) */
   checked?: boolean;
 };

@@ -2,9 +2,9 @@
 // Library, a paste). The glyph is a halftone ramp, so the tool says what it does before it's used.
 import { useState, type DragEvent, type MouseEvent } from 'react';
 import { shell } from '../../shell/core/index.ts';
-import { Button, ITEM_MIME, menu, toast, type MenuItem } from '../../ui/index.ts';
+import { Button, ITEM_MIME, menu, type MenuItem } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { pickImage, takeFiles, type Doc } from './actions.ts';
+import { pickImage, type Doc } from './actions.ts';
 import s from './Start.module.css';
 
 // a ramp of round dots on a 45° screen, from bare paper to nearly solid
@@ -35,18 +35,6 @@ function libraryImages(): MenuItem[] {
 export function Start({ doc }: { doc: Doc }) {
   const [over, setOver] = useState(false);
   const takes = (e: DragEvent) => e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes(ITEM_MIME);
-  const drop = (e: DragEvent<HTMLElement>) => {
-    if (!takes(e)) return;
-    e.preventDefault();
-    setOver(false);
-    const id = e.dataTransfer.getData(ITEM_MIME);
-    if (id) {
-      const ref = shell.getState().library?.collections.flatMap((c) => c.items).find((i) => i.id === id);
-      return void (ref && shell.openItem(ref));
-    }
-    const files = [...e.dataTransfer.files];
-    void takeFiles(doc, files).then((left) => left.length === files.length && toast.show({ icon: 'block', message: `${left[0]?.name ?? 'That'} isn't an image. Drop a PNG, JPEG, WebP, TIFF, GIF or SVG.` }));
-  };
   return (
     <div className={s.start}>
       <div
@@ -58,7 +46,8 @@ export function Start({ doc }: { doc: Doc }) {
           setOver(true);
         }}
         onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setOver(false)}
-        onDrop={drop}
+        // the drop itself goes on to the shell, which hands it to the tool and what it leaves to the Library (spec §9)
+        onDrop={() => setOver(false)}
       >
         <div className={s.glyph}>
           <Glyph />

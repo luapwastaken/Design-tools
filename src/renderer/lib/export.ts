@@ -2,6 +2,7 @@
 // and type) and replaces reversibly. Here each export counts as running work for the quit check,
 // and a failure becomes an error toast with main's plain message (main logs the details).
 import type { Api } from '../../shared/api.ts';
+import type { ToolId } from '../../shared/types.ts';
 import { shell } from '../shell/core/index.ts';
 import { errorText } from '../shell/core/errors.ts';
 import { ipc } from '../shell/core/ipc.ts';
@@ -15,6 +16,22 @@ export const saveFile = (req: SaveReq): Promise<string | null> => run(() => ipc.
 
 /** several files into one chosen folder, never a burst of dialogs; null when cancelled or failed */
 export const saveToFolder = (req: FolderReq): Promise<{ folder: string; written: string[] } | null> => run(() => ipc.invoke('export.toFolder', req));
+
+/**
+ * One chosen folder for files made one at a time, so a long animation is never held whole: `fill`
+ * writes each through `write`, and says whether it finished. The folder, or null when cancelled or
+ * failed (the toast says why).
+ */
+export const intoFolder = (tool: ToolId, fill: (write: (name: string, data: ArrayBuffer | string) => Promise<string>) => Promise<boolean>): Promise<string | null> =>
+  run(async () => {
+    const got = await ipc.invoke('export.openFolder', tool);
+    if (!got) return null;
+    try {
+      return (await fill((name, data) => ipc.invoke('export.intoFolder', got.id, name, data))) ? got.folder : null;
+    } finally {
+      await ipc.invoke('export.closeFolder', got.id);
+    }
+  });
 
 async function run<T>(fn: () => Promise<T | null>): Promise<T | null> {
   try {

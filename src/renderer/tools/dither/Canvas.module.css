@@ -1,0 +1,18 @@
+.vp { min-height: 0; }
+
+/* the one loop the chrome may show, only while a dither is being made (brief §8) */
+.busy { display: flex; flex: none; align-items: center; gap: 6px; color: var(--ink-2); font-size: var(--fs-meta); white-space: nowrap; }
+.spin { composes: spin from '../../ui/Progress.module.css'; }
+
+/* the palette index and its colour under the pointer, beside X and Y; lit like them while over the image */
+.index { display: inline-flex; align-items: center; gap: 6px; }
+.index b { display: inline-block; min-width: 3ch; text-align: right; }
+.index .hex { min-width: 7ch; text-align: left; }
+.live b { color: var(--signal); }
+.chip {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--well);
+  box-shadow: inset 0 0 0 1px var(--edge);
+}

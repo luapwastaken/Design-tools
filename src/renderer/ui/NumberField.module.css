@@ -8,8 +8,8 @@
   background: var(--well);
   cursor: text;
 }
-.nf:hover, .nf[data-state="hover"] { background: var(--well-hover); }
-.nf:focus-within, .nf[data-state="focus"] { background: var(--well); box-shadow: inset 0 0 0 1px var(--signal); }
+.nf:hover { background: var(--well-hover); }
+.nf:focus-within { background: var(--well); box-shadow: inset 0 0 0 1px var(--signal); }
 .nf[data-state="scrub"] { background: var(--well); box-shadow: inset 0 0 0 1px var(--tick); }
 .nf[data-error] { background: var(--danger-soft); box-shadow: inset 0 0 0 1px var(--danger); }
 

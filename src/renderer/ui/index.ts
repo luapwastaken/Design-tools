@@ -33,4 +33,3 @@ export { menu, type MenuItem, type MenuAction, type MenuAnchor, type MenuOptions
 export { MenuHost } from './Menu.tsx';
 export { Viewport, cursorXY, type ViewportProps, type ViewTransform, type RulerUnit } from './Viewport.tsx';
 export { asZoom, type Zoom } from './viewport.ts';
-export { ControlsBoard } from './ControlsBoard.tsx';

@@ -59,6 +59,8 @@
   letter-spacing: .02em;
 }
 .row > .end { margin-right: -2px; }
+.endSpace { flex: none; width: 16px; margin-right: -2px; }
+.strip { flex: none; width: 36px; }
 .hot > .end { color: var(--ink); }
 
 .chip {

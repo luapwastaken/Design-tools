@@ -88,6 +88,9 @@ export function registerIpc({ settings, workspace: ws, library: lib, exporter, s
 
     'export.save': (req) => exporter.save(req),
     'export.toFolder': (req) => exporter.toFolder(req),
+    'export.openFolder': (tool) => exporter.openFolder(tool),
+    'export.intoFolder': (id, name, data) => exporter.intoFolder(id, name, data),
+    'export.closeFolder': async (id) => exporter.closeFolder(id),
     'shell.reveal': (path) => shell.showItemInFolder(path),
   };
 

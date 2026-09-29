@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readoutOf, when } from '../src/renderer/shell/core/readout.ts';
 import type { ToolId } from '../src/shared/types.ts';
 
-const labels: Partial<Record<ToolId, string>> = { illustration: 'Illustration', 'dev-image': 'Dev image' };
+const labels: Partial<Record<ToolId, string>> = { illustration: 'Illustration', dither: 'Dither' };
 const label = (id: ToolId) => labels[id] ?? id;
 const at = new Date(2026, 8, 28, 14, 32).getTime();
 const later = new Date(2026, 8, 28, 18, 5).getTime();

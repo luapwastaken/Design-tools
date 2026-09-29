@@ -3,9 +3,7 @@
 export type Theme = 'dark' | 'light';
 
 export type ToolId =
-  | 'design' | 'illustration' | 'pattern' | 'logo' | 'dither' | 'halftone' | 'postfx'
-  /** dev-only stub image tool used until the image tools land (registered only when not packaged) */
-  | 'dev-image';
+  | 'design' | 'illustration' | 'pattern' | 'logo' | 'dither' | 'halftone' | 'postfx';
 
 // ── Library ─────────────────────────────────────────────────────────────────────────────────────
 

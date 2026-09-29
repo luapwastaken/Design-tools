@@ -105,7 +105,7 @@ function Floating({ anchor, content, shortcut, side }: { anchor: DOMRect; conten
   return <TipBubble ref={ref} className={s.floating} content={content} shortcut={shortcut} />;
 }
 
-/** The tooltip itself, also drawn in place on the controls board. */
+/** The tooltip itself. */
 export function TipBubble({ content, shortcut, className, ref }: { content: string; shortcut?: string; className?: string; ref?: Ref<HTMLDivElement> }) {
   return (
     <div ref={ref} role="tooltip" className={cx(s.tip, className)}>

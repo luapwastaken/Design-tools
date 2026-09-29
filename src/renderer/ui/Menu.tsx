@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { cx } from './cx.ts';
 import { Icon } from './Icon.tsx';
 import { formatKeys } from './Kbd.tsx';
+import { SwatchStrip } from './SwatchStrip.tsx';
 import { isAction, menu, menuStore, type MenuItem, type OpenMenu } from './menu.ts';
 import { placeAtPoint, placeBelow, placeBeside } from './popover.ts';
 import { Tooltip } from './Tooltip.tsx';
@@ -19,7 +20,7 @@ type ListProps = {
   ref?: Ref<HTMLDivElement>;
 } & Omit<HTMLAttributes<HTMLDivElement>, 'children'>;
 
-/** The rows of a menu on its popover. The host positions it; the controls board draws it in place. */
+/** The rows of a menu on its popover; the host positions it. */
 export function MenuList({ items, hot = -1, idBase, onHover, onActivate, options, className, ref, ...div }: ListProps) {
   const radio = items.some((i) => isAction(i) && i.checked !== undefined);
   const role = options ? 'option' : radio ? 'menuitemradio' : 'menuitem';
@@ -42,14 +43,15 @@ export function MenuList({ items, hot = -1, idBase, onHover, onActivate, options
             onPointerMove={(e) => onHover?.(i, e.currentTarget)}
             onClick={(e) => onActivate?.(i, e.currentTarget)}
           >
-            {it.swatch !== undefined ? <span className={s.chip} style={{ background: it.swatch }} /> : it.icon && <Icon name={it.icon} size={16} />}
+            {it.strip ? <SwatchStrip colors={it.strip} height={12} className={s.strip} /> : it.swatch !== undefined ? <span className={s.chip} style={{ background: it.swatch }} /> : it.icon && <Icon name={it.icon} size={16} />}
             <Tooltip content={it.label} overflowOnly>
               <span className={s.text}>{it.label}</span>
             </Tooltip>
             {it.hint && <span className={s.hint}>{it.hint}</span>}
             {it.shortcut && <kbd>{formatKeys(it.shortcut)}</kbd>}
             {it.submenu && <Icon name="chevron_right" size={16} className={s.end} />}
-            {it.checked && <Icon name="check" size={16} className={s.end} />}
+            {/* in a list with a current row, every row keeps the check's place, so hints line up */}
+            {it.checked ? <Icon name="check" size={16} className={s.end} /> : radio && !it.submenu && <span className={s.endSpace} />}
           </div>
         );
       })}

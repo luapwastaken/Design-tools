@@ -74,6 +74,14 @@ export function noteImageSize(ref: LibraryItemRef, img: HTMLImageElement) {
 
 export const swatchWord = (n: number) => `${n} swatch${n === 1 ? '' : 'es'}`;
 
+/** the item's info if it's read and current, outside a component (a menu being built); `read` starts reading it if not */
+export function itemInfo(ref: LibraryItemRef, read = false): ItemInfo | undefined {
+  const hit = cache.get(ref.id);
+  if (hit?.mtime === ref.mtimeMs) return hit.info;
+  if (read) void load(ref);
+  return undefined;
+}
+
 /** The row's info; `visible` starts the read for doc kinds. */
 export function useItemInfo(ref: LibraryItemRef, visible = false): ItemInfo | undefined {
   const hit = useSyncExternalStore(subscribe, () => cache.get(ref.id));
