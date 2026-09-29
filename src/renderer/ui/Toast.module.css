@@ -19,12 +19,14 @@
 .undo + kbd { margin-left: -4px; }
 
 /* The host is a zero-height strip on the work column's bottom edge, clipped there, so toasts rise
-   out of the edge by transform alone: nothing fades (hard rule 4). Newer toasts push older ones up. */
+   out of the edge by transform alone: nothing fades (hard rule 4). Newer toasts push older ones up.
+   A tool can name its work column with `anchor-name: --toasts`, so they rise there and not across
+   its inspector; without one they take the whole work region. */
 .host {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: anchor(--toasts left, 0px);
+  right: anchor(--toasts right, 0px);
+  bottom: anchor(--toasts bottom, 0px);
   z-index: 800;
   height: 0;
   pointer-events: none;
@@ -55,4 +57,4 @@
 }
 /* over a canvas tool the bottom chrome is the Viewport's bar, which holds the cursor readout and
    counts: toasts rise from its top edge instead, 12px above it as above the status bar */
-:global([data-region="work"]:has(> :not([inert]) [data-viewport])) > .host { bottom: var(--canvas-bar); }
+:global([data-region="work"]:has(> :not([inert]) [data-viewport])) > .host { bottom: anchor(--toasts bottom, var(--canvas-bar)); }

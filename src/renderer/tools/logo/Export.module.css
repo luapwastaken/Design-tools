@@ -1,0 +1,20 @@
+/* each output: its name and what it gives, its button, then its own settings (Pattern's Export) */
+.list { display: flex; flex-direction: column; }
+.item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 14px;
+  row-gap: 9px;
+  padding: 12px 0;
+}
+.item:first-child { padding-top: 0; }
+.item:last-child { padding-bottom: 0; }
+.item + .item { box-shadow: 0 -1px 0 var(--line); }
+.text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.name { font-size: var(--fs-row); font-weight: 600; }
+.desc { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
+.more { display: flex; grid-column: 1 / -1; flex-direction: column; gap: 7px; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.buttons { display: flex; gap: 6px; }
+.danger { color: var(--danger); }

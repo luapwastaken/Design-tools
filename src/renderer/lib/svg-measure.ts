@@ -68,7 +68,14 @@ async function drawnBounds(svg: string, box: ViewBox, w: number, h: number): Pro
     }
   }
   if (x1 < 0) return null;
+  // an edge pixel the art only partly covers: its strongest alpha says how far into it the art reaches
+  const at = (x: number, y: number) => a[(y * w + x) * 4 + 3] / 255;
+  let [l, r, t, b] = [0, 0, 0, 0];
+  for (let y = y0; y <= y1; y++) [l, r] = [Math.max(l, at(x0, y)), Math.max(r, at(x1, y))];
+  for (let x = x0; x <= x1; x++) [t, b] = [Math.max(t, at(x, y0)), Math.max(b, at(x, y1))];
+  const [left, right] = x1 > x0 ? [x0 + 1 - l, x1 + r] : [x0, x1 + 1];
+  const [top, bottom] = y1 > y0 ? [y0 + 1 - t, y1 + b] : [y0, y1 + 1];
   const sx = box[2] / w;
   const sy = box[3] / h;
-  return { x: box[0] + x0 * sx, y: box[1] + y0 * sy, w: (x1 + 1 - x0) * sx, h: (y1 + 1 - y0) * sy };
+  return { x: box[0] + left * sx, y: box[1] + top * sy, w: (right - left) * sx, h: (bottom - top) * sy };
 }

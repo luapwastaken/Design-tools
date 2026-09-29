@@ -4,7 +4,12 @@
 // 'full' runs the smoke list; 'quiet' is the relaunch: it restores, checks, and quits with no input.
 import { contrast, toHex, type Oklch } from '../shared/color/index.ts';
 import type { DocController } from '../shared/doc-api.ts';
+import { layoutLockup } from '../shared/logo/layout.ts';
+import { PAPER } from '../shared/logo/sheet.ts';
+import { lockupSvg } from '../shared/logo/svg.ts';
+import type { Rect } from '../shared/logo/types.ts';
 import { layoutTile, reachOf } from '../shared/pattern/layout.ts';
+import { parseSize } from '../shared/svg/index.ts';
 import type { LibraryItemRef, PatternPayload, Swatch, ToolId } from '../shared/types.ts';
 import { saveFile, saveToFolder } from './lib/export.ts';
 import { decodeImage } from './lib/load.ts';
@@ -14,6 +19,12 @@ import { newSwatch as designSwatch, recolour as recolourInDesign, type DesignDoc
 import { clearProposals, proposals } from './tools/design/proposals.ts';
 import type { ImageDoc } from './tools/dev-image/index.ts';
 import { addRamp, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
+import { isEmpty as noParts, lockupOf, shownLockups, type LogoDoc } from './tools/logo/doc.ts';
+import { faviconBundle, sheetSvg } from './tools/logo/files.ts';
+import { partFromImage, partFromSvg } from './tools/logo/intake.ts';
+import { pngSize } from './tools/logo/geometry.ts';
+import { drawSvg } from './tools/logo/raster.ts';
+import { patchView as patchLogo } from './tools/logo/view-state.ts';
 import { clearProposals as clearBases, proposals as bases } from './tools/illustration/proposals.ts';
 import { getView as illustrationView, patchView as patchIllustration } from './tools/illustration/view-state.ts';
 import { PX_PER, toPayload, withUnit, type PatternDoc } from './tools/pattern/doc.ts';
@@ -96,7 +107,7 @@ async function full(): Promise<void> {
   const dir = info.userData.replace(/[\\/]Design Tools$/, '');
 
   const ids = shell.getState().tools.map((t) => t.id);
-  check('Design, Illustration, Pattern and the dev image tool are registered, and nothing else', JSON.stringify(ids) === JSON.stringify(['design', 'illustration', 'pattern', 'dev-image']), ids);
+  check('Design, Illustration, Pattern, Logo and the dev image tool are registered, and nothing else', JSON.stringify(ids) === JSON.stringify(['design', 'illustration', 'pattern', 'logo', 'dev-image']), ids);
   for (const id of ids) {
     shell.setActive(id);
     await sleep(50);
@@ -216,6 +227,7 @@ async function full(): Promise<void> {
   if (check('Design still has its fork open', open && dp.state().t === 'saved', dp.state())) await outsideChange(dp, open!.itemId);
   await design(dir, image, di);
   await pattern(dir, palette, di);
+  await logo(dir);
   await illustration();
 
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
@@ -354,11 +366,11 @@ async function design(dir: string, image: LibraryItemRef, di: DocController<Imag
   clearProposals();
 }
 
-/** Export in the Pattern tool, then the file it wrote, read back through the Library (import copies it in) */
-async function patternExport(dir: string, collection: string): Promise<(row: string) => Promise<Response | null>> {
+/** a tool's Export button in the row named `row`, then the file it wrote, read back through the Library (import copies it in) */
+async function toolExport(dir: string, tool: ToolId, collection: string): Promise<(row: string) => Promise<Response | null>> {
   await shell.createCollection(collection);
   return async (row) => {
-    const button = [...(host('pattern')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export') && b.parentElement?.querySelector('b')?.textContent === row);
+    const button = [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export') && b.parentElement?.querySelector('b')?.textContent === row);
     if (!button) return null;
     const shown = toastStore.get().length;
     button.click();
@@ -432,7 +444,7 @@ async function pattern(dir: string, palette: LibraryItemRef, di: DocController<I
   );
 
   // the Illustrator swatch, read back from its file: every shape over an edge is on the far side too
-  const exported = await patternExport(dir, 'Pattern out');
+  const exported = await toolExport(dir, 'pattern', 'Pattern out');
   const swatch = await exported('Illustrator swatch');
   const svg = swatch && new DOMParser().parseFromString(await swatch.text(), 'image/svg+xml').documentElement;
   if (!check('Export writes the Illustrator swatch', svg?.nodeName === 'svg')) return;
@@ -510,6 +522,163 @@ async function pattern(dir: string, palette: LibraryItemRef, di: DocController<I
     [di.get().source?.name, name, bmp?.width, bmp?.height, clear],
   );
   bmp?.close();
+}
+
+// Logo parts, neutral and synthetic (the repo is public): a ring-and-diamond icon, the same icon as
+// an Illustrator export on a padded artboard (Layer_1, .cls-1 rules), and a wordmark drawn as paths
+// on its own padded artboard: caps 100 tall on a baseline at 100, one descender to 130.
+const [NAVY, AMBER, INK] = ([[0.35, 0.07, 255], [0.77, 0.14, 70], [0.33, 0.07, 275]] as Oklch[]).map(toHex);
+const RING = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 92 92"><circle cx="46" cy="46" r="46" fill="${NAVY}"/><rect x="27" y="27" width="38" height="38" fill="${AMBER}" transform="rotate(45 46 46)"/></svg>`;
+const RING_PADDED = `<svg xmlns="http://www.w3.org/2000/svg" id="Layer_1" data-name="Layer 1" width="400px" height="300px" viewBox="0 0 400 300"><defs><style>.cls-1{fill:${NAVY};}.cls-2{fill:${AMBER};}</style></defs><circle class="cls-1" cx="190" cy="140" r="46"/><rect class="cls-2" x="171" y="121" width="38" height="38" transform="rotate(45 190 140)"/></svg>`;
+const LUMP = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -30 324 190"><g fill="${INK}" fill-rule="evenodd"><path d="M0 0h14v86h46v14H0z"/><path d="M76 36h14v50h32V36h14v64H76z"/><path d="M152 36h60v64h-14V50h-9v50h-14V50h-9v50h-14z"/><path d="M228 36h56v50h-42v44h-14zM242 50v22h28V50z"/></g></svg>`;
+
+/** an ICO's entries as [its directory size, the PNG's width, height]; null when it doesn't parse */
+async function icoEntries(b: Uint8Array): Promise<number[][] | null> {
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  if (b.length < 6 || v.getUint16(0, true) !== 0 || v.getUint16(2, true) !== 1) return null;
+  const out: number[][] = [];
+  for (let i = 0; i < v.getUint16(4, true); i++) {
+    const e = 6 + 16 * i;
+    const [len, at] = [v.getUint32(e + 8, true), v.getUint32(e + 12, true)];
+    if (at + len > b.length) return null;
+    const bmp = await createImageBitmap(new Blob([b.slice(at, at + len)], { type: 'image/png' })).catch(() => null);
+    if (!bmp) return null;
+    out.push([b[e] || 256, bmp.width, bmp.height]);
+    bmp.close();
+  }
+  return out;
+}
+
+/**
+ * Make › Logo (plan: Then): parts come in from the Library, a padded artboard lays out as its
+ * unpadded twin, the first edit saves the logo with its preview, the exports are real fills at their
+ * stated sizes, the favicon ICO parses, and Pattern and Design take the logo. Leaves Logo linked to
+ * its logo, so the quiet pass sees it come back as its file.
+ */
+async function logo(dir: string): Promise<void> {
+  const ld = shell.doc('logo') as DocController<LogoDoc>;
+  shell.setActive('logo');
+  check('Logo starts new, with no parts', ld.state().t === 'new' && ld.depth() === 0 && noParts(ld.get()), ld.state());
+  await shell.createCollection('Logo parts');
+  const svg = (name: string, text: string) => api.invoke('library.createImage', 'Logo parts', name, 'svg', new TextEncoder().encode(text).buffer);
+  const padded = await svg('Ring padded', RING_PADDED);
+  const word = await svg('Lump', LUMP);
+  const label = () => shell.tool('logo').accepts.svg?.label;
+  check('an SVG goes into Logo as the icon first', label() === 'AS ICON', label());
+  await shell.sendItem(padded, 'logo');
+  const made = await until(() => (ld.state().t === 'saved' ? ld.source() : null));
+  if (!check('the first Logo edit makes a logo in Scratch', made?.collection === 'Scratch', made ?? ld.state())) return;
+  const file = await until(async () => {
+    const item = await api.invoke('library.read', made!.itemId).catch(() => null);
+    return item?.kind === 'logo' ? item.payload : null;
+  });
+  check('its file holds the icon and a preview that draws it', file?.icon?.includes('<circle') && /<circle/.test(file.preview.svg) && !/<image/.test(file.preview.svg), file?.preview.svg.slice(0, 160));
+  check('the next SVG goes in as the wordmark', label() === 'AS WORDMARK', label());
+  await shell.sendItem(word, 'logo');
+  const d = ld.get();
+  const t = d.wordmark?.type;
+  check('the wordmark comes in with its cap height and baseline, found from its letters', t && Math.abs(t.capTop) < 1.5 && Math.abs(t.baseline - 100) < 1.5, t);
+  const on = shownLockups(d).map((l) => l.kind);
+  check('the pair proposes horizontal and stacked, the horizontal aligned on the capitals', on.includes('horizontal') && on.includes('stacked') && lockupOf(d, 'horizontal').align === 'cap', on);
+
+  // the padded artboard and its tight twin: the same artwork (to the measure's resolution, a tenth
+  // of a percent), the same layout, the same drawing to within antialiasing
+  const tight = await partFromSvg(RING, 'Ring', 'icon');
+  const twin = { ...d, icon: tight };
+  const near = (a: number, b: number, e = 1e-3) => Math.abs(a - b) <= e;
+  const same = (a?: Rect, b?: Rect) => (!a && !b) || (!!a && !!b && near(a.x, b.x) && near(a.y, b.y) && near(a.w, b.w) && near(a.h, b.h));
+  const box = d.icon!.box;
+  const e = tight.box.h * 1e-3;
+  const measured = near(box.w, tight.box.w, e) && near(box.h, tight.box.h, e) && near(box.x - tight.box.x, 144, e) && near(box.y - tight.box.y, 94, e);
+  const laid = d.lockups.every((l) => {
+    const [a, b] = [layoutLockup(d, l), layoutLockup(twin, l)];
+    return near(a.w, b.w) && near(a.h, b.h) && same(a.icon, b.icon) && same(a.wordmark, b.wordmark);
+  });
+  const pixels = async (x: LogoDoc) => {
+    const out = lockupSvg(x, lockupOf(x, 'horizontal'), 'original', { padding: 'clearspace', height: 160 });
+    const { width, height } = parseSize(out);
+    const c = await drawSvg(out, Math.round(width), Math.round(height));
+    return c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+  };
+  const [pa, pb] = await Promise.all([pixels(d), pixels(twin)]);
+  // premultiplied, so a nearly clear edge pixel's colour doesn't count as a difference
+  let off = pa.length === pb.length ? 0 : 255;
+  for (let i = 0; i < pa.length && off < 255; i += 4)
+    for (let c = 0; c < 4; c++) off = Math.max(off, Math.abs((c < 3 ? pa[i + c] * pa[i + 3] : 255 * pa[i + 3]) - (c < 3 ? pb[i + c] * pb[i + 3] : 255 * pb[i + 3])) / 255);
+  check('a part on a padded artboard lays out as its unpadded twin, and draws the same to a sixteenth of a pixel', measured && laid && off <= 16, { box, tight: tight.box, laid, off });
+
+  // stray art on the pasteboard, two artboards off, never paints into a lockup
+  const amber = (px: Uint8ClampedArray) => {
+    let n = 0;
+    for (let i = 0; i < px.length; i += 4) if (px[i + 3] > 128 && px[i] > 170 && px[i + 2] < 120) n++;
+    return n;
+  };
+  const stray = await partFromSvg(RING.replace('</svg>', `<rect x="200" y="0" width="92" height="92" fill="${AMBER}"/></svg>`), 'Stray', 'icon');
+  const [clean, strayed] = [amber(await pixels(twin)), amber(await pixels({ ...d, icon: stray }))];
+  check('art off the artboard is clipped, as the file shows on its own', (['x', 'y', 'w', 'h'] as const).every((k) => near(stray.box[k], tight.box[k], e)) && Math.abs(strayed - clean) <= clean * 0.02, { box: stray.box, clean, strayed });
+  // an SVG that only wraps a picture is that picture: a PNG part, tinted flat
+  const ring = await drawSvg(RING, 92, 92);
+  const href = await new Promise<string>((ok) => {
+    const r = new FileReader();
+    r.onload = () => ok(r.result as string);
+    void ring.convertToBlob({ type: 'image/png' }).then((b) => r.readAsDataURL(b));
+  });
+  const wrapped = await partFromSvg(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 92 92"><image width="92" height="92" xlink:href="${href}"/></svg>`, 'Wrapped', 'icon');
+  check('an SVG that only wraps a picture comes in as a PNG part, with a silhouette to tint', !wrapped.svg && !!wrapped.png && !!wrapped.silhouette, [!!wrapped.svg, wrapped.box]);
+  // an opaque card inside a transparent border would tint to a block
+  const card = new OffscreenCanvas(44, 34);
+  const cc = card.getContext('2d')!;
+  cc.fillStyle = NAVY;
+  cc.fillRect(2, 2, 40, 30);
+  const refused = await partFromImage(await card.convertToBlob({ type: 'image/png' }), 'Card', 'icon').then(() => null, (e: Error) => e.message);
+  check('an opaque picture inside a transparent border is turned away', /no transparent background/.test(String(refused)), refused);
+  // a logo made for dark grounds, a white name beside the mark: its brand sheet shows the original on dark
+  const whiteName = await partFromSvg(LUMP.replace(`fill="${INK}"`, `fill="${toHex([1, 0, 0])}"`), 'White name', 'wordmark');
+  const sheet = await sheetSvg({ ...d, wordmark: whiteName }, 'Dark ground');
+  const tile = /<rect [^>]*width="240" height="150" fill="(#[0-9a-f]+)"/.exec(sheet)?.[1];
+  check('the brand sheet puts a white-named logo’s original on the dark tile, judged by its edge', tile === PAPER.dark, tile);
+
+  // the exports, read back from the files they wrote
+  patchLogo({ mode: 'edit', lockup: 'horizontal', version: 'black', dpi: 300 });
+  const row = (name: string) => [...(host('logo')?.querySelectorAll('b') ?? [])].find((b) => b.textContent === name);
+  if (!check('Logo shows its Export module', await until(() => row('SVG') && row('Favicon bundle')))) return;
+  const exported = await toolExport(dir, 'logo', 'Logo out');
+  const vector = await (await exported('SVG'))?.text();
+  check(
+    'the exported lockup SVG is its parts as paths in black fills: no filter, no <image>, no colour left over',
+    vector && /<circle/.test(vector) && /<path/.test(vector) && /fill="#000000"/.test(vector) && !/filter/.test(vector) && !/<image/.test(vector) && ![NAVY, AMBER, INK].some((c) => vector.toLowerCase().includes(c)),
+    vector?.slice(0, 240),
+  );
+  const png = await exported('PNG');
+  const info = png && pngInfo(new Uint8Array(await png.arrayBuffer()));
+  const size = pngSize(ld.get(), layoutLockup(ld.get(), lockupOf(ld.get(), 'horizontal')));
+  check('the PNG export is the set height with its DPI written in', info && info.w === size.w && info.h === size.h && Math.round(info.dpi ?? 0) === 300, [info, size]);
+
+  const bundle = await faviconBundle(ld.get(), 'original', made!.name);
+  const ico = bundle.find((f) => f.name === 'favicon.ico')?.data;
+  const entries = ico instanceof ArrayBuffer ? await icoEntries(new Uint8Array(ico)) : null;
+  check('the favicon ICO parses: 16, 32 and 48 px PNGs, each its stated size', JSON.stringify(entries) === '[[16,16,16],[32,32,32],[48,48,48]]', entries);
+  const shown = toastStore.get().length;
+  [...(host('logo')?.querySelectorAll('button') ?? [])].find((b) => b.parentElement?.querySelector('b')?.textContent === 'Favicon bundle')?.click();
+  const done = await until(() => toastStore.get().slice(shown).find((x) => x.icon === 'download'));
+  check('Favicon bundle writes its nine files into one folder', /^Exported 9 files into /.test(String(done?.message)), done?.message);
+
+  // other tools take the logo: Pattern its icon as a shape, Design its colours as proposals
+  const pd = patternDoc();
+  const shapes = pd.get().slots.length;
+  await shell.sendDoc('logo', 'pattern');
+  const shape = pd.get().slots.at(-1);
+  check(
+    'a logo sent to Pattern becomes a shape: its icon, measured by its artwork',
+    shell.getState().active === 'pattern' && pd.get().slots.length === shapes + 1 && shape?.name === made!.name && /<circle/.test(shape.svg) && near(shape.bounds.w, 92, 0.5) && near(shape.bounds.h, 92, 0.5),
+    [pd.get().slots.length - shapes, shape?.name, shape?.bounds],
+  );
+  clearProposals();
+  await shell.sendDoc('logo', 'design');
+  const hexes = (proposals.get()?.items ?? []).map((x) => toHex(x.oklch));
+  check('Design extracts the logo’s colours', shell.getState().active === 'design' && [NAVY, AMBER, INK].every((h) => hexes.includes(h)), hexes);
+  clearProposals();
+  check('and Logo keeps its logo', ld.state().t === 'saved' && ld.source()?.itemId === made!.itemId, ld.state());
 }
 
 /**

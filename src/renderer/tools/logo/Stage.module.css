@@ -1,0 +1,28 @@
+/* the edit view: the Viewport fills its module's body, square-cornered under the header */
+.vp { min-height: 0; border-radius: 0; }
+/* toasts rise from the top of the zoom bar, over the lockup, not onto the strip or the inspector */
+.vp > :first-child { anchor-name: --toasts; }
+.sep { flex: none; width: 1px; height: 16px; margin: 0 4px; background: var(--line); }
+.toggle { flex: none; white-space: nowrap; }
+.art { display: block; }
+.live b { color: var(--signal); }
+
+/* marks: 1 device px white lines on a dark halo (the canvas crosshair's pair), so they read on any surround */
+.marks { position: absolute; inset: 0; overflow: visible; }
+.halo { fill: none; stroke: var(--cross-halo); stroke-width: 3; }
+.line { fill: none; stroke: var(--cross); stroke-width: 1; }
+.dash { stroke-dasharray: 4 3; }
+.halo path:last-child { stroke-dasharray: 4 3; }
+.label {
+  fill: var(--cross);
+  stroke: var(--cross-halo);
+  stroke-width: 3px;
+  paint-order: stroke;
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.handle { fill: var(--cross); stroke: var(--cross-halo); stroke-width: 1; }
+.hit { fill: none; stroke: none; }
+.grip { pointer-events: all; }
+.grip:hover .handle, .dragging .handle { stroke-width: 3; }

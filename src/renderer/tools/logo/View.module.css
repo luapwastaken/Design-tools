@@ -1,0 +1,38 @@
+/* brief §5: work area at least 540px, inspector 340–460 (380); the inspector gives way first */
+.view {
+  display: grid;
+  grid-template-columns: minmax(min(540px, calc(100% - 340px - var(--gap))), 1fr) minmax(340px, var(--insp));
+  gap: var(--gap);
+  min-width: 0;
+  min-height: 0;
+}
+
+/* the document bar, then the stage takes the rest */
+.work {
+  position: relative;
+  display: grid;
+  grid-template-rows: var(--docbar) minmax(0, 1fr);
+  gap: var(--gap);
+  min-width: 0;
+  min-height: 0;
+}
+/* toasts rise in the work column (Toast.module.css), over the Viewport's bar in the edit view (Stage.module.css) */
+.stage { container: stage / inline-size; anchor-name: --toasts; }
+.stage > :nth-child(2) { display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
+.switches { display: flex; align-items: center; gap: 6px; }
+.switches > * { height: 22px; }
+.version { width: 164px; }
+
+/* the lockup large, its zoom bar, then the other lockups */
+.edit { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; }
+.none { padding: 18px 16px; color: var(--ink-2); font-size: var(--fs-base); background: var(--pasteboard); }
+
+.insp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.insp > * { flex: none; }

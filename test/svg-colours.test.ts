@@ -32,3 +32,10 @@ test('Illustrator exports: class rules, gradient stops, CDATA styles', () => {
 test('markup that is not an SVG says so', () => {
   assert.throws(() => svgColours('<svg><path></svg>'), /couldn't be read/);
 });
+
+test('mask and clip-path paint is how much shows, not a colour: left out, rules reaching only it too', () => {
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg"><style>.m{fill:#ffffff}.a{fill:#123456}</style><defs><mask id="k"><rect class="m" width="9" height="9"/><rect fill="#000" width="3" height="3"/></mask>' +
+    '<clipPath id="c"><rect width="9" height="9"/></clipPath></defs><g clip-path="url(#c)"><rect class="a" mask="url(#k)" width="9" height="9"/></g></svg>';
+  assert.deepEqual(hexes(svg), ['#123456']);
+});
