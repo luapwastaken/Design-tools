@@ -4,6 +4,7 @@ import { deltaE, hexToOklch } from '../src/shared/color/index.ts';
 import { mix } from '../src/shared/paint/km.ts';
 import { customPigment, PIGMENTS, type Pigment } from '../src/shared/paint/pigments.ts';
 import { recipes } from '../src/shared/paint/recipe.ts';
+import { budget } from './perf.ts';
 
 const P = Object.fromEntries(PIGMENTS.map((p) => [p.id, p])) as Record<string, Pigment>;
 const TARGETS = ['#6b8e23', '#c0504d', '#4f81bd', '#f2dcdb', '#1f497d', '#ffc000', '#7f7f7f', '#8064a2', '#4bacc6', '#f79646', '#2c1810', '#d8e4bc'].map(hexToOklch);
@@ -77,5 +78,5 @@ test('performance: 12 targets from 14 pigments in under 300ms', () => {
   const t = performance.now();
   for (const target of TARGETS) recipes(target, PIGMENTS, { maxPigments: 3, count: 3 });
   const ms = performance.now() - t;
-  assert.ok(ms < 300, `${ms.toFixed(0)}ms`);
+  assert.ok(ms < budget(300), `${ms.toFixed(0)}ms`);
 });

@@ -5,7 +5,7 @@ import type { ToolDefinition } from './tool.ts';
  * not imported at the top, so no tool module runs before the shell core it imports has.
  */
 const realTools = async (): Promise<ToolDefinition<any>[]> =>
-  (await Promise.all([import('../tools/design/index.ts'), import('../tools/illustration/index.ts'), import('../tools/pattern/index.ts'), import('../tools/logo/index.ts')])).map((m) => m.tool as ToolDefinition<any>);
+  (await Promise.all([import('../tools/design/index.ts'), import('../tools/illustration/index.ts'), import('../tools/pattern/index.ts'), import('../tools/logo/index.ts'), import('../tools/halftone/index.ts')])).map((m) => m.tool as ToolDefinition<any>);
 
 /**
  * The rail's tools. The foundation's dev image stub joins only when not packaged, and is loaded

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { rgb255, type Oklch } from '../src/shared/color/index.ts';
 import { fromOklab, toOklab } from '../src/shared/palette/space.ts';
 import { direction, frame, rampLut, shade, surface, tone, type Light, type Shape } from '../src/renderer/tools/illustration/shade.ts';
+import { budget } from './perf.ts';
 
 // highlight, light, base, shadow, deep shadow: a warm-lit terracotta
 const RAMP: Oklch[] = [
@@ -124,5 +125,5 @@ test('a light drag stays well inside a frame: three shapes at full size', () => 
   const t = performance.now();
   for (let a = 0; a < 10; a++) shapes.forEach((s) => shade(surface(s, 288), lut, { azimuth: a * 36, elevation: 30 }, px));
   const frameMs = (performance.now() - t) / 10;
-  assert.ok(frameMs < 12, `${frameMs.toFixed(1)}ms per frame`);
+  assert.ok(frameMs < budget(12), `${frameMs.toFixed(1)}ms per frame`);
 });

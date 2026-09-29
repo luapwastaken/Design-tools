@@ -31,6 +31,6 @@ export { toast, type ToastOptions } from './toast.ts';
 export { ToastHost } from './Toast.tsx';
 export { menu, type MenuItem, type MenuAction, type MenuAnchor, type MenuOptions } from './menu.ts';
 export { MenuHost } from './Menu.tsx';
-export { Viewport, cursorXY, type ViewportProps, type ViewTransform } from './Viewport.tsx';
+export { Viewport, cursorXY, type ViewportProps, type ViewTransform, type RulerUnit } from './Viewport.tsx';
 export { asZoom, type Zoom } from './viewport.ts';
 export { ControlsBoard } from './ControlsBoard.tsx';

@@ -9,15 +9,21 @@
   background: var(--module);
 }
 
+/* the view, or the view under rulers (18px, as on the Instrument Halftone board) */
+.ruled { display: grid; flex: 1 1 0; grid-template: minmax(0, 1fr) / minmax(0, 1fr); min-height: 0; }
+.ruled.on { grid-template: 18px minmax(0, 1fr) / 18px minmax(0, 1fr); }
+
 .view {
   position: relative;
-  flex: 1 1 0;
+  grid-area: -2 / -2 / -1 / -1;
   min-height: 0;
   overflow: hidden;
   contain: layout paint;
   background: var(--pasteboard);
   touch-action: none;
 }
+/* a probe follows the pointer: the crosshair marks the point it reads */
+.view[data-probe] { cursor: crosshair; }
 /* Space held: the whole view is a hand, whatever the content's own cursor */
 .view[data-space], .view[data-space] * { cursor: grab !important; }
 :global(html[data-pan]), :global(html[data-pan] *) { cursor: grabbing !important; }

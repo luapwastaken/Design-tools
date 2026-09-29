@@ -1,0 +1,31 @@
+/* the empty work area: one drop zone on the pasteboard, dashed at rest, lit while a drag is over it (brief §7) */
+.start {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 16px;
+  height: 100%;
+  padding: 24px;
+  overflow: auto;
+  border-radius: var(--r-mod);
+  background: var(--pasteboard);
+}
+.zone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: min(100%, 440px);
+  padding: 22px 22px 20px;
+  border-radius: 4px;
+  outline: 1px dashed var(--tick);
+  outline-offset: -1px;
+  background: var(--module);
+}
+.glyph { display: flex; margin-bottom: 8px; color: var(--ink-3); }
+.glyph svg { display: block; }
+.title { font-size: var(--fs-row); font-weight: 600; }
+.line { color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.note { max-width: 58ch; color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.5; text-align: center; }
+.over { outline-color: transparent; background: var(--signal-soft); box-shadow: inset 0 0 0 1px var(--signal); }

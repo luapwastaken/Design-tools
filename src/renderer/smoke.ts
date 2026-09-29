@@ -2,7 +2,8 @@
 // runs scripts/smoke.mjs). It drives the real shell, IPC and Library in the smoke folder, reports
 // each check, and hands the result to main (app.smokeDone), which quits through the close handshake.
 // 'full' runs the smoke list; 'quiet' is the relaunch: it restores, checks, and quits with no input.
-import { contrast, toHex, type Oklch } from '../shared/color/index.ts';
+import { contrast, rgb255, toHex, type Oklch } from '../shared/color/index.ts';
+import { INKS } from '../shared/palette/inks.ts';
 import type { DocController } from '../shared/doc-api.ts';
 import { layoutLockup } from '../shared/logo/layout.ts';
 import { PAPER } from '../shared/logo/sheet.ts';
@@ -18,6 +19,11 @@ import { select as selectInDesign } from './tools/design/actions.ts';
 import { newSwatch as designSwatch, recolour as recolourInDesign, type DesignDoc } from './tools/design/doc.ts';
 import { clearProposals, proposals } from './tools/design/proposals.ts';
 import type { ImageDoc } from './tools/dev-image/index.ts';
+import { mapInk, spotInk, type HalftoneDoc } from './tools/halftone/doc.ts';
+import { lookOf, Painter } from './tools/halftone/draw.ts';
+import { platesFor, pngBlob } from './tools/halftone/exports.ts';
+import { ready, screen, totals } from './tools/halftone/screening.ts';
+import { status as halftoneStatus } from './tools/halftone/view-state.ts';
 import { addRamp, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
 import { isEmpty as noParts, lockupOf, shownLockups, type LogoDoc } from './tools/logo/doc.ts';
 import { faviconBundle, sheetSvg } from './tools/logo/files.ts';
@@ -107,7 +113,7 @@ async function full(): Promise<void> {
   const dir = info.userData.replace(/[\\/]Design Tools$/, '');
 
   const ids = shell.getState().tools.map((t) => t.id);
-  check('Design, Illustration, Pattern, Logo and the dev image tool are registered, and nothing else', JSON.stringify(ids) === JSON.stringify(['design', 'illustration', 'pattern', 'logo', 'dev-image']), ids);
+  check('Design, Illustration, Pattern, Logo, Halftone and the dev image tool are registered, and nothing else', JSON.stringify(ids) === JSON.stringify(['design', 'illustration', 'pattern', 'logo', 'halftone', 'dev-image']), ids);
   for (const id of ids) {
     shell.setActive(id);
     await sleep(50);
@@ -228,6 +234,7 @@ async function full(): Promise<void> {
   await design(dir, image, di);
   await pattern(dir, palette, di);
   await logo(dir);
+  await halftone(dir, di);
   await illustration();
 
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
@@ -679,6 +686,265 @@ async function logo(dir: string): Promise<void> {
   check('Design extracts the logo’s colours', shell.getState().active === 'design' && [NAVY, AMBER, INK].every((h) => hexes.includes(h)), hexes);
   clearProposals();
   check('and Logo keeps its logo', ld.state().t === 'saved' && ld.source()?.itemId === made!.itemId, ld.state());
+}
+
+/** a PNG of w × h from (x, y) → [r, g, b] bytes, opaque (no colour literals: the image is data) */
+async function pngFrom(w: number, h: number, px: (x: number, y: number) => number[]): Promise<ArrayBuffer> {
+  const img = new ImageData(w, h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const [r, g, b] = px(x, y);
+      img.data.set([r, g, b, 255], (y * w + x) * 4);
+    }
+  }
+  const c = new OffscreenCanvas(w, h);
+  c.getContext('2d')!.putImageData(img, 0, 0);
+  return (await c.convertToBlob({ type: 'image/png' })).arrayBuffer();
+}
+
+/** an uncompressed 16-bit RGB TIFF, little-endian, one strip: (x, y) → [r, g, b] 0..65535 */
+function tiff16(w: number, h: number, px: (x: number, y: number) => number[]): ArrayBuffer {
+  const tags = [[256, 3, 1, w], [257, 3, 1, h], [258, 3, 3, 0], [259, 3, 1, 1], [262, 3, 1, 2], [273, 4, 1, 0], [277, 3, 1, 3], [278, 3, 1, h], [279, 4, 1, w * h * 6]];
+  const bps = 8 + 2 + tags.length * 12 + 4;
+  const data = bps + 6;
+  const v = new DataView(new ArrayBuffer(data + w * h * 6));
+  v.setUint16(0, 0x4949);
+  v.setUint16(2, 42, true);
+  v.setUint32(4, 8, true);
+  v.setUint16(8, tags.length, true);
+  tags.forEach(([tag, type, count, value], i) => {
+    const at = 10 + i * 12;
+    v.setUint16(at, tag, true);
+    v.setUint16(at + 2, type, true);
+    v.setUint32(at + 4, count, true);
+    const val = tag === 258 ? bps : tag === 273 ? data : value;
+    if (type === 3 && count === 1) v.setUint16(at + 8, val, true);
+    else v.setUint32(at + 8, val, true);
+  });
+  for (let c = 0; c < 3; c++) v.setUint16(bps + 2 * c, 16, true);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) px(x, y).forEach((c, k) => v.setUint16(data + (y * w + x) * 6 + 2 * k, c, true));
+  return v.buffer;
+}
+
+/** a baseline TIFF's first IFD as tag → value (a RATIONAL as its quotient) */
+function tiffTags(b: Uint8Array): Map<number, number> {
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const le = b[0] === 0x49;
+  const [u16, u32] = [(o: number) => v.getUint16(o, le), (o: number) => v.getUint32(o, le)];
+  const tags = new Map<number, number>();
+  const ifd = u32(4);
+  for (let i = 0; i < u16(ifd); i++) {
+    const e = ifd + 2 + 12 * i;
+    const type = u16(e + 2);
+    tags.set(u16(e), type === 3 ? u16(e + 8) : type === 5 ? u32(u32(e + 8)) / u32(u32(e + 8) + 4) : u32(e + 8));
+  }
+  return tags;
+}
+
+/** an image's RGBA bytes, as decoded (full resolution, straight alpha) */
+async function pixelsOf(blob: Blob): Promise<{ w: number; h: number; px: Uint8ClampedArray }> {
+  const bmp = await decodeImage(blob);
+  const c = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d', { willReadFrequently: true })!;
+  c.drawImage(bmp, 0, 0);
+  const out = { w: bmp.width, h: bmp.height, px: c.getImageData(0, 0, bmp.width, bmp.height).data };
+  bmp.close();
+  return out;
+}
+
+/**
+ * Image › Halftone (plan: Then): pure cyan separates to C alone and a 50% grey to half black, the
+ * SVG holds one path per visible ink and none for a hidden one, its dots are the view's, the TIFF
+ * plates carry the print DPI and the meters' coverage, a 16-bit TIFF opens, and Dev image takes the
+ * screen PNG. Leaves Halftone with its image, so the quiet pass sees the document come back.
+ */
+async function halftone(dir: string, di: DocController<ImageDoc>): Promise<void> {
+  const hd = shell.doc('halftone') as DocController<HalftoneDoc>;
+  shell.setActive('halftone');
+  const d0 = hd.get();
+  check(
+    'Halftone starts empty: A4 portrait at 300 dpi and 60 lpi, round dots, CMYK on Bone',
+    !d0.source && hd.depth() === 0 && d0.size.w === 210 && d0.size.h === 297 && d0.size.dpi === 300 && d0.screen.lpi === 60 && d0.screen.shape === 'round' && d0.inks.map((i) => i.process).join('') === 'cmyk',
+    [d0.size, d0.screen],
+  );
+  check('and shows where to drop an image', await until(() => host('halftone')?.textContent?.includes('Drop an image to screen')));
+
+  await shell.createCollection('Halftone in');
+  const put = async (name: string, ext: string, bytes: ArrayBuffer) => api.invoke('library.createImage', 'Halftone in', name, ext, bytes);
+  const cyan = await put('Smoke cyan', 'png', await pngFrom(64, 64, () => [0, 255, 255]));
+  const grey = await put('Smoke grey', 'png', await pngFrom(64, 64, () => [128, 128, 128]));
+  // a hue sweep over a grey ramp, 3:2 like the page, so every ink has dots
+  const hue = (t: number, o: number) => Math.round(255 * Math.min(1, Math.max(0, Math.abs(((6 * t + o) % 6) - 3) - 1)));
+  const level = (x: number) => Math.round((x / 239) * 255);
+  const ramp = await put('Smoke ramp', 'png', await pngFrom(240, 160, (x, y) => (y < 80 ? [hue(x / 240, 0), hue(x / 240, 4), hue(x / 240, 2)] : [level(x), level(x), level(x)])));
+  const deep = await put('Smoke 16-bit', 'tif', tiff16(48, 32, (x) => [0, 1, 2].map(() => Math.round((x / 47) * 65535))));
+
+  // a small page, and white paper: tone is relative to the paper, so on Bone a 50% grey needs less black
+  hd.transact('Smoke page', (d) => ({ ...d, size: { ...d.size, w: 90, h: 60 }, fit: 'cover', screen: { ...d.screen, lpi: 40 }, paper: { ...d.paper, colour: [1, 0, 0] } }));
+  const means = async () => (await screen(hd.get(), true)).stats.map((st) => st.mean);
+
+  await shell.sendItem(cyan, 'halftone');
+  check('an image sent from the Library opens in Halftone in one step', shell.getState().active === 'halftone' && hd.get().source?.name === 'Smoke cyan' && hd.depth() === 2, [hd.get().source?.name, hd.depth()]);
+  const [c1, m1, y1, k1] = await means();
+  check('pure cyan separates to C alone', c1 > 0.97 && m1 < 0.02 && y1 < 0.02 && k1 < 0.02, [c1, m1, y1, k1]);
+
+  await shell.sendItem(grey, 'halftone');
+  const greySource = hd.get().source;
+  const [c2, m2, y2, k2] = await means();
+  check('a 50% grey on white paper takes about 50% black and no colour', Math.abs(k2 - 0.5) < 0.03 && c2 < 0.02 && m2 < 0.02 && y2 < 0.02, [c2, m2, y2, k2]);
+
+  await shell.sendItem(deep, 'halftone');
+  const src = hd.get().source;
+  const read = src && (await pixelsOf(await (await fetch(src.asset)).blob()));
+  const row = read ? [0, 24, 47].map((x) => read.px[x * 4]) : null;
+  const deepMeans = await means().catch(() => null);
+  check('a 16-bit TIFF opens at its size, its values rounded to 8 bits, and screens', src?.w === 48 && src.h === 32 && JSON.stringify(row) === JSON.stringify([0, Math.round((24 / 47) * 255), 255]) && deepMeans !== null, [src, row]);
+
+  await shell.sendItem(ramp, 'halftone');
+  const yellow = hd.get().inks.find((i) => i.process === 'y')!;
+  hd.transact('Hide Yellow', (d) => mapInk(d, yellow.id, (i) => ({ ...i, visible: false })));
+  const d = hd.get();
+  const shown = await until(() => {
+    const st = halftoneStatus.get();
+    return ready(d) && st && !st.busy && !st.error && hd.get() === d ? st : null;
+  }, 20_000);
+  if (!check('the view screens the image', shown && shown.dots > 1000, halftoneStatus.get())) return;
+  const vp = host('halftone')?.querySelector<HTMLCanvasElement>('canvas');
+  const inked = await until(() => {
+    if (!vp || !vp.width) return 0;
+    const px = vp.getContext('2d')!.getImageData(0, 0, vp.width, vp.height).data;
+    let n = 0;
+    for (let i = 0; i < px.length; i += 4) if (px[i] + px[i + 1] + px[i + 2] < 300) n++;
+    return n > 500 ? n : 0;
+  });
+  check('and draws its dots', inked, vp?.width);
+
+  const exported = await toolExport(dir, 'halftone', 'Halftone out');
+  const file = await exported('SVG for Illustrator');
+  const svg = file && new DOMParser().parseFromString(await file.text(), 'image/svg+xml').documentElement;
+  if (!check('Export writes the SVG for Illustrator', svg?.nodeName === 'svg')) return;
+  const groups = [...svg!.querySelectorAll(':scope > g')];
+  const names = groups.map((g) => g.getAttribute('data-name'));
+  check(
+    'the SVG has one group and one path per visible ink, and nothing for the hidden one',
+    JSON.stringify(names) === JSON.stringify(['Cyan', 'Magenta', 'Black']) && groups.every((g) => g.querySelectorAll('path').length === 1) && svg!.querySelectorAll('path').length === 3,
+    names,
+  );
+  check('it is sized in mm', svg!.getAttribute('width') === '90mm' && svg!.getAttribute('height') === '60mm', [svg!.getAttribute('width'), svg!.getAttribute('height')]);
+  const subpaths = [...svg!.querySelectorAll('path')].reduce((n, p) => n + (p.getAttribute('d')?.match(/[Mm]/g)?.length ?? 0), 0);
+  check("its dots are the view's, one for one", subpaths === shown!.dots, [subpaths, shown!.dots]);
+
+  // the separations, through the module's button; smoke runs write them into exports/halftone
+  const plates = [...(host('halftone')?.querySelectorAll('button') ?? [])].find((b) => b.parentElement?.querySelector('b')?.textContent === 'Separations');
+  const before = toastStore.get().length;
+  plates?.click();
+  const done = await until(() => toastStore.get().slice(before).find((t) => t.icon === 'download'), 20_000);
+  check('Separations writes a plate per visible ink into one folder', /^Exported 3 plates into /.test(String(done?.message)), done?.message);
+  const plateNames = ['C Cyan', 'M Magenta', 'K Black'];
+  await shell.importFiles(plateNames.map((n) => `${dir}\\exports\\halftone\\Smoke ramp ${n}.tif`), 'Halftone out');
+  const stats = (await screen(d, true)).stats;
+  const [W, H] = [Math.round((90 * 300) / 25.4), Math.round((60 * 300) / 25.4)];
+  const found = await Promise.all(
+    plateNames.map(async (n, i) => {
+      const ref = await until(() => find((x) => x.collection === 'Halftone out' && x.name === `Smoke ramp ${n}`));
+      const item = ref && (await api.invoke('library.read', ref.id));
+      if (!item || !('url' in item)) return null;
+      const blob = await (await fetch(item.url)).blob();
+      const tags = tiffTags(new Uint8Array(await blob.arrayBuffer()));
+      const img = await pixelsOf(blob);
+      let ink = 0;
+      for (let p = 0; p < img.px.length; p += 4) ink += 1 - img.px[p] / 255;
+      return { tags: [256, 257, 258, 262, 282, 283, 296].map((t) => tags.get(t)), size: [img.w, img.h], off: Math.abs(ink / (img.w * img.h) - stats[[0, 1, 3][i]].mean) };
+    }),
+  );
+  check(
+    'the TIFF plates parse at print size, 8-bit greyscale with 300 dpi in the file',
+    found.every((f) => f && JSON.stringify(f.tags) === JSON.stringify([W, H, 8, 1, 300, 300, 2]) && f.size[0] === W && f.size[1] === H),
+    found.map((f) => f && [f.tags, f.size]),
+  );
+  check("and each carries its meter's coverage", found.every((f) => f && f.off < 0.02), found.map((f) => f?.off));
+  const bilevel = await platesFor(d, 1, 'Smoke');
+  check('1-bit plates are bilevel at the same size', bilevel.length === 3 && bilevel.every((f) => JSON.stringify([256, 257, 258, 282].map((t) => tiffTags(new Uint8Array(f.data)).get(t))) === JSON.stringify([W, H, 1, 300])), bilevel.map((f) => f.name));
+  const bits = await Promise.all(bilevel.map(async (f) => inkOf(await pixelsOf(new Blob([f.data])))));
+  check("and each carries its meter's coverage too, light tones included", bits.every((v, i) => Math.abs(v - stats[[0, 1, 3][i]].mean) < 0.01), bits.map((v, i) => [v.toFixed(4), stats[[0, 1, 3][i]].mean.toFixed(4)]));
+  await halftonePrint(d, greySource);
+
+  // Send to: Dev image gets the screen PNG at the image's own resolution
+  const want = await pixelsOf((await shell.tool('halftone').render!(d, {})).blob);
+  await shell.sendDoc('halftone', 'dev-image');
+  const url = di.get().source?.url;
+  const got = url ? await pixelsOf(await (await fetch(url)).blob()) : null;
+  let diff = got && got.px.length === want.px.length ? 0 : 255;
+  for (let p = 0; got && p < got.px.length && diff < 255; p++) diff = Math.max(diff, Math.abs(got.px[p] - want.px[p]));
+  check('Send to: Dev image receives the screen PNG, at the image’s own resolution', shell.getState().active === 'dev-image' && got?.w === 240 && got.h === 160 && diff <= 1, [got?.w, got?.h, diff]);
+}
+
+/** a plate's ink, 0..1, from its decoded pixels (black is ink) */
+function inkOf(img: { w: number; h: number; px: Uint8ClampedArray }): number {
+  let ink = 0;
+  for (let p = 0; p < img.px.length; p += 4) ink += 1 - img.px[p] / 255;
+  return ink / (img.w * img.h);
+}
+
+/**
+ * Halftone as it prints: the plates run through a press (each ink multiplied over the sheet) give
+ * the view's picture in both overlaps, so knocked-out plates are cut under the inks printed after
+ * them; and a flat tint keeps its tone at every zoom for every shape, down to a cell of a pixel.
+ */
+async function halftonePrint(d: HalftoneDoc, grey: HalftoneDoc['source']): Promise<void> {
+  const riso = (name: string) => INKS.riso.find((k) => k.name === name)!;
+  const inks = ['Medium Blue', 'Fluorescent Pink', 'Yellow'].map((n, i) => spotInk(n, riso(n).oklch, i));
+  const enc = (o: Oklch) => rgb255(o).map((v) => v / 255);
+  for (const overlap of ['overprint', 'knockout'] as const) {
+    const ds: HalftoneDoc = { ...d, mode: 'spot', inks, overlap };
+    const plates = await Promise.all((await platesFor(ds, 8, 'Press')).map((f) => pixelsOf(new Blob([f.data]))));
+    const { w, h } = plates[0];
+    const view = await pixelsOf(await pngBlob(ds, w));
+    const [paper, cols] = [enc(ds.paper.colour), inks.map((k) => enc(k.colour))];
+    let [off, n] = [0, 0];
+    for (let by = 0; by + 8 <= Math.min(h, view.h); by += 8) {
+      for (let bx = 0; bx + 8 <= w; bx += 8) {
+        for (let c = 0; c < 3; c++) {
+          let [press, shown] = [0, 0];
+          for (let y = by; y < by + 8; y++) {
+            for (let x = bx; x < bx + 8; x++) {
+              const p = y * w + x;
+              press += plates.reduce((v, pl, i) => v * (1 - (1 - pl.px[p * 4] / 255) * (1 - cols[i][c])), paper[c]) * 255;
+              shown += view.px[p * 4 + c];
+            }
+          }
+          off += Math.abs(press - shown) / 64;
+          n++;
+        }
+      }
+    }
+    check(`Halftone, ${overlap}: the plates as a press prints them are the view (8 px blocks)`, off / n < 4, (off / n).toFixed(2));
+    const meters = totals(await screen(ds, true), ds).stats;
+    const inked = plates.map(inkOf);
+    check(`and each ${overlap} plate carries what its meter says prints`, inked.every((v, i) => Math.abs(v - meters[i].mean) < 0.015), inked.map((v, i) => [v.toFixed(3), meters[i].mean.toFixed(3)]));
+  }
+
+  const painter = new Painter('smoke tone');
+  const misses: string[] = [];
+  for (const shape of ['round', 'ellipse', 'square', 'diamond', 'line', 'cross'] as const) {
+    const ds: HalftoneDoc = { ...d, source: grey, mode: 'spot', inks: [spotInk('Black', [0, 0, 0], 0)], paper: { colour: [1, 0, 0], include: true }, screen: { ...d.screen, shape } };
+    const s = await screen(ds, true);
+    const want = 255 * (1 - s.stats[0].mean);
+    for (const k of [0.2, 0.5, 1, 4]) {
+      const [w, h] = k < 4 ? [Math.round(s.page.w * k), Math.round(s.page.h * k)] : [240, 240];
+      const at: [number, number] = k < 4 ? [0, 0] : [Math.round(s.page.w * 1.5), Math.round(s.page.h * 1.5)];
+      const bmp = painter.bitmap(s, lookOf(ds, false), at, k, w, h);
+      const c = new OffscreenCanvas(w, h).getContext('2d', { willReadFrequently: true })!;
+      if (bmp) c.drawImage(bmp, 0, 0);
+      bmp?.close();
+      const px = c.getImageData(0, 0, w, h).data;
+      let sum = 0;
+      for (let p = 0; p < px.length; p += 4) sum += px[p];
+      const got = sum / (w * h);
+      if (!(Math.abs(got - want) <= 2)) misses.push(`${shape} at ${k}: ${got.toFixed(1)} for ${want.toFixed(1)}`);
+    }
+  }
+  painter.release();
+  check('a flat tint keeps its tone in the view at 20%, 50%, 100% and 400%, every shape (within 2 of 255)', !misses.length, misses);
 }
 
 /**

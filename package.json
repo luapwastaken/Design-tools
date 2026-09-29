@@ -24,7 +24,8 @@
     "fflate": "^0.8.3",
     "material-symbols": "^0.47.5",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "utif2": "^4.1.0"
   },
   "devDependencies": {
     "@types/culori": "^4.0.0",

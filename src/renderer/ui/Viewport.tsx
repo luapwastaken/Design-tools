@@ -4,6 +4,8 @@ import { cx } from './cx.ts';
 import { Icon } from './Icon.tsx';
 import { IconButton } from './IconButton.tsx';
 import { NumberField } from './NumberField.tsx';
+import { Rulers, useHover, type Hover } from './Rulers.tsx';
+import type { RulerUnit } from './rulers.ts';
 import { Segmented } from './Segmented.tsx';
 import { clampView, MAX_SCALE, MIN_SCALE, originOf, panBy, resolveZoom, sameZoom, stepScale, wheelFactor, zoomAt, zoomKey, type Point, type Size, type View, type Zoom, type ZoomKey } from './viewport.ts';
 import s from './Viewport.module.css';
@@ -25,6 +27,8 @@ export type ViewTransform = {
   toContent(clientX: number, clientY: number): Point;
 };
 
+export type { RulerUnit };
+
 export type ViewportProps = {
   contentWidth: number;
   contentHeight: number;
@@ -42,6 +46,11 @@ export type ViewportProps = {
   cursor?: false | ((p: Point | null) => ReactNode);
   /** the tool's own controls in the bar, after the zoom (a Seams toggle) */
   bar?: ReactNode;
+  /** rulers along the top and left in this unit, 0 at the content's top left, marking the pointer */
+  rulers?: RulerUnit;
+  /** a screen-space layer that follows the pointer (an ink readout beside it), with the crosshair
+   *  cursor; only it re-renders as the pointer moves. `at` is null off the view */
+  probe?(at: { screen: Point; content: Point } | null, t: ViewTransform): ReactNode;
   className?: string;
 };
 
@@ -59,7 +68,7 @@ const SETTLE_MS = 250;
  * It takes its keys only while it is on screen, so a hidden tool's viewport never moves.
  */
 export function Viewport(p: ViewportProps) {
-  const { contentWidth, contentHeight, children, render, overlay, cursor = cursorXY, bar, className } = p;
+  const { contentWidth, contentHeight, children, render, overlay, cursor = cursorXY, bar, rulers, probe, className } = p;
   const content: Size = { w: contentWidth, h: contentHeight };
   const viewEl = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -74,6 +83,7 @@ export function Viewport(p: ViewportProps) {
   }
   const [zoomBad, setZoomBad] = useState(false);
   const readout = useRef<(at: Point | null) => void>(() => {});
+  const [hover] = useState<Hover>(() => new Set());
   const over = useRef(false);
   const space = useRef(false);
   const pan = useRef<{ id: number; x: number; y: number; from: View } | null>(null);
@@ -230,6 +240,10 @@ export function Viewport(p: ViewportProps) {
   };
   const onPointerMoveCapture = (e: PointerEvent<HTMLDivElement>) => {
     readout.current(t && t.toContent(e.clientX, e.clientY));
+    if (hover.size) {
+      const r = e.currentTarget.getBoundingClientRect();
+      for (const f of hover) f({ x: e.clientX - r.left, y: e.clientY - r.top });
+    }
     const d = pan.current;
     if (d?.id === e.pointerId) change(panBy(d.from, e.clientX - d.x, e.clientY - d.y), 'end');
   };
@@ -237,33 +251,44 @@ export function Viewport(p: ViewportProps) {
   const pct = (view?.scale ?? 1) * 100;
   const preset: Preset = own === 'fit' ? 'fit' : view?.scale === 1 ? 'actual' : 'none';
 
+  const viewer = (
+    <div
+      ref={viewEl}
+      className={s.view}
+      data-probe={probe ? '' : undefined}
+      onPointerEnter={() => (over.current = true)}
+      onPointerLeave={() => {
+        over.current = false;
+        readout.current(null);
+        for (const f of hover) f(null);
+      }}
+      onPointerDownCapture={onPointerDownCapture}
+      onPointerMoveCapture={onPointerMoveCapture}
+      onPointerUp={endPan}
+      onLostPointerCapture={endPan}
+    >
+      {render && <canvas ref={canvas} className={s.canvas} />}
+      {t && (
+        <>
+          {children !== undefined && (
+            <div className={s.content} style={{ width: contentWidth, height: contentHeight, transform: `translate(${t.x}px, ${t.y}px) scale(${t.scale})` }}>
+              {children}
+            </div>
+          )}
+          <div className={s.frame} style={{ left: t.x, top: t.y, width: contentWidth * t.scale, height: contentHeight * t.scale }} />
+          {overlay && <div className={s.overlay}>{overlay(t)}</div>}
+          {probe && <Probe hover={hover} t={t} probe={probe} />}
+        </>
+      )}
+    </div>
+  );
+
   return (
     <div className={cx(s.vp, className)} data-viewport="">
-      <div
-        ref={viewEl}
-        className={s.view}
-        onPointerEnter={() => (over.current = true)}
-        onPointerLeave={() => {
-          over.current = false;
-          readout.current(null);
-        }}
-        onPointerDownCapture={onPointerDownCapture}
-        onPointerMoveCapture={onPointerMoveCapture}
-        onPointerUp={endPan}
-        onLostPointerCapture={endPan}
-      >
-        {render && <canvas ref={canvas} className={s.canvas} />}
-        {t && (
-          <>
-            {children !== undefined && (
-              <div className={s.content} style={{ width: contentWidth, height: contentHeight, transform: `translate(${t.x}px, ${t.y}px) scale(${t.scale})` }}>
-                {children}
-              </div>
-            )}
-            <div className={s.frame} style={{ left: t.x, top: t.y, width: contentWidth * t.scale, height: contentHeight * t.scale }} />
-            {overlay && <div className={s.overlay}>{overlay(t)}</div>}
-          </>
-        )}
+      {/* the same tree with or without rulers, so turning them on never remounts the view */}
+      <div className={cx(s.ruled, rulers && s.on)}>
+        {rulers && <Rulers t={t} unit={rulers} hover={hover} />}
+        {viewer}
       </div>
       <div className={s.bar}>
         <IconButton icon="zoom_out" label="Zoom out" shortcut="Ctrl+-" disabled={!view || view.scale <= MIN_SCALE} onClick={() => act('out')} />
@@ -326,6 +351,11 @@ function Readout({ bind, cursor }: { bind: RefObject<(at: Point | null) => void>
     bind.current = setAt;
   }, [bind]);
   return <div className={s.readout}>{cursor(at)}</div>;
+}
+
+function Probe({ hover, t, probe }: { hover: Hover; t: ViewTransform; probe: NonNullable<ViewportProps['probe']> }) {
+  const at = useHover(hover);
+  return <div className={s.overlay}>{probe(at && { screen: at, content: { x: (at.x - t.x) / t.scale, y: (at.y - t.y) / t.scale } }, t)}</div>;
 }
 
 /**
