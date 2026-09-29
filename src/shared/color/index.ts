@@ -80,6 +80,12 @@ export function rgb255(o: Oklch): [number, number, number] {
   return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
 }
 
+/** Linear-light sRGB (0-1 per channel) of the hex a screen shows: what light and paint mix in. */
+export function linearRgb(o: Oklch): [number, number, number] {
+  const { r, g, b } = lrgbOf(toHex(o))!;
+  return [r, g, b];
+}
+
 /** HSB (hue 0-360, saturation and brightness 0-1) of the hex a screen shows; Procreate stores it. */
 export function hsb(o: Oklch): [number, number, number] {
   const { h = 0, s, v } = hsvOf(toHex(o))!;

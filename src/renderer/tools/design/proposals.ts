@@ -2,8 +2,8 @@
 // document until added; a module-level store so `receive` can hand the view what an image, logo or
 // SVG gave (plan: the shell's history step is then a no-op).
 import type { Oklch } from '../../../shared/color/index.ts';
+import { createStore } from '../common/store.ts';
 import type { BuildTab } from './doc.ts';
-import { createStore } from './store.ts';
 
 export type Proposal = { id: string; oklch: Oklch; name: string | null; locked: boolean };
 export type Proposals = { from: BuildTab; label: string; items: Proposal[] };

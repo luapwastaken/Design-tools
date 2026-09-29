@@ -3,30 +3,31 @@
 import { memo } from 'react';
 import type { ContrastPair } from '../../../shared/palette/checks.ts';
 import { isGround, isInk } from '../../../shared/palette/roles.ts';
-import { cssColor } from '../../../shared/color/index.ts';
+import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import { Button, Icon, Module, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
+import { fmtL } from '../common/names.ts';
+import { Value } from '../common/Value.tsx';
+import { Vision } from '../common/Vision.tsx';
 import { setColours, type Doc } from './actions.ts';
 import { displayName, listNames, type DesignDoc, type DesignView } from './doc.ts';
 import { Print } from './Print.tsx';
 import { results } from './results.ts';
-import { fmtL } from './SwatchChip.tsx';
-import { Value } from './Value.tsx';
-import { Vision } from './Vision.tsx';
-import { pointAt } from './view-state.ts';
+import { patchView, pointAt } from './view-state.ts';
 import s from './Checks.module.css';
 
 export type CheckProps = { doc: Doc; d: DesignDoc; v: DesignView };
 
 /** memo: mid-drag on a long palette the view re-renders every frame while the settled document it passes stays put */
 export const Checks = memo(function Checks(p: CheckProps) {
-  const r = results(p.d.swatches, p.v.flagL, p.v.flagE);
+  const r = results(p.d.swatches, p.d.ramps, p.v.flagL, p.v.flagE);
+  const host = { swatches: r.shown, pointAt, onFix: (label: string, changes: Record<string, Oklch>) => setColours(p.doc, label, changes) };
   return (
     <div className={cx(s.checks, p.v.print && s.printOpen)}>
       <Contrast {...p} pairs={r.contrast} failing={r.failing} />
       <div className={s.right}>
-        <Value {...p} collisions={r.collisions} contrast={r.contrast} />
-        <Vision {...p} vision={r.vision} />
+        <Value {...host} collisions={r.collisions} contrast={r.contrast} flagL={p.v.flagL} onFlagL={(flagL) => patchView({ flagL })} />
+        <Vision {...host} vision={r.vision} flagE={p.v.flagE} onFlagE={(flagE) => patchView({ flagE })} cvd={p.v.cvd} onCvd={(cvd) => patchView({ cvd })} className={s.vision} />
       </div>
       <Print {...p} out={r.outOfSrgb} />
     </div>

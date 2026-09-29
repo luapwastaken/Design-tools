@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { deltaE, hexToOklch, simulateCvd, type Oklch } from '../src/shared/color/index.ts';
-import type { Swatch } from '../src/shared/types.ts';
-import { cvdFix, nextL, spreadL, valueFix } from '../src/renderer/tools/design/adjust.ts';
-import { moveIds, recolour, type DesignDoc } from '../src/renderer/tools/design/doc.ts';
+import type { RampSpec, Swatch } from '../src/shared/types.ts';
+import { cvdFix, spreadL, valueFix } from '../src/renderer/tools/common/adjust.ts';
+import { nextL } from '../src/renderer/tools/design/adjust.ts';
+import { fromPayload, moveIds, recolour, toPayload, type DesignDoc } from '../src/renderer/tools/design/doc.ts';
 
 const sw = (id: string, oklch: Oklch): Swatch => ({ id, name: id, role: null, oklch, type: 'process' });
 const doc = (...ids: string[]): DesignDoc => ({ notes: '', swatches: ids.map((id, i) => sw(id, [i / 10, 0, 0])) });
@@ -72,4 +73,28 @@ test('cvdFix parts a pair under the simulation', () => {
 
 test('nextL fills the widest lightness gap', () => {
   assert.ok(Math.abs(nextL([0.2, 0.3, 0.9]) - 0.6) < 1e-9);
+});
+
+test('an Illustration palette goes back to its file with its ramps, groups, steps and edits', () => {
+  const ramp: RampSpec = { id: 'r', base: [0.5, 0.1, 30], light: [0.95, 0.05, 85], shadow: [0.4, 0.08, 275], material: 'skin', intensity: 'expressive', steps: 3, hueShift: 0.2, chromaCurve: -0.1, hero: true };
+  const file = {
+    notes: 'n',
+    ramps: [ramp],
+    swatches: [
+      { ...sw('light', [0.7, 0.08, 40]), group: 'r', step: -1 },
+      { ...sw('base', [0.5, 0.1, 30]), group: 'r', step: 0 },
+      { ...sw('shadow', [0.3, 0.08, 10]), group: 'r', step: 1, edited: true },
+      sw('loose', [0.2, 0, 0]),
+    ],
+  };
+  const read = fromPayload(JSON.parse(JSON.stringify(file)));
+  assert.deepEqual(toPayload(read), file);
+  // an edit in Design: a ramp step becomes hand-edited, a loose colour doesn't
+  const edited = toPayload(recolour(read, { light: [0.75, 0.08, 40], loose: [0.25, 0, 0] }));
+  assert.equal(edited.swatches[0].edited, true);
+  assert.equal(edited.swatches[0].group, 'r');
+  assert.equal(edited.swatches[3].edited, undefined);
+  assert.deepEqual(edited.ramps, [ramp]);
+  // a plain palette stays plain
+  assert.equal('ramps' in toPayload(fromPayload({ notes: '', swatches: [sw('a', [0.5, 0, 0])] })), false);
 });

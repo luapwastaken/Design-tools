@@ -1,0 +1,128 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { rgb255, type Oklch } from '../src/shared/color/index.ts';
+import { fromOklab, toOklab } from '../src/shared/palette/space.ts';
+import { direction, frame, rampLut, shade, surface, tone, type Light, type Shape } from '../src/renderer/tools/illustration/shade.ts';
+
+// highlight, light, base, shadow, deep shadow: a warm-lit terracotta
+const RAMP: Oklch[] = [
+  [0.9, 0.06, 75],
+  [0.76, 0.12, 55],
+  [0.62, 0.14, 40],
+  [0.45, 0.115, 30],
+  [0.3, 0.08, 18],
+];
+const UPPER_LEFT: Light = { azimuth: 320, elevation: 35 };
+const SIZE = 96;
+const at = (lut: Uint8ClampedArray, i: number) => [...lut.subarray(i * 3, i * 3 + 3)];
+
+function render(shape: Shape, light: Light, banded = false, size = SIZE) {
+  const px = new Uint8ClampedArray(size * size * 4);
+  shade(surface(shape, size), rampLut(RAMP, banded), light, px);
+  return px;
+}
+
+test('the light points where the azimuth says: 0 up, 90 right, 320 upper left', () => {
+  const near = (a: number[], b: number[]) => a.every((v, i) => Math.abs(v - b[i]) < 1e-9);
+  assert.ok(near(direction({ azimuth: 0, elevation: 0 }), [0, 1, 0]));
+  assert.ok(near(direction({ azimuth: 90, elevation: 0 }), [1, 0, 0]));
+  assert.ok(near(direction({ azimuth: 0, elevation: 90 }), [0, 6.123233995736766e-17, 1]));
+  const [x, y, z] = direction(UPPER_LEFT);
+  assert.ok(x < 0 && y > 0 && z > 0);
+});
+
+test('the ramp table runs from the last step (0) to the first (255), blended in OKLab', () => {
+  const lut = rampLut(RAMP);
+  assert.deepEqual(at(lut, 255), rgb255(RAMP[0]));
+  assert.deepEqual(at(lut, 0), rgb255(RAMP[4]));
+  // index 255 × 7/8 sits halfway between the first two steps
+  const [a, b] = [toOklab(RAMP[0]), toOklab(RAMP[1])];
+  const mid = fromOklab([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], RAMP[0][2]);
+  const i = Math.round(255 * 7 / 8);
+  assert.ok(Math.abs(255 * 7 / 8 - i) < 0.5);
+  at(lut, i).forEach((v, k) => assert.ok(Math.abs(v - rgb255(mid)[k]) <= 2, `channel ${k}: ${v} vs ${rgb255(mid)[k]}`));
+});
+
+test('banded: every entry is a step, but for one blended entry at each edge', () => {
+  const lut = rampLut(RAMP, true);
+  const steps = RAMP.map((c) => rgb255(c).join());
+  const off = Array.from({ length: 256 }, (_, i) => at(lut, i).join()).filter((c) => !steps.includes(c));
+  assert.ok(off.length <= (RAMP.length - 1) * 2, `${off.length} blended entries`);
+  assert.deepEqual(rampLut([RAMP[2]], true).subarray(0, 3), new Uint8ClampedArray(rgb255(RAMP[2])));
+});
+
+test('tone: the painter’s order from the light round to the far side', () => {
+  const f = frame(UPPER_LEFT);
+  const [lx, ly, lz] = f.l;
+  const facing = tone(lx, ly, lz, 1, f);
+  // the normal turned away from the light about an axis in the picture plane, never through the specular spot
+  const a = [-ly, lx, 0].map((v) => v / Math.hypot(lx, ly));
+  const side = [a[1] * lz, -a[0] * lz, a[0] * ly - a[1] * lx]; // a × L
+  const turned = (deg: number) => f.l.map((v, k) => v * Math.cos((deg * Math.PI) / 180) + side[k] * Math.sin((deg * Math.PI) / 180)) as [number, number, number];
+  const along = [0, 20, 40, 60, 80].map((d) => tone(...turned(d), 1, f));
+  assert.ok(along.every((v, i) => i === 0 || v < along[i - 1]), `darkens toward the terminator: ${along}`);
+  assert.ok(facing > 0.625 && facing < 0.875, `facing the light: the light step (${facing})`);
+  const [hx, hy, hz] = f.h;
+  assert.ok(tone(hx, hy, hz, 1, f) > 0.875, 'halfway between the light and the viewer: the highlight');
+  const core = tone(...turned(100), 1, f);
+  assert.ok(core < 0.125, `just past the terminator: the deepest shadow (${core})`);
+  // the far edge, turned from the light and lit back by the room: lighter than the core
+  const b = f.b;
+  assert.ok(tone(b[0], b[1], b[2], 1, f) > core + 0.1);
+  assert.ok(tone(lx, ly, lz, 0.6, f) < facing, 'less open, less light');
+});
+
+test('a sphere lit from the upper left is lighter there and throws its shadow lower right', () => {
+  const px = render('sphere', UPPER_LEFT);
+  const lum = (x: number, y: number) => {
+    const p = (Math.round(y) * SIZE + Math.round(x)) * 4;
+    return px[p] + px[p + 1] + px[p + 2];
+  };
+  const c = SIZE / 2;
+  const r = 0.64 * c;
+  assert.ok(lum(c - r * 0.4, c - r * 0.4) > lum(c + r * 0.4, c + r * 0.4));
+  const alpha = (x: number, y: number) => px[(Math.round(y) * SIZE + Math.round(x)) * 4 + 3];
+  const off = r * 1.08;
+  assert.equal(alpha(c - off * 0.72, c - off * 0.72), 0, 'no shadow toward the light');
+  assert.ok(alpha(c + off * 0.72, c + off * 0.72) > 20, 'a shadow on the backdrop away from it');
+});
+
+test('banded, each shape shows the ramp’s steps: all five on the sphere, three planes on the cube', () => {
+  const colours = (px: Uint8ClampedArray) => {
+    const seen = new Map<string, number>();
+    for (let p = 0; p < px.length; p += 4) if (px[p + 3] === 255) seen.set(`${px[p]},${px[p + 1]},${px[p + 2]}`, (seen.get(`${px[p]},${px[p + 1]},${px[p + 2]}`) ?? 0) + 1);
+    const steps = RAMP.map((c) => rgb255(c).join());
+    return steps.map((s) => seen.get(s) ?? 0);
+  };
+  const sphere = colours(render('sphere', UPPER_LEFT, true));
+  assert.ok(sphere.every((n) => n > 8), `sphere steps ${sphere}`);
+  const cube = colours(render('cube', UPPER_LEFT, true));
+  // light top, base on the lit side, shadow on the far side: one plane each
+  const big = cube.map((n) => n > SIZE * SIZE * 0.05);
+  assert.deepEqual(big, [false, true, true, true, false], `cube steps ${cube}`);
+  const cloth = colours(render('cloth', UPPER_LEFT, true));
+  assert.ok(cloth.filter((n) => n > 8).length >= 4, `cloth steps ${cloth}`);
+});
+
+test('shapes cover what they should, edges antialiased', () => {
+  const sf = surface('sphere', SIZE);
+  const area = sf.cover.reduce((a, b) => a + b, 0);
+  const want = Math.PI * (0.64 * SIZE / 2) ** 2;
+  assert.ok(Math.abs(area - want) / want < 0.01, `${area} vs ${want}`);
+  assert.ok(sf.cover.some((c) => c > 0 && c < 1));
+  for (const shape of ['cube', 'cloth'] as Shape[]) {
+    const { cover, normal } = surface(shape, SIZE);
+    cover.forEach((c, p) => c > 0 && assert.ok(Math.abs(Math.hypot(normal[p * 3], normal[p * 3 + 1], normal[p * 3 + 2]) - 1) < 1e-4));
+  }
+});
+
+test('a light drag stays well inside a frame: three shapes at full size', () => {
+  const lut = rampLut(RAMP);
+  const px = new Uint8ClampedArray(288 * 288 * 4);
+  const shapes: Shape[] = ['sphere', 'cube', 'cloth'];
+  shapes.forEach((s) => shade(surface(s, 288), lut, UPPER_LEFT, px)); // built and warmed
+  const t = performance.now();
+  for (let a = 0; a < 10; a++) shapes.forEach((s) => shade(surface(s, 288), lut, { azimuth: a * 36, elevation: 30 }, px));
+  const frameMs = (performance.now() - t) / 10;
+  assert.ok(frameMs < 12, `${frameMs.toFixed(1)}ms per frame`);
+});

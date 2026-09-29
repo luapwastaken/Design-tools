@@ -134,6 +134,9 @@ test('an item file is checked before a tool gets it', () => {
   const w = { id: 'a', name: 'Ink', role: null, oklch: [0.5, 0.1, 30], type: 'process' };
   assert.equal(itemProblem(palette({ swatches: [w], notes: '' })), null);
   assert.equal(itemProblem(palette({ swatches: [] })), null);
+  // an Illustration palette: its ramps and each swatch's ramp, step and hand-edit mark pass through
+  const ramp = { id: 'r', base: [0.5, 0.1, 30], light: [0.95, 0.05, 85], shadow: [0.4, 0.08, 275], material: 'cloth', intensity: 'grounded', steps: 3, hueShift: 0, chromaCurve: 0, hero: true };
+  assert.equal(itemProblem(palette({ swatches: [{ ...w, group: 'r', step: 0 }, { ...w, id: 'b', group: 'r', step: 1, edited: true }], notes: '', ramps: [ramp] })), null);
   assert.equal(itemProblem(palette({ swatches: null })), "Brand isn't a readable palette.");
   assert.equal(itemProblem(palette({ swatches: [{ ...w, oklch: [0.5, 'x', 30] }] })), "Brand isn't a readable palette.");
   assert.equal(itemProblem(palette({ swatches: [{ ...w, oklch: [0.5, 0.1] }] })), "Brand isn't a readable palette.");

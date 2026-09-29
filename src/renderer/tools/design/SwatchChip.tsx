@@ -3,14 +3,10 @@ import { cmykEstimate, cssColor, inSrgb, rgb255, toHex, type Oklch } from '../..
 import type { Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
 import { Icon, IconButton, Tooltip } from '../../ui/index.ts';
+import { fmtC, fmtH, fmtL } from '../common/names.ts';
 import { displayName } from './doc.ts';
 import type { Proposal } from './proposals.ts';
 import s from './SwatchChip.module.css';
-
-/** "L 66.2", "C .173", "H 37": the mockup's readouts */
-export const fmtL = (l: number) => (l * 100).toFixed(1);
-export const fmtC = (c: number) => c.toFixed(3).replace(/^0/, '');
-export const fmtH = (h: number) => Math.round(h) % 360;
 
 function Readouts({ oklch, full }: { oklch: Oklch; full: boolean }) {
   const hex = toHex(oklch);
@@ -48,6 +44,8 @@ function Readouts({ oklch, full }: { oklch: Oklch; full: boolean }) {
 
 type ChipProps = {
   swatch: Swatch;
+  /** its name as the palette shows it (a blank one filled in) */
+  name: string;
   index: number;
   surround: string;
   full: boolean;
@@ -77,7 +75,7 @@ export function SwatchChip(p: ChipProps) {
     <div
       role="option"
       aria-selected={p.selected}
-      aria-label={`${displayName(w)}, ${toHex(w.oklch)}${w.role ? `, ${w.role}` : ''}`}
+      aria-label={`${p.name}, ${toHex(w.oklch)}${w.role ? `, ${w.role}` : ''}`}
       data-swatch={w.id}
       data-index={p.index}
       data-insert={p.insert}
@@ -113,8 +111,8 @@ export function SwatchChip(p: ChipProps) {
           <Tooltip content={w.role ?? ''} overflowOnly>
             <span className={cx('lbl', s.role, !w.role && s.unlit)}>{w.role ?? 'No role'}</span>
           </Tooltip>
-          <Tooltip content={displayName(w)} overflowOnly>
-            <span className={cx(s.name, !w.name.trim() && s.auto)}>{displayName(w)}</span>
+          <Tooltip content={p.name} overflowOnly>
+            <span className={cx(s.name, !w.name.trim() && s.auto)}>{p.name}</span>
           </Tooltip>
           <Readouts oklch={w.oklch} full={p.full} />
         </div>

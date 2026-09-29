@@ -2,8 +2,9 @@
 import { useSyncExternalStore } from 'react';
 import { PRESETS } from '../../../shared/palette/generate.ts';
 import { shell } from '../../shell/core/index.ts';
+import { EXPORT_FORMATS } from '../common/ExportPalette.tsx';
+import { createStore } from '../common/store.ts';
 import type { DesignView } from './doc.ts';
-import { createStore } from './store.ts';
 
 const ID = 'design';
 
@@ -37,7 +38,7 @@ const ENUMS: Partial<Record<keyof DesignView, readonly string[]>> = {
   cvd: ['protan', 'deutan', 'tritan', 'achromat'],
   build: ['harmony', 'generate', 'image', 'logo', 'gradient', 'paste'],
   picker: ['oklch', 'rgb', 'cmyk'],
-  format: ['ase', 'aco', 'gpl', 'css', 'tailwind', 'procreate', 'json', 'svg', 'png'],
+  format: EXPORT_FORMATS,
   space: ['oklch', 'oklab'],
 };
 

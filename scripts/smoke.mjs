@@ -57,7 +57,7 @@ if (!check('pass 1 names its folder', dir && existsSync(dir))) process.exit(1);
 check('a quit with a task running asks "Quit anyway?" and goes ahead', /\[smoke\] quit anyway: quit/.test(one.out));
 
 const exports = join(dir, 'exports');
-const exported = ['smoke export.png', join('dev-palette', 'one.txt'), join('dev-palette', 'two.txt')];
+const exported = ['smoke export.png', join('design', 'one.txt'), join('design', 'two.txt')];
 check('the exports are on disk', exported.every((f) => existsSync(join(exports, f))), exported.filter((f) => !existsSync(join(exports, f))).join(', '));
 const trash = existsSync(join(dir, 'trash')) ? readdirSync(join(dir, 'trash')) : [];
 check('the deleted palette is in the trash', trash.some((f) => f.endsWith(' Untitled palette.palette.json')), trash.join(', '));

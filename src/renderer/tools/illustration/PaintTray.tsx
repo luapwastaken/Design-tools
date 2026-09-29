@@ -1,0 +1,215 @@
+// The paint canvas's pigment tray and mixing well (plan unit C). Click a paint to load the brush;
+// drag it into the well (or use its menu) to add a part; the well's mix, by km.ts, loads the brush.
+import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type PointerEvent, type RefObject } from 'react';
+import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
+import { Button, IconButton, menu, NumberField, Tooltip } from '../../ui/index.ts';
+import { cx } from '../../ui/cx.ts';
+import { PARTS_MAX, type Source, type WellPart } from './paint-sources.ts';
+import s from './PaintCanvas.module.css';
+
+const SLOP = 4;
+const STEP: Record<string, number> = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 };
+
+function describe(src: Source): string {
+  if (src.swatch) return `${src.name} (palette colour)`;
+  const { opacity, granulation, staining } = src.pigment;
+  const traits = [opacity < 0.45 ? 'transparent' : opacity > 0.8 ? 'opaque' : 'semi-opaque', granulation > 0.25 && 'granulating', staining > 0.7 && 'staining'];
+  return `${src.name} · ${traits.filter(Boolean).join(', ')}`;
+}
+
+/** `onKey` is this drag's own Esc listener: the one added is the one removed, however often the tray renders */
+type Drag = { id: string; pointer: number; x: number; y: number; moving: boolean; over: boolean; onKey(e: globalThis.KeyboardEvent): void };
+
+export function Tray(p: {
+  sources: Source[];
+  /** the loaded paint's id */
+  current: string;
+  onLoad(id: string): void;
+  onAddToWell(id: string): void;
+  well: RefObject<HTMLElement | null>;
+  /** a paint is being dragged over the well */
+  onOver(over: boolean): void;
+}) {
+  const drag = useRef<Drag | null>(null);
+  /** a drag ends in a click on the chip it started from, which mustn't load the brush */
+  const dragged = useRef(false);
+  const ghost = useRef<HTMLSpanElement>(null);
+  const live = useRef(p);
+  live.current = p;
+
+  const overWell = (x: number, y: number) => {
+    const r = live.current.well.current?.getBoundingClientRect();
+    return !!r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  };
+  const stop = (drop: boolean) => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+    removeEventListener('keydown', d.onKey, true);
+    if (ghost.current) ghost.current.hidden = true;
+    live.current.onOver(false);
+    dragged.current = d.moving;
+    if (drop && d.moving && d.over) live.current.onAddToWell(d.id);
+  };
+  useEffect(() => () => stop(false), []);
+
+  const down = (e: PointerEvent<HTMLButtonElement>, src: Source) => {
+    if (e.button !== 0 || drag.current) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragged.current = false;
+    const onKey = (k: globalThis.KeyboardEvent) => {
+      if (k.key !== 'Escape') return;
+      k.preventDefault();
+      k.stopPropagation();
+      stop(false);
+    };
+    drag.current = { id: src.id, pointer: e.pointerId, x: e.clientX, y: e.clientY, moving: false, over: false, onKey };
+    addEventListener('keydown', onKey, true);
+    if (ghost.current) ghost.current.style.background = cssColor(src.pigment.oklch);
+  };
+  const move = (e: PointerEvent<HTMLButtonElement>) => {
+    const d = drag.current;
+    if (!d || d.pointer !== e.pointerId) return;
+    if (!d.moving && Math.hypot(e.clientX - d.x, e.clientY - d.y) < SLOP) return;
+    d.moving = true;
+    const g = ghost.current!;
+    g.hidden = false;
+    g.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+    const over = overWell(e.clientX, e.clientY);
+    if (over !== d.over) live.current.onOver((d.over = over));
+  };
+  const context = (e: MouseEvent<HTMLButtonElement>, src: Source) => {
+    e.preventDefault();
+    const at = e.detail === 0 ? e.currentTarget.getBoundingClientRect() : { x: e.clientX, y: e.clientY };
+    menu.open(
+      at,
+      [
+        { label: 'Load the brush', icon: 'brush', onSelect: () => live.current.onLoad(src.id) },
+        { label: 'Add a part to the well', icon: 'add', onSelect: () => live.current.onAddToWell(src.id) },
+      ],
+      { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined },
+    );
+  };
+
+  // one Tab stop: the loaded paint (or the first); arrow keys move along the tray and load
+  const at = p.sources.findIndex((x) => x.id === p.current);
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const n = p.sources.length;
+    const i = e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : e.key in STEP ? (Math.max(at, 0) + STEP[e.key] + n) % n : -1;
+    if (i < 0 || !n) return;
+    e.preventDefault();
+    p.onLoad(p.sources[i].id);
+    e.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]')[i]?.focus();
+  };
+
+  const pigments = p.sources.filter((x) => !x.swatch);
+  const colours = p.sources.filter((x) => x.swatch);
+  // the palette's colours a ramp at a time, each under its name, so a colour is found by its ramp
+  const sets = colours.reduce<{ key: string; name: string; list: Source[] }[]>((out, x) => {
+    const last = out.at(-1);
+    if (last && last.key === x.set?.key) last.list.push(x);
+    else out.push({ key: x.set?.key ?? x.id, name: x.set?.name ?? '', list: [x] });
+    return out;
+  }, []);
+  const chip = (src: Source, i: number) => (
+    <Tooltip key={src.id} content={describe(src)}>
+      <button
+        type="button"
+        role="radio"
+        className={cx(s.chip, src.id === p.current && s.on)}
+        style={{ background: cssColor(src.pigment.oklch) }}
+        aria-label={src.name}
+        aria-checked={src.id === p.current}
+        tabIndex={i === at || (at < 0 && i === 0) ? 0 : -1}
+        onClick={() => {
+          if (dragged.current) dragged.current = false;
+          else p.onLoad(src.id);
+        }}
+        onPointerDown={(e) => down(e, src)}
+        onPointerMove={move}
+        onPointerUp={() => stop(true)}
+        onLostPointerCapture={() => stop(false)}
+        onContextMenu={(e) => context(e, src)}
+      />
+    </Tooltip>
+  );
+  return (
+    <div className={s.tray} role="radiogroup" aria-label="Paints for the brush" onKeyDown={onKeyDown}>
+      <span className={cx('lbl', s.trayLabel)}>Paints</span>
+      {pigments.length ? pigments.map((x, i) => chip(x, i)) : <span className={s.hint}>Tick the paints you own to fill the tray.</span>}
+      {sets.map((set) => (
+        <span key={set.key} className={s.set}>
+          <Tooltip content={set.name} overflowOnly>
+            <span className={cx('lbl', s.trayLabel, s.setLabel)}>{set.name}</span>
+          </Tooltip>
+          {set.list.map((x) => chip(x, p.sources.indexOf(x)))}
+        </span>
+      ))}
+      <span ref={ghost} className={s.ghost} hidden aria-hidden="true" />
+    </div>
+  );
+}
+
+export function Well(p: {
+  well: WellPart[];
+  sources: Source[];
+  mix: Oklch | null;
+  /** the brush holds the well's mix */
+  loaded: boolean;
+  /** a paint is being dragged over it */
+  over: boolean;
+  onChange(well: WellPart[]): void;
+  /** empty it, with an Undo */
+  onEmpty(): void;
+  onLoad(): void;
+  ref: RefObject<HTMLDivElement | null>;
+}) {
+  const name = (id: string) => p.sources.find((x) => x.id === id)?.name ?? 'A paint no longer in the tray';
+  const colour = (id: string) => p.sources.find((x) => x.id === id)?.pigment.oklch;
+  return (
+    <div ref={p.ref} className={cx(s.well, p.over && s.wellOver)} aria-label="Mixing well">
+      <div className={s.wellHead}>
+        <span className="lbl">Well</span>
+        <span className={s.grow} />
+        <IconButton icon="delete_sweep" label="Empty the well" size="xs" disabled={!p.well.length} onClick={p.onEmpty} />
+      </div>
+      <Tooltip content={p.mix ? 'Load the brush with this mix' : 'Drag paints from the tray into the well to mix them'}>
+        <button
+          type="button"
+          className={cx(s.mix, !p.mix && s.mixEmpty, p.loaded && s.on)}
+          style={p.mix ? { background: cssColor(p.mix) } : undefined}
+          aria-label={p.mix ? `Well mix ${toHex(p.mix).toUpperCase()}: load the brush` : 'The well is empty'}
+          disabled={!p.mix}
+          onClick={p.onLoad}
+        >
+          {!p.mix && <span className={s.mixHint}>Drag paints here</span>}
+        </button>
+      </Tooltip>
+      {p.mix ? <span className={s.mixHex}>{toHex(p.mix).toUpperCase()}</span> : <span className={s.rowHint}>Drag paints here to mix them</span>}
+      <div className={s.parts}>
+        {p.well.map((w) => (
+          <div key={w.id} className={s.part}>
+            <i className={s.partChip} style={colour(w.id) ? { background: cssColor(colour(w.id)!) } : undefined} />
+            <Tooltip content={name(w.id)} overflowOnly>
+              <span className={s.partName}>{name(w.id)}</span>
+            </Tooltip>
+            <NumberField
+              label={`Parts of ${name(w.id)}`}
+              hideLabel
+              size="sm"
+              width={40}
+              value={w.parts}
+              min={1}
+              max={PARTS_MAX}
+              onChange={(parts) => p.onChange(p.well.map((x) => (x.id === w.id ? { ...x, parts } : x)))}
+            />
+            <IconButton icon="close" label={`Take ${name(w.id)} out`} size="xs" onClick={() => p.onChange(p.well.filter((x) => x.id !== w.id))} />
+          </div>
+        ))}
+      </div>
+      <Button size="xs" icon="brush" disabled={!p.mix || p.loaded} onClick={p.onLoad} className={s.loadBtn}>
+        {p.loaded ? 'On the brush' : 'Load brush'}
+      </Button>
+    </div>
+  );
+}

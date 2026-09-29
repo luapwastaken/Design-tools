@@ -1,0 +1,151 @@
+/* the lower panes keep the rest of the column however many ramps there are; four rows fit whole */
+.mod { max-height: calc(40vh + 4px); container-type: inline-size; }
+.surround { height: 22px; }
+
+.list { display: flex; flex-direction: column; padding: 3px 0; }
+
+/* One row: grip, name, the steps on their surround, then the hero star and More. */
+.row {
+  position: relative;
+  display: grid;
+  /* fixed outer columns, so every row's mat is as wide and the step columns line up */
+  grid-template-columns: 16px 132px minmax(0, 1fr) 50px;
+  align-items: center;
+  gap: 10px;
+  min-height: 84px;
+  padding: 6px 8px 6px 6px;
+}
+.row + .row::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 12px;
+  left: 12px;
+  height: 1px;
+  background: var(--line);
+}
+/* the ramp the Light controls set (brief §7: selected row) */
+.row.on { background: var(--raise); }
+.row.on::after, .row.on + .row::after { display: none; }
+.dragging { outline: 1px dashed var(--tick); outline-offset: -1px; }
+.row[data-insert]::before {
+  content: "";
+  position: absolute;
+  right: 6px;
+  left: 6px;
+  z-index: 2;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--signal);
+}
+.row[data-insert="before"]::before { top: -1px; }
+.row[data-insert="after"]::before { bottom: -1px; }
+
+.grip {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-ctl);
+  color: var(--ink-4);
+  cursor: grab;
+}
+.row:hover .grip { color: var(--ink-3); }
+.grip:hover { background: var(--well-hover); color: var(--ink-2); }
+
+.ident { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.name {
+  overflow: hidden;
+  color: var(--ink);
+  font: 500 var(--fs-swatch)/1.15 var(--font-sans);
+  font-stretch: var(--sans-stretch);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dim { color: var(--ink-2); }
+.editedCount { color: var(--ink-2); }
+.meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ident .broken {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--danger);
+  font: 500 var(--fs-label)/1 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.acts { display: flex; align-items: center; gap: 2px; }
+.confirm { min-width: 0; }
+
+/* ── the steps: colour over value, on the surround; the mats of every row line up ── */
+.steps { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mat { display: grid; padding: 3px; border-radius: 3px; }
+.step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 3px;
+  border-radius: 3px;
+}
+.colour { display: block; height: 38px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.value { display: block; height: 9px; border-radius: 1px; box-shadow: inset 0 0 0 1px var(--edge); }
+/* neutral rings, clear of the colour (brief §4): hover, the selected step, one a check points at */
+.step:hover { box-shadow: inset 0 0 0 1px var(--tick); }
+.step.sel { box-shadow: inset 0 0 0 1px var(--tick-strong); }
+.step.hot { outline: 1px dashed var(--tick-strong); outline-offset: -1px; }
+.step:focus-visible { outline: none; }
+.step:focus-visible::before {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: -3px;
+  left: 3px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--signal);
+}
+/* a hand-edited step: a mark on the colour, drawn with the on-content tokens (brief §10) */
+.edited .colour { position: relative; }
+.edited .colour::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--on-content-ink);
+  box-shadow: 0 0 0 1.5px var(--on-content-bg);
+}
+/* a step that breaks the ramp's value order: a real failure */
+.step.broken .value { box-shadow: inset 0 0 0 1.5px var(--danger); }
+
+.nums { display: grid; padding: 0 3px; }
+.nums span {
+  overflow: hidden;
+  color: var(--ink-3);
+  font: 400 var(--fs-label)/1 var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+.nums .base { color: var(--ink-2); font-weight: 600; }
+.nums .selNum { color: var(--ink); }
+
+/* ── colours in no ramp, and proposals ── */
+.loose .name { color: var(--ink-2); }
+.make { align-self: flex-start; margin-top: 2px; }
+.ghostRow { min-height: 0; }
+.ghost { padding: 3px; }
+.ghost .colour { height: 32px; margin: 3px; outline: 1px dashed var(--tick-strong); outline-offset: 3px; }
+.ghost:hover { box-shadow: inset 0 0 0 1px var(--tick-strong); }
+.ghostFoot { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.from { flex: 1; min-width: 0; overflow: hidden; color: var(--ink-2); font-size: var(--fs-base); text-overflow: ellipsis; white-space: nowrap; }
+
+/* wider than the sentence above it: the three ways in stay on one line */
+.start { display: flex; flex-wrap: wrap; gap: 6px; width: max-content; max-width: calc(100cqw - 28px); margin-top: 10px; }

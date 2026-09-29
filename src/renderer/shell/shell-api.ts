@@ -90,8 +90,8 @@ export interface Shell {
   setCollectionLocked(name: string, locked: boolean): Promise<void>;
 
   // ── documents ──
-  /** a doc-kind tool's New: an empty document in place of the open one, one undoable step */
-  newDoc(id: ToolId): Promise<void>;
+  /** a doc-kind tool's New: an empty document in place of the open one, one undoable step; `name` names the item its first edit makes */
+  newDoc(id: ToolId, name?: string): Promise<void>;
   /** the readout actions call these */
   takeBack(id: ToolId): Promise<void>;
   reloadFromDisk(id: ToolId): Promise<void>;
@@ -110,4 +110,12 @@ export interface Shell {
 
   /** wraps exports/imports so the close handshake knows about them */
   runBusy<T>(fn: () => Promise<T>): Promise<T>;
+  /** a save the quit must wait for that isn't a document or view write (the paint canvas's painting); returns the unregister */
+  beforeClose(fn: () => Promise<void>): () => void;
+  /**
+   * The tool's document now lives in another item: `fork` when an edit copied it into Scratch (it
+   * was open elsewhere, locked or missing), else the same item under a new id (a rename or move).
+   * Called before the tool's view sees the new id. Returns the unregister.
+   */
+  onRelink(tool: ToolId, fn: (from: string, to: string, fork: boolean) => void): () => void;
 }

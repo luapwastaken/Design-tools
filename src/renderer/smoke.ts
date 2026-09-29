@@ -2,16 +2,19 @@
 // runs scripts/smoke.mjs). It drives the real shell, IPC and Library in the smoke folder, reports
 // each check, and hands the result to main (app.smokeDone), which quits through the close handshake.
 // 'full' runs the smoke list; 'quiet' is the relaunch: it restores, checks, and quits with no input.
-import { contrast, toHex } from '../shared/color/index.ts';
+import { contrast, toHex, type Oklch } from '../shared/color/index.ts';
 import type { DocController } from '../shared/doc-api.ts';
 import type { LibraryItemRef, PatternPayload, Swatch, ToolId } from '../shared/types.ts';
 import { saveFile, saveToFolder } from './lib/export.ts';
 import { decodeImage } from './lib/load.ts';
 import { shell } from './shell/core/index.ts';
-import { newSwatch as designSwatch, type DesignDoc } from './tools/design/doc.ts';
+import { select as selectInDesign } from './tools/design/actions.ts';
+import { newSwatch as designSwatch, recolour as recolourInDesign, type DesignDoc } from './tools/design/doc.ts';
 import { clearProposals, proposals } from './tools/design/proposals.ts';
 import type { ImageDoc } from './tools/dev-image/index.ts';
-import { newSwatch, type PaletteDoc } from './tools/dev-palette/swatches.ts';
+import { addRamp, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
+import { clearProposals as clearBases, proposals as bases } from './tools/illustration/proposals.ts';
+import { getView as illustrationView, patchView as patchIllustration } from './tools/illustration/view-state.ts';
 import { toast } from './ui/index.ts';
 import { toastStore } from './ui/toast.ts';
 
@@ -44,9 +47,10 @@ const swatchCount = async (id: string) => {
   const item = await api.invoke('library.read', id).catch(() => null);
   return item?.kind === 'palette' ? item.payload.swatches.length : -1;
 };
-const paletteDoc = (id: ToolId) => shell.doc(id) as DocController<PaletteDoc>;
-const addSwatch = (doc: DocController<PaletteDoc>, name: string) =>
-  doc.transact('add swatch', (d) => ({ ...d, swatches: [...d.swatches, newSwatch(name, [0.6, 0.12, 40])] }));
+const designDoc = () => shell.doc('design') as DocController<DesignDoc>;
+const illustrationDoc = () => shell.doc('illustration') as DocController<IllustrationDoc>;
+const addSwatch = (doc: DocController<DesignDoc>, name: string) =>
+  doc.transact('Add swatch', (d) => ({ ...d, swatches: [...d.swatches, designSwatch([0.6, 0.12, 40], name)] }));
 /** a key as the keyboard sends it (to the focused element), so it goes through the keymap's routing (spec §8) */
 const press = (key: string, o: KeyboardEventInit = {}) =>
   (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...o }));
@@ -88,7 +92,7 @@ async function full(): Promise<void> {
   const dir = info.userData.replace(/[\\/]Design Tools$/, '');
 
   const ids = shell.getState().tools.map((t) => t.id);
-  check('Design, two more palette tools and an image tool are registered', ['design', 'dev-palette', 'dev-image', 'smoke-palette'].every((id) => ids.includes(id as ToolId)), ids);
+  check('Design, Illustration and the dev image tool are registered, and nothing else', JSON.stringify(ids) === JSON.stringify(['design', 'illustration', 'dev-image']), ids);
   for (const id of ids) {
     shell.setActive(id);
     await sleep(50);
@@ -97,9 +101,9 @@ async function full(): Promise<void> {
   check('every registered tool opens', drawn && ids.every((id) => shell.getState().mounted.includes(id)), shell.getState().mounted);
 
   // saving: first commit, next commit, undo
-  const dp = paletteDoc('dev-palette');
-  shell.setActive('dev-palette');
-  check('Dev palette starts new', dp.state().t === 'new' && dp.depth() === 0, dp.state());
+  const dp = designDoc();
+  shell.setActive('design');
+  check('Design starts new', dp.state().t === 'new' && dp.depth() === 0, dp.state());
   addSwatch(dp, 'Smoke 1');
   const first = await until(() => (dp.state().t === 'saved' ? dp.source() : null));
   if (!check('the first commit creates a palette in Scratch', first?.collection === 'Scratch', first ?? dp.state())) return;
@@ -121,36 +125,39 @@ async function full(): Promise<void> {
   check('the .ase imports as a palette', palette && (await swatchCount(palette.id)) > 0, palette);
   if (!check('the PNG imports as an image', image) || !palette || !image) return;
 
-  // Send to between the stubs
+  // Send to between tools
   const di = shell.doc('dev-image') as DocController<ImageDoc>;
-  await shell.sendDoc('dev-palette', 'dev-image');
-  check('Send to: Dev palette tints Dev image as one step', di.get().tints.length === 1 && di.depth() === 1, di.get().tints);
+  await shell.sendDoc('design', 'dev-image');
+  check('Send to: Design tints Dev image as one step', di.get().tints.length === 1 && di.depth() === 1, di.get().tints);
   const sent = toastStore.get().findLast((t) => t.icon === 'input');
   check('its toast has Undo and says nothing about Ctrl+Z', sent?.undo && !/Ctrl/.test(String(sent.message)), sent?.message);
   check('Ctrl+Z goes to that toast while Dev image shows', toast.activeCtrlZ()?.id === sent?.id);
-  shell.setActive('dev-palette');
+  shell.setActive('design');
   check('and not once another tool shows', toast.activeCtrlZ()?.id !== sent?.id);
   shell.setActive('dev-image');
   check("the undo button's tooltip names the step", host('dev-image')?.querySelector('[aria-label^="Undo: "]')?.getAttribute('aria-label') === 'Undo: Tint from Untitled palette');
   await shell.sendItem(image, 'dev-image');
   check('Send to: the image opens in Dev image', di.get().source?.name === image.name, di.get().source);
-  const n = dp.get().swatches.length;
-  await shell.sendDoc('dev-image', 'dev-palette');
+  const il = illustrationDoc();
+  const plain = il.get();
+  clearBases();
+  await shell.sendDoc('dev-image', 'illustration');
   const render = await find((i) => i.collection === 'Scratch' && i.kind === 'image');
-  check('Send to: Dev image renders into Scratch and Dev palette picks five colours', render && dp.get().swatches.length === n + 5, dp.get().swatches.length);
-  check('the picked colours are written', await until(async () => (await swatchCount(id)) === n + 5));
+  check('Send to: Dev image renders into Scratch and Illustration offers its colours as bases', render && shell.getState().active === 'illustration' && (bases.get()?.items.length ?? 0) > 0, bases.get()?.items.length);
+  check('and leaves the Illustration document alone', il.get() === plain && il.depth() === 0, il.depth());
+  clearBases();
 
   // one palette in two tools
-  const sp = paletteDoc('smoke-palette');
   const owner = () => shell.getState().owners[palette.id];
-  await shell.sendItem(palette, 'dev-palette');
-  check("Open: the palette becomes Dev palette's document", dp.source()?.itemId === palette.id && owner() === 'dev-palette', dp.source());
-  await shell.sendItem(palette, 'smoke-palette');
+  await shell.sendItem(palette, 'design');
+  check("Open: the palette becomes Design's document", dp.source()?.itemId === palette.id && owner() === 'design', dp.source());
+  await shell.sendItem(palette, 'illustration');
   const lost = dp.state();
-  check('opening it in a second tool moves ownership', owner() === 'smoke-palette' && lost.t === 'owned-elsewhere' && lost.by === 'smoke-palette' && sp.state().t === 'saved', [owner(), lost, sp.state()]);
-  await shell.takeBack('dev-palette');
-  const back = sp.state();
-  check('Take back moves it back', owner() === 'dev-palette' && dp.state().t === 'saved' && back.t === 'owned-elsewhere' && back.by === 'dev-palette', [owner(), dp.state(), back]);
+  check('opening it in Illustration moves ownership there', owner() === 'illustration' && lost.t === 'owned-elsewhere' && lost.by === 'illustration' && il.state().t === 'saved', [owner(), lost, il.state()]);
+  check('Illustration opens a flat palette as loose colours, changing nothing', il.get().ramps.length === 0 && il.get().swatches.length === (await swatchCount(palette.id)), il.get().ramps.length);
+  await shell.takeBack('design');
+  const back = il.state();
+  check('Take back moves it back', owner() === 'design' && dp.state().t === 'saved' && back.t === 'owned-elsewhere' && back.by === 'design', [owner(), dp.state(), back]);
 
   // lock and fork
   const before = await stat(palette.id);
@@ -196,14 +203,15 @@ async function full(): Promise<void> {
   const saved = await saveFile({ tool: 'dev-image', suggestedName: 'smoke export', ext: 'png', filterName: 'PNG image', data: bytes });
   check('export.save writes into the smoke exports folder', saved?.startsWith(exports), saved);
   const files = [{ name: 'one.txt', data: 'one' }, { name: 'two.txt', data: 'two' }];
-  const folder = await saveToFolder({ tool: 'dev-palette', files });
+  const folder = await saveToFolder({ tool: 'design', files });
   check('export.toFolder writes every file there', folder?.written.length === 2 && folder.written.every((p) => p.startsWith(exports)), folder);
 
   await asImage(di);
   await fieldUndo(dp);
   const open = dp.source();
-  if (check('Dev palette still has its fork open', open && dp.state().t === 'saved', dp.state())) await outsideChange(dp, open!.itemId);
+  if (check('Design still has its fork open', open && dp.state().t === 'saved', dp.state())) await outsideChange(dp, open!.itemId);
   await design(dir, image, di);
+  await illustration();
 
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
   // pending delete is trashed after it (scripts/smoke.mjs checks both)
@@ -224,10 +232,12 @@ async function asImage(di: DocController<ImageDoc>): Promise<void> {
 }
 
 /** spec §8 step 1: a text field holding an unsaved edit keeps Ctrl+Z; the tool's history is untouched */
-async function fieldUndo(dp: DocController<PaletteDoc>): Promise<void> {
-  shell.setActive('dev-palette');
-  const field = await until(() => host('dev-palette')?.querySelector<HTMLInputElement>('input[type="text"]'));
-  if (!check('Dev palette shows a swatch name field', field)) return;
+async function fieldUndo(dp: DocController<DesignDoc>): Promise<void> {
+  shell.setActive('design');
+  const w = dp.get().swatches[0];
+  selectInDesign([w.id]);
+  const field = await until(() => [...(host('design')?.querySelectorAll<HTMLInputElement>('input[type="text"]') ?? [])].find((i) => i.value === w.name));
+  if (!check('Design shows the swatch name field', field)) return;
   const depth = dp.depth();
   const before = JSON.stringify(dp.get());
   field!.focus();
@@ -242,14 +252,14 @@ async function fieldUndo(dp: DocController<PaletteDoc>): Promise<void> {
 }
 
 /** spec §7.3: the file changed outside the app, then Reload from disk; Ctrl+Z brings mine back and writes it */
-async function outsideChange(dp: DocController<PaletteDoc>, id: string): Promise<void> {
+async function outsideChange(dp: DocController<DesignDoc>, id: string): Promise<void> {
   const mine = dp.get().swatches.length;
   // written behind the app's back: the service takes it as its own write, so nothing is told
   const theirs = { kind: 'palette' as const, id, version: 1 as const, notes: 'from elsewhere', swatches: dp.get().swatches.slice(0, 1) };
   await api.invoke('library.write', id, theirs, null);
   addSwatch(dp, 'Smoke mine');
   check('an edit over an outside change reads CHANGED ON DISK and writes nothing', await until(() => dp.state().t === 'changed-outside') && (await swatchCount(id)) === 1, dp.state());
-  await shell.reloadFromDisk('dev-palette');
+  await shell.reloadFromDisk('design');
   check('Reload from disk takes the file', dp.state().t === 'saved' && dp.get().swatches.length === 1 && dp.get().notes === 'from elsewhere', [dp.state(), dp.get().swatches.length]);
   ctrlZ();
   check('Ctrl+Z brings mine back and writes it', await until(async () => dp.get().swatches.length === mine + 1 && (await swatchCount(id)) === mine + 1), [dp.get().swatches.length, mine]);
@@ -339,6 +349,131 @@ async function design(dir: string, image: LibraryItemRef, di: DocController<Imag
   clearProposals();
 }
 
+/**
+ * Colour › Illustration (plan: Integrate): an edit writes the file, regenerating keeps hand-edited
+ * steps, Design writes an Illustration palette back whole, and a painting is kept with its palette.
+ * Ends with Illustration showing its canvas, so the quiet pass can see the painting come back.
+ */
+async function illustration(): Promise<void> {
+  const il = illustrationDoc();
+  const dd = designDoc();
+  const glossy = dd.source();
+  shell.setActive('illustration');
+  await shell.newDoc('illustration');
+  il.transact('Add base colours', (d) => addRamp(addRamp(d, [0.62, 0.12, 40]).doc, [0.55, 0.1, 250]).doc);
+  const made = await until(() => (il.state().t === 'saved' ? il.source() : null));
+  if (!check('an Illustration edit makes a palette in Scratch', made?.collection === 'Scratch', made ?? il.state())) return;
+  const id = made!.itemId;
+  const payload = async () => {
+    const item = await api.invoke('library.read', id).catch(() => null);
+    return item?.kind === 'palette' ? item.payload : null;
+  };
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const whole = await until(async () => {
+    const p = await payload();
+    return p?.ramps?.length === 2 && p.swatches.length === 10 && p.swatches.every((w) => typeof w.group === 'string' && Number.isInteger(w.step));
+  });
+  check('its file holds two 5-step ramps, each swatch with its ramp and step', whole, await payload());
+
+  // a hand-edited step stays put when its ramp regenerates; the others follow the new settings
+  const ramp = il.get().ramps[0].id;
+  const shadow = stepsOf(il.get(), ramp)[3];
+  const mine: Oklch = [0.4, 0.06, 300];
+  il.transact('Change shadow', (d) => recolour(d, shadow.id, mine));
+  const before = stepsOf(il.get(), ramp);
+  il.transact('Change the material', (d) => setSpec(d, ramp, { material: 'metal', intensity: 'extreme' }));
+  const after = stepsOf(il.get(), ramp);
+  const kept = after.find((w) => w.id === shadow.id);
+  const moved = after.filter((w, i) => w.step !== 0 && !w.edited && !same(w.oklch, before[i].oklch));
+  check('regenerating keeps the hand-edited step and moves the others', kept?.edited && same(kept.oklch, mine) && moved.length === 3, after.map((w) => [w.step, w.edited, w.oklch]));
+  check('and writes the file', await until(async () => same((await payload())?.swatches, il.get().swatches)));
+
+  // Design opens it, changes a step and writes it back whole
+  const ref = await find((i) => i.id === id);
+  if (!check('the Illustration palette is listed', ref)) return;
+  await shell.sendItem(ref!, 'design');
+  check('Design opens the Illustration palette', dd.source()?.itemId === id && shell.getState().owners[id] === 'design', dd.source());
+  const light = stepsOf(il.get(), ramp)[1];
+  dd.transact('Change colour', (d) => recolourInDesign(d, { [light.id]: [0.8, 0.07, 60] }));
+  const written = await until(async () => {
+    const p = await payload();
+    return p?.swatches.find((w) => w.id === light.id)?.oklch[0] === 0.8 ? p : null;
+  });
+  const was = il.get(); // detached now: the palette as Illustration last wrote it
+  const kept2 = was.swatches.every((w) => {
+    const x = written?.swatches.find((y) => y.id === w.id);
+    return x && x.group === w.group && x.step === w.step && (x.id === light.id || !!x.edited === !!w.edited);
+  });
+  check('Design writes it back with its ramps, groups and steps', written && same(written.ramps, was.ramps) && written.swatches.length === was.swatches.length && kept2, written);
+  check('the step Design changed is marked hand-edited', written?.swatches.find((w) => w.id === light.id)?.edited === true);
+  await shell.takeBack('illustration');
+  const back = stepsOf(il.get(), ramp).find((w) => w.id === light.id);
+  check('Illustration takes it back with that step hand-edited', il.state().t === 'saved' && il.get().ramps.length === 2 && back?.edited === true && same(back.oklch, [0.8, 0.07, 60]), il.state());
+  if (glossy) await shell.sendItem((await find((i) => i.id === glossy.itemId))!, 'design');
+  check('Design goes back to its own palette', dd.source()?.itemId === glossy?.itemId && dd.state().t === 'saved', dd.state());
+
+  // the painting: one gouache stroke, kept as a workspace PNG under the palette's id
+  shell.setActive('illustration');
+  patchIllustration({ lower: 'paint', canvas: { ...illustrationView().canvas, tool: 'paint', medium: 'dry' } });
+  if (!check('Paint shows the canvas', await stroke(0.5))) return;
+  check('the stroke is on the canvas', await until(() => paintedPixels() > 500), paintedPixels());
+  check('and is saved under its palette', await until(() => illustrationView().paintings[id], 6000), illustrationView().paintings);
+
+  // an edit while Design holds the palette forks it: the painting stays on screen and goes with the fork
+  await shell.sendItem(ref!, 'design');
+  shell.setActive('illustration');
+  il.transact('Add base colour', (d) => addRamp(d, [0.5, 0.1, 140]).doc);
+  const fork = await until(() => (il.state().t === 'saved' && il.source()?.itemId !== id ? il.source() : null));
+  check('an Illustration edit of a palette Design holds forks it into Scratch', fork?.collection === 'Scratch', il.state());
+  await sleep(500); // a canvas that lost it would have cleared by now
+  check('the painting stays on the canvas through the fork', paintedPixels() > 500, paintedPixels());
+  check('and is kept under the fork, the original keeping its own', fork && (await until(() => illustrationView().paintings[fork.itemId], 6000)) && illustrationView().paintings[id], illustrationView().paintings);
+  if (glossy) await shell.sendItem((await find((i) => i.id === glossy.itemId))!, 'design');
+
+  // a new palette's first stroke: the quit, straight after this pass, must save it (the quiet pass looks)
+  shell.setActive('illustration');
+  await shell.newDoc('illustration');
+  il.transact('Add base colours', (d) => addRamp(d, [0.62, 0.12, 40]).doc);
+  const last = await until(() => (il.state().t === 'saved' ? il.source() : null));
+  if (!check('a new Illustration palette for the last painting', last && last.itemId !== id && last.itemId !== fork?.itemId, il.state())) return;
+  check('its canvas starts blank', await until(() => paintedPixels() === 0), paintedPixels());
+  await stroke(0.5);
+  check('the last stroke is on the canvas', await until(() => paintedPixels() > 500), paintedPixels());
+  // not waited for: the save comes a second after the paint settles
+  check('and not saved yet', !illustrationView().paintings[last!.itemId], illustrationView().paintings);
+}
+
+/** one horizontal stroke across the Illustration canvas at height `y` (0..1); false when it isn't showing */
+async function stroke(y: number): Promise<boolean> {
+  const canvas = await until(() => {
+    const c = host('illustration')?.querySelector<HTMLCanvasElement>('canvas[aria-label^="Painting"]');
+    return c && c.getBoundingClientRect().width > 0 ? c : null;
+  });
+  if (!canvas) return false;
+  const r = canvas.getBoundingClientRect();
+  const pointer = (type: string, x: number) =>
+    canvas.dispatchEvent(
+      new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerup' ? 0 : 1, clientX: r.left + x * r.width, clientY: r.top + y * r.height }),
+    );
+  pointer('pointerdown', 0.2);
+  for (let i = 1; i <= 20; i++) {
+    pointer('pointermove', 0.2 + i * 0.03);
+    await sleep(16);
+  }
+  pointer('pointerup', 0.8);
+  return true;
+}
+
+/** the painting's pixels on the Illustration canvas that aren't blank paper */
+function paintedPixels(): number {
+  const c = host('illustration')?.querySelector<HTMLCanvasElement>('canvas[aria-label^="Painting"]');
+  if (!c) return 0;
+  const px = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+  let n = 0;
+  for (let i = 0; i < px.length; i += 4) if (px[i] < 235 || px[i + 1] < 235 || px[i + 2] < 235) n++;
+  return n;
+}
+
 /** the relaunch: nothing is touched; scripts/smoke.mjs checks no Library or workspace file changed */
 async function quiet(): Promise<void> {
   await sleep(1500); // anything a restore wrongly writes lands before the quit
@@ -355,4 +490,9 @@ async function quiet(): Promise<void> {
     const body = t.toItem!(doc.get()) as Record<string, unknown>;
     check(`${t.label}: the document is its file`, Object.keys(body).every((k) => JSON.stringify(body[k]) === JSON.stringify(file[k])));
   }
+  const id = illustrationDoc().source()?.itemId;
+  check("Illustration: the quit saved the last stroke as its palette's painting", id && illustrationView().paintings[id], illustrationView().paintings);
+  // showing a tool is no edit: smoke.mjs still finds every file as it was
+  shell.setActive('illustration');
+  check('Illustration: the painting comes back on the canvas', await until(() => paintedPixels() > 500, 10_000), paintedPixels());
 }

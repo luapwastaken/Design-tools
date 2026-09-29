@@ -1,9 +1,13 @@
 /* DEV ONLY (plan unit D) */
+.page { display: flex; flex-direction: column; gap: var(--gap); height: 100%; min-height: 0; }
+.tabs { align-self: flex-start; }
+.controls { flex: 1; min-height: 0; overflow: hidden; border-radius: var(--r-mod); }
 .view {
   display: grid;
   grid-template: minmax(0, 1fr) / minmax(0, 1fr) 380px; /* brief §5: the inspector is 380 */
   gap: var(--gap);
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 .board {
   display: grid;

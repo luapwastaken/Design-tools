@@ -4,14 +4,22 @@ import type { ContrastPair, ValueCollision } from '../../../shared/palette/check
 import type { Swatch } from '../../../shared/types.ts';
 import { Button, Icon, Module, NumberField, Ticks, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { setColours } from './actions.ts';
 import { valueFix } from './adjust.ts';
-import type { CheckProps } from './Checks.tsx';
-import { displayName, listNames, plural } from './doc.ts';
-import { fmtL } from './SwatchChip.tsx';
+import { displayName, fmtL, listNames, plural } from './names.ts';
 import { useWidth } from './useWidth.ts';
-import { patchView, pointAt } from './view-state.ts';
 import s from './Checks.module.css';
+
+/** hovering or focusing a check's row lights its swatches where the tool shows them */
+export type PointAt = (ids: string[]) => { onPointerEnter(): void; onPointerLeave(): void; onFocus(): void; onBlur(): void };
+
+/** what the Value and Colour vision checks need from the tool that shows them */
+export type CheckHost = {
+  swatches: Swatch[];
+  /** one history step: new colours by swatch id */
+  onFix(label: string, changes: Record<string, Oklch>): void;
+  pointAt: PointAt;
+  className?: string;
+};
 
 const pct = (l: number) => `${Math.min(1, Math.max(0, l)) * 100}%`;
 const clamp01 = (l: number) => Math.min(1, Math.max(0, l));
@@ -58,21 +66,31 @@ function clusterOf(collisions: ValueCollision[]): Swatch[] {
   return [...found.values()].sort((a, b) => a.oklch[0] - b.oklch[0]);
 }
 
+type ValueProps = CheckHost & {
+  collisions: ValueCollision[];
+  /** contrast pairs: a spread that breaks one which passes now isn't offered */
+  contrast?: ContrastPair[];
+  flagL: number;
+  onFlagL(v: number): void;
+  /** what the scale compares, when it isn't every swatch */
+  sub?: string;
+};
+
 /** The palette in greyscale by OKLCH lightness on a ruler; the worst run that reads as one grey is flagged. */
-export function Value({ doc, d, v, collisions, contrast: pairs }: CheckProps & { collisions: ValueCollision[]; contrast: ContrastPair[] }) {
-  const byL = [...d.swatches].sort((a, b) => a.oklch[0] - b.oklch[0]);
+export function Value({ swatches, onFix, pointAt, className, collisions, contrast: pairs = [], flagL, onFlagL, sub }: ValueProps) {
+  const byL = [...swatches].sort((a, b) => a.oklch[0] - b.oklch[0]);
   const hit = new Set(collisions.flatMap((c) => [c.a.id, c.b.id]));
   const { ref: ruler, width } = useWidth<HTMLDivElement>();
   const lanes = laneOut(byL, width);
   const cluster = collisions.length ? clusterOf(collisions) : [];
   const ids = new Set(cluster.map((w) => w.id));
   const elsewhere = collisions.filter((c) => !ids.has(c.a.id) || !ids.has(c.b.id)).length;
-  const gap = v.flagL + 0.5;
+  const gap = flagL + 0.5;
   // lightness runs 0 to 100: past a point a run can't all stand apart, only spread as evenly as it goes
   const fits = (cluster.length - 1) * gap <= 100;
 
   const fix = () => {
-    const others = d.swatches.filter((w) => !ids.has(w.id)).map((w) => w.oklch[0]);
+    const others = swatches.filter((w) => !ids.has(w.id)).map((w) => w.oklch[0]);
     // a spread that breaks a contrast pair which passes now just trades one problem for another
     const passing = pairs.filter((p) => p.ratio >= p.target);
     const ok = (next: Oklch[]) => {
@@ -80,21 +98,21 @@ export function Value({ doc, d, v, collisions, contrast: pairs }: CheckProps & {
       const now = (w: Swatch) => moved.get(w.id) ?? w.oklch;
       return passing.every((p) => contrast(now(p.text), now(p.ground)) >= p.target);
     };
-    const next = valueFix(cluster.map((w) => w.oklch), v.flagL / 100, others, ok);
+    const next = valueFix(cluster.map((w) => w.oklch), flagL / 100, others, ok);
     const names = cluster.map(displayName);
-    setColours(doc, cluster.length === 2 ? `Spread ${names[0]} and ${names[1]} in lightness` : `Spread ${cluster.length} swatches in lightness`, Object.fromEntries(cluster.map((w, i) => [w.id, next[i]])));
+    onFix(cluster.length === 2 ? `Spread ${names[0]} and ${names[1]} in lightness` : `Spread ${cluster.length} swatches in lightness`, Object.fromEntries(cluster.map((w, i) => [w.id, next[i]])));
   };
 
   return (
     <Module
       title="Value"
-      sub="OKLCH lightness"
-      readout={d.swatches.length > 1 ? (collisions.length ? plural(collisions.length, 'collision') : 'No collisions') : undefined}
+      sub={sub ? `${sub} · OKLCH lightness` : 'OKLCH lightness'}
+      readout={swatches.length > 1 ? (collisions.length ? plural(collisions.length, 'collision') : 'No collisions') : undefined}
       actions={
-        <NumberField label="Flag <" value={v.flagL} min={1} max={20} step={0.5} precision={1} unit="ΔL" size="sm" width={112} onChange={(flagL) => patchView({ flagL })} />
+        <NumberField label="Flag <" value={flagL} min={1} max={20} step={0.5} precision={1} unit="ΔL" size="sm" width={112} onChange={onFlagL} />
       }
       scroll
-      className={s.value}
+      className={className}
     >
       {byL.length === 0 ? (
         <p className={s.none}>The palette's lightness steps show here, in greyscale.</p>
@@ -149,7 +167,7 @@ export function Value({ doc, d, v, collisions, contrast: pairs }: CheckProps & {
               <span className={s.flagText}>
                 <Run list={cluster} />
                 {cluster.length === 2 ? ` sit ${(Math.abs(cluster[1].oklch[0] - cluster[0].oklch[0]) * 100).toFixed(1)} apart and read as one value.` : ' read as one value.'}
-                {!fits && ` ${cluster.length} colours can't all stand ${v.flagL.toFixed(1)} apart; spread evenly they sit ${(100 / (cluster.length - 1)).toFixed(1)} apart.`}
+                {!fits && ` ${cluster.length} colours can't all stand ${flagL.toFixed(1)} apart; spread evenly they sit ${(100 / (cluster.length - 1)).toFixed(1)} apart.`}
                 {elsewhere > 0 && ` ${plural(elsewhere, 'other pair')} collide${elsewhere === 1 ? 's' : ''} too.`}
               </span>
               <Button size="xs" onClick={fix} tooltip={fits ? `Space them ${gap.toFixed(1)} apart in lightness, order and hues kept` : 'Space them evenly from black to white, order and hues kept'}>

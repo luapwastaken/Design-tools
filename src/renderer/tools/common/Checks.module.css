@@ -1,0 +1,71 @@
+/* The Value and Colour vision checks (shared by the colour tools). The layout that places them is
+   the tool's own. */
+.none { max-width: 52ch; padding: 2px 0; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
+
+/* ── value ── */
+.vstrip { display: flex; gap: 3px; }
+.vstrip + .vstrip { margin-top: 3px; }
+.vstrip i { flex: 1 1 0; height: 24px; box-shadow: inset 0 0 0 1px var(--edge); }
+.vstrip i:first-child { border-radius: 2px 0 0 2px; }
+.vstrip i:last-child { border-radius: 0 2px 2px 0; }
+/* --ramp: where the ramp sits, below however many label lanes the pins need */
+.vscale { position: relative; height: calc(var(--ramp) + 32px); margin: 10px 4px 0; }
+.vramp { position: absolute; left: 0; right: 0; top: var(--ramp); height: 8px; border-radius: 1px; box-shadow: inset 0 0 0 1px var(--edge); }
+.vticks { position: absolute; left: 0; right: 0; top: calc(var(--ramp) + 9px); height: 6px; }
+.vnum { position: absolute; top: calc(var(--ramp) + 20px); transform: translateX(-50%); color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-mono); font-stretch: normal; }
+.pin { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 2px; transform: translateX(-50%); }
+/* near an edge the label hangs inwards from its stem */
+.pin.rgt { align-items: flex-start; transform: translateX(-.5px); }
+.pin.lft { align-items: flex-end; transform: translateX(calc(-100% + .5px)); }
+/* over the stems of the lanes above: a label hides what runs behind it */
+.pl { position: relative; z-index: 1; padding: 0 1px; background: var(--module); color: var(--ink-2); font: 500 var(--fs-label)/1 var(--font-mono); font-stretch: normal; letter-spacing: .02em; white-space: nowrap; }
+/* no lane to spare: a stem alone, wide enough to hover for its name */
+.pin.bare { padding: 0 3px; }
+.pin.warn .pl { color: var(--ink); }
+.stem { display: block; width: 1px; height: var(--stem); background: var(--tick-strong); }
+.vbracket { position: absolute; top: calc(var(--ramp) - 3px); height: 14px; margin-left: -2px; padding: 0 2px; border: 1px solid var(--danger); border-radius: 2px; box-sizing: content-box; }
+
+.flag { display: flex; align-items: flex-start; gap: 7px; margin-top: 10px; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.4; }
+.flag > :global(.material-symbols-rounded) { margin-top: 1px; color: var(--ink-2); }
+.flag.bad > :global(.material-symbols-rounded) { color: var(--danger); }
+.flag b { color: var(--ink); font-weight: 600; }
+.flagText { flex: 1; min-width: 0; }
+
+/* ── colour vision ── */
+.cvdRow { display: grid; grid-template-columns: 74px minmax(0, 1fr) 128px; gap: 10px; align-items: center; }
+/* over the strips: label column + gap on the left, readout column + gap on the right */
+.cvdNames { display: grid; margin: 0 138px 2px 84px; }
+.cvdNames span {
+  overflow: hidden;
+  padding: 0 2px;
+  color: var(--ink-3);
+  font: 400 var(--fs-label)/1 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .04em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cvdRow { width: 100%; height: 30px; border-radius: var(--r-ctl); text-align: left; }
+.pick:hover { background: var(--well-hover); }
+.cvdRow.on { background: var(--well); }
+.cvdRow.on :global(.lbl) { color: var(--ink); }
+.strip { display: grid; height: 24px; overflow: hidden; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.strip i { display: block; }
+.rd {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding-right: 6px;
+  overflow: hidden;
+  color: var(--ink-3);
+  font: 400 var(--fs-unit)/1.2 var(--font-mono);
+  font-stretch: normal;
+  white-space: nowrap;
+}
+.rd.worst { color: var(--ink); }
+.rdNames { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.rd > :global(.material-symbols-rounded) { flex: none; }
+.dangerIcon { color: var(--danger); }
+.cvdRow > :global(.lbl) { padding-left: 6px; }

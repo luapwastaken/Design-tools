@@ -4,14 +4,14 @@ import { toast } from '../../ui/index.ts';
 import { registeredTools } from '../registry.ts';
 import type { Shell } from '../shell-api.ts';
 import type { ToolDefinition } from '../tool.ts';
-import { installCloseHandshake } from './close.ts';
+import { beforeClose, installCloseHandshake } from './close.ts';
 import { reloadTool, reportCrash, restoreAll, startEmpty } from './docs.ts';
 import { installErrorHandlers, reportError } from './errors.ts';
 import { installInput } from './input.ts';
 import { ipc } from './ipc.ts';
 import { installKeymap } from './keymap.ts';
 import * as library from './library.ts';
-import { reconcile, retry, setView } from './persist.ts';
+import { onRelink, reconcile, retry, setView } from './persist.ts';
 import { ACTION_LABELS, type ReadoutAction, readoutOf } from './readout.ts';
 import { targetsFor } from './routing.ts';
 import { rtOf } from './runtime.ts';
@@ -98,6 +98,8 @@ export const shell: Shell = {
   },
 
   runBusy: send.runBusy,
+  beforeClose,
+  onRelink,
 };
 
 /** Spec §4 start-up: every controller is created and restored before `ready` lets the UI take input. */
@@ -115,7 +117,7 @@ async function start(): Promise<void> {
     const [info, settings, index] = await Promise.all([ipc.invoke('app.info'), ipc.invoke('settings.get'), ipc.invoke('library.index')]);
     // an index event may have arrived meanwhile: keep the newest
     setState({ settings, library: getState().library ?? index, isPackaged: info.isPackaged });
-    const tools = await restoreAll(await registeredTools(info.isPackaged, !!window.api?.smokeRun));
+    const tools = await restoreAll(await registeredTools(info.isPackaged));
     setState({ tools });
     const active = tools[0]?.id ?? getState().active;
     setState({ ready: true, active, mounted: tools.length ? [active] : [] });

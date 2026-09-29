@@ -1,15 +1,15 @@
-import { useEffect, useState, type CSSProperties, type DragEvent, type MouseEvent } from 'react';
-import { cssColor, toHex, toOklch, type Oklch } from '../../../shared/color/index.ts';
-import { isGround } from '../../../shared/palette/roles.ts';
+import { useEffect, useMemo, useState, type CSSProperties, type DragEvent, type MouseEvent } from 'react';
+import { toHex } from '../../../shared/color/index.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { Button, EmptyState, menu, Module, Segmented, toast, type MenuAnchor } from '../../ui/index.ts';
+import { SURROUNDS, surroundOf } from '../common/surround.ts';
+import { useWidth } from '../common/useWidth.ts';
 import { startWith } from './Build.tsx';
 import { addProposals, armDelete, clickSelect, duplicate, select, selection, type Doc } from './actions.ts';
 import { DeleteConfirm } from './DeleteConfirm.tsx';
-import { moveIds, plural, type DesignDoc, type DesignView } from './doc.ts';
+import { moveIds, namesOf, plural, type DesignDoc, type DesignView } from './doc.ts';
 import { clearProposals, proposals, toggleLock } from './proposals.ts';
 import { GhostChip, SwatchChip } from './SwatchChip.tsx';
-import { useWidth } from './useWidth.ts';
 import { armed, hot, patchView } from './view-state.ts';
 import s from './SwatchRow.module.css';
 
@@ -17,24 +17,10 @@ import s from './SwatchRow.module.css';
 const REORDER_MIME = 'application/x-designtools-reorder';
 const MIN_CHIP = 140;
 
-/** 18% reflectance: the photographer's neutral grey, the same in both themes, for judging colour */
-const GREY_18: Oklch = toOklch({ mode: 'lrgb', r: 0.18, g: 0.18, b: 0.18 });
-
-const SURROUNDS: { value: DesignView['surround']; label: string; tip: string }[] = [
-  { value: 'grey', label: '18%', tip: '18% grey surround' },
-  { value: 'ground', label: 'Ground', tip: "The palette's own background" },
-  { value: 'plain', label: 'Plain', tip: 'No surround' },
-];
 const DATA: { value: DesignView['chipData']; label: string; tip: string }[] = [
   { value: 'short', label: 'Chips', tip: 'Hex and L C H' },
   { value: 'full', label: 'Table', tip: 'Adds RGB and ≈CMYK rows' },
 ];
-
-/** the palette's background colour, or its darkest swatch when no swatch has that job */
-function groundOf(list: Swatch[]): string {
-  const g = list.find((w) => w.role === 'Background') ?? list.find((w) => isGround(w.role)) ?? [...list].sort((a, b) => a.oklch[0] - b.oklch[0])[0];
-  return g ? cssColor(g.oklch) : 'var(--module)';
-}
 
 const FIELD = ['min(232px, 22vh)', 'min(100px, 10vh)', '72px'];
 
@@ -44,6 +30,7 @@ export function SwatchRow({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView
   const sel = selection(d, v);
   const [drag, setDrag] = useState<{ ids: string[]; at: number | null } | null>(null);
   const isArmed = armed.use();
+  const names = useMemo(() => namesOf(d), [d.swatches, d.ramps]);
   // the confirm belongs to the swatch it was armed on: another anchor disarms it
   useEffect(() => armed.set(false), [sel[0]]);
   // a new set of proposals lands at the end of the row, maybe below the fold: bring its first into view
@@ -55,7 +42,7 @@ export function SwatchRow({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView
   // how many rows the chips wrap to, so one row can stand tall and several stay compact
   const { ref, width } = useWidth<HTMLDivElement>();
   const rows = Math.max(1, Math.ceil(count / Math.max(1, Math.floor(width / MIN_CHIP))));
-  const surround = v.surround === 'grey' ? cssColor(GREY_18) : v.surround === 'ground' ? groundOf(d.swatches) : 'var(--module)';
+  const surround = surroundOf(v.surround, d.swatches);
   const full = v.chipData === 'full';
 
   const openMenu = (w: Swatch, at: MenuAnchor, fromKey: boolean) => {
@@ -183,6 +170,7 @@ export function SwatchRow({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView
           <SwatchChip
             key={w.id}
             swatch={w}
+            name={names.get(w.id) ?? w.name}
             index={i}
             surround={surround}
             full={full}

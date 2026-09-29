@@ -1,0 +1,36 @@
+/* a colour tool's document bar (Design, Illustration) */
+.docbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 8px 0 14px;
+  overflow: hidden;
+  border-radius: var(--r-mod);
+  background: var(--module);
+}
+.docbar { container-type: inline-size; }
+.docbar > :global(.lbl) { flex: none; white-space: nowrap; }
+.docbar .lowerSwitch { align-self: center; }
+/* short of room the collection goes first: the title bar's readout names it too */
+@container (max-width: 880px) {
+  .where { display: none; }
+}
+/* at the work area's 540px minimum: the count goes (the Swatches header reads it too) and Add
+   swatch keeps its icon and tooltip, so Send to stays on screen */
+@container (max-width: 700px) {
+  .count { display: none; }
+  .addText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+.title {
+  flex: 0 1 auto;
+  min-width: 48px;
+  overflow: hidden;
+  font: 600 var(--fs-title)/1 var(--font-sans);
+  font-stretch: var(--sans-stretch);
+  letter-spacing: -.005em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.grow { flex: 1; }
+.sep { flex: none; width: 1px; height: 16px; margin: 0 2px; background: var(--line); }

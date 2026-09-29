@@ -1,23 +1,14 @@
 // Colour > Design: build, check and export brand and UI palettes.
 // Spec: docs/superpowers/specs/2026-09-28-colour-design-tool.md; plan unit V.
-import type { Swatch } from '../../../shared/types.ts';
 import { unsupportedImage } from '../../lib/load.ts';
 import type { ToolDefinition } from '../../shell/tool.ts';
+import { fetchBlob } from '../common/take.ts';
 import { armDelete, duplicate, eyedrop, newPalette, step } from './actions.ts';
-import { emptyDoc, type DesignDoc } from './doc.ts';
+import { emptyDoc, fromPayload, toPayload, type DesignDoc } from './doc.ts';
 import { clearProposals } from './proposals.ts';
 import { takeImage, takeSvg } from './sources.ts';
 import { StatusSlot } from './StatusSlot.tsx';
 import { View } from './View.tsx';
-
-async function fetchBlob(url: string, name: string): Promise<Blob> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Couldn't read ${name}.`);
-  return res.blob();
-}
-
-// a hand-edited or imported file may leave these out
-const tidy = (w: Swatch): Swatch => ({ ...w, role: w.role ?? null, type: w.type ?? 'process' });
 
 export const tool: ToolDefinition<DesignDoc> = {
   id: 'design',
@@ -30,10 +21,10 @@ export const tool: ToolDefinition<DesignDoc> = {
   // no docName: the breadcrumb shows the palette item's name
 
   itemKind: 'palette',
-  toItem: (d) => ({ swatches: d.swatches, notes: d.notes }),
+  toItem: toPayload,
   fromItem(item) {
     if (item.kind !== 'palette') throw new Error(`A ${item.kind} isn't a palette.`);
-    return { swatches: item.payload.swatches.map(tidy), notes: item.payload.notes ?? '' };
+    return fromPayload(item.payload);
   },
 
   accepts: {

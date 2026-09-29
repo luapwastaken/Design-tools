@@ -4,10 +4,10 @@ import { ROLES } from '../../../shared/palette/roles.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { IconButton, Module, Picker, PickerModes, Segmented, Select, TextInput, Toggle, Tooltip, useDocColour } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
+import { fmtL } from '../common/names.ts';
 import { select, selection, type Doc } from './actions.ts';
 import { tints } from './adjust.ts';
-import { displayName, insertAfter, mapSwatch, newSwatch, recolour, type DesignDoc, type DesignView } from './doc.ts';
-import { fmtL } from './SwatchChip.tsx';
+import { displayName, insertAfter, mapSwatch, nameIn, newSwatch, recolour, type DesignDoc, type DesignView } from './doc.ts';
 import { armed, patchView } from './view-state.ts';
 import s from './Inspector.module.css';
 
@@ -26,7 +26,7 @@ export function Inspector({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView
   return (
     <Module
       title="Swatch"
-      sub={w ? displayName(w) : undefined}
+      sub={w ? nameIn(d, w) : undefined}
       // with several selected, the fields below still edit the one named here
       readout={sel.length > 1 ? `Editing 1 of ${sel.length}` : undefined}
       actions={
@@ -41,15 +41,14 @@ export function Inspector({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView
       {!w ? (
         <p className={s.hint}>{d.swatches.length ? 'Select a swatch to edit it.' : 'Add or build colours, then pick one here to edit it.'}</p>
       ) : (
-        <Editor key={w.id} doc={doc} w={w} v={v} />
+        <Editor key={w.id} doc={doc} w={w} v={v} name={nameIn(d, w)} />
       )}
     </Module>
   );
 }
 
-function Editor({ doc, w, v }: { doc: Doc; w: Swatch; v: DesignView }) {
+function Editor({ doc, w, v, name }: { doc: Doc; w: Swatch; v: DesignView; name: string }) {
   const edit = (label: string, fn: (x: Swatch) => Swatch) => doc.transact(label, (d) => mapSwatch(d, w.id, fn));
-  const name = displayName(w);
   const colour = useDocColour(doc, {
     label: `Change ${name}`,
     key: `${w.id}:colour`,
@@ -68,7 +67,7 @@ function Editor({ doc, w, v }: { doc: Doc; w: Swatch; v: DesignView }) {
       <div className={s.ident}>
         <i className={s.big} style={{ background: cssColor(colour.value) }} />
         <div className={s.fields}>
-          <TextInput value={w.name} placeholder={displayName({ name: '', oklch: w.oklch })} onCommit={(t) => edit(`Rename ${name}`, (x) => ({ ...x, name: t.trim() }))} />
+          <TextInput value={w.name} placeholder={w.name.trim() ? displayName({ name: '', oklch: w.oklch }) : name} onCommit={(t) => edit(`Rename ${name}`, (x) => ({ ...x, name: t.trim() }))} />
           <Role w={w} onChange={(role) => edit(role ? `Set ${name} to ${role}` : `Clear ${name}'s role`, (x) => ({ ...x, role }))} />
         </div>
       </div>

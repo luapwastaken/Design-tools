@@ -35,6 +35,8 @@ export type Runtime = {
   /** the last workspace state written, so an unchanged one isn't written again */
   saved: string;
   crashes: number;
+  /** what the first commit of a New document names its item, when the New gave a name */
+  newName?: string;
   detach(): void;
 };
 

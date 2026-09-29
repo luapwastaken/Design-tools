@@ -44,6 +44,8 @@ process.on('unhandledRejection', onMainError('Unhandled rejection in main'));
 
 registerDtScheme();
 Menu.setApplicationMenu(null);
+// Test windows live off-screen; without this Chromium treats them as covered and stops painting.
+if (smoke) app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
 
 // A second launch focuses the running window and quits.
 if (!app.requestSingleInstanceLock()) app.quit();

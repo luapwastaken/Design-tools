@@ -34,8 +34,8 @@ const index = (): LibraryIndex => ({
 });
 
 test('an unlinked document is new, or not saved when its create failed', () => {
-  assert.deepEqual(docState('dev-palette', null, null, null), { t: 'new' });
-  assert.deepEqual(docState('dev-palette', null, null, 'The Library folder is missing.'), { t: 'write-failed', message: 'The Library folder is missing.' });
+  assert.deepEqual(docState('design', null, null, null), { t: 'new' });
+  assert.deepEqual(docState('design', null, null, 'The Library folder is missing.'), { t: 'write-failed', message: 'The Library folder is missing.' });
 });
 
 test('a linked document it owns reads SAVED with the stamp time and collection', () => {

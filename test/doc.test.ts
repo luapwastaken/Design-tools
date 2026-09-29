@@ -18,7 +18,7 @@ const src = (itemId: string, mtimeMs = 1): DocSource => ({
 
 function setup(options: DocControllerOptions = {}) {
   let t = 1000;
-  const doc = createDocController<Doc>('dev-palette', { n: 0, tags: [] }, { strict: true, now: () => t, ...options });
+  const doc = createDocController<Doc>('design', { n: 0, tags: [] }, { strict: true, now: () => t, ...options });
   const log: [number, ChangeCause][] = [];
   doc.onChange((e, cause) => log.push([e.data.n, cause]));
   let notified = 0;
@@ -29,7 +29,7 @@ function setup(options: DocControllerOptions = {}) {
 test('starts empty with nothing to undo', () => {
   const { doc } = setup();
   assert.deepEqual(doc.get(), { n: 0, tags: [] });
-  assert.equal(doc.toolId, 'dev-palette');
+  assert.equal(doc.toolId, 'design');
   assert.equal(doc.source(), null);
   assert.deepEqual(doc.state(), { t: 'new' });
   assert.equal(doc.depth(), 0);
@@ -583,7 +583,7 @@ test('setState is not part of history', () => {
 });
 
 test('unsubscribe and onChange disposers stop calls', () => {
-  const doc = createDocController<Doc>('dev-palette', { n: 0, tags: [] }, { strict: true });
+  const doc = createDocController<Doc>('design', { n: 0, tags: [] }, { strict: true });
   let subs = 0;
   let hooks = 0;
   const offSub = doc.subscribe(() => subs++);

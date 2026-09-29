@@ -4,10 +4,8 @@ export type Theme = 'dark' | 'light';
 
 export type ToolId =
   | 'design' | 'illustration' | 'pattern' | 'logo' | 'dither' | 'halftone' | 'postfx'
-  /** dev-only stubs used during the foundation (registered only when not packaged) */
-  | 'dev-palette' | 'dev-image'
-  /** dev-only: a second palette tool, registered only during a smoke pass (shell/registry.ts) */
-  | 'smoke-palette';
+  /** dev-only stub image tool used until the image tools land (registered only when not packaged) */
+  | 'dev-image';
 
 // ── Library ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -33,9 +31,44 @@ export type Swatch = {
   type: 'process' | 'global' | 'spot';
   /** original values from an import (ASE/ACO/GPL); dropped as soon as the swatch is edited */
   source?: { space: 'rgb' | 'cmyk' | 'lab' | 'gray'; values: number[] };
+  /** Illustration ramps: the ramp (RampSpec.id) this swatch belongs to */
+  group?: string;
+  /** position in its ramp: 0 = base, negative = lighter (toward the highlight), positive = darker */
+  step?: number;
+  /** a hand-edited ramp step: regenerating the ramp leaves it alone */
+  edited?: boolean;
 };
 
-export type PalettePayload = { kind: 'palette'; id: string; version: 1; swatches: Swatch[]; notes: string };
+export type MaterialId =
+  | 'skin' | 'cloth' | 'velvet' | 'metal' | 'plastic' | 'glass'
+  | 'water' | 'foliage' | 'stone' | 'wood' | 'paper' | 'fur';
+
+/** How Illustration builds one ramp (spec 2026-09-29 §3.1). Other tools pass it through untouched. */
+export type RampSpec = {
+  id: string;
+  base: [number, number, number];
+  light: [number, number, number];
+  shadow: [number, number, number];
+  material: MaterialId;
+  intensity: 'grounded' | 'expressive' | 'extreme';
+  /** 3..9, default 5 */
+  steps: number;
+  hueShift: number;
+  chromaCurve: number;
+  hero: boolean;
+  /** the base's name when the file was written, so a ramp whose base another tool deleted keeps its name */
+  name?: string;
+};
+
+export type PalettePayload = {
+  kind: 'palette';
+  id: string;
+  version: 1;
+  swatches: Swatch[];
+  notes: string;
+  /** Illustration's ramp settings; tools that don't use them must write them back unchanged */
+  ramps?: RampSpec[];
+};
 export type PatternPayload = {
   kind: 'pattern';
   id: string;

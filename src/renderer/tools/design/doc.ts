@@ -1,18 +1,23 @@
 // The Design tool's document and view state (plan: Document and view).
 import type { Cvd, Oklch } from '../../../shared/color/index.ts';
-import { autoName } from '../../../shared/palette/names.ts';
-import type { Swatch } from '../../../shared/types.ts';
+import type { PalettePayload, RampSpec, Swatch } from '../../../shared/types.ts';
+import type { ExportFormat } from '../common/ExportPalette.tsx';
+import type { Surround } from '../common/surround.ts';
 
-export type DesignDoc = { swatches: Swatch[]; notes: string };
+import { displayName, named } from '../common/names.ts';
+
+export { displayName, listNames, named, plural } from '../common/names.ts';
+
+/** `ramps`: Illustration's ramp settings, kept so they go back into the file unchanged */
+export type DesignDoc = { swatches: Swatch[]; notes: string; ramps?: RampSpec[] };
 
 export type BuildTab = 'harmony' | 'generate' | 'image' | 'logo' | 'gradient' | 'paste';
-export type ExportFormat = 'ase' | 'aco' | 'gpl' | 'css' | 'tailwind' | 'procreate' | 'json' | 'svg' | 'png';
 
 /** Never in history: saved with the workspace through shell.setView (spec §7.1). */
 export type DesignView = {
   /** swatch ids; the first is the active one (inspector) */
   selected: string[];
-  surround: 'grey' | 'ground' | 'plain';
+  surround: Surround;
   /** short = Hex + L C H; full adds RGB and ≈CMYK rows */
   chipData: 'short' | 'full';
   lower: 'checks' | 'context';
@@ -40,6 +45,20 @@ export type DesignView = {
 
 export const emptyDoc = (): DesignDoc => ({ swatches: [], notes: '' });
 
+/** each swatch's name as the palette shows it: blank ones filled in, an Illustration ramp step by its ramp ("Cloth shadow") */
+export const namesOf = (d: DesignDoc): Map<string, string> => new Map(named(d.swatches, d.ramps).map((w) => [w.id, w.name]));
+export const nameIn = (d: DesignDoc, w: Swatch): string => (w.name.trim() ? w.name : (namesOf(d).get(w.id) ?? displayName(w)));
+
+// a hand-edited or imported file may leave these out
+const tidy = (w: Swatch): Swatch => ({ ...w, role: w.role ?? null, type: w.type ?? 'process' });
+
+/** The palette file's contents. An Illustration palette's ramps and each swatch's group, step and edited go back as they came. */
+export const toPayload = (d: DesignDoc): Pick<PalettePayload, 'swatches' | 'notes' | 'ramps'> => ({ swatches: d.swatches, notes: d.notes, ...(d.ramps && { ramps: d.ramps }) });
+
+export function fromPayload(p: Pick<PalettePayload, 'swatches' | 'notes' | 'ramps'>): DesignDoc {
+  return { swatches: p.swatches.map(tidy), notes: p.notes ?? '', ...(p.ramps && { ramps: p.ramps }) };
+}
+
 export const newSwatch = (oklch: Oklch, name = '', role: string | null = null): Swatch => ({
   id: crypto.randomUUID(),
   name,
@@ -47,25 +66,6 @@ export const newSwatch = (oklch: Oklch, name = '', role: string | null = null): 
   oklch,
   type: 'process',
 });
-
-// autoName searches the whole name list with CIEDE2000; chips ask on every render (keyed by the
-// numbers themselves: a hex key would gamut-map the colour on every call)
-const names = new Map<string, string>();
-
-/** Blank names show the nearest colour name. */
-export function displayName(w: Pick<Swatch, 'name' | 'oklch'>): string {
-  if (w.name.trim()) return w.name;
-  const key = w.oklch.join(' ');
-  let n = names.get(key);
-  if (n === undefined) {
-    if (names.size > 4096) names.clear(); // a long drag of an unnamed swatch asks for a new colour every frame
-    names.set(key, (n = autoName(w.oklch)));
-  }
-  return n;
-}
-
-/** What export and the checks' sentences call each swatch: blank names filled in. */
-export const named = (list: Swatch[]): Swatch[] => list.map((w) => (w.name.trim() ? w : { ...w, name: displayName(w) }));
 
 export const mapSwatch = (d: DesignDoc, id: string, fn: (w: Swatch) => Swatch): DesignDoc => ({
   ...d,
@@ -75,6 +75,7 @@ export const mapSwatch = (d: DesignDoc, id: string, fn: (w: Swatch) => Swatch): 
 /**
  * New colours; an edited colour is no longer the imported one, so its original values go
  * (Swatch.source). A "change" to the same colour changes nothing, so the imported values stay.
+ * A step of an Illustration ramp becomes a hand-edited one, which regenerating the ramp leaves alone.
  */
 export const recolour = (d: DesignDoc, changes: Record<string, Oklch>): DesignDoc => ({
   ...d,
@@ -82,7 +83,7 @@ export const recolour = (d: DesignDoc, changes: Record<string, Oklch>): DesignDo
     const next = changes[w.id];
     if (!next || next.every((v, i) => v === w.oklch[i])) return w;
     const { source: _, ...rest } = w;
-    return { ...rest, oklch: next };
+    return { ...rest, oklch: next, ...(w.group !== undefined && { edited: true }) };
   }),
 });
 
@@ -102,10 +103,3 @@ export function moveIds(d: DesignDoc, ids: string[], index: number): DesignDoc {
   const after = d.swatches.slice(index).filter((w) => !ids.includes(w.id));
   return { ...d, swatches: [...before, ...moving, ...after] };
 }
-
-/** "Iron", "Iron and Moss", "Iron, Moss and Sky" */
-export function listNames(list: string[]): string {
-  return list.length < 2 ? (list[0] ?? '') : `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`;
-}
-
-export const plural = (n: number, one: string, many = `${one}s`): string => `${n} ${n === 1 ? one : many}`;

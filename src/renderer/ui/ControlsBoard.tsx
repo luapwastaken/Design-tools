@@ -127,7 +127,7 @@ function ColorFields() {
 
 // bound to a small document of its own, so each drag, typed value and arrow run shows as one undo step
 function PickerDemo() {
-  const [doc] = useState(() => createDocController<{ ember: Oklch }>('dev-palette', { ember: MONOLITH[3][1] }));
+  const [doc] = useState(() => createDocController<{ ember: Oklch }>('dev-image', { ember: MONOLITH[3][1] }));
   const colour = useDocColour(doc, { label: 'change Ember', key: 'board-picker', get: (d) => d.ember, set: (d, ember) => ({ ...d, ember }) });
   const [mode, setMode] = useState<PickerMode>('oklch');
   const [lockL, setLockL] = useState(false);

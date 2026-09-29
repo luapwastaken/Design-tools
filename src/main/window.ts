@@ -36,13 +36,13 @@ export function applyTheme(theme: Theme): void {
 }
 
 /**
- * Test runs (--smoke / --smoke-dir) open on a monitor other than the primary one when there is one,
- * so Luap can keep working on the main screen. They never take focus either (showInactive below).
+ * Test runs (--smoke / --smoke-dir) open off every screen, so they never cover what Luap is working
+ * on, and never take focus (showInactive below). They keep painting because index.ts turns off
+ * Chromium's occlusion tracking for test runs, so CDP screenshots still work.
  */
-function testPlacement(): { x: number; y: number } | Record<string, never> {
-  const primary = screen.getPrimaryDisplay();
-  const other = screen.getAllDisplays().find((d) => d.id !== primary.id);
-  return other ? { x: other.workArea.x + 20, y: other.workArea.y + 20 } : {};
+function testPlacement(): { x: number; y: number } {
+  const left = Math.min(...screen.getAllDisplays().map((d) => d.bounds.x));
+  return { x: left - 4000, y: 0 };
 }
 
 /** a second launch: bring the running window forward (never for test runs) */
@@ -94,7 +94,15 @@ export function createWindow(o: {
   // Test runs never take focus from whatever Luap is doing. The smoke passes need no window at
   // all (it still lays out and paints, unthrottled), so nothing appears; --smoke-dir, driven by
   // scripts that take screenshots, shows one without focus.
-  w.once('ready-to-show', () => (o.smokeRun ? undefined : o.smoke ? w.showInactive() : w.show()));
+  w.once('ready-to-show', () => {
+    if (o.smokeRun) return;
+    if (!o.smoke) return w.show();
+    w.setSkipTaskbar(true);
+    w.showInactive();
+    // Windows may pull a window back onto a screen when it shows; put it back off-screen
+    const p = testPlacement();
+    w.setPosition(p.x, p.y);
+  });
 
   // Pinch zoom off. Page zoom needs nothing more: with no application menu, Ctrl+= / Ctrl+- / Ctrl+0
   // and Ctrl+wheel don't zoom the page (checked on Electron 44), and the keys still reach the renderer

@@ -5,17 +5,48 @@ import type { DocController } from '../../../shared/doc-api.ts';
 import { saveFile } from '../../lib/export.ts';
 import { decodeImage } from '../../lib/load.ts';
 import { shell } from '../../shell/core/index.ts';
-import { Button, EmptyState, IconButton, Module, Slider, SwatchStrip, UndoRedo, menu, toast, useDocNumber, type MenuItem } from '../../ui/index.ts';
+import { Button, ControlsBoard, EmptyState, IconButton, Module, Segmented, Slider, SwatchStrip, UndoRedo, menu, toast, useDocNumber, type MenuItem } from '../../ui/index.ts';
 import { type ImageDoc, tool } from './index.ts';
 import { fetchBlob, pixels, tint } from './pixels.ts';
 import s from './View.module.css';
 
 type Doc = DocController<ImageDoc>;
+type Tab = 'image' | 'controls';
+
+// the Controls tab holds the controls board, every control in every state, for the design critic
+const TABS: { value: Tab; label: string }[] = [
+  { value: 'image', label: 'Image' },
+  { value: 'controls', label: 'Controls' },
+];
+
+// the tab is view state: saved with the workspace, never in history (spec §7.1)
+const savedTab = (): Tab => ((shell.view('dev-image') as { tab?: Tab } | undefined)?.tab === 'controls' ? 'controls' : 'image');
 
 /** long edge of the on-screen copy; render() works at full resolution */
 const PREVIEW = 1600;
 
 export function View({ doc, active }: { doc: Doc; active: boolean }) {
+  const [tab, setTabState] = useState<Tab>(savedTab);
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    shell.setView('dev-image', { tab: t });
+  };
+  return (
+    <div className={s.page}>
+      <Segmented<Tab> options={TABS} value={tab} onChange={setTab} fit className={s.tabs} />
+      {tab === 'controls' ? (
+        <div className={s.controls}>
+          <ControlsBoard />
+        </div>
+      ) : (
+        <Image doc={doc} active={active} />
+      )}
+    </div>
+  );
+}
+
+function Image({ doc, active }: { doc: Doc; active: boolean }) {
+  const [crash, setCrash] = useState(false);
   const d = useSyncExternalStore(doc.subscribe, doc.get);
   const strength = useDocNumber(doc, {
     label: 'change tint strength',
@@ -25,6 +56,8 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   });
   const clear = () => doc.transact('clear tints', (d) => ({ ...d, tints: [] }));
   const sendKind = useSyncExternalStore(doc.subscribe, () => shell.sendKind('dev-image'));
+  // exercises ToolHost's error module (Reload tool, Start empty, Copy details)
+  if (crash) throw new Error('Crash test: the dev image view threw on purpose.');
 
   return (
     <div className={s.view}>
@@ -41,6 +74,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         className={s.inspector}
         actions={
           <>
+            <IconButton icon="bug_report" label="Crash this view (dev test)" size="sm" onClick={() => setCrash(true)} />
             <UndoRedo doc={doc} />
             {d.tints.length > 0 && <IconButton icon="format_color_reset" label="Clear tints" size="sm" onClick={clear} />}
             <IconButton icon="download" label="Export PNG" size="sm" disabled={!d.source} onClick={() => void exportPng(d)} />

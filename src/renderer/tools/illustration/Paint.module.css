@@ -1,0 +1,85 @@
+/* Paint: the canvas takes the room; recipes and your paints stack beside it */
+.pane {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  gap: var(--gap);
+  height: 100%;
+  min-height: 0;
+}
+.side {
+  display: grid;
+  grid-template-rows: minmax(160px, 1fr) minmax(150px, auto);
+  gap: var(--gap);
+  min-width: 0;
+  min-height: 0;
+}
+/* too narrow to share a row: the canvas fills the pane's height, so its bars, paper, well, tray and
+   brush stay in one view as the paper shrinks to fit; recipes and paints sit under it (the pane
+   scrolls to them). */
+@container lower (max-width: 900px) {
+  .pane { grid-template-columns: minmax(0, 1fr); grid-template-rows: max(360px, 100cqh) auto; height: auto; min-height: 100%; }
+  .side { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(260px, auto); }
+}
+@container lower (max-width: 600px) {
+  .side { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; }
+}
+.none { padding: 12px; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
+.small { height: 22px; }
+.maxRow { --label-w: 104px; padding: 8px 12px 6px; }
+
+/* ── recipes ── */
+.recipes { min-height: 0; }
+.rlist { display: flex; flex-direction: column; }
+.recipe {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 48px;
+  padding: 6px 12px;
+}
+.recipe + .recipe { box-shadow: 0 -1px 0 var(--line); }
+/* the target and the mix touch, so the difference reads at a glance */
+.pairChips { display: flex; height: 32px; overflow: hidden; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.pairChips i { flex: 1; }
+.parts { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.rname { overflow: hidden; color: var(--ink); font-size: var(--fs-ctl); text-overflow: ellipsis; white-space: nowrap; }
+.mix { display: flex; flex-wrap: wrap; gap: 3px 6px; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.3; }
+.part { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.part b { color: var(--ink); font: 500 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; }
+.plus { margin-right: 1px; color: var(--ink-4); }
+.pchip { flex: none; width: 10px; height: 10px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.de { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.deNum { color: var(--ink); font: 500 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.farText { color: var(--ink-2); font-size: var(--fs-base); line-height: 1.4; }
+.fine { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.35; }
+
+/* ── your paints ── */
+.paints { min-height: 0; }
+.plist { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0 8px; }
+.prow { display: flex; align-items: center; min-width: 0; }
+.tick {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  height: 26px;
+  padding: 0 6px;
+  margin-left: -6px;
+  border-radius: var(--r-ctl);
+  color: var(--ink-3);
+  font-size: var(--fs-base);
+  text-align: left;
+}
+.tick:hover { background: var(--well-hover); color: var(--ink-2); }
+.ticked { color: var(--ink); }
+.ticked:hover { color: var(--ink); }
+.tick > :global(.material-symbols-rounded) { color: var(--ink-3); }
+.ticked > :global(.material-symbols-rounded) { color: var(--ink); }
+.pname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.armed { grid-column: 1 / -1; margin: 2px 0; }
+.add { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 10px; box-shadow: 0 -1px 0 var(--line); }
+.addRow { display: flex; gap: 6px; }
+.addColour { flex: 0 0 148px; min-width: 0; }
+.addName { flex: 1; min-width: 0; }

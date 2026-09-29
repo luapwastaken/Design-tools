@@ -156,6 +156,22 @@ test('Procreate: more than 30 swatches continue in a second palette', () => {
   assert.deepEqual(palettes.map((p: { name: string; swatches: unknown[] }) => [p.name, p.swatches.length]), [['Big', 30], ['Big 2', 1]]);
 });
 
+/** Illustration ramps as export gets them: blank names filled in, each swatch with its ramp and step */
+const ramp = (group: string, base: string, n: number): Swatch[] =>
+  Array.from({ length: n }, (_, i) => ({ ...sw(`#${(i * 30).toString(16).padStart(2, '0')}4080`, i === 1 ? base : `${base} ${i}`), group, step: i - 1 }));
+
+test('Procreate: a palette breaks between ramps, never inside one', () => {
+  const list = [...ramp('a', 'Skin', 9), ...ramp('b', 'Cloth', 9), ...ramp('c', 'Hair', 9), ...ramp('d', 'Sky', 9)];
+  const palettes = JSON.parse(strFromU8(unzipSync(writeProcreate('Study', list))['Swatches.json']));
+  assert.deepEqual(palettes.map((p: { name: string; swatches: unknown[] }) => [p.name, p.swatches.length]), [['Study', 27], ['Study 2', 9]]);
+});
+
+test('ASE: one colour group per ramp, named after its base; loose colours under the palette name', () => {
+  const list = [...ramp('a', 'Skin', 3), ...ramp('b', 'Cloth', 3), sw('#123456', 'Loose')];
+  const back = readPaletteFile('ase', writeAse('Study', list), 'x').swatches.map((s) => s.name);
+  assert.deepEqual(back, ['Skin / Skin 0', 'Skin / Skin', 'Skin / Skin 2', 'Cloth / Cloth 0', 'Cloth / Cloth', 'Cloth / Cloth 2', 'Study / Loose']);
+});
+
 test('Sheet SVG: a sized page with one chip per swatch and escaped text', () => {
   const svg = writeSheetSvg('Tom & Jerry <3', UI.slice(0, 5), { columns: 2, theme: 'dark' });
   assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="\d+" height="\d+" viewBox="0 0 \d+ \d+">/);

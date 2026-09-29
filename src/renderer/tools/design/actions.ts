@@ -61,7 +61,8 @@ export function duplicate(doc: Doc): void {
   const d = doc.get();
   const ids = selection(d);
   if (!ids.length) return;
-  const copies = d.swatches.filter((w) => ids.includes(w.id)).map((w) => ({ ...w, id: crypto.randomUUID(), name: w.name && `${w.name} copy` }));
+  // a copy is a new colour, never a second Illustration ramp step in the same place
+  const copies = d.swatches.filter((w) => ids.includes(w.id)).map(({ group: _g, step: _s, edited: _e, ...w }) => ({ ...w, id: crypto.randomUUID(), name: w.name && `${w.name} copy` }));
   const last = d.swatches.filter((w) => ids.includes(w.id)).at(-1)!.id;
   doc.transact(copies.length === 1 ? 'Duplicate swatch' : `Duplicate ${copies.length} swatches`, (x) => insertAfter(x, last, copies));
   select(copies.map((w) => w.id));

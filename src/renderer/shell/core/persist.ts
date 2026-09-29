@@ -1,6 +1,6 @@
 import type { ChangeCause, DocSource, DocState, Entry } from '../../../shared/doc-api.ts';
 import { same } from '../../../shared/history.ts';
-import type { DocKind, DocPayload, LibraryItemRef, WorkspaceState, WriteResult } from '../../../shared/types.ts';
+import type { DocKind, DocPayload, LibraryItemRef, ToolId, WorkspaceState, WriteResult } from '../../../shared/types.ts';
 import { toast } from '../../ui/index.ts';
 import { errorText, guardSync } from './errors.ts';
 import { ipc, log } from './ipc.ts';
@@ -52,7 +52,12 @@ async function persistItem(r: Runtime, entry: Entry<unknown>, cause: ChangeCause
   const plan = planChange({ cause, kind: r.def.itemKind!, source, state: stateOf(r, source), empty: isEmptyDoc(r, entry.data) });
   const payload = plan.t === 'none' ? null : payloadOf(r, entry.data);
   if (payload && plan.t === 'write') await write(r, source!, payload, cause === 'commit' || cause === 'receive');
-  else if (payload && (plan.t === 'create' || plan.t === 'fork')) await create(r, plan.name, payload, source);
+  else if (payload && plan.t === 'fork') await create(r, plan.name, payload, source);
+  else if (payload && plan.t === 'create') {
+    const name = r.newName ?? plan.name;
+    r.newName = undefined;
+    await create(r, name, payload, source);
+  }
   refreshAll();
   await saveWorkspace(r);
 }
@@ -117,7 +122,7 @@ function patchRef(id: string, ref: LibraryItemRef): void {
 async function create(r: Runtime, name: string, payload: DocPayload, from: DocSource): Promise<void> {
   try {
     const { ref, stamp } = await ipc.invoke('library.create', SCRATCH, name, payload);
-    relink(r, sourceOf(ref, stamp), from);
+    relink(r, sourceOf(ref, stamp), from, true);
     if (from) {
       r.paused.delete(from.itemId);
       r.lostTo.delete(from.itemId);
@@ -143,8 +148,19 @@ export function keepCopy(r: Runtime): Promise<void> {
 
 // -- links: which item a queued snapshot means now --
 
+const relinks = new Set<(tool: ToolId, from: string, to: string, fork: boolean) => void>();
+
+/** the document now lives in another item: a fork (`fork`) or its own item under a new id (rename, move) */
+export function onRelink(tool: ToolId, fn: (from: string, to: string, fork: boolean) => void): () => void {
+  const hook = (t: ToolId, from: string, to: string, fork: boolean) => t === tool && fn(from, to, fork);
+  relinks.add(hook);
+  return () => void relinks.delete(hook);
+}
+
 /** after a write, create or fork: the controller's entries and this tool's links follow (handoff: setSource rules) */
-export function relink(r: Runtime, next: Linked, from: DocSource): void {
+export function relink(r: Runtime, next: Linked, from: DocSource, fork = false): void {
+  // told first, so what the tool keeps per item (a painting) moves before its view sees the new id
+  if (from && from.itemId !== next.itemId) relinks.forEach((fn) => guardSync(`${r.def.label} couldn't follow its palette`, () => fn(r.def.id, from.itemId, next.itemId, fork)));
   r.doc.setSource(next, from);
   r.links.set(from?.itemId ?? '', next);
   r.links.set(next.itemId, next);

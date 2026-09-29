@@ -234,10 +234,11 @@ async function reopen(r: Runtime, label: (name: string) => string): Promise<void
  * opening over a document is (brief rule 3), and nothing is written until its first commit makes
  * `Scratch/Untitled <kind> N` (spec §7.1). Undo brings the old one back, linked to its item.
  */
-export async function newDoc(id: ToolId): Promise<void> {
+export async function newDoc(id: ToolId, name?: string): Promise<void> {
   const r = runtime(id);
   endGesture(r);
   await idle(r);
+  r.newName = name;
   if (!r.doc.source() && isEmptyDoc(r, r.doc.get())) return;
   // an unlinked snapshot resolves through the '' link to the item the last first commit made; this
   // document is a new one, so its first commit must make its own (not write over that one)

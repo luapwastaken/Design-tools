@@ -10,20 +10,30 @@ export { writeSheetSvg, type SheetOptions } from './sheet.ts';
 /** a swatch's name for formats that need one: blank names become the hex */
 const label = (s: Swatch): string => s.name.trim() || toHex(s.oklch);
 
+/**
+ * The palette as sets: each Illustration ramp one set, named after its base, in the order the ramps
+ * first appear; the colours in no ramp together under the palette's own name.
+ */
+function sets(title: string, swatches: Swatch[]): { name: string; list: Swatch[] }[] {
+  const by = new Map<string | undefined, Swatch[]>();
+  for (const s of swatches) by.set(s.group, [...(by.get(s.group) ?? []), s]);
+  return [...by].map(([group, list]) => ({ name: group === undefined ? title : label(list.find((s) => s.step === 0) ?? list[0]), list }));
+}
+
 // ── Adobe ASE ────────────────────────────────────────────────────────────────────────────────────
 
 const ASE_TYPE: Record<Swatch['type'], number> = { global: 0, spot: 1, process: 2 };
 
-/** One colour group named after the palette (Illustrator shows it as a folder). */
+/** One colour group named after the palette, or one per Illustration ramp (Illustrator shows each as a folder). */
 export function writeAse(name: string, swatches: Swatch[]): Uint8Array {
-  const blocks = [
-    aseBlock(0xc001, aseName(name.trim() || 'Palette')),
-    ...swatches.map((s) => {
+  const blocks = sets(name.trim() || 'Palette', swatches).flatMap((set) => [
+    aseBlock(0xc001, aseName(set.name)),
+    ...set.list.map((s) => {
       const [model, values] = aseValues(s);
       return aseBlock(0x0001, [...aseName(label(s)), ...ascii(model), ...values.flatMap(f32), ...u16(ASE_TYPE[s.type])]);
     }),
     aseBlock(0xc002, []),
-  ];
+  ]);
   return Uint8Array.from([...ascii('ASEF'), ...u16(1), ...u16(0), ...u32(blocks.length), ...blocks.flat()]);
 }
 
@@ -108,19 +118,31 @@ const slug = (s: string) =>
 // ── JSON and Procreate ───────────────────────────────────────────────────────────────────────────
 
 export function writeJson(name: string, swatches: Swatch[]): string {
-  const list = swatches.map((s) => ({ name: s.name, role: s.role, type: s.type, hex: toHex(s.oklch), oklch: s.oklch }));
+  // an Illustration ramp step says which ramp and where in it; other formats have no place for that
+  const list = swatches.map((s) => ({ name: s.name, role: s.role, type: s.type, hex: toHex(s.oklch), oklch: s.oklch, ...(s.group !== undefined && { group: s.group, step: s.step }) }));
   return JSON.stringify({ name, swatches: list }, null, 2) + '\n';
 }
 
 /** Procreate holds 30 swatches per palette, so longer ones continue as "Name 2", "Name 3" */
 const PROCREATE_MAX = 30;
 
-/** a zip holding Swatches.json: an array of palettes, each [{ hue, saturation, brightness, alpha, colorSpace }] (0..1, sRGB) */
+/**
+ * A zip holding Swatches.json: an array of palettes, each [{ hue, saturation, brightness, alpha,
+ * colorSpace }] (0..1, sRGB). A palette breaks between Illustration ramps, never inside one.
+ */
 export function writeProcreate(name: string, swatches: Swatch[]): Uint8Array {
   const title = name.trim() || 'Palette';
-  const palettes = Array.from({ length: Math.max(1, Math.ceil(swatches.length / PROCREATE_MAX)) }, (_, i) => ({
+  const pages: Swatch[][] = [[]];
+  for (const { list } of sets(title, swatches)) {
+    for (let i = 0; i < list.length; i += PROCREATE_MAX) {
+      const part = list.slice(i, i + PROCREATE_MAX);
+      if (pages.at(-1)!.length + part.length > PROCREATE_MAX) pages.push([]);
+      pages.at(-1)!.push(...part);
+    }
+  }
+  const palettes = pages.map((page, i) => ({
     name: i ? `${title} ${i + 1}` : title,
-    swatches: swatches.slice(i * PROCREATE_MAX, (i + 1) * PROCREATE_MAX).map((s) => {
+    swatches: page.map((s) => {
       const [h, saturation, brightness] = hsb(s.oklch);
       return { hue: h / 360, saturation, brightness, alpha: 1, colorSpace: 0 };
     }),
