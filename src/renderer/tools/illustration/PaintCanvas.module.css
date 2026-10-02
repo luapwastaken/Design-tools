@@ -1,5 +1,5 @@
-/* The paint canvas (plan unit C): a canvas module, its tool bar, the paper on the pasteboard, then
-   the tray with the mixing well first. */
+/* The paint canvas: a canvas module, its tool bar, the paper on the pasteboard, then the tray with
+   the mixing well first. */
 .paint {
   display: flex;
   flex-direction: column;
@@ -11,12 +11,12 @@
   background: var(--module);
   container: paint / size;
 }
-/* one bar: it wraps onto a second line in a narrow window rather than hiding a control */
+/* one line, 36px, down to a 700px section (PaintBar measures it); narrower it wraps, between groups only */
 .head {
   --label-w: auto;
   display: flex;
   flex: none;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 4px 8px;
   min-height: var(--canvas-bar);
@@ -24,10 +24,23 @@
   padding: 5px 6px 5px 8px;
   background: var(--module-head);
 }
+.head[data-fit="wrap"] { flex-wrap: wrap; }
 .grow { flex: 1; }
-.group { display: flex; flex: none; align-items: center; gap: 8px; min-width: 0; }
-.sep { flex: none; width: 1px; height: 16px; margin: 0 2px; background: var(--line); }
-.slider { flex: none; width: 180px; }
+.group { display: flex; flex: none; align-items: center; gap: 6px; min-width: 0; }
+.head .tools button { padding: 0 6px; }
+/* Smudge takes no medium: the tooltip explains, over segments that can't be pressed */
+.mediaOff { display: flex; }
+.mediaOff button { pointer-events: none; }
+/* the header's own widths win over the controls' defaults; the paint's name gives way first */
+.head .brushGroup { flex: 0 1 auto; }
+.head .brushSelect { flex: none; width: 128px; }
+.head .slider { flex: none; width: 172px; min-height: 0; }
+.head .slider.wide { width: 200px; }
+.head[data-fit="full"] .slider { width: 180px; }
+.head[data-fit="full"] .slider.wide { width: 208px; }
+.head .number { flex: none; }
+.acts { gap: 2px; }
+.dim { color: var(--ink-3); }
 
 /* ── the paper ── */
 .view {
@@ -44,38 +57,50 @@
 .canvas {
   display: block;
   width: min(calc(100cqw - 24px), calc((100cqh - 24px) * 1.6));
-  aspect-ratio: 1024 / 640;
+  aspect-ratio: 2048 / 1280;
   box-shadow: 0 0 0 1px var(--edge);
   cursor: none;
   touch-action: none;
 }
 .canvas:focus-visible { outline: 1px solid var(--signal); outline-offset: 2px; }
 .picking .canvas { cursor: crosshair; }
+.waiting .canvas { cursor: default; }
 
-/* the brush's footprint, following the pointer */
+/* the cursor over the paper: the 2px dot, and the brush's footprint around it (hidden from the lift
+   until the pointer moves on); it moves by transform, with no transition */
+.cursor { position: absolute; left: 0; top: 0; pointer-events: none; }
+.ring, .dot { position: absolute; left: 0; top: 0; border-radius: 50%; }
 .ring {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: var(--ring);
-  height: var(--ring);
-  margin: calc(var(--ring) / -2) 0 0 calc(var(--ring) / -2);
-  border-radius: 50%;
+  width: var(--ring, 6px);
+  height: var(--ring, 6px);
+  margin: calc(var(--ring, 6px) / -2) 0 0 calc(var(--ring, 6px) / -2);
   box-shadow: 0 0 0 1px var(--cross), 0 0 0 2px var(--cross-halo);
-  pointer-events: none;
 }
-.ring i {
-  position: absolute;
-  left: 50%;
-  top: 50%;
+.dot {
   width: 2px;
   height: 2px;
   margin: -1px 0 0 -1px;
-  border-radius: 50%;
   background: var(--cross);
   box-shadow: 0 0 0 1px var(--cross-halo);
 }
-.ring[hidden], .picking .ring { display: none; }
+.cursor[hidden], .ring[hidden], .picking .cursor, .waiting .cursor { display: none; }
+
+/* on the paper while the engine starts, or when it can't */
+.note {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 48px);
+  padding: 8px 12px;
+  border-radius: var(--r-ctl);
+  background: var(--module);
+  color: var(--ink-2);
+  font-size: var(--fs-base);
+  line-height: 1.4;
+}
+.failed > :global(.material-symbols-rounded) { flex: none; color: var(--danger); }
+.spin { composes: spin from '../../ui/Progress.module.css'; }
 
 .confirm {
   position: absolute;
@@ -187,20 +212,24 @@
 .readout { display: flex; flex: 0 1 auto; align-items: center; gap: 7px; min-width: 0; }
 .brushChip { flex: none; width: 14px; height: 14px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
 .brushName { min-width: 0; max-width: 180px; overflow: hidden; color: var(--ink); font-size: var(--fs-ctl); text-overflow: ellipsis; white-space: nowrap; }
-/* the colour under the cursor: a live readout */
+/* the colour under the cursor: a live readout (its text is written straight to the DOM) */
 .under {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
   color: var(--signal);
-  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font: 400 var(--fs-unit)/14px var(--font-mono);
   font-stretch: normal;
   font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .under::before {
   content: "";
+  display: inline-block;
   width: 14px;
   height: 14px;
+  margin-right: 6px;
+  vertical-align: top;
   border-radius: 2px;
   background: var(--under, var(--well));
   box-shadow: inset 0 0 0 1px var(--edge);

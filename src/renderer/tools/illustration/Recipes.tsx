@@ -1,10 +1,11 @@
 // Mix it, "how do I mix this?" (spec §3.3): recipes from the paints you own, for the selected
-// colour or for every ramp's base, each with its parts, the mix beside the target, and ΔE.
-import { useMemo } from 'react';
+// colour or for every ramp's base, each with its parts, the mix beside the target, and ΔE. Try it
+// puts a recipe in the well and on the brush, so it can be checked on paper.
+import { useDeferredValue, useMemo } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import type { Pigment } from '../../../shared/paint/pigments.ts';
 import { recipes, type Recipe } from '../../../shared/paint/recipe.ts';
-import { Module, Segmented, Tooltip } from '../../ui/index.ts';
+import { Button, Module, Segmented, Tooltip } from '../../ui/index.ts';
 import { baseOf, nameOf, rampName, type IllustrationDoc } from './doc.ts';
 import { PaintsButton } from './Paints.tsx';
 import { patchView, type IllustrationView } from './view-state.ts';
@@ -26,16 +27,27 @@ const FAR = 10;
 const verdict = (e: number) => (e < 2 ? 'Match' : e < 5 ? 'Close' : 'Near');
 const partsText = (r: Recipe) => r.parts.map((p) => `${p.parts} ${p.pigment.name}`).join(' + ');
 
-type Props = { d: IllustrationDoc; v: IllustrationView; sel: { id: string; name: string; oklch: Oklch } | null; owned: Pigment[]; hidden: boolean; className?: string };
+type Props = {
+  d: IllustrationDoc;
+  v: IllustrationView;
+  sel: { id: string; name: string; oklch: Oklch } | null;
+  owned: Pigment[];
+  hidden: boolean;
+  /** Try it: the recipe into the well, and the well onto the brush */
+  onTry(r: Recipe): void;
+  className?: string;
+};
 
 /** `d`: the settled document, so a picker drag doesn't solve recipes on every frame */
-export function Recipes({ d, v, sel, owned, hidden, className }: Props) {
+export function Recipes({ d, v, sel, owned, hidden, onTry, className }: Props) {
   const targets = v.recipesFor === 'bases' ? d.ramps.flatMap((r) => (baseOf(d, r.id) ? [{ id: r.id, name: rampName(d, r), oklch: baseOf(d, r.id)!.oklch }] : [])) : sel ? [sel] : [];
   const key = `${v.recipesFor}|${v.maxPaints}|${owned.map((p) => p.id).join()}|${targets.map((t) => `${t.name}:${t.oklch.join()}`).join('|')}`;
-  // the solver runs only while the Paint side shows (~25ms a colour)
+  // the solver runs only while the Paint side shows (~25ms a colour), and a frame after it shows, so
+  // that task is not the one that shows the pane
+  const deferred = useDeferredValue(hidden ? '' : key, '');
   const found = useMemo(
-    () => (hidden || !owned.length ? [] : targets.map((t) => ({ t, list: recipes(t.oklch, owned, { maxPigments: v.maxPaints, count: v.recipesFor === 'bases' ? 1 : 3 }) }))),
-    [key, hidden],
+    () => (deferred && owned.length ? targets.map((t) => ({ t, list: recipes(t.oklch, owned, { maxPigments: v.maxPaints, count: v.recipesFor === 'bases' ? 1 : 3 }) })) : []),
+    [deferred],
   );
   return (
     <Module
@@ -55,14 +67,14 @@ export function Recipes({ d, v, sel, owned, hidden, className }: Props) {
         <p className={s.none}>Recipes use only the paints you own: tick them under the paints button above.</p>
       ) : !targets.length ? (
         <p className={s.none}>{v.recipesFor === 'bases' ? 'Add a base colour to find how to mix it.' : 'Select a colour to find how to mix it.'}</p>
-      ) : (
+      ) : !deferred ? null : (
         <div className={s.rlist}>
           {found.flatMap(({ t, list }) => {
             const name = v.recipesFor === 'bases' ? t.name : null;
             const close = list.filter((r) => r.deltaE < FAR);
             // three wrong answers would read as three answers: say it plainly, with the nearest
-            if (!close.length && list[0]) return [<FarRow key={t.id} target={t.oklch} name={name} r={list[0]} more={v.maxPaints < 3} />];
-            return close.map((r, i) => <RecipeRow key={`${t.id}:${i}`} target={t.oklch} name={name} r={r} />);
+            if (!close.length && list[0]) return [<FarRow key={t.id} target={t.oklch} name={name} r={list[0]} more={v.maxPaints < 3} onTry={onTry} />];
+            return close.map((r, i) => <RecipeRow key={`${t.id}:${i}`} target={t.oklch} name={name} r={r} onTry={onTry} />);
           })}
           {found.every((f) => !f.list.length) && <p className={s.none}>No mix of your paints comes near. Tick more paints, or allow more per mix.</p>}
         </div>
@@ -71,8 +83,16 @@ export function Recipes({ d, v, sel, owned, hidden, className }: Props) {
   );
 }
 
+type RowProps = { target: Oklch; name: string | null; r: Recipe; onTry(r: Recipe): void };
+
+const TryIt = ({ r, onTry }: Pick<RowProps, 'r' | 'onTry'>) => (
+  <Button size="xs" icon="brush" onClick={() => onTry(r)} tooltip={`Put ${partsText(r)} in the well and load the brush`}>
+    Try it
+  </Button>
+);
+
 /** best first: the target and the mix side by side, then each paint by its parts, one a line */
-function RecipeRow({ target, name, r }: { target: Oklch; name: string | null; r: Recipe }) {
+function RecipeRow({ target, name, r, onTry }: RowProps) {
   return (
     <div className={s.recipe}>
       <Tooltip content="Target, then the mix">
@@ -94,13 +114,14 @@ function RecipeRow({ target, name, r }: { target: Oklch; name: string | null; r:
       <span className={s.de}>
         <span className={s.deNum}>ΔE {r.deltaE.toFixed(1)}</span>
         <span className="lbl">{verdict(r.deltaE)}</span>
+        <TryIt r={r} onTry={onTry} />
       </span>
     </div>
   );
 }
 
 /** no mix of the owned paints comes close: the nearest, as a sentence rather than a recipe */
-function FarRow({ target, name, r, more }: { target: Oklch; name: string | null; r: Recipe; more: boolean }) {
+function FarRow({ target, name, r, more, onTry }: RowProps & { more: boolean }) {
   return (
     <div className={s.recipe}>
       <Tooltip content="Target, then the nearest mix">
@@ -115,6 +136,9 @@ function FarRow({ target, name, r, more }: { target: Oklch; name: string | null;
           No close mix from your paints. Nearest: {partsText(r)}, ΔE {r.deltaE.toFixed(1)}. {more ? 'Allow more paints per mix, or tick more.' : 'Tick more paints, or add your own.'}
         </span>
       </div>
+      <span className={s.de}>
+        <TryIt r={r} onTry={onTry} />
+      </span>
     </div>
   );
 }

@@ -1,4 +1,5 @@
-// The GPU engine (foundation spec §10.5), built with Halftone and shared by Dither and Post FX.
+// The GPU engine (foundation spec §10.5), built with Halftone and shared by Dither, Post FX and the
+// Illustration painting.
 //
 // One WebGL2 context for the whole app, on a canvas that is never shown (Chromium drops contexts
 // past about 16). Tools show results on their own 2D or bitmaprenderer canvases through bitmap().
@@ -7,22 +8,42 @@
 //   const g = gpuScope('dither preview')   a handle for things released together; make one per lifetime
 //   g.program(fragment, vertex?)           compiled once per source for the whole app; a shader that
 //                                          fails throws GpuError with GL's log, mapped to your lines
+//   g.programAsync(fragment, vertex?)      → Promise of the same program, compiled without blocking:
+//                                          in parallel with KHR_parallel_shader_compile, else one per task
 //   g.texture(source, format, opts?)       source: ImageBitmap, ImageData, canvas, video, VideoFrame,
 //                                          { width, height, data } or just { width, height } (empty);
-//                                          format 'rgba8' | 'rgba16f' | 'r16f'; opts { filter, wrap }.
-//                                          Any texture can be a pass's output. tex.upload(source) refills it
+//                                          format 'rgba8' | 'rgba16f' | 'rgba32f' | 'r16f'; opts { filter,
+//                                          wrap } (rgba32f always samples nearest). Any texture can be a
+//                                          pass's output. tex.upload(source) refills it; tex.write(rect,
+//                                          data) replaces part of it (texSubImage2D)
 //   g.instances(floats, { a_pos: 2, a_r: 1 })  per-instance data, interleaved in layout order; .update()
-//   g.pass(program, { output, inputs, uniforms, instances, blend, clear })
-//                                          inputs: sampler2D uniforms by name; uniforms: every other
-//                                          uniform the shader uses (a missing one throws, so nothing
-//                                          leaks between passes); blend 'none' | 'over' | 'multiply' | 'add'
+//   g.pass(program, { output, inputs, uniforms, instances, blend, blendConstant, rect, clear })
+//                                          output: a texture, or a list of same-size textures the
+//                                          shader's layout(location = i) outs draw into (at most
+//                                          caps.drawBuffers); inputs: sampler2D uniforms by name, in
+//                                          either shader stage; uniforms: every other uniform the shader
+//                                          uses (a missing one throws, so nothing leaks between passes);
+//                                          blend 'none' | 'over' | 'multiply' | 'add' | 'max' | 'constant'
+//                                          (moves toward the shader's value by blendConstant), or one per
+//                                          output (different ones need caps.indexedBlend); rect: draw only
+//                                          inside that part of the output (a scissor)
+//   g.copy(src, dst, from, to?)            a rect from one texture into another of the same format (a blit)
+//   g.clear(textures, rgba, rect?)         fills each texture, or a rect of it
+//   g.prepare(output)                      makes a pass's framebuffer ahead: making one waits for the
+//                                          GPU, so do it before queueing heavy work (shader builds)
 //   g.chain(w, h, format).pass(program, opts) → texture   ping-pong: writes the one it doesn't read
-//   g.read(texture, rect?)                 Uint8Array (rgba8) or Float32Array, full resolution
+//   g.read(texture, rect?)                 Uint8Array (rgba8) or Float32Array, full resolution; waits
+//                                          for every GPU command before it, so never while drawing live
+//   g.readAsync(texture, rect?)            → Promise of the same, through a pixel-pack buffer and a
+//                                          fence polled between tasks: nothing stalls
 //   g.renderTiled(w, h, format, draw, { tile }?)  → Promise of one buffer for an image of any size;
 //                                          draw(tile) runs per tile: pass `tile` as the output
 //   g.bitmap(texture)                      ImageBitmap for drawImage (null while lost); close it after
 //   g.onRestore(fn)                        after a context loss: rebuild as when the tool is shown again
 //   g.lost, g.maxSize                      texture sides are at most maxSize; outputs go beyond it tiled
+//   g.caps                                 { drawBuffers, indexedBlend, parallelCompile, timer }
+//   g.timeGpu(fn)                          → Promise of the GPU ms of what fn drew (timer queries;
+//                                          null without them): probes only
 //   g.release()                            frees every texture and buffer this scope made (hidden tools)
 //
 // ── Conventions ──
@@ -74,12 +95,14 @@
 //             void main() { o = vec4(0.0, 0.0, 0.0, clamp(v_r + 0.5 - distance(fragPixel(), v_c), 0.0, 1.0)); }
 //   const dots = g.instances(xyr, { a_pos: 2, a_r: 1 });       // x, y, r per dot, px
 //   g.pass(g.program(fragment, vertex), { output, instances: dots, blend: 'over', clear: [1, 1, 1, 1] });
-import { getEngine, isLost, onRestored } from './context.ts';
-import { bitmap, Chain, pass } from './draw.ts';
-import { program, type Program } from './program.ts';
-import { read, renderTiled } from './read.ts';
+import { getEngine, isLost, onRestored, type Caps } from './context.ts';
+import { bitmap, Chain, clear, copy, pass, prepare } from './draw.ts';
+import { program, programAsync, type Program } from './program.ts';
+import { read, readAsync, renderTiled } from './read.ts';
+import { timeGpu } from './timer.ts';
 import { Instances, Texture, type Format, type Owner, type Source, type TextureOptions } from './texture.ts';
 
+export type { Caps } from './context.ts';
 export { GpuError, GpuLost } from './errors.ts';
 export type { Blend, Chain, PassOptions, Tile } from './draw.ts';
 export type { Program, UniformValue } from './program.ts';
@@ -88,16 +111,23 @@ export type { Rect } from './tiles.ts';
 
 export type Gpu = {
   program(fragment: string, vertex?: string): Program;
+  programAsync(fragment: string, vertex?: string): Promise<Program>;
   texture<F extends Format>(source: Source, format: F, opts?: TextureOptions): Texture<F>;
   instances(data: Float32Array, layout: Record<string, number>): Instances;
   chain<F extends Format>(width: number, height: number, format: F): Chain<F>;
   pass: typeof pass;
+  copy: typeof copy;
+  clear: typeof clear;
+  prepare: typeof prepare;
   read: typeof read;
+  readAsync: typeof readAsync;
   renderTiled: typeof renderTiled;
   bitmap: typeof bitmap;
   onRestore(fn: () => void): () => void;
   readonly lost: boolean;
   readonly maxSize: number;
+  readonly caps: Caps;
+  timeGpu: typeof timeGpu;
   release(): void;
 };
 
@@ -106,11 +136,16 @@ export function gpuScope(label: string): Gpu {
   const owner: Owner = { label, owned: new Set() };
   return {
     program: (fragment, vertex) => program(fragment, vertex ?? null),
+    programAsync: (fragment, vertex) => programAsync(fragment, vertex ?? null),
     texture: (source, format, opts) => new Texture(owner, source, format, opts),
     instances: (data, layout) => new Instances(owner, data, layout),
     chain: (width, height, format) => new Chain(owner, width, height, format),
     pass,
+    copy,
+    clear,
+    prepare,
     read,
+    readAsync,
     renderTiled,
     bitmap,
     onRestore: onRestored,
@@ -120,6 +155,10 @@ export function gpuScope(label: string): Gpu {
     get maxSize() {
       return getEngine().maxSize;
     },
+    get caps() {
+      return getEngine().caps;
+    },
+    timeGpu,
     release() {
       for (const r of [...owner.owned]) r.release();
     },

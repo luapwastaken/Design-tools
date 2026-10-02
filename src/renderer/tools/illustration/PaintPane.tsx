@@ -1,22 +1,44 @@
 // Paint (spec §3.3, UX pass): the scratch canvas with its tool bar and tray, and beside it how to mix
 // the selected colour from the paints you own (the paint box is behind Mix it's paints button).
-import { useMemo, useSyncExternalStore } from 'react';
+// A ramp colour clicked while Paint shows loads the brush; Try it on a recipe fills the well with it.
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import type { Recipe } from '../../../shared/paint/recipe.ts';
+import { toast } from '../../ui/index.ts';
 import { useSettled } from '../common/settled.ts';
 import { selected, type Doc } from './actions.ts';
 import { looseOf, named, rampName, stepsOf, type IllustrationDoc } from './doc.ts';
 import { PaintCanvas } from './PaintCanvas.tsx';
 import { ownedPaints } from './Paints.tsx';
-import { paintSettings, type PaletteSet } from './paint-sources.ts';
+import { paintSettings, wellFromRecipe, type PaintSettings, type PaletteSet, type WellPart } from './paint-sources.ts';
 import { pickFromCanvas } from './proposals.ts';
 import { recipeTarget, Recipes } from './Recipes.tsx';
-import { getView, patchView, type IllustrationView } from './view-state.ts';
+import { clicked, getView, patchView, type IllustrationView } from './view-state.ts';
 import s from './Paint.module.css';
+
+/** written whole: a saved view from before the brushes existed is read once, as its sizes were meant */
+const setPaint = (patch: Partial<PaintSettings>) => patchView({ canvas: { ...paintSettings(getView().canvas), ...patch } });
+const sameWell = (a: WellPart[], b: WellPart[]) => a.length === b.length && a.every((w, i) => w.id === b[i].id && w.parts === b[i].parts);
+
+/** a recipe onto the brush: its parts in the well, the well loaded, the Paint tool on */
+function tryRecipe(r: Recipe): void {
+  const was = paintSettings(getView().canvas);
+  const well = wellFromRecipe(r);
+  setPaint({ well, paint: 'well', tool: 'paint' });
+  if (!was.well.length || sameWell(was.well, well)) return;
+  toast.show({
+    icon: 'brush',
+    message: 'The well holds this recipe now. Undo puts your mix back.',
+    undo: () => setPaint({ well: was.well, paint: was.paint }),
+    when: () => sameWell(paintSettings(getView().canvas).well, well),
+  });
+}
 
 export function PaintPane({ doc, d, v, hidden }: { doc: Doc; d: IllustrationDoc; v: IllustrationView; hidden: boolean }) {
   // recipes wait for a drag to end: solving them is too slow for every frame
   const settled = useSettled(doc, 0);
-  const owned = ownedPaints(v);
+  const owned = useMemo(() => ownedPaints(v), [v.owned, v.custom]);
   const itemId = useSyncExternalStore(doc.subscribe, () => doc.source()?.itemId ?? null);
+  const settings = useMemo(() => paintSettings(v.canvas), [v.canvas]);
   // the tray's palette colours: a set per ramp, each step by its name ("Skin shadow")
   const sets = useMemo((): PaletteSet[] => {
     const shown = new Map(named(d).map((w) => [w.id, w]));
@@ -26,19 +48,32 @@ export function PaintPane({ doc, d, v, hidden }: { doc: Doc; d: IllustrationDoc;
       ...(loose.length ? [{ key: 'loose', name: 'Loose', swatches: loose.map((w) => shown.get(w.id)!) }] : []),
     ];
   }, [d]);
+
+  // a ramp colour clicked (or chosen with Enter or Space) goes on the brush; other selection changes leave it
+  useEffect(() => {
+    if (hidden) return;
+    return clicked.subscribe(() => {
+      const c = clicked.get();
+      if (!c) return;
+      const cur = paintSettings(getView().canvas);
+      setPaint({ paint: `swatch:${c.id}`, ...(cur.tool === 'pick' ? { tool: 'paint' as const } : {}) });
+    });
+  }, [hidden]);
+
   return (
     <div className={s.pane}>
       <PaintCanvas
         itemId={itemId}
+        hidden={hidden}
         pigments={owned}
         sets={sets}
-        settings={paintSettings(v.canvas)}
-        onSettings={(patch) => patchView({ canvas: { ...getView().canvas, ...patch } })}
+        settings={settings}
+        onSettings={setPaint}
         paintings={v.paintings}
         onPaintings={(paintings) => patchView({ paintings })}
         onPick={pickFromCanvas}
       />
-      <Recipes d={settled} v={v} sel={recipeTarget(settled, selected(settled, v.selected))} owned={owned} hidden={hidden} className={s.recipes} />
+      <Recipes d={settled} v={v} sel={recipeTarget(settled, selected(settled, v.selected))} owned={owned} hidden={hidden} onTry={tryRecipe} className={s.recipes} />
     </div>
   );
 }

@@ -25,7 +25,7 @@ function lobe(x: number, mu: number, below: number, above: number): number {
 // CIE 1931 2-degree observer, Wyman, Sloan and Shirley's multi-lobe fit (2013), folded into
 // XYZ -> linear sRGB. Each row is scaled so a flat reflectance of 1 is exactly white: the fit's
 // small errors then wash out instead of tinting every mix.
-const TO_LINEAR = (() => {
+export const TO_LINEAR = (() => {
   const xyzToRgb = [
     [3.2406, -1.5372, -0.4986],
     [-0.9689, 1.8758, 0.0415],
@@ -71,16 +71,16 @@ const smoothstep = (e0: number, e1: number, x: number) => {
 const LO = 0.015;
 const HI = 0.985;
 const curve = (fn: (l: number) => number) => Float64Array.from({ length: BANDS }, (_, i) => LO + (HI - LO) * fn(lambda(i)));
-const WHITE = curve(() => 1);
-const RED = curve((l) => smoothstep(560, 610, l));
-const GREEN = curve((l) => smoothstep(475, 515, l) * (1 - smoothstep(580, 620, l)));
-const BLUE = curve((l) => 1 - smoothstep(455, 500, l));
-const YELLOW = curve((l) => smoothstep(460, 505, l));
-const CYAN = curve((l) => 1 - smoothstep(565, 610, l));
-const MAGENTA = curve((l) => Math.max(1 - smoothstep(470, 515, l), smoothstep(585, 625, l)));
+export const WHITE = curve(() => 1);
+export const RED = curve((l) => smoothstep(560, 610, l));
+export const GREEN = curve((l) => smoothstep(475, 515, l) * (1 - smoothstep(580, 620, l)));
+export const BLUE = curve((l) => 1 - smoothstep(455, 500, l));
+export const YELLOW = curve((l) => smoothstep(460, 505, l));
+export const CYAN = curve((l) => 1 - smoothstep(565, 610, l));
+export const MAGENTA = curve((l) => Math.max(1 - smoothstep(470, 515, l), smoothstep(585, 625, l)));
 
 /** keeps K/S finite at both ends */
-const EPS = 1e-4;
+export const EPS = 1e-4;
 
 function smits([r, g, b]: number[], out: Float64Array): Float64Array {
   out.fill(0);
@@ -105,7 +105,7 @@ function smits([r, g, b]: number[], out: Float64Array): Float64Array {
 }
 
 /** correction rounds: the bases don't integrate to exactly their RGB, so aim off by the miss */
-const FIT = 4;
+export const FIT = 4;
 
 /** The reflectance curve of a colour as the screen shows it (sRGB), so a paint alone mixes back to its own colour. */
 export function reflectance(o: Oklch): Float64Array {

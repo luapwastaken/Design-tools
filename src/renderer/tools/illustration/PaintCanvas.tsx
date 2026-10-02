@@ -1,24 +1,28 @@
-// The paint canvas (spec §3.3, plan unit C): a scratch pad where paints mix as paint, wet
-// (watercolour) or dry (gouache), with Paint, Smudge and Pick, a pigment tray and a mixing well.
-// Layout (UX pass): one tool bar over the paper (tools, medium, brush, size, load, undo, clear),
-// the tray under it with the well first.
-// Its painting is a PNG workspace asset per Library item, saved a moment after each stroke
-// settles. Its undo is its own (the last strokes), never the document's.
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
+// The paint canvas (spec §3.3, engine spec 2026-09-29): a scratch pad where paints mix as paint,
+// watercolour or gouache, on the GPU painting engine (./paint). Layout (UX pass): the tool bar over
+// the paper, the tray under it with the well first.
+// Its painting is a PNG workspace asset per Library item. Its undo is its own (the last strokes and
+// Clear), never the document's. What shows under the brush is final: nothing changes after the lift.
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { cssColor, toHex, toOklch, type Oklch } from '../../../shared/color/index.ts';
 import type { Pigment } from '../../../shared/paint/pigments.ts';
-import { decodeImage } from '../../lib/load.ts';
-import { shell } from '../../shell/core/index.ts';
-import { ConfirmInline, IconButton, Segmented, Slider, toast, Tooltip } from '../../ui/index.ts';
+import { ConfirmInline, Icon, toast } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { CANVAS_H, CANVAS_W, PaintSim, type Loaded } from './paint-sim.ts';
-import { addToWell, LOAD, loadedOf, SIZE, sourcesOf, WELL_MAX, wellMix, type PaintSettings, type PaintTool, type PaletteSet } from './paint-sources.ts';
+import { brushWidth, toSample, WIDTH, type PaintingState, type PointerSample } from './paint/index.ts';
+import { addToWell, SIZE, sourcesOf, WELL_MAX, type PaintSettings, type PaletteSet } from './paint-sources.ts';
+import { PaintBar } from './PaintBar.tsx';
 import { Tray, Well } from './PaintTray.tsx';
+import { useBrush } from './useBrush.ts';
+import { useCanvasKeys } from './useCanvasKeys.ts';
+import { useEngine } from './useEngine.ts';
+import { usePainting } from './usePainting.ts';
 import s from './PaintCanvas.module.css';
 
 export type PaintCanvasProps = {
   /** the open Library item: its painting is kept under this id. Null until the document is saved. */
   itemId: string | null;
+  /** the Paint tab isn't showing: the engine waits for its first showing, and the keys are off */
+  hidden: boolean;
   /** the pigments ticked as owned, in tray order */
   pigments: Pigment[];
   /** palette colours, offered in the tray too: a set per ramp, named */
@@ -32,97 +36,112 @@ export type PaintCanvasProps = {
   onPick(oklch: Oklch): void;
 };
 
-const TOOL = 'illustration';
-const SAVE_MS = 1000;
-/** a lifted stroke settles off-screen, about this much work a frame, so the UI keeps 60fps */
-const SETTLE_MS = 8;
+const BLANK: PaintingState = { depth: 0, redoDepth: 0, lastIsClear: false, blank: true };
+/** after a lift the ring waits until the pointer moves this far, so it never sits on the fresh paint */
+const RING_SLOP = 2;
+const oklchOf = ([r, g, b]: [number, number, number]) => toOklch({ mode: 'rgb', r, g, b });
 
-const TOOLS: { value: PaintTool; label: string; icon: 'brush' | 'gesture' | 'colorize'; tip?: string }[] = [
-  { value: 'paint', label: 'Paint', icon: 'brush' },
-  { value: 'smudge', label: 'Smudge', icon: 'gesture', tip: 'Smudge: push the paint around' },
-  { value: 'pick', label: 'Pick', icon: 'colorize', tip: 'Pick: the colour under the cursor goes to the proposals. Alt-click picks while painting.' },
-];
-const MEDIA: { value: PaintSettings['medium']; label: string; tip: string }[] = [
-  { value: 'wet', label: 'Wet', tip: 'Wet: watercolour. Transparent; as you lift the brush the wash bleeds and dries with a darker edge.' },
-  { value: 'dry', label: 'Dry', tip: 'Dry: gouache. Opaque and matte; a brush low on paint drags dry.' },
-];
-
-type Brush = { id: string; loaded: Loaded; oklch: Oklch; name: string };
+type Stroke = { id: number; box: DOMRect; onKey(e: globalThis.KeyboardEvent): void };
 
 export function PaintCanvas(p: PaintCanvasProps) {
   const v = p.settings;
   const live = useRef(p);
   live.current = p;
-  const sim = useMemo(() => new PaintSim(), []);
   const canvas = useRef<HTMLCanvasElement>(null);
   const view = useRef<HTMLDivElement>(null);
-  const ring = useRef<HTMLDivElement>(null);
+  const cursor = useRef<HTMLDivElement>(null);
+  const ring = useRef<HTMLElement>(null);
   const readout = useRef<HTMLSpanElement>(null);
   const wellEl = useRef<HTMLDivElement>(null);
   const clearBtn = useRef<HTMLButtonElement>(null);
-  const [depth, setDepth] = useState(0);
-  const [painted, setPainted] = useState(false);
+  const [painting, setPainting] = useState(BLANK);
   const [armed, setArmed] = useState(false);
   const [over, setOver] = useState(false);
-  const [scale, setScale] = useState(0.5);
 
   const sources = useMemo(() => sourcesOf(p.pigments, p.sets), [p.pigments, p.sets]);
-  const mix = useMemo(() => wellMix(v.well, sources), [v.well, sources]);
-  const brush = useMemo((): Brush | null => {
-    if (v.paint === 'well' && mix) return { id: 'well', loaded: mix.loaded, oklch: mix.oklch, name: 'Well mix' };
-    // a paint no longer in the tray (unticked, or a swatch that went): the first one there is
-    const src = sources.find((x) => x.id === v.paint) ?? sources[0];
-    return src ? { id: src.id, loaded: loadedOf(src.pigment), oklch: src.pigment.oklch, name: src.name } : null;
-  }, [v.paint, sources, mix]);
+  const { brush, mix } = useBrush(v, sources, p.onSettings);
   const brushRef = useRef(brush);
   brushRef.current = brush;
 
-  const paint = usePainter(sim, canvas);
-  const save = usePainting(sim, p.itemId, live, paint.snapshot, () => {
-    setDepth(0);
-    setPainted(!sim.blank);
-    paint.kick();
-  });
-
-  const afterChange = () => {
-    setDepth(sim.depth);
-    setPainted(!sim.blank);
-    save.soon();
-    paint.kick();
-  };
-
-  // ── the canvas under the pointer ──
-  const stroke = useRef<{ id: number; onKey(e: globalThis.KeyboardEvent): void } | null>(null);
+  const started = useEngine(!p.hidden, canvas);
+  const engine = started.t === 'ready' ? started.engine : null;
+  const save = usePainting(engine, p.itemId, live);
   const clearToast = useRef<string | null>(null);
-  const at = (e: { clientX: number; clientY: number }) => {
-    const r = canvas.current!.getBoundingClientRect();
-    return { x: ((e.clientX - r.left) * CANVAS_W) / r.width, y: ((e.clientY - r.top) * CANVAS_H) / r.height };
-  };
-  const pressure = (e: globalThis.PointerEvent) => (e.pointerType === 'pen' ? e.pressure : 1);
 
-  const endStroke = (keep: boolean) => {
+  useEffect(() => {
+    if (!engine) return;
+    setPainting(engine.state);
+    const offChange = engine.on('change', (kind, state) => {
+      setPainting(state);
+      if (kind === 'restored') toast.show({ icon: 'restart_alt', message: 'The graphics card was reset. The painting is back, without its undo history.' });
+      // a load (another palette, a relaunch) and a restore are the painting as saved
+      else if (kind !== 'load') save.soon();
+      toast.refresh();
+    });
+    const offError = engine.on('error', (e) => toast.show({ kind: 'error', message: `The stroke couldn't be painted, so it ended there: ${e.message}` }));
+    return () => {
+      offChange();
+      offError();
+    };
+  }, [engine]);
+
+  // ── the brush's ring and the cursor dot ──
+  const scale = () => (canvas.current?.clientWidth ?? 0) / WIDTH;
+  const lift = useRef<{ x: number; y: number } | null>(null);
+  const sizeRing = (px: number) => ring.current?.style.setProperty('--ring', `${Math.max(6, px * scale())}px`);
+  const hoverRing = () => sizeRing(brushWidth(v.brushes[v.medium], v.size, 1));
+  useEffect(hoverRing, [v.brushes, v.medium, v.size]);
+  const moveCursor = (e: PointerEvent<HTMLElement>) => {
+    const c = cursor.current!;
+    // a finger has no cursor; Pick shows the crosshair instead
+    c.hidden = e.pointerType === 'touch' || v.tool === 'pick';
+    const vr = view.current!.getBoundingClientRect();
+    c.style.transform = `translate(${e.clientX - vr.left}px, ${e.clientY - vr.top}px)`;
+    const l = lift.current;
+    if (l && Math.hypot(e.clientX - l.x, e.clientY - l.y) >= RING_SLOP) {
+      lift.current = null;
+      ring.current!.hidden = false;
+    }
+  };
+
+  // ── the stroke ──
+  const stroke = useRef<Stroke | null>(null);
+  const endStroke = (keep: boolean, last?: PointerSample) => {
     const st = stroke.current;
     if (!st) return;
     stroke.current = null;
     removeEventListener('keydown', st.onKey, true);
     if (canvas.current?.hasPointerCapture(st.id)) canvas.current.releasePointerCapture(st.id);
-    if (keep) sim.end();
-    else sim.cancel();
-    afterChange();
+    if (keep) engine?.end(last);
+    else engine?.cancel();
+    hoverRing();
   };
   useEffect(() => () => endStroke(true), []);
 
-  const pickAt = (x: number, y: number) => {
-    const [r, g, b] = sim.pick(x, y);
-    live.current.onPick(toOklch({ mode: 'rgb', r, g, b }));
+  const pickAt = (at: PointerSample) => {
+    void engine?.pick(at.x, at.y).then((rgb) => live.current.onPick(oklchOf(rgb)));
+  };
+  /** Pick's live readout: only the latest answer is written */
+  const asked = useRef(0);
+  const readUnder = (at: PointerSample) => {
+    const n = ++asked.current;
+    void engine?.pick(at.x, at.y).then((rgb) => {
+      const el = readout.current;
+      if (n !== asked.current || !el) return;
+      const under = oklchOf(rgb);
+      el.textContent = toHex(under).toUpperCase();
+      el.style.setProperty('--under', cssColor(under));
+    });
   };
 
   const onPointerDown = (e: PointerEvent<HTMLCanvasElement>) => {
-    if (e.button !== 0 || stroke.current || save.loading) return;
-    const { x, y } = at(e);
-    if (v.tool === 'pick' || e.altKey) return pickAt(x, y);
+    if (e.button !== 0 || !engine || stroke.current || save.loading) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    const first = toSample(e.nativeEvent, box);
+    if (v.tool === 'pick' || e.altKey) return pickAt(first);
+    const smudge = v.tool === 'smudge';
     const b = brushRef.current;
-    if (!b) return;
+    if (!smudge && !b) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const onKey = (k: globalThis.KeyboardEvent) => {
       if (k.key !== 'Escape') return;
@@ -131,79 +150,65 @@ export function PaintCanvas(p: PaintCanvasProps) {
       endStroke(false);
     };
     addEventListener('keydown', onKey, true);
-    stroke.current = { id: e.pointerId, onKey };
+    stroke.current = { id: e.pointerId, box, onKey };
+    lift.current = null;
+    ring.current!.hidden = false;
     // painting on after a Clear: its toast's Undo would take this stroke with it
     if (clearToast.current) toast.dismiss(clearToast.current);
-    sim.begin({ tool: v.tool === 'smudge' ? 'smudge' : 'paint', medium: v.medium, size: v.size, load: v.load / 100, loaded: b.loaded }, x, y, pressure(e.nativeEvent));
-    paint.kick();
-  };
-
-  const moveRing = (e: PointerEvent<HTMLCanvasElement>) => {
-    const vr = view.current!.getBoundingClientRect();
-    ring.current!.style.transform = `translate(${e.clientX - vr.left}px, ${e.clientY - vr.top}px)`;
+    engine.begin({ tool: smudge ? 'smudge' : 'paint', medium: v.medium, brush: v.brushes[v.medium], size: v.size, load: v.load / 100, loaded: smudge ? null : b!.loaded }, first);
   };
 
   const onPointerMove = (e: PointerEvent<HTMLCanvasElement>) => {
-    moveRing(e);
-    if (v.tool === 'pick' && readout.current) {
-      // a live readout, written straight to the DOM: no render per pointer move
-      const { x, y } = at(e);
-      const [r, g, b] = sim.pick(x, y);
-      const under = toOklch({ mode: 'rgb', r, g, b });
-      readout.current.textContent = toHex(under).toUpperCase();
-      readout.current.style.setProperty('--under', cssColor(under));
-    }
-    if (stroke.current?.id !== e.pointerId) return;
+    moveCursor(e);
+    const st = stroke.current;
+    if (v.tool === 'pick' && !st) return readUnder(toSample(e.nativeEvent, e.currentTarget.getBoundingClientRect()));
+    if (!engine || st?.id !== e.pointerId) return;
     const events = e.nativeEvent.getCoalescedEvents?.() ?? [];
-    for (const ev of events.length ? events : [e.nativeEvent]) {
-      const q = at(ev);
-      sim.to(q.x, q.y, pressure(ev));
-    }
-    paint.kick();
+    engine.move((events.length ? events : [e.nativeEvent]).map((ev) => toSample(ev, st.box)));
+    if (engine.liveWidth > 0) sizeRing(engine.liveWidth);
+  };
+
+  const onPointerUp = (e: PointerEvent<HTMLCanvasElement>) => {
+    const st = stroke.current;
+    if (st?.id !== e.pointerId) return;
+    endStroke(true, toSample(e.nativeEvent, st.box));
+    // the ring leaves the fresh paint in view until the pointer moves on
+    ring.current!.hidden = true;
+    lift.current = { x: e.clientX, y: e.clientY };
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLCanvasElement>) => {
     const k = e.key.toLowerCase();
-    const mod = e.ctrlKey || e.metaKey;
-    // on the paper, undo is the painting's: a painter's reflex Ctrl+Z must never rewrite the palette.
-    // The palette's own keys (delete, duplicate, step along a ramp) wait until focus leaves it.
-    if (mod && (k === 'z' || k === 'y')) {
-      e.preventDefault();
-      if (k === 'z' && !e.shiftKey && depth) undo();
-      return;
-    }
-    if (k === 'delete' || k === 'backspace' || k.startsWith('arrow') || (mod && k === 'd')) return e.preventDefault();
+    // the palette's own keys (delete, duplicate, step along a ramp) wait until focus leaves the paper
+    if (k === 'delete' || k === 'backspace' || k.startsWith('arrow') || ((e.ctrlKey || e.metaKey) && k === 'd')) return e.preventDefault();
     if (e.key !== '[' && e.key !== ']') return;
     e.preventDefault();
     const next = e.key === ']' ? Math.max(v.size + 1, Math.round(v.size * 1.2)) : Math.min(v.size - 1, Math.round(v.size / 1.2));
     p.onSettings({ size: Math.min(SIZE.max, Math.max(SIZE.min, next)) });
   };
 
-  useEffect(() => {
-    const el = canvas.current!;
-    const ro = new ResizeObserver(() => setScale(el.clientWidth / CANVAS_W));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  // ── undo and clear ──
+  // ── undo, redo and clear ──
   const undo = () => {
-    sim.undo();
-    afterChange();
-    if (clearToast.current && !sim.lastIsClear) toast.dismiss(clearToast.current);
+    if (!engine || engine.stroking) return;
+    engine.undo();
+    if (clearToast.current && !engine.state.lastIsClear) toast.dismiss(clearToast.current);
   };
+  const redo = () => {
+    if (engine && !engine.stroking) engine.redo();
+  };
+  useCanvasKeys(!p.hidden, view, canvas, { undo, redo });
   const clear = () => {
     setArmed(false);
-    sim.clear(true);
-    afterChange();
+    if (!engine) return;
+    engine.clear();
     clearBtn.current?.focus({ preventScroll: true });
     clearToast.current = toast.show({
       icon: 'delete_sweep',
       message: 'Painting cleared.',
       undo: () => {
-        if (sim.lastIsClear) undo();
+        if (engine.state.lastIsClear) undo();
       },
-      when: () => sim.lastIsClear,
+      when: () => engine.state.lastIsClear,
       onClose: () => {
         clearToast.current = null;
       },
@@ -228,75 +233,59 @@ export function PaintCanvas(p: PaintCanvasProps) {
     else toast.show({ icon: 'palette', message: `The well holds ${WELL_MAX} paints. Take one out to add another.` });
   };
 
-  const ringSize = Math.max(6, v.size * scale);
+  const ready = !!engine && !save.loading;
   return (
     <section className={s.paint} aria-label="Paint canvas">
-      {/* in groups, so a narrow bar wraps between them rather than through them */}
-      <header className={s.head}>
-        <span className={s.group}>
-          <Segmented options={TOOLS} value={v.tool} onChange={(tool) => p.onSettings({ tool })} fit />
-          <Segmented options={MEDIA} value={v.medium} onChange={(medium) => p.onSettings({ medium })} mono fit />
-        </span>
-        <span className={s.grow} />
-        {v.tool === 'pick' ? (
-          <span className={s.readout}>
-            <span className="lbl">Under</span>
-            <span ref={readout} className={s.under}>
-              Point at the paper
-            </span>
-          </span>
-        ) : (
-          <span className={s.readout}>
-            <span className="lbl">Brush</span>
-            <i className={s.brushChip} style={brush ? { background: cssColor(brush.oklch) } : undefined} />
-            <Tooltip overflowOnly>
-              <span className={s.brushName}>{brush?.name ?? 'Tick a paint you own to load the brush'}</span>
-            </Tooltip>
-          </span>
-        )}
-        <span className={s.group}>
-          <span className={s.sep} />
-          <Slider label="Size" value={v.size} min={SIZE.min} max={SIZE.max} unit="px" fieldWidth={64} className={s.slider} onChange={(size) => p.onSettings({ size })} />
-          <Slider
-            label={v.tool === 'smudge' ? 'Strength' : 'Load'}
-            value={v.load}
-            min={LOAD.min}
-            max={LOAD.max}
-            unit="%"
-            fieldWidth={64}
-            className={s.slider}
-            onChange={(load) => p.onSettings({ load })}
-          />
-          <span className={s.sep} />
-          <IconButton icon="undo" label="Undo on the canvas: the last strokes, or a Clear" size="sm" disabled={!depth} onClick={undo} />
-          <IconButton ref={clearBtn} icon="delete_sweep" label="Clear the painting" size="sm" disabled={!painted} onClick={() => setArmed(true)} />
-        </span>
-      </header>
+      <PaintBar
+        v={v}
+        onSettings={p.onSettings}
+        brush={brush}
+        emptyTray={!sources.length}
+        readout={readout}
+        painting={painting}
+        ready={ready}
+        onUndo={undo}
+        onRedo={redo}
+        onClear={() => setArmed(true)}
+        clearBtn={clearBtn}
+      />
 
-      <div ref={view} className={cx(s.view, v.tool === 'pick' && s.picking)} style={{ '--ring': `${ringSize}px` } as CSSProperties}>
+      <div ref={view} className={cx(s.view, v.tool === 'pick' && s.picking, !ready && s.waiting)}>
         <canvas
           ref={canvas}
-          width={CANVAS_W}
-          height={CANVAS_H}
           className={s.canvas}
           tabIndex={0}
-          aria-label="Painting. Drag to paint; the [ and ] keys change the brush size; Ctrl+Z undoes a stroke."
+          aria-label="Painting. Drag to paint; [ and ] change the brush size; Ctrl+Z undoes a stroke, Ctrl+Y redoes it."
+          aria-disabled={!ready || undefined}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
-          onPointerUp={() => endStroke(true)}
+          onPointerUp={onPointerUp}
           onLostPointerCapture={() => endStroke(true)}
           onPointerEnter={(e) => {
-            moveRing(e);
-            ring.current!.hidden = false;
+            moveCursor(e);
+            hoverRing();
           }}
           onPointerLeave={() => {
-            ring.current!.hidden = true;
+            cursor.current!.hidden = true;
           }}
           onKeyDown={onKeyDown}
         />
-        <div ref={ring} className={s.ring} hidden aria-hidden="true">
-          <i />
+        <div ref={cursor} className={s.cursor} hidden aria-hidden="true">
+          <i ref={ring} className={s.ring} data-ring="" />
+          <i className={s.dot} />
         </div>
+        {started.t === 'starting' && started.slow && (
+          <span className={s.note} role="status">
+            <Icon name="progress_activity" size={16} className={s.spin} />
+            Getting the paper ready
+          </span>
+        )}
+        {started.t === 'failed' && (
+          <p className={cx(s.note, s.failed)} role="alert">
+            <Icon name="error" size={16} />
+            {`The canvas couldn't start: ${started.message}`}
+          </p>
+        )}
         {armed && (
           <div className={s.confirm}>
             <ConfirmInline
@@ -331,176 +320,4 @@ export function PaintCanvas(p: PaintCanvasProps) {
       </div>
     </section>
   );
-}
-
-/**
- * Draws the simulation into the canvas: a stroke as it's painted, then, once the lifted stroke has
- * settled (a few frames of work, off-screen), the settled wash in one go.
- */
-function usePainter(sim: PaintSim, canvas: RefObject<HTMLCanvasElement | null>) {
-  const st = useRef({ raf: 0, ctx: null as CanvasRenderingContext2D | null, img: null as ImageData | null });
-
-  const draw = (budgetMs: number) => {
-    const { ctx, img } = st.current;
-    const d = ctx && img ? sim.frame(budgetMs) : null;
-    if (!d) return;
-    sim.render(img!.data, d);
-    ctx!.putImageData(img!, 0, 0, d.x0, d.y0, d.x1 - d.x0 + 1, d.y1 - d.y0 + 1);
-  };
-  const tick = () => {
-    st.current.raf = 0;
-    draw(SETTLE_MS);
-    if (sim.wet || sim.stroking) kick();
-  };
-  const kick = () => {
-    if (!st.current.raf) st.current.raf = requestAnimationFrame(tick);
-  };
-
-  useEffect(() => {
-    const ctx = canvas.current!.getContext('2d', { alpha: false })!;
-    const img = ctx.createImageData(CANVAS_W, CANVAS_H);
-    img.data.fill(255);
-    Object.assign(st.current, { ctx, img });
-    draw(Infinity);
-    return () => cancelAnimationFrame(st.current.raf);
-  }, []);
-
-  return {
-    kick,
-    /** the whole painting, copied (a stroke still settling settles first) */
-    snapshot(): ImageData {
-      draw(Infinity);
-      return new ImageData(new Uint8ClampedArray(st.current.img!.data), CANVAS_W, CANVAS_H);
-    },
-  };
-}
-
-/**
- * The painting as a workspace asset per Library item: loaded when the item changes, saved a
- * second after the last stroke once it has settled. A document with no item yet
- * keeps its painting in memory and saves it under the item its first commit makes, and one that
- * moves to another item (a fork, a rename) keeps the painting on screen and saves it there.
- */
-function usePainting(
-  sim: PaintSim,
-  itemId: string | null,
-  props: RefObject<PaintCanvasProps>,
-  snapshot: () => ImageData,
-  onLoaded: () => void,
-) {
-  const owner = useRef<string | null | undefined>(undefined);
-  /** a relink the shell announced: the item id about to change, and to what */
-  const carried = useRef<{ from: string; to: string } | null>(null);
-  const unsaved = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  /** saves run one after another, so a quit waits for one already under way and an older one never lands last */
-  const saving = useRef<Promise<void>>(Promise.resolve());
-  const [loading, setLoading] = useState(false);
-
-  const store = async (id: string, out: OffscreenCanvas | null) => {
-    let url: string | null = null;
-    if (out) {
-      try {
-        const blob = await out.convertToBlob({ type: 'image/png' });
-        url = (await window.api.invoke('workspace.putAsset', TOOL, await blob.arrayBuffer(), 'png')).url;
-      } catch (e) {
-        if (owner.current === id) unsaved.current = true;
-        toast.show({ kind: 'error', message: `The painting couldn't be saved: ${e instanceof Error ? e.message : String(e)}` });
-        return;
-      }
-    }
-    const { paintings, onPaintings } = props.current;
-    if (!url && !(id in paintings)) return;
-    const { [id]: _, ...rest } = paintings;
-    onPaintings(url ? { ...rest, [id]: url } : rest);
-  };
-
-  const write = (id: string | null): Promise<void> => {
-    if (!id || !unsaved.current) return saving.current;
-    unsaved.current = false;
-    // copied now: the canvas may change (another item) while this waits and encodes
-    const out = sim.blank ? null : new OffscreenCanvas(CANVAS_W, CANVAS_H);
-    out?.getContext('2d')!.putImageData(snapshot(), 0, 0);
-    return (saving.current = saving.current.then(() => store(id, out)));
-  };
-
-  const trySave = () => {
-    if (sim.wet || sim.stroking) timer.current = setTimeout(trySave, 300);
-    else void write(owner.current ?? null);
-  };
-
-  useEffect(
-    () =>
-      shell.onRelink(TOOL, (from, to) => {
-        if (owner.current === from) carried.current = { from, to };
-      }),
-    [],
-  );
-
-  useEffect(() => {
-    const prev = owner.current;
-    if (prev === itemId) return;
-    owner.current = itemId;
-    clearTimeout(timer.current);
-    // the document just got its item, or moved to another (a fork, a rename): the painting on
-    // screen is its painting, saved under the new id
-    const moved = !!prev && carried.current?.from === prev && carried.current.to === itemId;
-    carried.current = null;
-    if (moved || (prev === null && itemId && !props.current.paintings[itemId])) {
-      if (moved && !sim.blank) unsaved.current = true;
-      if (unsaved.current) trySave();
-      return;
-    }
-    void write(prev ?? null);
-    sim.clear(false);
-    onLoaded();
-    const url = itemId ? props.current.paintings[itemId] : undefined;
-    if (!url) return;
-    setLoading(true);
-    void (async () => {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`status ${res.status}`);
-        const bmp = await decodeImage(await res.blob(), 'The painting');
-        const ctx = new OffscreenCanvas(CANVAS_W, CANVAS_H).getContext('2d')!;
-        ctx.drawImage(bmp, 0, 0, CANVAS_W, CANVAS_H);
-        bmp.close();
-        if (owner.current === itemId) sim.load(ctx.getImageData(0, 0, CANVAS_W, CANVAS_H).data);
-      } catch (e) {
-        toast.show({ kind: 'error', message: `This palette's painting couldn't be read, so the canvas starts blank. (${e instanceof Error ? e.message : String(e)})` });
-      } finally {
-        if (owner.current === itemId) {
-          setLoading(false);
-          onLoaded();
-        }
-      }
-    })();
-  }, [itemId]);
-
-  useEffect(() => {
-    // every save writes a new file: the ones no palette points at any more go (the service keeps
-    // anything under a minute old, and whatever a quarantined workspace refers to)
-    const keep = Object.values(props.current.paintings).flatMap((url) => /[0-9a-f]{64}/.exec(url) ?? []);
-    void window.api.invoke('workspace.gcAssets', TOOL, keep).catch(() => {});
-    // a quit inside the save's delay keeps the last strokes (one still settling settles first)
-    const off = shell.beforeClose(() => {
-      clearTimeout(timer.current);
-      return write(owner.current ?? null);
-    });
-    return () => {
-      off();
-      clearTimeout(timer.current);
-      void write(owner.current ?? null);
-    };
-  }, []);
-
-  return {
-    loading,
-    /** a stroke, an undo or a clear changed the painting */
-    soon() {
-      unsaved.current = true;
-      clearTimeout(timer.current);
-      timer.current = setTimeout(trySave, SAVE_MS);
-    },
-  };
 }

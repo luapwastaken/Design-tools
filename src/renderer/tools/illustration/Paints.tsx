@@ -5,8 +5,9 @@ import { useRef, useState } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import { customPigment, PIGMENTS, type CustomPigment, type Pigment } from '../../../shared/paint/pigments.ts';
 import { cx } from '../../ui/cx.ts';
-import { Button, ColorField, ConfirmInline, Icon, IconButton, Popover, TextInput, toast } from '../../ui/index.ts';
+import { Button, ColorField, ConfirmInline, Icon, IconButton, Popover, TextInput, toast, Tooltip } from '../../ui/index.ts';
 import { displayName } from '../common/names.ts';
+import { paintSettings } from './paint-sources.ts';
 import { getView, patchView, type IllustrationView } from './view-state.ts';
 import s from './Paint.module.css';
 
@@ -41,6 +42,7 @@ function Box({ v }: { v: IllustrationView }) {
   const owned = new Set(v.owned);
   const ticked = all.filter((p) => owned.has(p.id)).length;
   const [armed, setArmed] = useState<string | null>(null);
+  const onBrush = paintSettings(v.canvas).paint;
 
   const toggle = (id: string) => patchView({ owned: owned.has(id) ? v.owned.filter((x) => x !== id) : [...v.owned, id] });
   const remove = (p: CustomPigment) => {
@@ -86,10 +88,24 @@ function Box({ v }: { v: IllustrationView }) {
             </div>
           ) : (
             <div key={p.id} className={s.prow}>
-              <button type="button" role="checkbox" aria-checked={owned.has(p.id)} className={cx(s.tick, owned.has(p.id) && s.ticked)} onClick={() => toggle(p.id)}>
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={owned.has(p.id)}
+                aria-description={p.id === onBrush ? 'On the brush' : undefined}
+                className={cx(s.tick, owned.has(p.id) && s.ticked)}
+                onClick={() => toggle(p.id)}
+              >
                 <Icon name={owned.has(p.id) ? 'check_box' : 'check_box_outline_blank'} size={16} fill={owned.has(p.id)} />
                 <i className={s.pchip} style={{ background: cssColor(p.oklch) }} />
                 <span className={s.pname}>{p.name}</span>
+                {p.id === onBrush && (
+                  <Tooltip content="On the brush">
+                    <span className={s.onBrush}>
+                      <Icon name="brush" size={14} />
+                    </span>
+                  </Tooltip>
+                )}
               </button>
               {'custom' in p && <IconButton icon="delete" label={`Remove ${p.name}`} size="xs" onClick={() => setArmed(p.id)} />}
             </div>

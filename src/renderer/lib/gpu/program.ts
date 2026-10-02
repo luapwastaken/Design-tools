@@ -1,5 +1,6 @@
 // Programs (see index.ts): compiled once per source for the whole app and again after a context
-// loss. A shader that fails throws with GL's log; nothing ever falls back to a pass-through.
+// loss, now or in the background. A shader that fails throws with GL's log; nothing ever falls back
+// to a pass-through.
 import { getEngine, isLost, type Engine } from './context.ts';
 import { GpuError, GpuLost } from './errors.ts';
 import { ENGINE_UNIFORMS, FULL_VERTEX, assemble, explain, type Stage } from './shader.ts';
@@ -55,12 +56,28 @@ export class Program {
 
   /** linked in the current context, compiling again after a loss */
   linked(e: Engine): Linked {
-    if (this.#linked?.gen !== e.gen) this.#linked = link(e, this.fragment, this.vertex ?? FULL_VERTEX);
+    if (this.#linked?.gen !== e.gen) this.#linked = finish(e, start(e, this.fragment, this.vertex ?? FULL_VERTEX));
     return this.#linked;
+  }
+
+  /** @internal compiles in the background where the driver can, else on a task of its own */
+  async linkSoon(e: Engine): Promise<void> {
+    if (this.#linked?.gen === e.gen) return;
+    if (!e.ext.parallel) {
+      await new Promise((r) => setTimeout(r));
+      if (!isLost()) this.linked(e);
+      return;
+    }
+    const done = e.ext.parallel.COMPLETION_STATUS_KHR;
+    const started = start(e, this.fragment, this.vertex ?? FULL_VERTEX);
+    while (!isLost() && e.gen === started.gen && !e.gl.getProgramParameter(started.program, done)) await new Promise((r) => setTimeout(r, 2));
+    if (isLost() || e.gen !== started.gen) return; // linked() compiles it after the restore
+    this.#linked = finish(e, started);
   }
 }
 
 const cache = new Map<string, Program>();
+const pending = new Map<string, Promise<Program>>();
 
 /** The app's program for this source, compiled now so a broken shader throws where it is written. */
 export function program(fragment: string, vertex: string | null = null): Program {
@@ -74,40 +91,63 @@ export function program(fragment: string, vertex: string | null = null): Program
   return p;
 }
 
-function compile(gl: WebGL2RenderingContext, stage: Stage, body: string): WebGLShader {
-  const sh = gl.createShader(stage === 'vertex' ? gl.VERTEX_SHADER : gl.FRAGMENT_SHADER)!;
-  gl.shaderSource(sh, assemble(stage, body));
-  gl.compileShader(sh);
-  if (gl.getShaderParameter(sh, gl.COMPILE_STATUS)) return sh;
-  const log = gl.getShaderInfoLog(sh) ?? '';
-  gl.deleteShader(sh);
-  if (gl.isContextLost()) throw new GpuLost();
-  throw new GpuError(`The ${stage} shader didn't compile.\n${explain(stage, log, body)}`, log);
+/** program(), compiled without holding up the page: in parallel where the driver can (KHR_parallel_shader_compile). */
+export function programAsync(fragment: string, vertex: string | null = null): Promise<Program> {
+  const key = `${vertex?.length ?? -1}:${vertex ?? ''}${fragment}`;
+  const have = cache.get(key);
+  if (have) return Promise.resolve(have);
+  let p = pending.get(key);
+  if (p) return p;
+  const made = new Program(fragment, vertex);
+  const e = getEngine();
+  p = made
+    .linkSoon(e)
+    .then(() => {
+      cache.set(key, made);
+      return made;
+    })
+    .finally(() => pending.delete(key));
+  pending.set(key, p);
+  return p;
 }
 
-function link(e: Engine, fragment: string, vertex: string): Linked {
+type Started = { gen: number; program: WebGLProgram; vs: WebGLShader; fs: WebGLShader; fragment: string; vertex: string };
+
+/** compiles and links without asking how it went, so a driver that compiles in parallel can get on with it */
+function start(e: Engine, fragment: string, vertex: string): Started {
   const { gl } = e;
-  const vs = compile(gl, 'vertex', vertex);
-  let fs: WebGLShader;
-  try {
-    fs = compile(gl, 'fragment', fragment);
-  } catch (err) {
-    gl.deleteShader(vs);
-    throw err;
-  }
+  const shader = (stage: Stage, body: string) => {
+    const sh = gl.createShader(stage === 'vertex' ? gl.VERTEX_SHADER : gl.FRAGMENT_SHADER)!;
+    gl.shaderSource(sh, assemble(stage, body));
+    gl.compileShader(sh);
+    return sh;
+  };
+  const vs = shader('vertex', vertex);
+  const fs = shader('fragment', fragment);
   const program = gl.createProgram()!;
   gl.attachShader(program, vs);
   gl.attachShader(program, fs);
   gl.bindAttribLocation(program, 0, 'a_corner');
   gl.linkProgram(program);
-  gl.deleteShader(vs); // only flagged: they go with the program
-  gl.deleteShader(fs);
+  return { gen: e.gen, program, vs, fs, fragment, vertex };
+}
+
+function finish(e: Engine, s: Started): Linked {
+  const { gl } = e;
+  const { program, vs, fs } = s;
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
     const log = gl.getProgramInfoLog(program) ?? '';
+    const failed = !gl.getShaderParameter(vs, gl.COMPILE_STATUS) ? (['vertex', vs, s.vertex] as const) : !gl.getShaderParameter(fs, gl.COMPILE_STATUS) ? (['fragment', fs, s.fragment] as const) : null;
+    const shaderLog = failed ? (gl.getShaderInfoLog(failed[1]) ?? '') : '';
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
     gl.deleteProgram(program);
     if (gl.isContextLost()) throw new GpuLost();
+    if (failed) throw new GpuError(`The ${failed[0]} shader didn't compile.\n${explain(failed[0], shaderLog, failed[2])}`, shaderLog);
     throw new GpuError(`The shaders didn't link.\n${log.replaceAll('\0', '').trim()}`, log);
   }
+  gl.deleteShader(vs); // only flagged: they go with the program
+  gl.deleteShader(fs);
   const uniforms = new Map<string, Uniform>();
   for (let i = 0, n = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS); i < n; i++) {
     const { name, type, size } = gl.getActiveUniform(program, i)!;

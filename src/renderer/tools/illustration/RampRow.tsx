@@ -8,7 +8,7 @@ import { fmtL, plural } from '../common/names.ts';
 import { arm, deleteLoose, deleteRamp, duplicate, focusStep, rampsFromLoose, reorder, select, type Doc } from './actions.ts';
 import { brokenSteps, nameOf, rampName, regen, revertRamp, setSpec, wordOf, type IllustrationDoc } from './doc.ts';
 import type { Proposal } from './proposals.ts';
-import { armed } from './view-state.ts';
+import { armed, clicked } from './view-state.ts';
 import s from './Ramps.module.css';
 
 /** internal reorders carry this type (foundation spec §9), so OS files dropped here still go to onFiles */
@@ -172,6 +172,7 @@ function Steps({ d, list, place, cols, sel, lit, broken }: StepsProps) {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault();
     select(w.id);
+    clicked.set({ id: w.id, at: performance.now() });
   };
   return (
     <div className={s.mat} style={cells(cols)}>
@@ -192,6 +193,7 @@ function Steps({ d, list, place, cols, sel, lit, broken }: StepsProps) {
                 style={{ gridColumn: place(w, i) }}
                 onClick={(e) => {
                   select(w.id);
+                  clicked.set({ id: w.id, at: performance.now() });
                   e.currentTarget.focus();
                 }}
                 onKeyDown={onKeyDown(w)}

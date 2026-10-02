@@ -146,3 +146,6 @@ export const pointAt = (ids: string[]) => ({
 
 /** the ramp whose Delete confirm is armed (its row turns into it) */
 export const armed = createStore<string | null>(null);
+
+/** the last ramp step clicked (or chosen with Enter or Space), even the one already selected: Paint loads it on the brush */
+export const clicked = createStore<{ id: string; at: number } | null>(null);

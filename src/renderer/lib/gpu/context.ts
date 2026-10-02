@@ -12,6 +12,26 @@ export type Engine = {
   /** the corner quad every draw starts from: a_corner, location 0 */
   vao: WebGLVertexArrayObject;
   quad: WebGLBuffer;
+  caps: Caps;
+  ext: Extensions;
+};
+
+/** what this GPU can do beyond plain WebGL2 */
+export type Caps = {
+  /** outputs one pass can draw into */
+  drawBuffers: number;
+  /** a different blend per output (OES_draw_buffers_indexed) */
+  indexedBlend: boolean;
+  /** programs compiled off the page's thread (KHR_parallel_shader_compile) */
+  parallelCompile: boolean;
+  /** GPU timer queries (EXT_disjoint_timer_query_webgl2) */
+  timer: boolean;
+};
+
+export type Extensions = {
+  dbi: OES_draw_buffers_indexed | null;
+  parallel: { readonly COMPLETION_STATUS_KHR: number } | null;
+  timer: { readonly TIME_ELAPSED_EXT: number; readonly GPU_DISJOINT_EXT: number } | null;
 };
 
 const ATTRS: WebGLContextAttributes = {
@@ -71,6 +91,14 @@ export function bindCorners(gl: WebGL2RenderingContext, quad: WebGLBuffer): void
 function setup(gl: WebGL2RenderingContext) {
   // drawing into half-float textures needs one of these in WebGL2; target() says so if neither is there
   if (!gl.getExtension('EXT_color_buffer_float')) gl.getExtension('EXT_color_buffer_half_float');
+  gl.getExtension('EXT_float_blend');
+  const ext: Extensions = {
+    dbi: gl.getExtension('OES_draw_buffers_indexed'),
+    parallel: gl.getExtension('KHR_parallel_shader_compile'),
+    timer: gl.getExtension('EXT_disjoint_timer_query_webgl2'),
+  };
+  const drawBuffers = Math.min(gl.getParameter(gl.MAX_DRAW_BUFFERS) ?? 1, gl.getParameter(gl.MAX_COLOR_ATTACHMENTS) ?? 1);
+  const caps: Caps = { drawBuffers, indexedBlend: !!ext.dbi, parallelCompile: !!ext.parallel, timer: !!ext.timer };
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
   gl.pixelStorei(gl.PACK_ALIGNMENT, 1);
   // values as stored, as lib/load decodes them: no colour conversion, no premultiplying, no flip
@@ -83,5 +111,5 @@ function setup(gl: WebGL2RenderingContext) {
   bindCorners(gl, quad);
   const dims = (gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array | null) ?? [0, 0]; // null while lost
   const maxSize = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), dims[0], dims[1]);
-  return { quad, vao, maxSize };
+  return { quad, vao, maxSize, caps, ext };
 }

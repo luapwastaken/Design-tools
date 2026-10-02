@@ -2,7 +2,7 @@
 // runs scripts/smoke.mjs). It drives the real shell, IPC and Library in the smoke folder, reports
 // each check, and hands the result to main (app.smokeDone), which quits through the close handshake.
 // 'full' runs the smoke list; 'quiet' is the relaunch: it restores, checks, and quits with no input.
-import { contrast, rgb255, toHex, type Oklch } from '../shared/color/index.ts';
+import { contrast, cssColor, rgb255, toHex, type Oklch } from '../shared/color/index.ts';
 import { INKS } from '../shared/palette/inks.ts';
 import type { DocController } from '../shared/doc-api.ts';
 import { layoutLockup } from '../shared/logo/layout.ts';
@@ -33,6 +33,8 @@ import { platesFor, pngBlob } from './tools/halftone/exports.ts';
 import { ready, screen, totals } from './tools/halftone/screening.ts';
 import { status as halftoneStatus } from './tools/halftone/view-state.ts';
 import { addRamp, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
+import { liveEngine, paintEngineChecks, type PaintEngine } from './tools/illustration/paint/index.ts';
+import { paintSettings, type PaintSettings } from './tools/illustration/paint-sources.ts';
 import { isEmpty as noParts, lockupOf, shownLockups, type LogoDoc } from './tools/logo/doc.ts';
 import { faviconBundle, sheetSvg } from './tools/logo/files.ts';
 import { partFromImage, partFromSvg } from './tools/logo/intake.ts';
@@ -1192,49 +1194,6 @@ async function dither(dir: string): Promise<void> {
 }
 
 /**
- * One wet stroke; how many times the canvas changes once the brush lifts (unit D: the settled wash
- * swaps in once). Counted in frames, not time: the smoke window is never shown, so its frames come
- * about once a second, and the settle runs a slice a frame.
- */
-async function settleSwaps(y: number): Promise<number | null> {
-  const canvas = await until(() => {
-    const c = host('illustration')?.querySelector<HTMLCanvasElement>('canvas[aria-label^="Painting"]');
-    return c && c.getBoundingClientRect().width > 0 ? c : null;
-  });
-  if (!canvas) return null;
-  const ctx = canvas.getContext('2d')!;
-  const sum = () => {
-    const px = new Uint32Array(ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer);
-    let h = 0;
-    for (let i = 0; i < px.length; i++) h = (Math.imul(h, 31) + px[i]) | 0;
-    return h;
-  };
-  const frame = () => new Promise((r) => requestAnimationFrame(r));
-  const r = canvas.getBoundingClientRect();
-  const pointer = (type: string, x: number) =>
-    canvas.dispatchEvent(
-      new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerup' ? 0 : 1, clientX: r.left + x * r.width, clientY: r.top + y * r.height }),
-    );
-  pointer('pointerdown', 0.2);
-  for (let i = 1; i <= 20; i++) pointer('pointermove', 0.2 + i * 0.03);
-  // the stroke as painted, all on screen; then the lift
-  for (let i = 0; i < 3; i++) await frame();
-  let last = sum();
-  pointer('pointerup', 0.8);
-  // until it has changed and then held still for 5 frames (a settle drawn as it goes changes every frame)
-  let changes = 0;
-  let still = 0;
-  for (let n = 0; n < 120 && (!changes || still < 5); n++) {
-    await frame();
-    const now = sum();
-    still = now === last ? still + 1 : 0;
-    if (now !== last) changes++;
-    last = now;
-  }
-  return changes;
-}
-
-/**
  * Colour › Illustration (plan: Integrate): an edit writes the file, regenerating keeps hand-edited
  * steps, Design writes an Illustration palette back whole, and a painting is kept with its palette.
  * Ends with Illustration showing its canvas, so the quiet pass can see the painting come back.
@@ -1303,20 +1262,17 @@ async function illustration(): Promise<void> {
   // the painting: one gouache stroke, kept as a workspace PNG under the palette's id
   shell.setActive('illustration');
   patchIllustration({ tab: 'paint', canvas: { ...illustrationView().canvas, tool: 'paint', medium: 'dry' } });
+  await paintEngineChecks(check);
+  if (!check('Paint starts the painting engine', await until(() => liveEngine.get(), 10_000), host('illustration')?.querySelector('[role="alert"]')?.textContent)) return;
   if (!check('Paint shows the canvas', await stroke(0.5))) return;
-  check('the stroke is on the canvas', await until(() => paintedPixels() > 500), paintedPixels());
+  check('the stroke is on the canvas', await until(painted), liveEngine.get()?.state);
   check('and is saved under its palette', await until(() => illustrationView().paintings[id], 6000), illustrationView().paintings);
   for (const tab of ['light', 'check', 'paint'] as const) {
     patchIllustration({ tab });
     await sleep(50);
   }
-  check('a tab switch keeps the painting: Paint, Light, Check, Paint', paintedPixels() > 500, paintedPixels());
-  patchIllustration({ canvas: { ...illustrationView().canvas, medium: 'wet' } });
-  // the brush reads its medium from the last render
-  await until(() => host('illustration')?.querySelector('[role="radio"][aria-label^="Wet"]')?.getAttribute('aria-checked') === 'true');
-  const swaps = await settleSwaps(0.75);
-  check('a wet stroke changes nothing on the canvas after the lift but the one settled wash', swaps === 1, swaps);
-  patchIllustration({ canvas: { ...illustrationView().canvas, medium: 'dry' } });
+  check('a tab switch keeps the painting: Paint, Light, Check, Paint', painted(), liveEngine.get()?.state);
+  await paintUi(id);
 
   // an edit while Design holds the palette forks it: the painting stays on screen and goes with the fork
   await shell.sendItem(ref!, 'design');
@@ -1325,7 +1281,7 @@ async function illustration(): Promise<void> {
   const fork = await until(() => (il.state().t === 'saved' && il.source()?.itemId !== id ? il.source() : null));
   check('an Illustration edit of a palette Design holds forks it into Scratch', fork?.collection === 'Scratch', il.state());
   await sleep(500); // a canvas that lost it would have cleared by now
-  check('the painting stays on the canvas through the fork', paintedPixels() > 500, paintedPixels());
+  check('the painting stays on the canvas through the fork', painted(), liveEngine.get()?.state);
   check('and is kept under the fork, the original keeping its own', fork && (await until(() => illustrationView().paintings[fork.itemId], 6000)) && illustrationView().paintings[id], illustrationView().paintings);
   if (glossy) await shell.sendItem((await find((i) => i.id === glossy.itemId))!, 'design');
 
@@ -1337,42 +1293,167 @@ async function illustration(): Promise<void> {
   const last = await until(() => (il.state().t === 'saved' ? il.source() : null));
   if (!check('a new Illustration palette for the last painting', last && last.itemId !== id && last.itemId !== fork?.itemId, il.state())) return;
   check('it lets the check chosen on the last palette go, so Check opens on its own first problem', await until(() => illustrationView().check === null), illustrationView().check);
-  check('its canvas starts blank', await until(() => paintedPixels() === 0), paintedPixels());
+  check('its canvas starts blank', await until(() => liveEngine.get()?.state.blank), liveEngine.get()?.state);
   await stroke(0.5);
-  check('the last stroke is on the canvas', await until(() => paintedPixels() > 500), paintedPixels());
-  // not waited for: the save comes a second after the paint settles
+  check('the last stroke is on the canvas', await until(painted), liveEngine.get()?.state);
+  // not waited for: the save comes a second after the lift
   check('and not saved yet', !illustrationView().paintings[last!.itemId], illustrationView().paintings);
 }
 
-/** one horizontal stroke across the Illustration canvas at height `y` (0..1); false when it isn't showing */
-async function stroke(y: number): Promise<boolean> {
-  const canvas = await until(() => {
-    const c = host('illustration')?.querySelector<HTMLCanvasElement>('canvas[aria-label^="Painting"]');
-    return c && c.getBoundingClientRect().width > 0 ? c : null;
-  });
-  if (!canvas) return false;
+const paperCanvas = () => {
+  const c = host('illustration')?.querySelector<HTMLCanvasElement>('canvas[aria-label^="Painting"]');
+  return c && c.getBoundingClientRect().width > 0 ? c : null;
+};
+const frame = () => new Promise((r) => requestAnimationFrame(r));
+/** the painting has paint on it (the engine knows: paper grain is not paint) */
+const painted = () => liveEngine.get()?.state.blank === false;
+const paint = () => paintSettings(illustrationView().canvas);
+const setPaint = (patch: Partial<PaintSettings>) => patchIllustration({ canvas: { ...paint(), ...patch } });
+const toastSays = (text: string) => toastStore.get().find((t) => !t.leaving && String(t.message).includes(text));
+
+/** a pointer event on the paper at (x, y), 0..1 across it */
+function pointer(canvas: HTMLCanvasElement, type: string, x: number, y: number): void {
   const r = canvas.getBoundingClientRect();
-  const pointer = (type: string, x: number) =>
-    canvas.dispatchEvent(
-      new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerup' ? 0 : 1, clientX: r.left + x * r.width, clientY: r.top + y * r.height }),
-    );
-  pointer('pointerdown', 0.2);
+  canvas.dispatchEvent(
+    new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerup' ? 0 : 1, clientX: r.left + x * r.width, clientY: r.top + y * r.height }),
+  );
+}
+
+/** one horizontal stroke across the Illustration canvas at height `y` (0..1), lifted; false when it isn't showing */
+async function stroke(y: number): Promise<boolean> {
+  // the paper takes input once the engine is up and the palette's painting is on it
+  const canvas = await until(() => (liveEngine.get() && !paperCanvas()?.hasAttribute('aria-disabled') ? paperCanvas() : null));
+  if (!canvas) return false;
+  pointer(canvas, 'pointerdown', 0.2, y);
   for (let i = 1; i <= 20; i++) {
-    pointer('pointermove', 0.2 + i * 0.03);
+    pointer(canvas, 'pointermove', 0.2 + i * 0.03, y);
     await sleep(16);
   }
-  pointer('pointerup', 0.8);
+  pointer(canvas, 'pointerup', 0.8, y);
   return true;
 }
 
-/** the painting's pixels on the Illustration canvas that aren't blank paper */
-function paintedPixels(): number {
-  const c = host('illustration')?.querySelector<HTMLCanvasElement>('canvas[aria-label^="Painting"]');
-  if (!c) return 0;
-  const px = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
-  let n = 0;
-  for (let i = 0; i < px.length; i += 4) if (px[i] < 235 || px[i + 1] < 235 || px[i + 2] < 235) n++;
-  return n;
+/** a hash of the paper as the canvas shows it */
+function shownHash(canvas: HTMLCanvasElement): number {
+  const px = new Uint32Array(canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data.buffer);
+  let h = 0;
+  for (let i = 0; i < px.length; i++) h = (Math.imul(h, 31) + px[i]) | 0;
+  return h;
+}
+
+/** a 1024 × 640 painting as the old canvas saved it: opaque, painted on white, a red square at 100..300 */
+async function v1Painting(): Promise<Blob> {
+  const c = new OffscreenCanvas(1024, 640);
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = cssColor([1, 0, 0]);
+  ctx.fillRect(0, 0, 1024, 640);
+  ctx.fillStyle = cssColor([0.6, 0.2, 29]);
+  ctx.fillRect(100, 100, 200, 200);
+  return c.convertToBlob({ type: 'image/png' });
+}
+
+/**
+ * The paint canvas's own UI (engine plan §5, §6): nothing on the paper changes after the lift, the
+ * ring leaves with the pointer, the brush follows the palette and the tray, Try it, the canvas's
+ * undo keys wherever the focus is, the tool bar on one line, Clear's Undo, and an old painting.
+ */
+async function paintUi(id: string): Promise<void> {
+  const il = illustrationDoc();
+  const e = liveEngine.get() as PaintEngine;
+  const canvas = paperCanvas()!;
+  const section = canvas.closest('section')!;
+  const view = canvas.parentElement!;
+
+  // the lift: the stroke as painted is the painting; not one more present, not one pixel different
+  pointer(canvas, 'pointerdown', 0.2, 0.3);
+  for (let i = 1; i <= 20; i++) pointer(canvas, 'pointermove', 0.2 + i * 0.03, 0.3 + (i % 5) * 0.01);
+  for (let i = 0; i < 3; i++) await frame();
+  pointer(canvas, 'pointerup', 0.8, 0.34);
+  const [presents, shown] = [e.probe.presents, shownHash(canvas)];
+  let frames = 0;
+  let changed = 0;
+  // 60 frames, or two seconds of them: a window that is never shown gets few
+  for (const t0 = performance.now(); frames < 60 && performance.now() - t0 < 2000; frames++) {
+    await frame();
+    if (shownHash(canvas) !== shown) changed++;
+  }
+  check('after the lift nothing on the paper changes: no present, the same pixels', frames > 0 && e.probe.presents === presents && !changed, { frames, changed, presents: [presents, e.probe.presents] });
+  check('and the stroke is one undo step', e.state.depth > 0 && !e.stroking, e.state);
+  check('the ring leaves the fresh paint at the lift', view.querySelector<HTMLElement>('[data-ring]')?.hidden === true);
+
+  // a ramp colour loads the brush, even the one already selected
+  const step = host('illustration')?.querySelector<HTMLButtonElement>('[data-step]');
+  step?.click();
+  check('clicking a ramp colour loads it on the brush', step && (await until(() => paint().paint === `swatch:${step.dataset.step}`)), paint().paint);
+  setPaint({ paint: 'hansa' });
+  step?.click();
+  check('and clicking it again, already selected, loads it again', step && (await until(() => paint().paint === `swatch:${step.dataset.step}`)), paint().paint);
+
+  // the loaded paint unticked: the brush goes to its neighbour, says so, and stays there
+  setPaint({ paint: 'ultra' });
+  await sleep(50);
+  const owned = illustrationView().owned;
+  patchIllustration({ owned: owned.filter((x) => x !== 'ultra') });
+  const moved = await until(() => paint().paint === 'phthaloB');
+  check('unticking the loaded paint moves the brush to its neighbour, with a notice', moved && toastSays('Ultramarine Blue is off the tray, so the brush holds Phthalo Blue now.'), [paint().paint, toastStore.get().map((t) => String(t.message))]);
+  patchIllustration({ owned });
+  await sleep(50);
+  check('re-ticking it leaves the brush where it went', paint().paint === 'phthaloB', paint().paint);
+
+  // Try it: a recipe into the well and onto the brush; a mix it replaced comes back from the toast
+  setPaint({ well: [{ id: 'hansa', parts: 1 }], paint: 'ultra', tool: 'smudge' });
+  const tryIt = await until(() => [...(host('illustration')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Try it') && shows(b)));
+  tryIt?.click();
+  const tried = await until(() => (paint().paint === 'well' && paint().tool === 'paint' && paint().well.length && paint().well[0].id !== 'hansa' ? paint().well : null));
+  check('Try it puts the recipe in the well, loads it and switches to Paint', tried, paint());
+  const back = toastSays('The well holds this recipe now.');
+  if (back) toastStore.undo(back.id);
+  check('and its Undo puts the mix that was there back', back && (await until(() => paint().well[0]?.id === 'hansa' && paint().paint === 'ultra')), paint());
+
+  // the canvas's undo keys, with the focus on a tray chip and the pointer over the paper
+  setPaint({ tool: 'paint' });
+  await stroke(0.6);
+  await until(() => !e.stroking);
+  const depth = e.state.depth;
+  const swatches = il.get().swatches.length;
+  const history = il.depth();
+  host('illustration')?.querySelector<HTMLElement>('[aria-label="Paints for the brush"] [tabindex="0"]')?.focus();
+  view.dispatchEvent(new PointerEvent('pointerenter'));
+  ctrlZ();
+  const undone = await until(() => e.state.depth === depth - 1);
+  check('Ctrl+Z over the paper undoes the stroke, with the focus on the tray; the palette is untouched', undone && il.get().swatches.length === swatches && il.depth() === history, [e.state, il.get().swatches.length, il.depth()]);
+  ctrlY();
+  check('and Ctrl+Y redoes it', await until(() => e.state.depth === depth && !e.state.redoDepth), e.state);
+  view.dispatchEvent(new PointerEvent('pointerleave'));
+
+  // the tool bar: one line at 1000px with the paint's name, and still one line at 724px
+  const head = section.querySelector('header')!;
+  const oneLine = () => {
+    const r = head.getBoundingClientRect();
+    const mid = r.top + r.height / 2;
+    return r.height <= 36.5 && head.scrollWidth <= head.clientWidth + 1 && [...head.children].every((c) => Math.abs(c.getBoundingClientRect().top + c.getBoundingClientRect().height / 2 - mid) <= 2);
+  };
+  for (const w of [1000, 724]) {
+    section.style.width = `${w}px`;
+    const fits = await until(() => head.dataset.fit === (w >= 1000 ? 'full' : 'compact') && oneLine(), 5000);
+    check(`the tool bar is one line at ${w}px`, fits && (w < 1000 || head.textContent?.includes('Ultramarine Blue')), [head.dataset.fit, head.getBoundingClientRect().height, head.scrollWidth, head.clientWidth]);
+  }
+  section.style.width = '';
+
+  // Clear, then its toast's Undo: the painting comes back
+  host('illustration')?.querySelector<HTMLButtonElement>('[aria-label="Clear the painting"]')?.click();
+  (await until(() => button('illustration', 'Clear')))?.click();
+  const cleared = await until(() => e.state.blank && toastSays('Painting cleared.'));
+  if (cleared) toastStore.undo(cleared.id);
+  check("Clear empties the paper and its toast's Undo brings the painting back", cleared && (await until(painted)) && !e.state.lastIsClear, e.state);
+
+  // a painting saved by the old 1024 × 640 canvas loads upscaled onto the paper
+  const keep = await e.snapshot();
+  await e.load(await v1Painting());
+  const [red, bare] = [await e.pick(400, 400), await e.pick(1600, 1000)];
+  check('a 1024 × 640 painting loads upscaled: its paint where it was, its white as bare paper', !e.state.blank && red[0] > 0.5 && red[1] < 0.4 && bare.every((c) => c > 0.85), { red, bare });
+  await e.load(keep);
+  check('and the painting on the paper comes back', painted() && illustrationView().paintings[id], e.state);
 }
 
 /** the relaunch: nothing is touched; scripts/smoke.mjs checks no Library or workspace file changed */
@@ -1404,5 +1485,5 @@ async function quiet(): Promise<void> {
   check("Illustration: the quit saved the last stroke as its palette's painting", id && illustrationView().paintings[id], illustrationView().paintings);
   // showing a tool is no edit: smoke.mjs still finds every file as it was
   shell.setActive('illustration');
-  check('Illustration: the painting comes back on the canvas', await until(() => paintedPixels() > 500, 10_000), paintedPixels());
+  check('Illustration: the painting comes back on the canvas', await until(painted, 10_000), liveEngine.get()?.state);
 }

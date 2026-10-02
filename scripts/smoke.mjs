@@ -3,7 +3,7 @@
 // files each pass leaves, prints PASS or FAIL and exits non-zero on any failure. The folder is
 // deleted on a pass and kept on a failure.
 import { spawn } from 'node:child_process';
-import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import electron from 'electron';
@@ -59,6 +59,13 @@ check('a quit with a task running asks "Quit anyway?" and goes ahead', /\[smoke\
 const exports = join(dir, 'exports');
 const exported = ['smoke export.png', join('design', 'one.txt'), join('design', 'two.txt')];
 check('the exports are on disk', exported.every((f) => existsSync(join(exports, f))), exported.filter((f) => !existsSync(join(exports, f))).join(', '));
+// the paint engine's stroke sheet is the look to review: PAINT_SHEET_OUT=<file> keeps a copy past the folder's deletion
+const sheet = existsSync(exports) && readdirSync(exports, { recursive: true }).find((f) => String(f).endsWith('paint-sheet.png'));
+check('the paint engine left its stroke sheet', !!sheet);
+if (sheet && process.env.PAINT_SHEET_OUT) {
+  mkdirSync(dirname(process.env.PAINT_SHEET_OUT), { recursive: true });
+  copyFileSync(join(exports, String(sheet)), process.env.PAINT_SHEET_OUT);
+}
 const trash = existsSync(join(dir, 'trash')) ? readdirSync(join(dir, 'trash')) : [];
 check('the deleted palette is in the trash', trash.some((f) => f.endsWith(' Untitled palette.palette.json')), trash.join(', '));
 check('the delete pending at the quit is in the trash', trash.some((f) => f.endsWith(' Dither.png')), trash.join(', '));

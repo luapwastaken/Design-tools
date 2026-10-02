@@ -75,6 +75,8 @@
 .tick > :global(.material-symbols-rounded) { color: var(--ink-3); }
 .ticked > :global(.material-symbols-rounded) { color: var(--ink); }
 .pname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the paint on the brush: a mark after its name, the words in its tooltip */
+.onBrush { display: inline-grid; flex: none; place-items: center; margin-left: auto; color: var(--ink-2); }
 .armed { grid-column: 1 / -1; margin: 2px 0; }
 .add { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; box-shadow: 0 -1px 0 var(--line); }
 .addRow { display: flex; gap: 6px; }

@@ -1,5 +1,5 @@
-// The paint canvas's pigment tray and mixing well (plan unit C), in one row under the paper. Click a
-// paint to load the brush; drag it into the well (or use its menu) to add a part; the well's mix, by
+// The paint canvas's pigment tray and mixing well, in one row under the paper. Click a paint to load
+// the brush; Shift-click it, drag it into the well or use its menu to add a part; the well's mix, by
 // km.ts, loads the brush.
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type PointerEvent, type RefObject } from 'react';
 import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
@@ -9,6 +9,7 @@ import { PARTS_MAX, type Source, type WellPart } from './paint-sources.ts';
 import s from './PaintCanvas.module.css';
 
 const SLOP = 4;
+const HOW = 'Click to load the brush. Shift-click or drag into the well to add a part.';
 const STEP: Record<string, number> = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 };
 
 function describe(src: Source): string {
@@ -113,7 +114,7 @@ export function Tray(p: {
     return out;
   }, []);
   const chip = (src: Source, i: number) => (
-    <Tooltip key={src.id} content={describe(src)}>
+    <Tooltip key={src.id} content={`${describe(src)}. ${HOW}`}>
       <button
         type="button"
         role="radio"
@@ -122,8 +123,9 @@ export function Tray(p: {
         aria-label={src.name}
         aria-checked={src.id === p.current}
         tabIndex={i === at || (at < 0 && i === 0) ? 0 : -1}
-        onClick={() => {
+        onClick={(e) => {
           if (dragged.current) dragged.current = false;
+          else if (e.shiftKey) p.onAddToWell(src.id);
           else p.onLoad(src.id);
         }}
         onPointerDown={(e) => down(e, src)}
@@ -169,7 +171,7 @@ export function Well(p: {
   const colour = (id: string) => p.sources.find((x) => x.id === id)?.pigment.oklch;
   return (
     <div ref={p.ref} role="group" className={cx(s.well, p.over && s.wellOver)} aria-label="Mixing well">
-      <Tooltip content={p.mix ? 'Load the brush with this mix' : 'Drag paints from the tray into the well to mix them'}>
+      <Tooltip content={p.mix ? 'Load the brush with this mix' : 'Shift-click paints in the tray, or drag them here, to mix them'}>
         <button
           type="button"
           className={cx(s.mix, !p.mix && s.mixEmpty, p.loaded && s.on)}
@@ -200,7 +202,7 @@ export function Well(p: {
           </span>
         ))
       ) : (
-        <span className={s.hint}>Drag paints here to mix</span>
+        <span className={s.hint}>Mix your own: Shift-click paints or drag them here. Try it on a recipe fills it too.</span>
       )}
       <Button size="xs" icon="brush" disabled={!p.mix || p.loaded} onClick={p.onLoad}>
         {p.loaded ? 'On the brush' : 'Load brush'}

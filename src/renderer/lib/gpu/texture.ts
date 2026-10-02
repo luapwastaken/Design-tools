@@ -2,9 +2,11 @@
 // all; a context loss ends them too, and the owner makes them again in onRestore().
 import { getEngine, isLost, type Engine } from './context.ts';
 import { GpuError } from './errors.ts';
+import type { Rect } from './tiles.ts';
+import { rectInside, rectText } from './validate.ts';
 
-export type Format = 'rgba8' | 'rgba16f' | 'r16f';
-/** what read() gives for a format: bytes for rgba8, floats for the half-float ones */
+export type Format = 'rgba8' | 'rgba16f' | 'rgba32f' | 'r16f';
+/** what read() gives for a format: bytes for rgba8, floats for the float ones */
 export type PixelArray<F extends Format> = F extends 'rgba8' ? Uint8Array : Float32Array;
 /** pixels in memory, rows from the top: 4 values a pixel for rgba formats, 1 for r16f */
 export type RawPixels = { width: number; height: number; data: Uint8Array | Uint8ClampedArray | Float32Array };
@@ -16,8 +18,13 @@ const GL = WebGL2RenderingContext;
 export const FORMATS = {
   rgba8: { internal: GL.RGBA8, format: GL.RGBA, type: GL.UNSIGNED_BYTE, channels: 4, float: false },
   rgba16f: { internal: GL.RGBA16F, format: GL.RGBA, type: GL.HALF_FLOAT, channels: 4, float: true },
+  rgba32f: { internal: GL.RGBA32F, format: GL.RGBA, type: GL.FLOAT, channels: 4, float: true },
   r16f: { internal: GL.R16F, format: GL.RED, type: GL.HALF_FLOAT, channels: 1, float: true },
 } as const;
+
+let nextId = 1;
+/** framebuffers drawing into several textures at once, by their ids: made on first use, freed with any of them */
+const MRT = new Map<string, { gen: number; ids: number[]; fbo: WebGLFramebuffer }>();
 
 /** a scope's list of what it made, for release() */
 export type Owner = { label: string; owned: Set<{ release(): void }> };
@@ -69,6 +76,8 @@ function sizeOf(s: Source): [number, number] {
 
 export class Texture<F extends Format = Format> extends Resource {
   readonly format: F;
+  /** @internal */
+  readonly id = nextId++;
   #width = 0;
   #height = 0;
   #tex: WebGLTexture | null;
@@ -80,10 +89,11 @@ export class Texture<F extends Format = Format> extends Resource {
     const { gl } = getEngine();
     this.#tex = gl.createTexture(); // null while the context is lost
     try {
-      if (!FORMATS[format]) throw new GpuError(`${String(format)} isn't a texture format; use rgba8, rgba16f or r16f.`);
+      if (!FORMATS[format]) throw new GpuError(`${String(format)} isn't a texture format; use rgba8, rgba16f, rgba32f or r16f.`);
       const wrap = { clamp: gl.CLAMP_TO_EDGE, repeat: gl.REPEAT, mirror: gl.MIRRORED_REPEAT }[opts.wrap ?? 'clamp'];
       if (!wrap) throw new GpuError(`${opts.wrap} isn't a wrap; use clamp, repeat or mirror.`);
-      const filter = opts.filter === 'nearest' ? gl.NEAREST : gl.LINEAR;
+      // not every GPU filters 32-bit floats, and an unfilterable texture samples as zeros
+      const filter = opts.filter === 'nearest' || format === 'rgba32f' ? gl.NEAREST : gl.LINEAR;
       gl.bindTexture(gl.TEXTURE_2D, this.#tex);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
@@ -132,6 +142,19 @@ export class Texture<F extends Format = Format> extends Resource {
     this.#height = h;
   }
 
+  /** Replaces `rect` of the texture: `data` holds its pixels, rows from the top (bytes for rgba8, floats otherwise). */
+  write(rect: Rect, data: Uint8Array | Float32Array): void {
+    const f = FORMATS[this.format];
+    if (!rectInside(rect, this.#width, this.#height)) throw new GpuError(rectText(rect, this.#width, this.#height));
+    if ((data instanceof Float32Array) !== f.float) throw new GpuError(`${this.format} pixels come as a ${f.float ? 'Float32Array' : 'Uint8Array'}.`);
+    if (data.length !== rect.w * rect.h * f.channels) throw new GpuError(`${rect.w} × ${rect.h} px of ${this.format} is ${rect.w * rect.h * f.channels} values, not ${data.length}.`);
+    if (isLost()) return;
+    const e = getEngine();
+    this.live(e);
+    e.gl.bindTexture(e.gl.TEXTURE_2D, this.#tex);
+    e.gl.texSubImage2D(e.gl.TEXTURE_2D, 0, rect.x, rect.y, rect.w, rect.h, f.format, f.float ? e.gl.FLOAT : e.gl.UNSIGNED_BYTE, data);
+  }
+
   /** @internal the engine's handle, for sampling */
   glTexture(e: Engine): WebGLTexture {
     this.live(e);
@@ -155,8 +178,35 @@ export class Texture<F extends Format = Format> extends Resource {
 
   protected free(gl: WebGL2RenderingContext): void {
     gl.deleteFramebuffer(this.#fbo);
+    for (const [key, m] of MRT) {
+      if (!m.ids.includes(this.id)) continue;
+      gl.deleteFramebuffer(m.fbo);
+      MRT.delete(key);
+    }
     gl.deleteTexture(this.#tex);
   }
+}
+
+/** @internal a framebuffer drawing into all of `list` at once, output i into location i */
+export function mrtFramebuffer(e: Engine, list: readonly Texture[]): WebGLFramebuffer {
+  if (list.length === 1) return list[0].glFramebuffer(e);
+  const ids = list.map((t) => t.id);
+  const key = ids.join(',');
+  const have = MRT.get(key);
+  if (have?.gen === e.gen) return have.fbo;
+  for (const [k, m] of MRT) if (m.gen !== e.gen) MRT.delete(k); // gone with a lost context
+  const { gl } = e;
+  const textures = list.map((t) => t.glTexture(e));
+  const fbo = gl.createFramebuffer()!;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  textures.forEach((t, i) => gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + i, gl.TEXTURE_2D, t, 0));
+  gl.drawBuffers(textures.map((_, i) => gl.COLOR_ATTACHMENT0 + i));
+  if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE && !gl.isContextLost()) {
+    gl.deleteFramebuffer(fbo);
+    throw new GpuError(`This graphics card can't draw into these ${list.length} textures at once.`);
+  }
+  MRT.set(key, { gen: e.gen, ids, fbo });
+  return fbo;
 }
 
 /** Per-instance floats, interleaved in `layout` order: { a_pos: 2, a_radius: 1 } is x, y, r, x, y, r… */

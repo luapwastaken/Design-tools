@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { GpuError } from '../src/renderer/lib/gpu/errors.ts';
 import { assemble, explain } from '../src/renderer/lib/gpu/shader.ts';
 import { tiles } from '../src/renderer/lib/gpu/tiles.ts';
+import { checkCopy, checkPass, type PassShape } from '../src/renderer/lib/gpu/validate.ts';
 
 test('assemble puts the prelude first and refuses a #version of its own', () => {
   const src = assemble('fragment', 'out vec4 o;\nvoid main() { o = vec4(1.0); }');
@@ -38,4 +39,45 @@ test('tiles cover the image exactly, row by row, none larger than the tile size'
   assert.equal(tiles(8000, 8000, 4096).length, 4);
   assert.throws(() => tiles(0, 10, 256), RangeError);
   assert.throws(() => tiles(10.5, 10, 256), RangeError);
+});
+
+test('a pass with several outputs: one blend each or one for all, none of them an input, all one size', () => {
+  const tex = (width = 64, height = 32) => ({ width, height });
+  const [a, b, c] = [tex(), tex(), tex()];
+  const shape = (o: Partial<PassShape>): PassShape => ({ outputs: [a, b], whole: true, inputs: [], drawBuffers: 8, indexedBlend: true, ...o });
+  assert.deepEqual(checkPass(shape({})), ['none', 'none']);
+  assert.deepEqual(checkPass(shape({ blend: 'max' })), ['max', 'max']);
+  assert.deepEqual(checkPass(shape({ blend: ['max', 'constant'], blendConstant: 0.3 })), ['max', 'constant']);
+  assert.throws(() => checkPass(shape({ blend: ['max'] })), /2 blends, not 1/);
+  assert.throws(() => checkPass(shape({ blend: ['max', 'constant'] })), /blendConstant/);
+  assert.throws(() => checkPass(shape({ blend: ['max', 'add'], indexedBlend: false })), /OES_draw_buffers_indexed/);
+  assert.deepEqual(checkPass(shape({ blend: ['add', 'add'], indexedBlend: false })), ['add', 'add']);
+  assert.throws(() => checkPass(shape({ blend: 'glow' as never })), /isn't a blend/);
+  assert.throws(() => checkPass(shape({ inputs: [b] })), /can't read the texture it draws into/);
+  assert.throws(() => checkPass(shape({ outputs: [a, tex(64, 16)] })), /same size/);
+  assert.throws(() => checkPass(shape({ outputs: [a, a] })), /same output twice/);
+  assert.throws(() => checkPass(shape({ outputs: [a, b, c], drawBuffers: 2 })), /at most 2/);
+  assert.throws(() => checkPass(shape({ outputs: [] })), /at least one/);
+});
+
+test('a pass limited to a rect keeps it inside a whole output', () => {
+  const t = { width: 64, height: 32 };
+  const shape = (rect: PassShape['rect'], whole = true): PassShape => ({ outputs: [t], whole, inputs: [], drawBuffers: 4, indexedBlend: false, rect });
+  assert.deepEqual(checkPass(shape({ x: 0, y: 0, w: 64, h: 32 })), ['none']);
+  assert.deepEqual(checkPass(shape({ x: 10, y: 5, w: 1, h: 1 })), ['none']);
+  for (const r of [{ x: -1, y: 0, w: 4, h: 4 }, { x: 60, y: 0, w: 5, h: 4 }, { x: 0, y: 30, w: 4, h: 3 }, { x: 0, y: 0, w: 0, h: 4 }, { x: 0.5, y: 0, w: 4, h: 4 }]) {
+    assert.throws(() => checkPass(shape(r)), /isn't inside/, JSON.stringify(r));
+  }
+  assert.throws(() => checkPass(shape({ x: 0, y: 0, w: 4, h: 4 }, false)), /not a tile/);
+});
+
+test('a copy is between two textures of one format, inside both', () => {
+  const a = { width: 64, height: 32, format: 'rgba16f' };
+  const b = { width: 16, height: 16, format: 'rgba16f' };
+  checkCopy(a, b, { x: 10, y: 10, w: 16, h: 16 }, { x: 0, y: 0 });
+  checkCopy(b, a, { x: 0, y: 0, w: 16, h: 16 }, { x: 48, y: 16 });
+  assert.throws(() => checkCopy(a, a, { x: 0, y: 0, w: 4, h: 4 }, { x: 8, y: 8 }), /same texture/);
+  assert.throws(() => checkCopy(a, { ...b, format: 'rgba8' }, { x: 0, y: 0, w: 4, h: 4 }, { x: 0, y: 0 }), /one format/);
+  assert.throws(() => checkCopy(a, b, { x: 0, y: 0, w: 17, h: 4 }, { x: 0, y: 0 }), /isn't inside the 16/);
+  assert.throws(() => checkCopy(a, b, { x: 60, y: 0, w: 8, h: 4 }, { x: 0, y: 0 }), /isn't inside the 64/);
 });
