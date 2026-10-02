@@ -85,7 +85,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const fm = d.screen.shape === 'stochastic';
 
   useEffect(() => {
-    status.set(d.source ? { dots: sum?.dots ?? 0, fm: fm ? d.size.dpi : null, ms: screened?.ms ?? 0, busy: !error && (busy || !screened), error: !!error } : null);
+    status.set(d.source ? { dots: sum?.dots ?? 0, about: !!screened && !screened.held, fm: fm ? d.size.dpi : null, ms: screened?.ms ?? 0, busy: !error && (busy || !screened), error: !!error } : null);
   }, [sum, screened, busy, error, fm, d.source, d.size.dpi]);
 
   const plates = useMemo(() => new Map(screened?.inks.map((k) => [k.id, { data: k.plate, w: screened.plate.w, h: screened.plate.h }])), [screened]);

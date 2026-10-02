@@ -1,0 +1,80 @@
+// Image > Post FX: a quick stack of effects over an image, a GIF or a clip, compared before and after
+// across a divider, and exported as a full-resolution PNG, a GIF or a PNG sequence that loops exactly.
+// Spec: docs/superpowers/specs/2026-09-29-postfx-tool.md; plan unit V.
+import type { ToolDefinition } from '../../shell/tool.ts';
+import { fetchBlob } from '../common/take.ts';
+import { duplicate, pickFile, sourceOf, takeFiles, withPalette } from './actions.ts';
+import { emptyDoc, fix, frameAt, timeline, type PostFxDoc } from './doc.ts';
+import { pngBlob } from './exports.ts';
+import { StatusSlot } from './StatusSlot.tsx';
+import { stepFrame, togglePlay } from './Transport.tsx';
+import { getView, patchView, playhead } from './view-state.ts';
+import { View } from './View.tsx';
+
+// `\` shows the original, and again goes back to the view it came from
+let beforeWas: 'split' | 'after' = 'split';
+function toggleBefore(): void {
+  const v = getView();
+  if (v.compare !== 'before') beforeWas = v.compare;
+  patchView({ compare: v.compare === 'before' ? beforeWas : 'before' });
+}
+
+export const tool: ToolDefinition<PostFxDoc> = {
+  id: 'postfx',
+  label: 'Post FX',
+  group: 'image',
+  icon: 'filter_vintage',
+  shortcut: 7,
+  docVersion: 1,
+  createEmptyDoc: emptyDoc,
+  isEmpty: (d) => !d.source,
+  docName: (d) => d.source?.name ?? 'No image',
+
+  accepts: {
+    image: { mode: 'open', label: 'IMAGE' },
+    pattern: { mode: 'open', label: 'AS IMAGE' },
+    logo: { mode: 'open', label: 'AS IMAGE' },
+    svg: { mode: 'open', label: 'AS IMAGE' },
+    palette: { mode: 'apply', label: 'EFFECT COLOURS' },
+  },
+  async receive(item, _use, current) {
+    if (item.kind === 'palette') return withPalette(current, item.ref.name, item.payload.swatches);
+    if (!('url' in item)) return current;
+    // the shell draws patterns, logos and SVGs as PNGs ("as an image"); a Library image keeps its own file
+    const blob = await fetchBlob(item.url, item.ref.name);
+    return fix({ ...current, source: await sourceOf(blob, item.ref.name, item.ref.kind === 'image' ? item.ref.ext.toLowerCase() : 'png'), time: 0 });
+  },
+
+  /** the full-resolution PNG of the frame on screen (plan unit V: at the current time) */
+  async render(d) {
+    if (!d.source) throw new Error('There is no image to send yet.');
+    const t = timeline(d);
+    const { frame, playing } = playhead.get();
+    return { blob: await pngBlob(d, playing ? frame : frameAt(t, d.time)), name: d.source.name, ext: 'png' };
+  },
+
+  async onFiles(files, _how, doc) {
+    const left = await takeFiles(doc, files);
+    return left.length === files.length ? false : left.length ? left : true;
+  },
+
+  shortcuts: (doc) => {
+    const d = doc.get();
+    const t = timeline(d);
+    const sel = getView().selected;
+    return [
+      { keys: 'Ctrl+O', label: 'Open an image or a clip', run: () => pickFile(doc) },
+      { keys: '\\', label: 'Switch to the original and back', run: toggleBefore },
+      ...(sel && d.stack.some((l) => l.id === sel) ? [{ keys: 'Ctrl+D', label: 'Duplicate the selected layer', run: () => duplicate(doc, sel) }] : []),
+      ...(d.source && t.count > 1
+        ? [
+            { keys: 'ArrowLeft', label: 'Previous frame', run: () => stepFrame(doc, timeline(doc.get()), -1) },
+            { keys: 'ArrowRight', label: 'Next frame', run: () => stepFrame(doc, timeline(doc.get()), 1) },
+            { keys: 'K', label: 'Play or pause', run: () => togglePlay(doc, timeline(doc.get())) },
+          ]
+        : []),
+    ];
+  },
+  StatusSlot,
+  View,
+};

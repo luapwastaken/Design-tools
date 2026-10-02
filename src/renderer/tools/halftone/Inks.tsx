@@ -4,13 +4,13 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { INKS } from '../../../shared/palette/inks.ts';
 import { shell } from '../../shell/core/index.ts';
-import { ColorField, ConfirmInline, FieldError, Icon, IconButton, menu, Module, NumberField, Segmented, SwatchStrip, TextInput, useDocColour, useDocNumber, type MenuItem } from '../../ui/index.ts';
+import { ColorField, ConfirmInline, FieldError, Icon, IconButton, menu, Module, NumberField, Segmented, SwatchStrip, TextInput, Toggle, useDocColour, useDocNumber, type MenuItem } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { plural } from '../common/names.ts';
 import { addInk, LIBRARIES, removeInk, setMode, type Doc } from './actions.ts';
 import { Curve } from './Curve.tsx';
 import { Dial } from './Dial.tsx';
-import { foldAngle, isIdentity, LIMIT, mapInk, overlapOf, sharedScreen, type HalftoneDoc, type Ink } from './doc.ts';
+import { foldAngle, isIdentity, LIMIT, mapInk, opaqueOf, overlapOf, sharedScreen, type HalftoneDoc, type Ink } from './doc.ts';
 import { inksFrom, patchView, useView } from './view-state.ts';
 import s from './Inks.module.css';
 import i from './Inspector.module.css';
@@ -59,8 +59,8 @@ function paletteMenu(): MenuItem[] {
   return groups.flatMap((g) => [{ header: g.name }, ...g.items.map((ref) => ({ label: ref.name, onSelect: () => void shell.sendItem(ref, 'halftone') }))]);
 }
 
-/** a plate as a small picture: its ink on the paper, at the plate's tone */
-function PlateThumb({ plate, ink, paper }: { plate: ReturnType<PlateOf>; ink: Oklch; paper: Oklch }) {
+/** a plate as a small picture: its ink on the paper, at the plate's tone, covering it if the ink does */
+function PlateThumb({ plate, ink, paper, cover }: { plate: ReturnType<PlateOf>; ink: Oklch; paper: Oklch; cover: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = ref.current;
@@ -84,9 +84,9 @@ function PlateThumb({ plate, ink, paper }: { plate: ReturnType<PlateOf>; ink: Ok
     g.globalCompositeOperation = 'source-in';
     g.fillStyle = cssColor(ink);
     g.fillRect(0, 0, n, n);
-    ctx.globalCompositeOperation = 'multiply';
+    ctx.globalCompositeOperation = cover ? 'source-over' : 'multiply';
     ctx.drawImage(layer, 0, 0);
-  }, [plate, ink, paper]);
+  }, [plate, ink, paper, cover]);
   return <canvas ref={ref} className={s.thumb} aria-hidden="true" />;
 }
 
@@ -103,8 +103,9 @@ function InkRow({ doc, d, ink, n, plate, open, onOpen }: { doc: Doc; d: Halftone
   const inPalette = from?.swatches.some((w) => toHex(w.colour) === toHex(ink.colour));
   // the angle column is too narrow for its message: it goes on a line of its own under the row
   const [angleError, setAngleError] = useState<string | null>(null);
+  const overprint = overlapOf(d) === 'overprint';
   // hidden says more than process, and both don't fit beside the hex
-  const tag = !ink.visible ? 'Hidden' : ink.process ? 'Process' : inPalette ? 'Palette' : null;
+  const tag = !ink.visible ? 'Hidden' : ink.process ? 'Process' : overprint && opaqueOf(ink) ? 'Opaque' : inPalette ? 'Palette' : null;
   return (
     <div className={cx(s.row, !ink.visible && s.hidden, open && s.open)}>
       <IconButton
@@ -113,7 +114,7 @@ function InkRow({ doc, d, ink, n, plate, open, onOpen }: { doc: Doc; d: Halftone
         size="sm"
         onClick={() => doc.transact(ink.visible ? `Hide ${ink.name}` : `Show ${ink.name}`, (x) => mapInk(x, ink.id, (k) => ({ ...k, visible: !k.visible })))}
       />
-      <PlateThumb plate={plate} ink={ink.colour} paper={d.paper.colour} />
+      <PlateThumb plate={plate} ink={ink.colour} paper={d.paper.colour} cover={!overprint || opaqueOf(ink)} />
       <span className={s.ch}>{channel}</span>
       <button type="button" className={s.name} aria-expanded={open} onClick={onOpen}>
         <span className={s.a}>
@@ -161,6 +162,7 @@ function InkEditor({ doc, d, ink }: { doc: Doc; d: HalftoneDoc; ink: Ink }) {
         <IconButton icon="format_paint" label="Use an ink from Riso, RAL, HKS or NCS" size="sm" onClick={(e) => openAt(e, inkMenu(swap))} />
       </div>
       {!ink.process && <TextInput label="Name" value={ink.name} validate={(v) => (v.trim() ? null : 'An ink needs a name: it names its layer and plate.')} onCommit={(v) => doc.transact(`Rename ${ink.name}`, (x) => mapInk(x, ink.id, (k) => ({ ...k, name: v.trim() })))} />}
+      {!ink.process && <OpaqueSwitch doc={doc} d={d} ink={ink} />}
       {ink.process && <p className={i.note}>Its colour changes only the view and the PNG; the separation stays CMYK.</p>}
       <div className={i.group}>
         <div className={s.curveHead}>
@@ -180,6 +182,20 @@ function InkEditor({ doc, d, ink }: { doc: Doc; d: HalftoneDoc; ink: Ink }) {
           <IconButton icon="delete" label={d.inks.length < 2 ? 'The last ink stays' : `Remove ${ink.name}`} size="sm" disabled={d.inks.length < 2} onClick={() => setArming(true)} />
         </div>
       )}
+    </div>
+  );
+}
+
+/** Opaque (spec §6.3): on by itself for white and near-white inks, which only show by covering */
+function OpaqueSwitch({ doc, d, ink }: { doc: Doc; d: HalftoneDoc; ink: Ink }) {
+  const knockout = overlapOf(d) === 'knockout';
+  const on = opaqueOf(ink);
+  return (
+    <div className={i.group}>
+      <Toggle label="Opaque" checked={knockout || on} disabled={knockout} onChange={(opaque) => doc.transact(opaque ? `Make ${ink.name} opaque` : `Make ${ink.name} transparent`, (x) => mapInk(x, ink.id, (k) => ({ ...k, opaque })))} />
+      <p className={i.note}>
+        {knockout ? 'Knocked out, every ink covers what is under it.' : on ? 'It covers what is under it, as white or screen-print ink does.' : 'It multiplies with what is under it, as transparent ink does.'}
+      </p>
     </div>
   );
 }
@@ -248,7 +264,7 @@ export function InksModule({ doc, d, plateOf }: { doc: Doc; d: HalftoneDoc; plat
         <div className={cx(i.group, i.rule)}>
           <Segmented label="Overlap" options={OVERLAPS} value={overlap} disabled={!spot} onChange={(o) => doc.transact(o === 'knockout' ? 'Knock out under each ink' : 'Overprint the inks', (x) => ({ ...x, overlap: o }))} />
           <p className={i.note}>
-            {!spot ? 'CMYK always overprints: it builds its colours that way.' : overlap === 'overprint' ? 'Where inks meet they multiply, as transparent ink does.' : 'Each ink clears the ones before it, and its plate is cut to match.'}
+            {!spot ? 'CMYK always overprints: it builds its colours that way.' : overlap === 'overprint' ? `Where inks meet they multiply, as transparent ink does.${d.inks.some((k) => k.visible && opaqueOf(k)) ? ' An opaque ink covers what is under it.' : ''}` : 'Each ink clears the ones before it, and its plate is cut to match.'}
           </p>
         </div>
       </div>

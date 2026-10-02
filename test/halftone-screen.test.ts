@@ -7,13 +7,16 @@ import {
   cells,
   compensate,
   dot,
+  dotEstimate,
   dots,
   extent,
   inkedCoverage,
   pagePx,
   printed,
   sdf,
+  splitOf,
   stochastic,
+  type Cells,
   type CellShape,
   type Screen,
   type Size,
@@ -223,4 +226,41 @@ test('blue noise: a flat 10% tint has no clumps (dots keep apart)', () => {
   }
   // white noise at 10% puts about a fifth of dots against a right or lower neighbour
   assert.ok(touching / dotsSeen < 0.03, `${touching} of ${dotsSeen} touch`);
+});
+
+/** a soft blob with grain, so cells differ from their neighbours and some print nothing */
+const blob = (w: number, h: number) =>
+  Float32Array.from({ length: w * h }, (_, i) => {
+    const [x, y] = [(i % w) / w - 0.5, Math.floor(i / w) / h - 0.5];
+    return Math.min(1, Math.max(0, 1.2 - 2.6 * Math.hypot(x, y) + (((i * 7919) % 97) / 97 - 0.5) * 0.2));
+  });
+
+test("a region of a screen is the whole screen's cells centred in it, each the same (a screen too big to hold whole)", () => {
+  const [pw, ph] = [150, 212];
+  const plate = blob(pw, ph);
+  for (const [shape, angle] of [['round', 15], ['line', 75], ['cross', 45], ['square', 0]] as const) {
+    const whole = cells(plate, A4, 60, angle, pw, ph, splitOf(shape));
+    const clip = { x0: 700.3, y0: 1210.7, x1: 1333.1, y1: 2104.9 };
+    const part = cells(plate, A4, 60, angle, pw, ph, splitOf(shape), clip);
+    const key = (c: Cells, k: number) => `${c.x[k]},${c.y[k]}`;
+    const want = new Map<string, number>();
+    for (let k = 0; k < whole.n; k++) {
+      if (whole.x[k] >= clip.x0 && whole.x[k] <= clip.x1 && whole.y[k] >= clip.y0 && whole.y[k] <= clip.y1) want.set(key(whole, k), whole.coverage[k]);
+    }
+    assert.equal(part.n, want.size, `${shape}: cells in the region`);
+    for (let k = 0; k < part.n; k++) assert.ok(Math.abs(part.coverage[k] - want.get(key(part, k))!) < 1e-6, `${shape}: cell ${k}`);
+  }
+  // a region off the page holds nothing
+  assert.equal(cells(plate, A4, 60, 15, pw, ph, 1, { x0: 5000, y0: 5000, x1: 6000, y1: 6000 }).n, 0);
+});
+
+test('the dot count read from the plate alone is within a few percent of the count cell by cell', () => {
+  const [pw, ph] = [620, 877];
+  // smooth: grain at the edge of the ink reads low, as a cell prints if any pixel under it does
+  const plate = Float32Array.from({ length: pw * ph }, (_, i) => Math.min(1, Math.max(0, 1.2 - 2.6 * Math.hypot((i % pw) / pw - 0.5, Math.floor(i / pw) / ph - 0.5))));
+  for (const sc of [screen(), screen({ minDot: 0.08, gain: 0.1 }), screen({ shape: 'line', lpi: 40 })]) {
+    const exact = dots(cells(plate, A4, sc.lpi, 45, pw, ph, splitOf(sc.shape)), sc).count;
+    const about = dotEstimate(plate, pw, ph, A4, sc);
+    assert.ok(Math.abs(about - exact) / exact < 0.03, `${sc.shape} ${sc.minDot}: ${about} for ${exact}`);
+  }
 });

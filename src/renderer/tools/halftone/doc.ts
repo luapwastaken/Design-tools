@@ -17,6 +17,8 @@ export type Ink = {
   /** transfer curve, [in, out] pairs 0..1 in rising order: identity is [[0, 0], [1, 1]] */
   curve: [number, number][];
   process?: Process;
+  /** a spot ink that covers what is under it (spec §6.3); unset, near-white inks do */
+  opaque?: boolean;
 };
 
 export type HalftoneDoc = {
@@ -118,6 +120,19 @@ export function fix(d: HalftoneDoc): HalftoneDoc {
 
 /** process inks always overprint (CMYK builds its colours by overprinting), so knockout is for spot inks only */
 export const overlapOf = (d: Pick<HalftoneDoc, 'mode' | 'overlap'>): HalftoneDoc['overlap'] => (d.mode === 'process' ? 'overprint' : d.overlap);
+
+/** OKLCH lightness past which a spot ink is opaque until told otherwise: white and near-white inks only show by covering */
+export const NEAR_WHITE = 0.9;
+
+/**
+ * Whether a palette's ground can be the paper for its inks: every ink is darker than it, or one is
+ * white enough to be opaque and print the lights on it (transparent inks only darken their paper,
+ * so on a dark ground alone they would print almost black).
+ */
+export const groundIsPaper = (ground: Oklch, inks: Oklch[]): boolean => inks.every((c) => c[0] < ground[0]) || inks.some((c) => c[0] > NEAR_WHITE);
+
+/** whether a spot ink covers what is under it; process inks are transparent by nature */
+export const opaqueOf = (ink: Pick<Ink, 'process' | 'opaque' | 'colour'>): boolean => !ink.process && (ink.opaque ?? ink.colour[0] > NEAR_WHITE);
 
 export const mapInk = (d: HalftoneDoc, id: string, fn: (i: Ink) => Ink): HalftoneDoc => ({ ...d, inks: d.inks.map((i) => (i.id === id ? fn(i) : i)) });
 

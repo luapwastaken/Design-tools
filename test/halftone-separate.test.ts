@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { linearRgb, toOklch, type Oklch } from '../src/shared/color/index.ts';
+import { linearRgb, rgb255, toOklch, type Oklch } from '../src/shared/color/index.ts';
 import { INKS } from '../src/shared/palette/inks.ts';
 import {
   encodeTable,
@@ -34,6 +34,8 @@ const BONE: Oklch = [0.9354, 0.0173, 84.59];
 
 /** an sRGB-encoded colour as the linear light the tool hands the core */
 const linear = (r: number, g: number, b: number) => linearRgb(toOklch({ mode: 'rgb', r, g, b }));
+/** a colour's sRGB-encoded values, 0..1 */
+const rgbOf = (o: Oklch) => rgb255(o).map((v) => v / 255);
 const inks = (sep: ReturnType<typeof separation>, [r, g, b]: number[], alpha = 1) => {
   const out = new Array<number>(sep.n);
   inksAt(sep, r, g, b, alpha, out);
@@ -122,7 +124,7 @@ test('spot knockout: an ink lighter than the paper prints where the image is lig
   const stock: Oklch = [0.2, 0, 0];
   const out = separation([white], 'spot', NEUTRAL_TONE, { paper: stock, overlap: 'knockout' });
   near(inks(out, [1, 1, 1]), [1], 0.02, 'white on black');
-  near(inks(out, linearRgb(stock)), [0], 0.02, 'the stock itself');
+  near(inks(out, [0, 0, 0]), [0], 0.02, 'black is the stock');
   near(inks(out, [0, 0, 0], 0), [0], 0.01, 'transparent');
   // overprinted, a transparent ink can't lighten the sheet, so it isn't asked to
   near(inks(separation([white], 'spot', NEUTRAL_TONE, { paper: stock }), [1, 1, 1]), [0], 0.02, 'overprinted');
@@ -136,8 +138,13 @@ test('spot knockout: a smooth sweep of colour gives smooth plates (the fit has o
     const f = k / 1000;
     // orange to pink to dark blue, through where the fit changes its inks
     const [r, g, b] = f < 0.5 ? [1 - f * 0.4, 0.5 - f * 0.6, 0.2 + f * 0.8] : [0.8 - (f - 0.5) * 1.4, 0.2 - (f - 0.5) * 0.2, 0.6 - (f - 0.5) * 0.6];
-    const now = inks(sep, linear(r, g, b));
-    if (last) now.forEach((v, i) => assert.ok(Math.abs(v - last![i]) < 0.04, `ink ${i} jumps ${last![i].toFixed(3)} → ${v.toFixed(3)} at ${f}`));
+    // what each plate prints once the inks after it cut it (under a nearly solid top ink, the
+    // coverage beneath is steep but never seen)
+    const cover = inks(sep, linear(r, g, b));
+    let free = 1;
+    const now = cover.map(() => 0);
+    for (let i = cover.length - 1; i >= 0; i--) [now[i], free] = [cover[i] * free, free * (1 - cover[i])];
+    if (last) now.forEach((v, i) => assert.ok(Math.abs(v - last![i]) < 0.02, `ink ${i} jumps ${last![i].toFixed(3)} → ${v.toFixed(3)} at ${f}`));
     last = now;
   }
 });
@@ -146,14 +153,68 @@ test(`spot: at most ${MAX_SPOT} inks`, () => {
   assert.throws(() => separation(Array.from({ length: MAX_SPOT + 1 }, () => ink(riso('Blue'))), 'spot', NEUTRAL_TONE), RangeError);
 });
 
-test('the paper: where the image is paper, lighter, or transparent, no ink goes down', () => {
+test('the paper is the image white: white and transparent take no ink, and the paper never changes a transparent fit', () => {
   for (const [mode, set] of [['process', PROCESS], ['spot', SPOT]] as const) {
     const sep = separation(set, mode, NEUTRAL_TONE, { paper: BONE });
     const zero = set.map(() => 0);
-    near(inks(sep, linearRgb(BONE)), zero, 0.01, `${mode} on its paper`);
     near(inks(sep, [1, 1, 1]), zero, 0, `${mode} white on bone`);
     near(inks(sep, [0, 0, 0], 0), zero, 0, `${mode} transparent`);
+    const white = separation(set, mode, NEUTRAL_TONE, { paper: WHITE });
+    for (const colour of [linear(0.5, 0.5, 0.5), linear(0.9, 0.4, 0.2), linearRgb(BONE)]) near(inks(sep, colour), inks(white, colour), 0, `${mode} on bone as on white`);
   }
+});
+
+test('paper-relative: a grey on Bone prints with neutral ink only and takes on the paper, no ink cancels its tint', () => {
+  const grey = linear(0.5, 0.5, 0.5);
+  near(inks(separation(PROCESS, 'process', NEUTRAL_TONE, { paper: BONE }), grey), [0, 0, 0, 0.5], 0.01, 'process');
+  // the Bone itself, as an image, is a light warm tint to print (it is not the image's white)
+  const [c, m, y] = inks(separation(PROCESS, 'process', NEUTRAL_TONE, { paper: BONE }), linearRgb(BONE));
+  assert.ok(y > m && m >= c, `bone is warm: c ${c.toFixed(3)} m ${m.toFixed(3)} y ${y.toFixed(3)}`);
+  // knocked out, the lone black ink prints the grey's own share, not less to make up for the tint
+  const out = separation([ink(riso('Black'))], 'spot', NEUTRAL_TONE, { paper: BONE, overlap: 'knockout' });
+  near(inks(out, grey), [0.5], 0.01, 'knockout');
+  near(inks(out, [1, 1, 1]), [0], 0.01, 'knockout white');
+});
+
+test('an opaque ink covers: white ink on dark stock prints the lights, and the stock is the darks', () => {
+  const stock: Oklch = [0.2, 0, 0];
+  const white = separation([{ ...ink(riso('White')), opaque: true }], 'spot', NEUTRAL_TONE, { paper: stock });
+  near(inks(white, [1, 1, 1]), [1], 0.01, 'white');
+  // exactly: a dot a fraction of a percent big still prints, as a speck on every cell
+  near(inks(white, [0, 0, 0]), [0], 1e-4, 'black is the stock');
+  near(inks(white, [0, 0, 0], 0), [0], 0, 'transparent');
+  // the image's range laid over the stock's: a grey prints its own share of white
+  for (const v of [0.25, 0.5, 0.75]) near(inks(white, linear(v, v, v)), [v], 0.012, `grey ${v}`);
+  // the same ink transparent can't lighten the sheet, so it isn't asked to
+  near(inks(separation([ink(riso('White'))], 'spot', NEUTRAL_TONE, { paper: stock }), [1, 1, 1]), [0], 0.02, 'transparent white');
+});
+
+test('a transparent ink over an opaque one: white goes down under a colour on dark stock, as a Riso underbase', () => {
+  const stock: Oklch = [0.25, 0.02, 260];
+  const pink = ink(riso('Fluorescent Pink'));
+  const sep = separation([{ ...ink(riso('White')), opaque: true }, pink], 'spot', NEUTRAL_TONE, { paper: stock });
+  // the pink, lifted a little as the image's black moves up to the stock
+  const [w, p] = inks(sep, linearRgb(pink.colour));
+  assert.ok(w > 0.97 && p > 0.8 && p < 0.95, `pink on white on the stock: white ${w.toFixed(3)}, pink ${p.toFixed(3)}`);
+  near(inks(sep, [1, 1, 1]), [1, 0], 0.03, 'white');
+  // the image's black is the stock: no pink spent darkening it towards a black it can't reach
+  near(inks(sep, [0, 0, 0]), [0, 0], 1e-4, 'black');
+  // an ink darker than the stock is the black, though
+  const withBlack = separation([{ ...ink(riso('White')), opaque: true }, ink(riso('Black'))], 'spot', NEUTRAL_TONE, { paper: stock });
+  near(inks(withBlack, [0, 0, 0]), [0, 1], 0.03, 'black ink');
+  // a grey sweep from the stock up to white: the white ink rises steadily, no staircase
+  let last = -1;
+  for (let k = 0; k <= 200; k++) {
+    const [w] = inks(sep, linear(k / 200, k / 200, k / 200));
+    assert.ok(w >= last - 0.005 && (last < 0 || w - last < 0.04), `white ${last.toFixed(3)} → ${w.toFixed(3)} at ${k / 200}`);
+    last = w;
+  }
+});
+
+test('opaque means nothing to process inks: CMYK always overprints', () => {
+  const plain = inks(separation(PROCESS, 'process', NEUTRAL_TONE, { paper: BONE }), linear(0.3, 0.6, 0.8));
+  const flagged = inks(separation(PROCESS.map((i) => ({ ...i, opaque: true })), 'process', NEUTRAL_TONE, { paper: BONE }), linear(0.3, 0.6, 0.8));
+  near(flagged, plain, 0, 'process');
 });
 
 test('hidden inks keep their plates, and the others keep theirs (v1 moved data between inks)', () => {

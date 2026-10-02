@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { toHex, type Oklch } from '../src/shared/color/index.ts';
-import { cells, dots, halftoneSvg, svgProblem, type Cells, type CellShape, type DrawInk, type SvgDoc } from '../src/shared/halftone/index.ts';
+import { cells, dots, halftoneSvg, svgParts, svgProblem, type Cells, type CellShape, type DrawInk, type SvgDoc } from '../src/shared/halftone/index.ts';
 import { getAttr, isEl, parseSvg, walk, type El } from '../src/shared/svg/xml.ts';
 
 const IDENTITY: [number, number][] = [[0, 0], [1, 1]];
@@ -164,4 +164,19 @@ test('round and elliptical dots draw as exact circles and ellipses, the size scr
       });
     }
   }
+});
+
+test('overprinted, an opaque ink keeps Normal blending and covers; the note says which', () => {
+  const doc = docOf({ inks: [{ ...ink('White', [1, 0, 0], 45), opaque: true }, INKS[0], INKS[1]] });
+  const svg = halftoneSvg(doc, screensOf(doc));
+  assert.deepEqual(inkGroups(parseSvg(svg)).map((g) => getAttr(g, 'style')), [null, 'mix-blend-mode:multiply', 'mix-blend-mode:multiply']);
+  assert.match(svg, /opaque inks \(White\) keep Normal blending/);
+  assert.doesNotMatch(halftoneSvg(docOf(), screensOf(docOf())), /opaque/);
+});
+
+test('the file comes in pieces that join to the one SVG (a page of dots can outgrow a string)', () => {
+  const doc = docOf();
+  const parts = svgParts(doc, screensOf(doc));
+  assert.equal(parts.length, 2 + 3 * INKS.length);
+  assert.equal(parts.join(''), halftoneSvg(doc, screensOf(doc)));
 });

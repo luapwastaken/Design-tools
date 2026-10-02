@@ -1,0 +1,80 @@
+/* the layers edge to edge in the module: grip, eye, name over blend and opacity, More */
+.list { display: flex; flex-direction: column; padding: 3px 0; }
+.list:focus-visible { outline: none; }
+
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px 22px minmax(0, 1fr) 22px;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 3px 8px 3px 6px;
+  cursor: default;
+}
+.row + .row::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 12px;
+  left: 12px;
+  height: 1px;
+  background: var(--line);
+}
+.row:hover { background: var(--well-hover); }
+/* the layer whose settings show (brief §7: selected row) */
+.row.on { background: var(--raise); }
+.row.on::after, .row.on + .row::after { display: none; }
+.row:focus-visible { outline: 1px solid var(--signal); outline-offset: -1px; }
+
+/* a drag: the row stays with a dashed outline, the insertion point is a signal bar */
+.dragging { outline: 1px dashed var(--tick); outline-offset: -1px; }
+.row[data-insert]::before {
+  content: "";
+  position: absolute;
+  right: 6px;
+  left: 6px;
+  z-index: 2;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--signal);
+}
+.row[data-insert="before"]::before { top: -1px; }
+.row[data-insert="after"]::before { bottom: -1px; }
+
+.grip {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-ctl);
+  color: var(--ink-4);
+  cursor: grab;
+}
+.row:hover .grip { color: var(--ink-3); }
+.grip:hover { background: var(--well-hover); color: var(--ink-2); }
+
+.ident { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.name { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.label { overflow: hidden; color: var(--ink); font-size: var(--fs-ctl); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.moves { display: flex; flex: none; color: var(--ink-3); }
+.meta {
+  overflow: hidden;
+  color: var(--ink-3);
+  font: 400 var(--fs-label)/1 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.tag { color: var(--ink-2); font-weight: 500; }
+
+/* hidden, or skipped on a still: the row stays in its place, set back, never faded */
+.hidden .label, .skipped .label { color: var(--ink-4); }
+.hidden .meta { color: var(--ink-4); }
+
+.confirm { padding: 4px 8px; }
+
+.empty { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px; }
+.emptyText { color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }

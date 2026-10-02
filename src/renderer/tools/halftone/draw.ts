@@ -1,12 +1,15 @@
 // The halftone on the GPU (lib/gpu), for the view and every raster export: each ink's dots, one
 // instanced draw of the worker's cells, into a coverage mask of its own; then the masks combined on
-// the paper the way separate.ts models the print (overprint multiplies, knockout clears below).
-// The dots are shapes.ts's shapes, the ones the SVG writes, and every size keeps the print's tone.
+// the paper the way separate.ts models the print (a transparent ink multiplies, an opaque or
+// knocked-out one covers). The dots are shapes.ts's shapes, the ones the SVG writes, and every size
+// keeps the print's tone. A screen too big to hold whole (no cells from the worker) is drawn region
+// by region: the cells under what is drawn, made here from the plate, or, where its cells are too
+// small to show a dot, the plate's own tone.
 import { rgb255, type Oklch } from '../../../shared/color/index.ts';
-import { axes } from '../../../shared/halftone/screen.ts';
+import { axes, cells, dotData, inkedCoverage, splitOf, type Clip } from '../../../shared/halftone/screen.ts';
 import type { Cells, CellShape } from '../../../shared/halftone/types.ts';
 import { gpuScope, type Gpu, type Instances, type Program, type Texture, type Tile } from '../../lib/gpu/index.ts';
-import { overlapOf, type HalftoneDoc } from './doc.ts';
+import { opaqueOf, overlapOf, type HalftoneDoc } from './doc.ts';
 import type { Screened } from './screening.ts';
 
 const SHAPE: Record<CellShape, number> = { round: 0, ellipse: 1, square: 2, diamond: 3, line: 4, cross: 5 };
@@ -15,7 +18,10 @@ const MAX_INKS = 6;
 // Cells under TONE_AT output px across can't show a dot: each spreads its ink over its own cell
 // (a cubic B-spline the cell's size, which sums to exactly the tint). At TONE_AT the view switches to
 // the shapes in one step: no blend while zooming (Luap's motion rule: nothing may dissolve).
-const TONE_AT = 3;
+export const TONE_AT = 3;
+/** the most cells made at once for a region of a screen too big to hold whole (about 50 MB) */
+export const REGION_CELLS = 2e6;
+const LAYOUT = { a_pos: 2, a_ab: 2, a_cov: 1 };
 
 const DOT_VERTEX = `in vec2 a_pos;
 in vec2 a_ab;
@@ -131,6 +137,30 @@ void main() {
   o = vec4(sum / float(n * n), 0.0, 0.0, 1.0);
 }`;
 
+// a plate's own tone where its cells are under TONE_AT px: the inked plate (screen.inkedCoverage)
+// averaged over each output pixel's footprint, as the cells' B-spline tone sums to it
+const TONE_FRAGMENT = `uniform sampler2D u_plate;
+uniform vec2 u_origin;
+uniform float u_k;
+uniform vec2 u_scale;
+out vec4 o;
+void main() {
+  vec2 p = fragPixel() - u_rect.xy;
+  vec2 size = vec2(textureSize(u_plate, 0));
+  vec2 span = u_scale / u_k;
+  int n = int(clamp(ceil(max(span.x, span.y)), 1.0, 8.0));
+  vec2 q0 = (u_origin + p - 0.5) / u_k * u_scale;
+  float sum = 0.0;
+  for (int j = 0; j < 8; j++) {
+    if (j >= n) break;
+    for (int i = 0; i < 8; i++) {
+      if (i >= n) break;
+      sum += texture(u_plate, (q0 + (vec2(float(i), float(j)) + 0.5) * span / float(n)) / size).r;
+    }
+  }
+  o = vec4(sum / float(n * n), 0.0, 0.0, 1.0);
+}`;
+
 // the print model of separate.ts on sRGB-encoded values, with the print feel on top
 const COMPOSITE = `uniform sampler2D u_m0;
 uniform sampler2D u_m1;
@@ -140,8 +170,8 @@ uniform sampler2D u_m4;
 uniform sampler2D u_m5;
 uniform int u_n;
 uniform vec3 u_ink[6];
+uniform float u_cover[6];
 uniform vec3 u_paper;
-uniform int u_knockout;
 uniform int u_clear;
 uniform float u_grain;
 uniform vec2 u_mm0;
@@ -178,28 +208,15 @@ void main() {
     paper *= 1.0 - u_grain * 0.08 * fibre;
     starve = u_grain * 0.55 * smoothstep(0.45, 0.95, noise(mm * vec2(23.0, 17.0) + 31.0));
   }
-  vec3 c = vec3(1.0);
+  // in printing order on the paper: a transparent ink multiplies the sheet, a covering one (opaque,
+  // or knocked out) shows its own colour where it prints (the SVG's stacked fills)
+  vec3 c = paper;
   float open = 1.0;
-  vec3 seen = vec3(0.0);
   for (int i = 0; i < 6; i++) {
     if (i >= u_n) break;
     float m = clamp(mask(i, p), 0.0, 1.0) * (1.0 - starve);
-    c *= 1.0 - m * (1.0 - u_ink[i]);
+    c = u_cover[i] > 0.5 ? mix(c, u_ink[i], m) : c * (1.0 - m * (1.0 - u_ink[i]));
     open *= 1.0 - m;
-  }
-  if (u_knockout == 1) {
-    // from the top ink down: each shows its own colour where it prints and nothing above it does;
-    // the paper shows only where no ink prints (the SVG's stacked fills)
-    float free = 1.0;
-    for (int i = 5; i >= 0; i--) {
-      if (i >= u_n) continue;
-      float m = clamp(mask(i, p), 0.0, 1.0) * (1.0 - starve);
-      seen += m * free * u_ink[i];
-      free *= 1.0 - m;
-    }
-    c = seen + free * paper;
-  } else {
-    c *= paper;
   }
   if (u_clear == 1) {
     float a = 1.0 - open;
@@ -209,11 +226,10 @@ void main() {
   }
 }`;
 
-/** How the inks look: those that show, in printing order, on which paper. `shift` is in page px. */
+/** How the inks look: those that show, in printing order, on which paper. `shift` is in page px; a `cover` ink hides what is under it. */
 export type Look = {
-  inks: { index: number; colour: [number, number, number]; shift: [number, number] }[];
+  inks: { index: number; colour: [number, number, number]; shift: [number, number]; cover: boolean }[];
   paper: [number, number, number];
-  knockout: boolean;
   /** leave the paper out: clear where no ink prints */
   clear: boolean;
   grain: number;
@@ -234,16 +250,16 @@ const DRIFT = [
 /** The document's look: print feel on for the view (and a PNG that bakes it), off for everything else. */
 export function lookOf(d: HalftoneDoc, feel: boolean, clear = false): Look {
   const mis = feel ? (d.feel.misregister * d.size.dpi) / 25.4 : 0;
+  const knockout = overlapOf(d) === 'knockout';
   return {
     inks: d.inks
       .map((ink, index) => ({ ink, index }))
       .filter((x) => x.ink.visible)
       .map(({ ink, index }) => {
         const [angle, r] = DRIFT[index % DRIFT.length];
-        return { index, colour: encoded(ink.colour), shift: [Math.cos(angle) * r * mis, Math.sin(angle) * r * mis] as [number, number] };
+        return { index, colour: encoded(ink.colour), shift: [Math.cos(angle) * r * mis, Math.sin(angle) * r * mis] as [number, number], cover: knockout || opaqueOf(ink) };
       }),
     paper: encoded(d.paper.colour),
-    knockout: overlapOf(d) === 'knockout',
     clear,
     grain: feel ? d.feel.texture : 0,
   };
@@ -252,14 +268,13 @@ export function lookOf(d: HalftoneDoc, feel: boolean, clear = false): Look {
 /**
  * One plate as film, black ink on white (the separations view and the TIFF plates). Knocked out,
  * the inks that print after it and show clear it where they print, as the press needs: otherwise
- * every lower ink would print under the top one.
+ * every lower ink would print under the top one. An opaque ink cuts nothing: a plate is a plate.
  */
 export function filmOf(d: HalftoneDoc, index: number): Look {
   const above = overlapOf(d) === 'knockout' ? d.inks.flatMap((ink, i) => (i > index && ink.visible ? [i] : [])) : [];
   return {
-    inks: [index, ...above].map((i, n) => ({ index: i, colour: n ? [1, 1, 1] : [0, 0, 0], shift: [0, 0] })),
+    inks: [index, ...above].map((i, n) => ({ index: i, colour: n ? [1, 1, 1] : [0, 0, 0], shift: [0, 0], cover: true })),
     paper: [1, 1, 1],
-    knockout: above.length > 0,
     clear: false,
     grain: 0,
   };
@@ -282,6 +297,9 @@ function interleave(c: Cells, dots: Float32Array): Float32Array {
 const reachAt = (px: number) => Math.min(1, Math.max(0, (px - 8) / 8)) * 0.55;
 
 type Fm = { tex: Texture; x: number; y: number; w: number; h: number };
+type Region = { rect: Clip; cells: Cells; inst: Instances | null };
+
+const inside = (a: Clip, b: Clip) => a.x0 >= b.x0 && a.y0 >= b.y0 && a.x1 <= b.x1 && a.y1 <= b.y1;
 
 /** A screen's dots and plates on the GPU, drawn into regions of the page at any scale. */
 export class Painter {
@@ -294,18 +312,21 @@ export class Painter {
   #empty: Texture | null = null;
   #nothing: Instances | null = null;
   #target: Texture | null = null;
-  #programs: { dot: Program; fm: Program; composite: Program };
+  /** a screen too big to hold whole, per ink: its inked plate, and the cells of the last region drawn */
+  #tone: (Texture | undefined)[] = [];
+  #regions: (Region | undefined)[] = [];
+  #programs: { dot: Program; fm: Program; tone: Program; composite: Program };
 
   constructor(label: string) {
     this.g = gpuScope(label);
-    this.#programs = { dot: this.g.program(DOT_FRAGMENT, DOT_VERTEX), fm: this.g.program(FM_FRAGMENT), composite: this.g.program(COMPOSITE) };
+    this.#programs = { dot: this.g.program(DOT_FRAGMENT, DOT_VERTEX), fm: this.g.program(FM_FRAGMENT), tone: this.g.program(TONE_FRAGMENT), composite: this.g.program(COMPOSITE) };
   }
 
   /** the screen's instances and FM plates, uploaded once per screen */
   load(s: Screened): void {
     if (this.#key === s.key) return;
     this.#free();
-    this.#dots = s.inks.map((ink) => (ink.cells && ink.dots && ink.cells.n ? this.g.instances(interleave(ink.cells, ink.dots), { a_pos: 2, a_ab: 2, a_cov: 1 }) : null));
+    this.#dots = s.inks.map((ink) => (ink.cells && ink.dots && ink.cells.n ? this.g.instances(interleave(ink.cells, ink.dots), LAYOUT) : null));
     const fm = s.inks.map((ink) => ink.fm);
     if (fm.some(Boolean)) {
       const [w, h] = [Math.round(s.page.w), Math.round(s.page.h)];
@@ -343,13 +364,19 @@ export class Painter {
     this.#empty = null;
     this.#nothing = null;
     this.#target = null;
+    this.#tone = [];
+    this.#regions = [];
   }
 
   #free(): void {
     this.#dots.forEach((d) => d?.release());
     this.#fm.flat().forEach((t) => t.tex.release());
+    this.#tone.forEach((t) => t?.release());
+    this.#regions.forEach((r) => r?.inst?.release());
     this.#dots = [];
     this.#fm = [];
+    this.#tone = [];
+    this.#regions = [];
   }
 
   #mask(i: number, w: number, h: number): Texture {
@@ -367,10 +394,11 @@ export class Painter {
   paint(s: Screened, look: Look, at: [number, number], k: number, output: Texture | Tile, size: { w: number; h: number }, whole = false): void {
     this.load(s);
     const base = whole ? [0, 0] : [at[0] / k, at[1] / k];
-    const { dot, fm, composite } = this.#programs;
+    const { fm, composite } = this.#programs;
     const inputs: Record<string, Texture> = {};
     const colours: number[] = [];
-    const shape = s.doc.screen.shape as CellShape;
+    const cover: number[] = [];
+    const pitch = s.doc.size.dpi / s.doc.screen.lpi;
     look.inks.slice(0, MAX_INKS).forEach((x, j) => {
       const out = this.#mask(j, size.w, size.h);
       const ink = s.inks[x.index];
@@ -378,23 +406,22 @@ export class Painter {
       // each ink's own mask, its region moved by its misregistration, so none outgrows the view
       const origin = [at[0] - x.shift[0] * k, at[1] - x.shift[1] * k];
       if (ink.fm) this.#fmPass(fm, out, x.index, origin, k, s, size);
-      else if (inst && ink.cells) {
-        const { ux, uy } = axes(ink.cells.angle);
-        const cell = [ink.cells.step, ink.cells.pitch];
-        this.g.pass(dot, {
-          output: out,
-          instances: inst,
-          blend: 'add',
-          clear: [0, 0, 0, 0],
-          uniforms: { u_base: base, u_off: [origin[0] - base[0] * k, origin[1] - base[1] * k], u_k: k, u_shape: SHAPE[shape], u_cell: cell, u_axis: [ux, uy], u_reach: reachAt(ink.cells.pitch * k) },
-        });
-      } else this.#blank(out);
+      else if (ink.cells && inst) this.#dotPass(s, out, inst, ink.cells, base, origin, k);
+      else if (ink.cells) this.#blank(out);
+      else if (pitch * k < TONE_AT) this.#tonePass(s, out, x.index, origin, k);
+      else {
+        const r = this.#region(s, x.index, origin, k, size, !whole);
+        if (r.inst) this.#dotPass(s, out, r.inst, r.cells, base, origin, k);
+        else this.#blank(out);
+      }
       inputs[`u_m${j}`] = out;
       colours.push(...x.colour);
+      cover.push(x.cover ? 1 : 0);
     });
     for (let j = look.inks.length; j < MAX_INKS; j++) {
       inputs[`u_m${j}`] = (this.#empty ??= this.g.texture({ width: 1, height: 1 }, 'r16f'));
       colours.push(1, 1, 1);
+      cover.push(0);
     }
     const mmPerPx = 25.4 / s.doc.size.dpi / k;
     this.g.pass(composite, {
@@ -403,14 +430,68 @@ export class Painter {
       uniforms: {
         u_n: Math.min(MAX_INKS, look.inks.length),
         u_ink: colours,
+        u_cover: cover,
         u_paper: look.paper,
-        u_knockout: look.knockout ? 1 : 0,
         u_clear: look.clear ? 1 : 0,
         u_grain: look.grain,
         u_mm0: [at[0] * mmPerPx, at[1] * mmPerPx],
         u_mmPerPx: mmPerPx,
       },
     });
+  }
+
+  /** an ink's dots into its mask */
+  #dotPass(s: Screened, out: Texture, inst: Instances, c: Cells, base: number[], origin: number[], k: number): void {
+    const { ux, uy } = axes(c.angle);
+    this.g.pass(this.#programs.dot, {
+      output: out,
+      instances: inst,
+      blend: 'add',
+      clear: [0, 0, 0, 0],
+      uniforms: { u_base: base, u_off: [origin[0] - base[0] * k, origin[1] - base[1] * k], u_k: k, u_shape: SHAPE[s.doc.screen.shape as CellShape], u_cell: [c.step, c.pitch], u_axis: [ux, uy], u_reach: reachAt(c.pitch * k) },
+    });
+  }
+
+  /**
+   * The cells under a region (dots from up to two cells round it reach in). The view keeps
+   * some room round what it shows, up to REGION_CELLS, so a small pan or a zoom in draws them again.
+   */
+  #region(s: Screened, index: number, origin: number[], k: number, size: { w: number; h: number }, room: boolean): Region {
+    const { size: page, screen } = s.doc;
+    const pitch = page.dpi / screen.lpi;
+    const m = 2 * pitch + 4 / k;
+    const need = { x0: origin[0] / k - m, y0: origin[1] / k - m, x1: (origin[0] + size.w) / k + m, y1: (origin[1] + size.h) / k + m };
+    const last = this.#regions[index];
+    if (last && inside(need, last.rect)) return last;
+    const [w, h] = [need.x1 - need.x0, need.y1 - need.y0];
+    const many = (w * h * splitOf(screen.shape)) / (pitch * pitch);
+    const e = room ? Math.min(0.5, Math.max(0, (Math.sqrt(REGION_CELLS / Math.max(1, many)) - 1) / 2)) : 0;
+    const rect = { x0: need.x0 - e * w, y0: need.y0 - e * h, x1: need.x1 + e * w, y1: need.y1 + e * h };
+    const c = cells(s.inks[index].plate, page, screen.lpi, s.doc.inks[index].angle, s.plate.w, s.plate.h, splitOf(screen.shape), rect);
+    last?.inst?.release();
+    const inst = c.n ? this.g.instances(interleave(c, dotData(c, screen).data), LAYOUT) : null;
+    return (this.#regions[index] = { rect, cells: c, inst });
+  }
+
+  /** a screen too big to hold whole, where its cells are too small to show a dot: the plate's tone */
+  #tonePass(s: Screened, out: Texture, index: number, origin: number[], k: number): void {
+    const tex = (this.#tone[index] ??= this.#tonePlate(s, index));
+    this.g.pass(this.#programs.tone, { output: out, inputs: { u_plate: tex }, uniforms: { u_origin: origin, u_k: k, u_scale: [tex.width / s.page.w, tex.height / s.page.h] } });
+  }
+
+  /** the plate as each cell's dot inks it, shrunk by whole steps past the largest texture */
+  #tonePlate(s: Screened, index: number): Texture {
+    const { w, h } = s.plate;
+    const plate = s.inks[index].plate;
+    const f = Math.ceil(Math.max(w, h) / this.g.maxSize);
+    const [tw, th] = [Math.ceil(w / f), Math.ceil(h / f)];
+    const data = new Float32Array(tw * th);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) data[Math.floor(y / f) * tw + Math.floor(x / f)] += plate[y * w + x];
+    for (let t = 0; t < data.length; t++) {
+      const [bw, bh] = [Math.min(f, w - (t % tw) * f), Math.min(f, h - Math.floor(t / tw) * f)];
+      data[t] = inkedCoverage(s.doc.screen, data[t] / (bw * bh));
+    }
+    return this.g.texture({ width: tw, height: th, data }, 'r16f');
   }
 
   /** an FM ink's mask: each tile of its plate under the region adds its share */
@@ -434,7 +515,7 @@ export class Painter {
 
   /** a mask with nothing on it still needs its clear */
   #blank(out: Texture): void {
-    this.#nothing ??= this.g.instances(new Float32Array(5), { a_pos: 2, a_ab: 2, a_cov: 1 });
+    this.#nothing ??= this.g.instances(new Float32Array(5), LAYOUT);
     this.g.pass(this.#programs.dot, { output: out, clear: [0, 0, 0, 0], instances: this.#nothing, uniforms: { u_base: [0, 0], u_off: [0, 0], u_k: 1, u_shape: 0, u_cell: [1, 1], u_axis: [1, 0], u_reach: 0 } });
   }
 

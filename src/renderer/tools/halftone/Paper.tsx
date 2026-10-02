@@ -3,7 +3,7 @@ import { toHex } from '../../../shared/color/index.ts';
 import { ColorField, Module, Toggle, useDocColour } from '../../ui/index.ts';
 import { displayName } from '../common/names.ts';
 import type { Doc } from './actions.ts';
-import { BONE, overlapOf, type HalftoneDoc } from './doc.ts';
+import { BONE, opaqueOf, overlapOf, type HalftoneDoc } from './doc.ts';
 import s from './Inspector.module.css';
 
 /** OKLCH lightness under which overprinted inks leave little to see: they can only darken the sheet */
@@ -13,14 +13,14 @@ export function PaperModule({ doc, d }: { doc: Doc; d: HalftoneDoc }) {
   const paper = useDocColour(doc, { label: 'Change the paper', key: 'paper', get: (x) => x.paper.colour, set: (x, colour) => ({ ...x, paper: { ...x.paper, colour } }) });
   // by hex, as the field shows it: a typed #EFE9DD is still Bone
   const name = toHex(d.paper.colour) === toHex(BONE) ? 'Bone, uncoated' : displayName({ name: '', oklch: d.paper.colour });
-  const dark = d.paper.colour[0] < DARK && overlapOf(d) === 'overprint';
+  const dark = d.paper.colour[0] < DARK && overlapOf(d) === 'overprint' && !d.inks.some((k) => k.visible && opaqueOf(k));
   return (
     <Module title="Paper">
       <div className={s.stack}>
         <ColorField {...paper} name={name} />
         {dark && (
           <p className={s.note} role="status">
-            Overprinted inks are transparent, so on paper this dark they only darken it: the print comes out nearly black.{d.mode === 'spot' ? ' Knockout prints spot inks as they are, lighter ones too.' : ''}
+            Transparent inks only darken the sheet, so on paper this dark the print comes out nearly black.{d.mode === 'spot' ? ' An opaque ink covers it: turn on Opaque in a light ink’s settings (white inks have it on already).' : ''}
           </p>
         )}
         <div className={s.group}>

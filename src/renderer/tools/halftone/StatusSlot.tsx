@@ -1,7 +1,7 @@
 import { useHeld } from '../common/held.ts';
 import { status } from './view-state.ts';
 
-/** `12,859 DOTS · SCREEN 38 MS` (plan unit V), `FM AT 300 DPI · …` for a stochastic screen, or what it's doing */
+/** `12,859 DOTS · SCREEN 38 MS` (plan unit V), `≈` when counted from the plates, `FM AT 300 DPI · …` for a stochastic screen, or what it's doing */
 export function StatusSlot() {
   const st = status.use();
   // the last time stays up through a drag's quick renders
@@ -17,6 +17,7 @@ export function StatusSlot() {
         </>
       ) : (
         <>
+          {st.about && '≈ '}
           <b>{st.dots.toLocaleString('en')}</b> {st.dots === 1 ? 'dot' : 'dots'}
         </>
       )}{' '}

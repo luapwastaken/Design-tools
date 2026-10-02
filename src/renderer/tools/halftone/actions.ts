@@ -9,7 +9,7 @@ import { decodeImage, unsupportedImage } from '../../lib/load.ts';
 import { rasterize } from '../../shell/core/rasterize.ts';
 import { toast } from '../../ui/index.ts';
 import { displayName, plural } from '../common/names.ts';
-import { freeAngle, LIMIT, processInks, spotInk, type HalftoneDoc, type Ink } from './doc.ts';
+import { freeAngle, groundIsPaper, LIMIT, processInks, spotInk, type HalftoneDoc, type Ink } from './doc.ts';
 
 export type Doc = DocController<HalftoneDoc>;
 
@@ -82,8 +82,7 @@ export function setMode(doc: Doc, mode: HalftoneDoc['mode']): void {
 
 /**
  * A palette as spot inks (Send to: INKS, or Inks from): a swatch whose job is a ground becomes the
- * paper when it is lighter than every ink (transparent inks only darken their paper, so a dark
- * ground would print almost black), the rest become inks, up to the engine's six.
+ * paper when the inks can print on it (groundIsPaper), the rest become inks, up to the engine's six.
  */
 export function withPalette(d: HalftoneDoc, name: string, swatches: Swatch[]): HalftoneDoc {
   const ground = swatches.find((w) => w.role === 'Background') ?? swatches.find((w) => isGround(w.role));
@@ -91,7 +90,7 @@ export function withPalette(d: HalftoneDoc, name: string, swatches: Swatch[]): H
   const use = (colours.length ? colours : swatches).slice(0, LIMIT.spot);
   if (!use.length) throw new Error(`${name} has no colours yet.`);
   const left = colours.length - use.length;
-  const paper = ground && use.every((w) => w.oklch[0] < ground.oklch[0]) ? ground : null;
+  const paper = ground && groundIsPaper(ground.oklch, use.map((w) => w.oklch)) ? ground : null;
   // the shell's toast says the inks came; this says what else happened
   const said = [
     left > 0 ? `Spot inks stop at ${LIMIT.spot}, so the last ${plural(left, 'colour')} of ${name} stayed out.` : '',

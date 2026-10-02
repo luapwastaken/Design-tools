@@ -53,22 +53,8 @@ export function toneAt(t: Tone, x: number): number {
   return v;
 }
 
-/**
- * Three tables end to end (red, green, blue): linear light to toned sRGB over the paper's own, so
- * 1 is paper or lighter (no transparent ink can print lighter than the sheet). White paper gives
- * the values as they are, for opaque (knocked-out) inks.
- */
-export function channelTables(tone: Tone, paper: readonly number[]): Float32Array {
-  const enc = encodeTable();
-  const out = new Float32Array(3 * TABLE);
-  for (let c = 0; c < 3; c++) {
-    for (let j = 0; j < TABLE; j++) {
-      const v = toneAt(tone, enc[j]);
-      out[c * TABLE + j] = paper[c] > 0 ? Math.min(1, v / paper[c]) : 1;
-    }
-  }
-  return out;
-}
+/** Linear light to toned sRGB, the same for each channel. */
+export const toneTable = (tone: Tone): Float32Array => encodeTable().map((v) => toneAt(tone, v));
 
 /** a transfer curve's output at x: [in, out] points in rising order, straight between them */
 export function curveAt(curve: [number, number][], x: number): number {

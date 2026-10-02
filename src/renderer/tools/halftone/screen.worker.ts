@@ -1,9 +1,11 @@
 // The screening, off the window's thread: the image's plates (shared/halftone separate), each ink's
 // cells and dots (screen), or its FM plate (stochastic), and the meters' numbers. This is the one
-// place the screen is computed: the view draws what comes back and every export writes it.
+// place the screen is computed: the view draws what comes back and every export writes it. A screen
+// too big to hold whole (`hold` false) comes back as plates alone, its dots counted from them: the
+// view and the rasters make its cells region by region from those plates (draw.ts).
 import { hexToOklch, linearRgb } from '../../../shared/color/index.ts';
 import { stats } from '../../../shared/halftone/coverage.ts';
-import { cells, dots, inkedCoverage, splitOf } from '../../../shared/halftone/screen.ts';
+import { cells, dotData, dotEstimate, splitOf } from '../../../shared/halftone/screen.ts';
 import { toPlates } from '../../../shared/halftone/separate.ts';
 import { stochastic } from '../../../shared/halftone/stochastic.ts';
 import type { Cells, Mode, Overlap, Screen, SeparateInk, Size, Tone } from '../../../shared/halftone/types.ts';
@@ -23,6 +25,7 @@ export type Job = {
   overlap: Overlap;
   size: Size;
   screen: Screen;
+  hold: boolean;
 };
 /** one ink: its plate, and its cells with each one's dot (a, b and inked coverage, interleaved), or its FM plate */
 export type InkOut = { plate: Float32Array; cells: Cells | null; dots: Float32Array | null; count: number; fm: Uint8Array | null };
@@ -66,16 +69,12 @@ function screenInk(j: Job, i: number, plate: Float32Array): Omit<InkOut, 'plate'
     let count = 0;
     for (let p = 0; p < fm.length; p++) if (fm[p] === 0) count++;
     out = { cells: null, dots: null, count, fm };
-  } else {
+  } else if (j.hold) {
     const c = cells(plate, j.size, j.screen.lpi, ink.angle, src!.w, src!.h, splitOf(j.screen.shape));
-    const { geom, count } = dots(c, j.screen);
-    const inst = new Float32Array(c.n * 3);
-    for (let k = 0, o = 0; k < c.n; k++, o += 3) {
-      inst[o] = geom[2 * k];
-      inst[o + 1] = geom[2 * k + 1];
-      inst[o + 2] = inkedCoverage(j.screen, c.coverage[k]);
-    }
-    out = { cells: c, dots: inst, count, fm: null };
+    const { data, count } = dotData(c, j.screen);
+    out = { cells: c, dots: data, count, fm: null };
+  } else {
+    out = { cells: null, dots: null, count: dotEstimate(plate, src!.w, src!.h, j.size, j.screen), fm: null };
   }
   screened.set(ink.key, out);
   return out;

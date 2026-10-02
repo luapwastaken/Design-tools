@@ -55,3 +55,32 @@ test('a dot grows from its cell centre: at 10% the inked pixels sit round the ce
   }
   assert.ok(inked > 0 && far === 0, `${far} of ${inked} inked pixels away from their dot`);
 });
+
+test('a plate made band by band, each band from the cells over it, is the whole plate to within a pixel a seam cell', () => {
+  const page = pagePx(size);
+  const [W, H] = [Math.round(page.w), Math.round(page.h)];
+  const [pw, ph] = [120, 80];
+  const plate = Float32Array.from({ length: pw * ph }, (_, i) => Math.min(1, Math.max(0, 1.2 - 2.4 * Math.hypot((i % pw) / pw - 0.5, Math.floor(i / pw) / ph - 0.5))));
+  const screen: Screen = { shape: 'round', lpi: 60, minDot: 0, gain: 0 };
+  const inked = (c: ReturnType<typeof cells>) => Float32Array.from(c.coverage, (v) => inkedCoverage(screen, v));
+  const whole = cells(plate, size, 60, 15, pw, ph);
+  const want = bilevel(whole, inked(whole), 'round', W, H, page);
+  const got = new Uint8Array(W * H);
+  const rows = 37;
+  const pitch = size.dpi / 60;
+  for (let y0 = 0; y0 < H; y0 += rows) {
+    const h = Math.min(rows, H - y0);
+    const c = cells(plate, size, 60, 15, pw, ph, 1, { x0: -pitch, y0: y0 - pitch, x1: page.w + pitch, y1: y0 + h + pitch });
+    got.set(bilevel(c, inked(c), 'round', W, H, page, { y0, h }), y0 * W);
+  }
+  let [differ, inkWant, inkGot] = [0, 0, 0];
+  for (let p = 0; p < want.length; p++) {
+    if (want[p] !== got[p]) differ++;
+    if (!want[p]) inkWant++;
+    if (!got[p]) inkGot++;
+  }
+  // a cell over a seam may land its rounding a pixel apart; nothing else moves
+  const seamCells = Math.ceil(H / rows) * Math.ceil(W / pitch) * 2;
+  assert.ok(differ <= seamCells, `${differ} pixels differ`);
+  assert.ok(Math.abs(inkGot - inkWant) / inkWant < 0.002, `${inkGot} inked, want ${inkWant}`);
+});

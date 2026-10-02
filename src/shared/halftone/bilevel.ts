@@ -50,10 +50,12 @@ function spotAt(t: Float32Array, u: number, v: number): number {
 /**
  * One ink's plate at print resolution, W × H: 0 where it prints, 255 for paper (tiff.ts's order).
  * `coverage` is each cell's inked coverage (after gain and the min dot), `page` the page in print
- * px unrounded (the cells' grid is anchored at its centre).
+ * px unrounded (the cells' grid is anchored at its centre). `band` makes only rows y0 to y0 + h of
+ * it, from the cells over them (a plate too big to screen whole goes band by band).
  */
-export function bilevel(cells: Cells, coverage: ArrayLike<number>, shape: CellShape, W: number, H: number, page: { w: number; h: number }): Uint8Array {
-  const out = new Uint8Array(W * H).fill(255);
+export function bilevel(cells: Cells, coverage: ArrayLike<number>, shape: CellShape, W: number, H: number, page: { w: number; h: number }, band = { y0: 0, h: H }): Uint8Array {
+  const [top, end] = [band.y0, Math.min(H, band.y0 + band.h)];
+  const out = new Uint8Array(W * (end - top)).fill(255);
   const table = spotTable(shape);
   const { ux, uy, vx, vy } = axes(cells.angle);
   const [s, p] = [cells.step, cells.pitch];
@@ -72,7 +74,7 @@ export function bilevel(cells: Cells, coverage: ArrayLike<number>, shape: CellSh
     const [cx, cy] = [cells.x[k], cells.y[k]];
     const [x0, x1] = [Math.ceil(cx - ex - 0.5), Math.floor(cx + ex - 0.5)];
     const [y0, y1] = [Math.ceil(cy - ey - 0.5), Math.floor(cy + ey - 0.5)];
-    if (x1 < 0 || y1 < 0 || x0 >= W || y0 >= H) continue;
+    if (x1 < 0 || y1 < top || x0 >= W || y0 >= end) continue;
     // this cell's place in the grid; a pixel is its own when it rounds to the same place, so every
     // pixel belongs to exactly one cell
     const ci = Math.round(((cx - ox) * ux + (cy - oy) * uy) / s);
@@ -87,7 +89,8 @@ export function bilevel(cells: Cells, coverage: ArrayLike<number>, shape: CellSh
         if (Math.round(U) !== ci || Math.round(V) !== cj) continue;
         // ties (a symmetric pixel) go in the order met, so each level adds exactly one pixel
         keys[n] = spotAt(table, U - ci, V - cj) + n * 1e-9;
-        at[n] = x >= 0 && y >= 0 && x < W && y < H ? y * W + x : -1;
+        // every pixel of the cell counts, in the band or not, so its share is of the whole cell
+        at[n] = x >= 0 && y >= top && x < W && y < end ? (y - top) * W + x : -1;
         n++;
       }
     }

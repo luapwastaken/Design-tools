@@ -27,10 +27,10 @@ import { used, type DitherDoc } from './tools/dither/doc.ts';
 import { lookOf as ditherLook, withLook } from './tools/dither/looks.ts';
 import { dithered, ready as ditherReady, type Result } from './tools/dither/pipeline.ts';
 import { status as ditherStatus } from './tools/dither/view-state.ts';
-import { mapInk, spotInk, type HalftoneDoc } from './tools/halftone/doc.ts';
+import { emptyDoc as halftoneEmpty, mapInk, opaqueOf, spotInk, type HalftoneDoc } from './tools/halftone/doc.ts';
 import { lookOf, Painter } from './tools/halftone/draw.ts';
-import { platesFor, pngBlob } from './tools/halftone/exports.ts';
-import { ready, screen, totals } from './tools/halftone/screening.ts';
+import { platesFor, pngBlob, svgFor } from './tools/halftone/exports.ts';
+import { ready, screen, shownDots, svgOver, totals } from './tools/halftone/screening.ts';
 import { status as halftoneStatus } from './tools/halftone/view-state.ts';
 import { addRamp, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
 import { liveEngine, paintEngineChecks, type PaintEngine } from './tools/illustration/paint/index.ts';
@@ -45,6 +45,13 @@ import { clearProposals as clearBases, proposals as bases } from './tools/illust
 import { getView as illustrationView, patchView as patchIllustration } from './tools/illustration/view-state.ts';
 import { PX_PER, toPayload, withUnit, type PatternDoc } from './tools/pattern/doc.ts';
 import { patchView as patchPattern } from './tools/pattern/view-state.ts';
+import { addEffect, importCode } from './tools/postfx/actions.ts';
+import { layerOf, offered, timeline, type PostFxDoc } from './tools/postfx/doc.ts';
+import { datamoshChecks, flickerChecks, loopChecks, pipelineChecks, scaleChecks } from './tools/postfx/effects/checks.ts';
+import { Stack } from './tools/postfx/effects/stack.ts';
+import { decodeStack, encodeStack } from './tools/postfx/share.ts';
+import { togglePlay } from './tools/postfx/Transport.tsx';
+import { playhead } from './tools/postfx/view-state.ts';
 import { toast } from './ui/index.ts';
 import { toastStore } from './ui/toast.ts';
 
@@ -136,13 +143,22 @@ export async function runSmoke(run: 'full' | 'quiet'): Promise<void> {
   await api.invoke('app.smokeDone', failures === 0, [head, ...report].join('\n'));
 }
 
+
 async function full(): Promise<void> {
   const info = await api.invoke('app.info');
   check('userData ends in "Design Tools"', /[\\/]Design Tools$/.test(info.userData), info.userData);
   const dir = info.userData.replace(/[\\/]Design Tools$/, '');
 
   const ids = shell.getState().tools.map((t) => t.id);
-  check('Design, Illustration, Pattern, Logo, Dither and Halftone are registered, and nothing else', JSON.stringify(ids) === JSON.stringify(['design', 'illustration', 'pattern', 'logo', 'dither', 'halftone']), ids);
+  check('Design, Illustration, Pattern, Logo, Dither, Halftone and Post FX are registered, and nothing else', JSON.stringify(ids) === JSON.stringify(['design', 'illustration', 'pattern', 'logo', 'dither', 'halftone', 'postfx']), ids);
+  const rail = shell.getState().tools.map((t) => `${t.group}:${t.shortcut}`);
+  check('the rail runs Colour 1-2, Make 3-4, Image 5-7, and Ctrl+1 to 7 match', JSON.stringify(rail) === JSON.stringify(['colour:1', 'colour:2', 'make:3', 'make:4', 'image:5', 'image:6', 'image:7']), rail);
+  const keyed: string[] = [];
+  for (const [n, id] of ids.entries()) {
+    press(String(n + 1), { code: `Digit${n + 1}`, ctrlKey: true });
+    if (shell.getState().active !== id) keyed.push(`${n + 1} shows ${shell.getState().active}`);
+  }
+  check('Ctrl+1 to 7 show the tools in rail order', !keyed.length, keyed);
   for (const id of ids) {
     shell.setActive(id);
     await sleep(50);
@@ -269,6 +285,7 @@ async function full(): Promise<void> {
   await logo(dir);
   await halftone(dir, dt);
   await dither(dir);
+  await postfx(dir);
   await illustration();
 
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
@@ -945,6 +962,7 @@ async function halftone(dir: string, dt: DocController<DitherDoc>): Promise<void
   const bits = await Promise.all(bilevel.map(async (f) => inkOf(await pixelsOf(new Blob([f.data])))));
   check("and each carries its meter's coverage too, light tones included", bits.every((v, i) => Math.abs(v - stats[[0, 1, 3][i]].mean) < 0.01), bits.map((v, i) => [v.toFixed(4), stats[[0, 1, 3][i]].mean.toFixed(4)]));
   await halftonePrint(d, greySource);
+  await halftoneFollowUps({ white: await put('Smoke white', 'png', await pngFrom(64, 64, () => [255, 255, 255])), grey, ramp }, hd);
 
   // Send to: Dither gets the screen PNG at the image's own resolution
   const want = await pixelsOf((await shell.tool('halftone').render!(d, {})).blob);
@@ -978,6 +996,8 @@ async function halftonePrint(d: HalftoneDoc, grey: HalftoneDoc['source']): Promi
     const { w, h } = plates[0];
     const view = await pixelsOf(await pngBlob(ds, w));
     const [paper, cols] = [enc(ds.paper.colour), inks.map((k) => enc(k.colour))];
+    // an opaque ink (Riso Yellow is near-white) covers what is under it on the press, as in the view; its plate is the same
+    const covers = inks.map((k) => overlap === 'overprint' && opaqueOf(k));
     let [off, n] = [0, 0];
     for (let by = 0; by + 8 <= Math.min(h, view.h); by += 8) {
       for (let bx = 0; bx + 8 <= w; bx += 8) {
@@ -986,7 +1006,10 @@ async function halftonePrint(d: HalftoneDoc, grey: HalftoneDoc['source']): Promi
           for (let y = by; y < by + 8; y++) {
             for (let x = bx; x < bx + 8; x++) {
               const p = y * w + x;
-              press += plates.reduce((v, pl, i) => v * (1 - (1 - pl.px[p * 4] / 255) * (1 - cols[i][c])), paper[c]) * 255;
+              press += plates.reduce((v, pl, i) => {
+                const a = 1 - pl.px[p * 4] / 255;
+                return covers[i] ? v * (1 - a) + cols[i][c] * a : v * (1 - a * (1 - cols[i][c]));
+              }, paper[c]) * 255;
               shown += view.px[p * 4 + c];
             }
           }
@@ -1023,6 +1046,73 @@ async function halftonePrint(d: HalftoneDoc, grey: HalftoneDoc['source']): Promi
   }
   painter.release();
   check('a flat tint keeps its tone in the view at 20%, 50%, 100% and 400%, every shape (within 2 of 255)', !misses.length, misses);
+}
+
+/**
+ * The three Halftone decisions of 2026-09-29 (spec §6), in the app. Bone is the image's white, so a
+ * white image takes no ink and a grey no ink to cancel the tint. Only the SVG has a dot cap, counted
+ * over the inks that show; the screen PNG and the plates go through without it. An opaque ink
+ * covers in the screen PNG and the SVG (normal blend, not multiply) while its plate is its plate.
+ * Leaves Halftone on the ramp, as the Send to Dither check after it expects.
+ */
+async function halftoneFollowUps(img: Record<'white' | 'grey' | 'ramp', LibraryItemRef>, hd: DocController<HalftoneDoc>): Promise<void> {
+  const open = async (ref: LibraryItemRef) => {
+    await shell.sendItem(ref, 'halftone');
+    return hd.get().source;
+  };
+  const [white, grey, ramp] = [await open(img.white), await open(img.grey), await open(img.ramp)];
+  const base = halftoneEmpty();
+  const page = { ...base.size, w: 90, h: 60 };
+  const small = (source: HalftoneDoc['source']): HalftoneDoc => ({ ...base, source, size: page, fit: 'cover', screen: { ...base.screen, lpi: 40 } });
+  const means = async (d: HalftoneDoc) => (await screen(d, true)).stats.map((st) => st.mean);
+
+  const bare = await means(small(white));
+  const [c, m, y, k] = await means(small(grey));
+  check('Halftone on Bone: the image’s white is the paper, so a white image takes no ink', Math.max(...bare) < 0.005, bare);
+  check('and a 50% grey takes about 50% black and no colour to cancel the tint', Math.abs(k - 0.5) < 0.03 && Math.max(c, m, y) < 0.02, [c, m, y, k]);
+
+  // the cap, on a page with far more cells than the SVG may hold
+  const riso = (name: string) => INKS.riso.find((x) => x.name === name)!;
+  const two = ['Black', 'Medium Blue'].map((n, i) => spotInk(n, riso(n).oklch, i));
+  const big: HalftoneDoc = { ...small(ramp), mode: 'spot', inks: two, size: { ...page, w: 841, h: 1189, dpi: 72 }, screen: { ...base.screen, lpi: 150 } };
+  const held = { ...big, inks: [two[0], { ...two[1], visible: false }] };
+  const s = await screen(big, true);
+  const all = shownDots(s, big);
+  check('the dot cap counts only the inks that show', all > 12e6 && svgOver(all, true) !== null && shownDots(s, held) === s.inks[0].count && s.inks[0].count < all, [all, s.inks.map((i) => i.count)]);
+  const refused = await svgFor(big).then(() => null, (e: Error) => e.message);
+  check('the SVG refuses a page past 12 million dots in plain words', /million dots is more than the SVG takes/.test(String(refused)), refused);
+  const png = await pngBlob(big, 600).then((b) => b.size, (e: Error) => e.message);
+  check('but the screen PNG of the same page has no cap', typeof png === 'number' && png > 1000, png);
+  const plates = await platesFor(big, 8, 'Smoke big').then((f) => f.length, (e: Error) => e.message);
+  check('and neither do its plates', plates === 2, plates);
+
+  // opaque white on dark paper
+  const dark: Oklch = [0.2, 0.03, 280];
+  const ink = (opaque: boolean) => ({ ...spotInk('White', [1, 0, 0], 1), opaque });
+  const onDark = (inks: HalftoneDoc['inks']): HalftoneDoc => ({ ...small(grey), mode: 'spot', inks, paper: { colour: dark, include: true } });
+  const meanRed = async (d: HalftoneDoc) => {
+    const { px } = await pixelsOf(await pngBlob(d, 180));
+    let sum = 0;
+    for (let i = 0; i < px.length; i += 4) sum += px[i];
+    return sum / (px.length / 4);
+  };
+  const [lit, unlit] = [await meanRed(onDark([ink(true)])), await meanRed(onDark([ink(false)]))];
+  check('a white ink prints the lights on dark paper when it is opaque, and is lost on it when it is not', lit > 90 && unlit < 40, [lit, unlit]);
+
+  const black = spotInk('Black', riso('Black').oklch, 0);
+  const blends = async (opaque: boolean) => {
+    const doc = new DOMParser().parseFromString(new TextDecoder().decode(await svgFor(onDark([black, ink(opaque)]))), 'image/svg+xml');
+    return ['Black', 'White'].map((n) => /multiply/.test(doc.querySelector(`g[data-name="${n}"]`)?.getAttribute('style') ?? ''));
+  };
+  const [opaqueBlend, plainBlend] = [await blends(true), await blends(false)];
+  check('the SVG draws an opaque ink with normal blending and a transparent one with Multiply', JSON.stringify(opaqueBlend) === '[true,false]' && JSON.stringify(plainBlend) === '[true,true]', [opaqueBlend, plainBlend]);
+
+  const cover = onDark([black, ink(true)]);
+  const meters = totals(await screen(cover, true), cover).stats;
+  const carried = (await platesFor(cover, 8, 'Smoke opaque')).map(async (f) => inkOf(await pixelsOf(new Blob([f.data]))));
+  const got = await Promise.all(carried);
+  check('and its plate is just its plate: neither plate is cut where the white covers', got.length === 2 && got.every((v, i) => Math.abs(v - meters[i].mean) < 0.015), got.map((v, i) => [v.toFixed(3), meters[i].mean.toFixed(3)]));
+  await open(img.ramp);
 }
 
 /** a PNG's chunks by type, the first of each */
@@ -1191,6 +1281,262 @@ async function dither(dir: string): Promise<void> {
   check('Send to Halftone: it opens the dithered PNG at the export size, every block as the view has it', shell.getState().active === 'halftone' && r2 && got && offBlocks(got, r2, 2) === 0, [hs?.name, got?.w, got?.h, got && r2 && offBlocks(got, r2, 2)]);
 
   await shell.sendItem(anim, 'dither');
+}
+
+const postfxDoc = () => shell.doc('postfx') as DocController<PostFxDoc>;
+/** the button of a tool's export row (the row's name is its bold text) */
+const exportRow = (tool: ToolId, row: string) => [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => !b.disabled && b.parentElement?.querySelector('b')?.textContent === row);
+
+/** an input's text as typing leaves it (React hears the input event) */
+function typeInto(el: HTMLInputElement, text: string): void {
+  el.focus();
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(el, text);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+/** a PNG of w × h from (x, y) → [r, g, b, a] bytes, straight alpha */
+async function pngRgba(w: number, h: number, px: (x: number, y: number) => number[]): Promise<ArrayBuffer> {
+  const img = new ImageData(w, h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) img.data.set(px(x, y), (y * w + x) * 4);
+  const c = new OffscreenCanvas(w, h);
+  c.getContext('2d')!.putImageData(img, 0, 0);
+  return (await c.convertToBlob({ type: 'image/png' })).arrayBuffer();
+}
+
+/** a frame's index is drawn into it as 8 blocks of 16 px along the top: white for a 1, bit 0 at the left */
+const BLOCK = 16;
+const readIndex = (img: { w: number; px: Uint8ClampedArray }) =>
+  [...Array(8).keys()].reduce((n, b) => n | ((img.px[((BLOCK / 2) * img.w + b * BLOCK + BLOCK / 2) * 4] > 127 ? 1 : 0) << b), 0);
+
+/**
+ * A WebM of exactly `n` frames at `fps`, made in the page: VP8 frames from WebCodecs (each a key frame),
+ * muxed by hand so every frame time and the frame duration are exact (MediaRecorder times its frames by
+ * the clock, and a clip measured off those can come out a frame or a rate away). Frame i holds a moving
+ * scene under its index.
+ */
+async function makeWebm(w: number, h: number, n: number, fps: number): Promise<File> {
+  const joined = (...parts: Uint8Array[]) => {
+    const out = new Uint8Array(parts.reduce((len, p) => len + p.length, 0));
+    parts.reduce((at, p) => (out.set(p, at), at + p.length), 0);
+    return out;
+  };
+  const be = (v: number, bytes: number) => Uint8Array.from({ length: bytes }, (_, i) => Math.floor(v / 2 ** (8 * (bytes - 1 - i))) & 255);
+  // an EBML element: its id, its size in 8 bytes, its body
+  const el = (id: number[], ...body: Uint8Array[]) => {
+    const b = joined(...body);
+    return joined(Uint8Array.from(id), Uint8Array.of(1), be(b.length, 7), b);
+  };
+  const uint = (id: number[], v: number) => el(id, be(v, 4));
+  const text = (id: number[], s: string) => el(id, new TextEncoder().encode(s));
+  const float = (id: number[], v: number) => el(id, new Uint8Array(new Float64Array([v]).buffer).reverse());
+
+  const canvas = new OffscreenCanvas(w, h);
+  const g = canvas.getContext('2d')!;
+  const frames: { key: boolean; data: Uint8Array }[] = [];
+  const encoder = new VideoEncoder({
+    output: (c) => {
+      const data = new Uint8Array(c.byteLength);
+      c.copyTo(data);
+      frames.push({ key: c.type === 'key', data });
+    },
+    error: (e) => {
+      throw e;
+    },
+  });
+  encoder.configure({ codec: 'vp8', width: w, height: h, bitrate: 3e6, framerate: fps });
+  for (let i = 0; i < n; i++) {
+    const img = new ImageData(w, h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const bar = Math.abs(x - ((i * 7) % w)) < 6;
+        const code = y < BLOCK && x < 8 * BLOCK ? ((i >> Math.floor(x / BLOCK)) & 1) * 255 : null;
+        const v = code ?? (bar ? 230 : 60 + ((x + y + i * 3) % 90));
+        img.data.set([v, code === null ? v >> 1 : v, code === null ? 255 - v : v, 255], (y * w + x) * 4);
+      }
+    }
+    g.putImageData(img, 0, 0);
+    const frame = new VideoFrame(canvas, { timestamp: Math.round((i * 1e6) / fps) });
+    encoder.encode(frame, { keyFrame: true });
+    frame.close();
+  }
+  await encoder.flush();
+  encoder.close();
+
+  const ms = 1000 / fps;
+  const header = el([0x1a, 0x45, 0xdf, 0xa3], uint([0x42, 0x86], 1), uint([0x42, 0xf7], 1), uint([0x42, 0xf2], 4), uint([0x42, 0xf3], 8), text([0x42, 0x82], 'webm'), uint([0x42, 0x87], 4), uint([0x42, 0x85], 2));
+  const info = el([0x15, 0x49, 0xa9, 0x66], uint([0x2a, 0xd7, 0xb1], 1e6), float([0x44, 0x89], n * ms), text([0x4d, 0x80], 'smoke'), text([0x57, 0x41], 'smoke'));
+  const track = el(
+    [0x16, 0x54, 0xae, 0x6b],
+    el([0xae], uint([0xd7], 1), uint([0x73, 0xc5], 1), uint([0x83], 1), uint([0x9c], 0), text([0x86], 'V_VP8'), uint([0x23, 0xe3, 0x83], Math.round(1e9 / fps)), el([0xe0], uint([0xb0], w), uint([0xba], h))),
+  );
+  const blocks = frames.map((f, i) => {
+    const at = Math.round(i * ms);
+    return el([0xa3], Uint8Array.of(0x81, at >> 8, at & 255, f.key ? 0x80 : 0), f.data);
+  });
+  const segment = el([0x18, 0x53, 0x80, 0x67], info, track, el([0x1f, 0x43, 0xb6, 0x75], uint([0xe7], 0), ...blocks));
+  return new File([joined(header, segment)], 'smoke clip.webm', { type: 'video/webm' });
+}
+
+/**
+ * Image › Post FX (plan: Then): a PNG at full resolution keeps its alpha; a still with grain exports
+ * a loop of exactly N frames and its frame N is its frame 0; a share code round-trips and one with an
+ * effect this version lacks is refused; datamosh is unavailable on a still; nothing plays until play
+ * and switching tools pauses; no moving effect flickers; a WebM made here opens, and its PNG
+ * sequence has every frame, in order, as the index drawn in it says. Leaves Post FX with a still
+ * and a grain loop, so the quiet pass sees the document come back.
+ */
+async function postfx(dir: string): Promise<void> {
+  const pd = postfxDoc();
+  shell.setActive('postfx');
+  const d0 = pd.get();
+  check('Post FX starts empty: no image, no effects', !d0.source && !d0.stack.length && pd.depth() === 0, d0);
+  check('and shows where to drop an image', await until(() => host('postfx')?.textContent?.includes('Drop an image, a GIF or a video')));
+
+  await shell.createCollection('Post FX in');
+  const put = async (name: string, bytes: ArrayBuffer) => api.invoke('library.createImage', 'Post FX in', name, 'png', bytes);
+  const exported = await toolExport(dir, 'postfx', 'Post FX out');
+
+  // full resolution, with alpha: wider than v1's 1600 px cap, a clear corner and a half-clear band
+  const [BW, BH] = [1800, 1000];
+  const clear = (x: number, y: number) => (x < 90 && y < 60 ? 0 : y >= BH - 40 ? 128 : 255);
+  const wide = await put('Smoke wide', await pngRgba(BW, BH, (x, y) => [x % 256, Math.floor((y * 255) / BH), ((x + y) >> 2) & 255, clear(x, y)]));
+  await shell.sendItem(wide, 'postfx');
+  check('an image sent from the Library opens in Post FX in one step', pd.get().source?.kind === 'image' && pd.get().source?.w === BW && pd.depth() === 1, [pd.get().source, pd.depth()]);
+  pd.transact('Add Grade', (d) => ({ ...d, stack: [layerOf('grade', { saturation: 140 })] }));
+  const whole = await exported('PNG');
+  const big = whole && (await pixelsOf(await whole.blob()));
+  const alphaAt = (x: number, y: number) => big!.px[(y * big!.w + x) * 4 + 3];
+  check(
+    'the PNG is the full 1800 × 1000 px (v1 stopped at 1600) and keeps its alpha: clear, half clear, solid',
+    !!big && big.w === BW && big.h === BH && alphaAt(10, 10) === 0 && Math.abs(alphaAt(900, BH - 10) - 128) <= 1 && alphaAt(900, 500) === 255,
+    big && [big.w, big.h, alphaAt(10, 10), alphaAt(900, BH - 10), alphaAt(900, 500)],
+  );
+
+  // a still with grain: a loop of exactly N frames, and frame N is frame 0
+  const card = await put('Smoke fx card', await pngRgba(256, 160, (x, y) => [x, Math.floor((y * 255) / 159), (x ^ y) & 255, x < 40 && y < 24 ? 0 : 255]));
+  await shell.sendItem(card, 'postfx');
+  pd.transact('Grain loop', (d) => ({ ...d, stack: [layerOf('grain', { amount: 30, boil: 12 })], loop: { seconds: 1, fps: 10 } }));
+  const loop = timeline(pd.get());
+  check('a still with grain becomes a loop of 10 frames over 1 second', loop.kind === 'loop' && loop.count === 10 && loop.seconds === 1, [loop.kind, loop.count, loop.seconds]);
+  const gif = await exported('GIF');
+  const gifInfo = gif && readGif(new Uint8Array(await gif.arrayBuffer()));
+  check(
+    'its GIF has 10 frames of 10 hundredths, looping forever, so it is exactly one second',
+    gifInfo?.frames.length === 10 && gifInfo.frames.every((f) => f.delay === 10) && gifInfo.loop === 0 && gifInfo.w === 256,
+    gifInfo && [gifInfo.frames.map((f) => f.delay), gifInfo.loop],
+  );
+  const asked = toastStore.get().length;
+  exportRow('postfx', 'PNG sequence')?.click();
+  const wrote = await until(() => toastStore.get().slice(asked).find((t) => t.icon === 'download'), 20_000);
+  check('PNG sequence writes all 10 frames into one folder', /^Exported 10 frames into /.test(String(wrote?.message)), wrote?.message);
+  const numbered = (name: string, n: number) => `${name} ${String(n).padStart(4, '0')}`;
+  await shell.importFiles([1, 2, 10].map((n) => `${dir}\\exports\\postfx\\${numbered('Smoke fx card fx', n)}.png`), 'Post FX out');
+  const frameOf = async (n: number) => {
+    const ref = await until(() => find((x) => x.collection === 'Post FX out' && x.name === numbered('Smoke fx card fx', n)));
+    const item = ref && (await api.invoke('library.read', ref.id));
+    return item && 'url' in item ? pixelsOf(await (await fetch(item.url)).blob()) : null;
+  };
+  const stack = new Stack('smoke post fx');
+  try {
+    const bmp = await decodeImage(await (await fetch(pd.get().source!.asset)).blob());
+    const src = stack.g.texture(bmp, 'rgba16f');
+    bmp.close();
+    const at = (t: number) => stack.bytes(stack.render(src, pd.get().stack, { t, scale: 1 })).slice();
+    const [f0, f1, fN, f9] = [at(0), at(0.1), at(1), at(0.9)];
+    check('frame N of the loop is frame 0 to the byte: the grain comes round exactly', f0.every((v, i) => v === fN[i]) && f0.some((v, i) => v !== f1[i]), f0.filter((v, i) => v !== fN[i]).length);
+    const [first, second, last] = [await frameOf(1), await frameOf(2), await frameOf(10)];
+    // straight-alpha pixels come back from a canvas exactly where alpha is 255
+    const sameAs = (img: Awaited<ReturnType<typeof pixelsOf>> | null, want: Uint8Array) => !!img && img.px.length === want.length && img.px.every((v, i) => want[i - (i % 4) + 3] !== 255 || v === want[i]);
+    check('and the files are those frames: the first is frame 0, the second is frame 1, the last is frame 9', sameAs(first, f0) && sameAs(second, f1) && sameAs(last, f9) && !!first && !!last && first.px.join() !== last.px.join(), [!!first, !!second, !!last]);
+  } finally {
+    stack.release();
+  }
+
+  // share codes
+  pd.transact('A stack', (d) => ({ ...d, stack: [layerOf('grade', { lift: 7 }), layerOf('vhs', { wobble: 5, speed: 2 }), layerOf('duotone')] }));
+  const made = pd.get().stack;
+  const bare = (l: typeof made) => JSON.stringify(l.map(({ effect, on, opacity, blend, params }) => ({ effect, on, opacity, blend, params })));
+  const code = encodeStack(made);
+  check('a share code is PFX2. and the stack, and it round-trips with every setting', code.startsWith('PFX2.') && bare(decodeStack(code)) === bare(made), code.slice(0, 24));
+  pd.transact('Empty the stack', (d) => ({ ...d, stack: [] }));
+  const field = await until(() => host('postfx')?.querySelector<HTMLInputElement>('input[placeholder^="Paste a PFX2"]'));
+  if (field) {
+    typeInto(field, code);
+    press('Enter');
+  }
+  check('pasting the code into the field brings the stack back', await until(() => bare(pd.get().stack) === bare(made)), pd.get().stack.map((l) => l.effect));
+  const sparkle = `PFX2.${btoa(JSON.stringify({ v: 2, layers: [{ effect: 'sparkle', on: true, opacity: 1, blend: 'normal', params: {} }] })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
+  let why = '';
+  try {
+    decodeStack(sparkle);
+  } catch (e) {
+    why = e instanceof Error ? e.message : String(e);
+  }
+  const kept = pd.get();
+  if (field) {
+    typeInto(field, sparkle);
+    press('Enter');
+  }
+  check('a code with an effect this version lacks is refused by name, in the field, and the stack stays', /“sparkle”/.test(why) && !!(await until(() => field?.getAttribute('aria-invalid') === 'true')) && pd.get() === kept, why);
+  field?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+  // datamosh needs a clip
+  const stillDoc = pd.get();
+  addEffect(pd, 'datamosh');
+  host('postfx')?.querySelector<HTMLButtonElement>('button[aria-label="Add an effect"]')?.click();
+  const row = await until(() => [...document.querySelectorAll<HTMLElement>('[role="dialog"][aria-label="Add an effect"] [role="option"]')].find((o) => o.textContent?.includes('Datamosh')));
+  press('Escape');
+  check('datamosh is unavailable on a still: adding it does nothing and the picker greys it', !offered(stillDoc, 'datamosh') && pd.get() === stillDoc && row?.getAttribute('aria-disabled') === 'true', [pd.get().stack.length, row?.getAttribute('aria-disabled')]);
+
+  // nothing plays until play is pressed, and leaving the tool pauses
+  pd.transact('Grain', (d) => ({ ...d, stack: [layerOf('grain')] }));
+  await sleep(600);
+  const rest = playhead.get();
+  check('nothing plays until play is pressed: a moving stack rests on its first frame', !rest.playing && rest.frame === 0, rest);
+  togglePlay(pd, timeline(pd.get()));
+  const ran = playhead.get().playing && !!(await until(() => playhead.get().frame > 0, 10_000));
+  shell.setActive('dither');
+  check('Play plays the loop, and switching to another tool pauses it', ran && !!(await until(() => !playhead.get().playing, 3000)), playhead.get());
+  shell.setActive('postfx');
+
+  // no flicker, exact loops, half floats, a preview that is the export
+  const flicker = flickerChecks();
+  check(`no moving effect flickers: ${flicker.length} runs of 60 frames, the mean luminance moving under 2% a frame`, flicker.length >= 10 && flicker.every((c) => c.ok), flicker.filter((c) => !c.ok));
+  const gpu = [...loopChecks(), ...pipelineChecks(), ...datamoshChecks(), ...scaleChecks()];
+  check(`every moving effect loops exactly; stacks stay in half floats; datamosh repeats; a small preview is the export (${gpu.length} checks)`, gpu.every((c) => c.ok), gpu.filter((c) => !c.ok));
+
+  // a clip made here: its frame count and rate, and a PNG sequence of exactly those frames in order
+  const N = 12;
+  await shell.runBusy(async () => shell.tool('postfx').onFiles!([await makeWebm(160, 96, N, 25)], 'drop', pd));
+  const vid = await until(() => (pd.get().source?.kind === 'video' ? pd.get().source : null), 30_000);
+  check(`a WebM made in the page opens as a clip of its ${N} frames at 25 fps`, vid?.frames === N && vid.fps === 25 && vid.w === 160 && vid.h === 96, vid);
+  pd.transact('Grade', (d) => ({ ...d, stack: [layerOf('grade')] }));
+  check('and datamosh is offered on it', offered(pd.get(), 'datamosh'));
+  const before = toastStore.get().length;
+  exportRow('postfx', 'PNG sequence')?.click();
+  const clipDone = await until(() => toastStore.get().slice(before).find((t) => t.icon === 'download'), 60_000);
+  check(`its PNG sequence has one file for each of its ${N} frames`, new RegExp(`^Exported ${N} frames into `).test(String(clipDone?.message)), clipDone?.message);
+  const names = Array.from({ length: N }, (_, i) => numbered('smoke clip fx', i + 1));
+  await shell.importFiles(names.map((n) => `${dir}\\exports\\postfx\\${n}.png`), 'Post FX out');
+  const indices = await Promise.all(
+    names.map(async (n) => {
+      const ref = await until(() => find((x) => x.collection === 'Post FX out' && x.name === n));
+      const item = ref && (await api.invoke('library.read', ref.id));
+      return item && 'url' in item ? readIndex(await pixelsOf(await (await fetch(item.url)).blob())) : -1;
+    }),
+  );
+  check(`and the index drawn in each frame, read back from the PNGs, runs 0 to ${N - 1} with none repeated or missing`, indices.every((v, i) => v === i), indices);
+
+  // leave a still with a grain loop, and hand its first frame on: Send to renders the effects in, full size
+  await shell.sendItem(card, 'postfx');
+  pd.transact('Grain loop', (d) => ({ ...d, stack: [layerOf('grain', { amount: 30, boil: 12 })], loop: { seconds: 1, fps: 10 } }));
+  const hd = shell.doc('halftone') as DocController<HalftoneDoc>;
+  await shell.sendDoc('postfx', 'halftone');
+  const sent = hd.get().source;
+  const [plain, grainy] = sent ? [await pixelsOf(await (await fetch(pd.get().source!.asset)).blob()), await pixelsOf(await (await fetch(sent.asset)).blob())] : [null, null];
+  let moved = 0;
+  for (let p = 0; plain && grainy && p < plain.px.length; p += 4) if (plain.px[p + 3] === 255 && Math.abs(plain.px[p] - grainy.px[p]) > 3) moved++;
+  check('Send to Halftone hands over the frame on screen with its grain, at full size', shell.getState().active === 'halftone' && grainy?.w === 256 && grainy.h === 160 && moved > 5000, [sent?.name, grainy?.w, grainy?.h, moved]);
 }
 
 /**

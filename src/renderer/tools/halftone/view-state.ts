@@ -73,4 +73,4 @@ export const useView = (): HalftoneView => useSyncExternalStore(subscribe, getVi
 export const inksFrom = createStore<{ name: string; swatches: { name: string; colour: Oklch }[] } | null>(null);
 
 /** the status bar's readout, from the view: dots that print, the dpi of an FM screen, how long the screen took */
-export const status = createStore<{ dots: number; fm: number | null; ms: number; busy: boolean; error: boolean } | null>(null);
+export const status = createStore<{ dots: number; about: boolean; fm: number | null; ms: number; busy: boolean; error: boolean } | null>(null);

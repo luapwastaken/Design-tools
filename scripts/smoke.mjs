@@ -42,9 +42,13 @@ function mtimes(dir) {
   return new Map(files.filter((f) => statSync(f).isFile()).map((f) => [f, statSync(f).mtimeMs]));
 }
 
+// A workspace asset the saved document doesn't use is cleared at start-up once it is a minute old
+// (spec §7.2), which a pass longer than a minute makes happen: a removal there is not a write.
+const assetGone = (k, after) => !after.has(k) && /[\\/]workspace[\\/][^\\/]+[\\/]assets[\\/]/.test(k);
+
 function changed(before, after) {
   const keys = new Set([...before.keys(), ...after.keys()]);
-  return [...keys].filter((k) => before.get(k) !== after.get(k));
+  return [...keys].filter((k) => before.get(k) !== after.get(k) && !assetGone(k, after));
 }
 
 console.log('pass 1: --smoke');

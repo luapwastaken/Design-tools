@@ -3,9 +3,10 @@
 // here, so they all hold the same cells (the plan's one rule).
 import { knockedOut, totalInk } from '../../../shared/halftone/coverage.ts';
 import { pagePx, splitOf } from '../../../shared/halftone/screen.ts';
+import { covering } from '../../../shared/halftone/separate.ts';
 import { decodeImage } from '../../lib/load.ts';
 import { fetchBlob } from '../common/take.ts';
-import { overlapOf, type HalftoneDoc } from './doc.ts';
+import { opaqueOf, overlapOf, type HalftoneDoc } from './doc.ts';
 import type { Done, Failed, InkOut, Job, SourceIn } from './screen.worker.ts';
 
 export type Screened = {
@@ -17,6 +18,8 @@ export type Screened = {
   plate: { w: number; h: number };
   /** in the document's ink order */
   inks: (InkOut & { id: string })[];
+  /** every ink's cells came whole and its dots were counted; otherwise they are made region by region and counted from the plate */
+  held: boolean;
   stats: { mean: number; peak: number }[];
   hist: Uint32Array;
   ms: number;
@@ -27,8 +30,13 @@ const PLATE_PER_CELL = 2.5;
 /** and along a line screen's segment, which are shorter */
 const PLATE_PER_SEGMENT = 1.25;
 const MAX_PLATE = 8e6;
-/** every ink's cells together, about 24 bytes each on each side of the worker */
-const MAX_CELLS = 12e6;
+/**
+ * Every ink's cells held whole, about 24 bytes each on each side of the worker: past this many the
+ * view and the rasters make them region by region, and only the SVG has a cap (SVG_DOTS).
+ */
+const HOLD = 12e6;
+/** the most dots of the inks that show an SVG may hold (its file size, spec §6.2) */
+export const SVG_DOTS = 12e6;
 /** a stochastic screen's plates are at print resolution, so it stops at this size */
 export const MAX_FM = 120e6;
 
@@ -45,19 +53,42 @@ export function plateOf(d: HalftoneDoc): { w: number; h: number } | string {
   const pitch = d.size.dpi / d.screen.lpi;
   const split = splitOf(d.screen.shape);
   const k = Math.min(1, Math.max(PLATE_PER_CELL, PLATE_PER_SEGMENT * split) / pitch, Math.sqrt(MAX_PLATE / (page.w * page.h)));
-  const cells = (page.w / pitch + 2) * (page.h / pitch + 2) * split * d.inks.length;
-  if (cells > MAX_CELLS) return `${(cells / 1e6).toFixed(1)} million dots over ${d.inks.length === 1 ? 'the ink' : `${d.inks.length} inks`} is more than the view and the files can hold (${MAX_CELLS / 1e6} million). Lower the frequency or the size.`;
   return { w: Math.max(1, Math.round(page.w * k)), h: Math.max(1, Math.round(page.h * k)) };
+}
+
+/** whether the worker hands back every ink's cells whole (a cell screen of at most HOLD cells) */
+export function holds(d: HalftoneDoc): boolean {
+  if (d.screen.shape === 'stochastic') return true;
+  const page = pagePx(d.size);
+  const pitch = d.size.dpi / d.screen.lpi;
+  return (page.w / pitch + 2) * (page.h / pitch + 2) * splitOf(d.screen.shape) * d.inks.length <= HOLD;
+}
+
+/** the dots of the inks that show (counted from the plates unless `s.held`): what the SVG would hold */
+export const shownDots = (s: Pick<Screened, 'inks'>, d: HalftoneDoc): number => s.inks.reduce((n, ink, i) => n + (d.inks[i]?.visible ? ink.count : 0), 0);
+
+/** Why the SVG can't hold the dots of the inks that show, or null (for `dots` counted from the plate, `about`). */
+export function svgOver(dots: number, about = false): string | null {
+  return dots > SVG_DOTS
+    ? `${about ? 'About ' : ''}${(dots / 1e6).toFixed(1)} million dots is more than the SVG takes: past ${SVG_DOTS / 1e6} million the file runs to near a gigabyte. Lower the frequency or the size, hide an ink, or export the PNG or the separations.`
+    : null;
 }
 
 const J = JSON.stringify;
 
+/** the inks as the core separates them, each one's Opaque settled */
+const separateInks = (d: HalftoneDoc) => d.inks.map((i) => ({ colour: i.colour, curve: i.curve, process: i.process, opaque: opaqueOf(i) }));
+
 function keysOf(d: HalftoneDoc, plate: { w: number; h: number }) {
   const sourceKey = J([d.source?.asset, d.size.w, d.size.h, d.fit, plate.w, plate.h]);
-  const sepKey = J([sourceKey, d.mode, d.inks.map((i) => [i.colour, i.curve, i.process]), d.tone, d.paper.colour, overlapOf(d)]);
+  const inks = separateInks(d);
+  // colour is paper-relative: the paper enters the separation only through an ink that covers
+  const paper = covering(inks, d.mode, overlapOf(d)).some(Boolean) ? d.paper.colour : null;
+  const sepKey = J([sourceKey, d.mode, inks, d.tone, paper, overlapOf(d)]);
   const fm = d.screen.shape === 'stochastic';
-  const inkKeys = d.inks.map((ink, n) => J([sepKey, n, fm ? [d.size.dpi, d.screen.gain] : [ink.angle, d.screen, d.size.dpi]]));
-  return { sourceKey, sepKey, inkKeys, key: J(inkKeys) };
+  const hold = holds(d);
+  const inkKeys = d.inks.map((ink, n) => J([sepKey, n, fm ? [d.size.dpi, d.screen.gain] : [ink.angle, d.screen, d.size.dpi, hold]]));
+  return { sourceKey, sepKey, inkKeys, key: J(inkKeys), hold };
 }
 
 // ── the image, drawn onto the page at the plate's size ──
@@ -160,7 +191,8 @@ async function compute(d: HalftoneDoc, key: string): Promise<Screened> {
     source,
     sourceKey: k.sourceKey,
     sepKey: k.sepKey,
-    inks: d.inks.map((i, n) => ({ colour: i.colour, curve: i.curve, process: i.process, angle: i.angle, key: k.inkKeys[n] })),
+    inks: separateInks(d).map((i, n) => ({ ...i, angle: d.inks[n].angle, key: k.inkKeys[n] })),
+    hold: k.hold,
     mode: d.mode,
     tone: d.tone,
     paper: d.paper.colour,
@@ -183,6 +215,7 @@ async function compute(d: HalftoneDoc, key: string): Promise<Screened> {
     page: pagePx(d.size),
     plate: { w: done.plateW, h: done.plateH },
     inks,
+    held: k.hold,
     stats: done.stats,
     hist: done.hist,
     ms: done.ms,
@@ -196,8 +229,7 @@ async function compute(d: HalftoneDoc, key: string): Promise<Screened> {
  */
 export function screen(d: HalftoneDoc, keep = false): Promise<Screened> {
   if (!keep) shown = true;
-  const plate = plateOf(d);
-  const key = typeof plate === 'string' || !d.source ? `x${J(d)}` : keysOf(d, plate).key;
+  const key = screenKey(d);
   if (latest?.key === key) return Promise.resolve(latest);
   return new Promise((ok, fail) => {
     for (let i = queue.length - 1; i >= 0; i--) {
@@ -212,8 +244,13 @@ export function screen(d: HalftoneDoc, keep = false): Promise<Screened> {
 
 /** the screen for `d` if it's made already */
 export function ready(d: HalftoneDoc): Screened | null {
+  return latest && d.source && latest.key === screenKey(d) ? latest : null;
+}
+
+/** every setting a document's screen depends on (one that can't be screened keys by all of it) */
+export function screenKey(d: HalftoneDoc): string {
   const plate = plateOf(d);
-  return latest && d.source && typeof plate !== 'string' && latest.key === keysOf(d, plate).key ? latest : null;
+  return typeof plate === 'string' || !d.source ? `x${J(d)}` : keysOf(d, plate).key;
 }
 
 /**

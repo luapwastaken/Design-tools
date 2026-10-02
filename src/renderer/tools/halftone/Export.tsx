@@ -9,7 +9,7 @@ import { cx } from '../../ui/cx.ts';
 import { plural } from '../common/names.ts';
 import { MM_PER, printPx, type HalftoneDoc } from './doc.ts';
 import { pngFor, pngLimit, platesFor, platesLimit, svgFor, svgWeight } from './exports.ts';
-import type { Screened } from './screening.ts';
+import { shownDots, svgOver, type Screened } from './screening.ts';
 import { patchView, type HalftoneView } from './view-state.ts';
 import s from './Export.module.css';
 
@@ -77,7 +77,7 @@ export function ExportModule({ d, v, screened, error }: { d: HalftoneDoc; v: Hal
     });
 
   const off = busy !== null || !ready;
-  const svgOff = svgProblem(d) ?? blocked;
+  const svgOff = svgProblem(d) ?? blocked ?? (screened && !fm ? svgOver(shownDots(screened, d), !screened.held) : null);
   const weight = screened && !fm ? svgWeight(screened, d) : null;
   // a 1-bit cell of n × n print pixels holds n² + 1 tones; under 8 × 8 it reads as coarse
   const cellPx = d.size.dpi / d.screen.lpi;

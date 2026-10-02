@@ -1,16 +1,18 @@
 // What each export writes, every one from the screen the view draws (screening.ts): the SVG from its
 // cells, the screen PNG and the greyscale plates from the same dots drawn by draw.ts at their own
-// sizes, the 1-bit plates from the same cells ranked pixel by pixel (shared/halftone/bilevel).
-import { halftoneSvg, svgProblem } from '../../../shared/halftone/svg.ts';
-import { pagePx } from '../../../shared/halftone/screen.ts';
+// sizes, the 1-bit plates from the same cells ranked pixel by pixel (shared/halftone/bilevel). Only
+// the SVG has a dot cap (spec §6.2): the rasters go tile by tile, a screen too big to hold whole
+// making its cells region by region.
+import { dots, pagePx, splitOf } from '../../../shared/halftone/screen.ts';
+import { svgParts, svgProblem } from '../../../shared/halftone/svg.ts';
 import { writeTiff } from '../../../shared/halftone/tiff.ts';
-import { withDpi } from '../../lib/png.ts';
-import type { CellShape } from '../../../shared/halftone/types.ts';
+import type { Cells, CellShape } from '../../../shared/halftone/types.ts';
 import type { Tile } from '../../lib/gpu/index.ts';
-import { overlapOf, type HalftoneDoc } from './doc.ts';
-import { filmOf, lookOf, Painter, type Look } from './draw.ts';
-import type { PlateDone, PlateJob } from './plate.worker.ts';
-import { screen, type Screened } from './screening.ts';
+import { withDpi } from '../../lib/png.ts';
+import { opaqueOf, overlapOf, type HalftoneDoc } from './doc.ts';
+import { filmOf, lookOf, Painter, REGION_CELLS, TONE_AT, type Look } from './draw.ts';
+import type { PlateDone, PlateJob, ScreenOf } from './plate.worker.ts';
+import { screen, shownDots, svgOver, type Screened } from './screening.ts';
 
 type Progress = (done: number, detail?: string) => void;
 
@@ -30,30 +32,77 @@ export function platesLimit(d: HalftoneDoc): string | null {
 
 /** "12,859 dots · ≈ 0.6 MB": what the SVG will weigh */
 export function svgWeight(s: Screened, d: HalftoneDoc): string {
-  const dots = s.inks.reduce((n, ink, i) => n + (d.inks[i]?.visible ? ink.count : 0), 0);
+  const dots = shownDots(s, d);
   const mb = (dots * (d.screen.shape === 'cross' ? 150 : d.screen.shape === 'round' || d.screen.shape === 'ellipse' ? 70 : 50)) / 1e6;
-  return `${dots.toLocaleString('en')} dots · ≈ ${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
+  return `${s.held ? '' : '≈ '}${dots.toLocaleString('en')} dots · ≈ ${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
 }
 
-export async function svgFor(d: HalftoneDoc): Promise<string> {
+/** an ink's screen as the plate worker makes it */
+const screenOf = (s: Screened, index: number): ScreenOf => ({
+  plate: s.inks[index].plate,
+  plateW: s.plate.w,
+  plateH: s.plate.h,
+  size: s.doc.size,
+  screen: s.doc.screen,
+  angle: s.doc.inks[index].angle,
+});
+
+function plateWorker<T>(job: PlateJob, take: (done: Exclude<PlateDone, { error: string }>) => T, transfer: Transferable[] = []): Promise<T> {
+  const w = new Worker(new URL('./plate.worker.ts', import.meta.url), { type: 'module' });
+  return new Promise<T>((ok, fail) => {
+    w.onmessage = ({ data }: MessageEvent<PlateDone>) => ('error' in data ? fail(new Error(data.error)) : ok(take(data)));
+    w.onerror = (e) => fail(new Error(e.message || 'The plate worker stopped working.'));
+    w.postMessage(job, transfer);
+  }).finally(() => w.terminate());
+}
+
+/** The SVG, in pieces joined as bytes (a page of dots can outgrow one string). */
+export async function svgFor(d: HalftoneDoc): Promise<ArrayBuffer> {
   const why = svgProblem(d);
   if (why) throw new Error(why);
   const s = await screen(d, true);
-  return halftoneSvg({ ...d, overlap: overlapOf(d) }, s.inks.map((ink) => ink.cells));
+  const over = svgOver(shownDots(s, d), !s.held);
+  if (over) throw new Error(over);
+  const shown = await Promise.all(s.inks.map((ink, i) => (!d.inks[i].visible ? null : (ink.cells ?? plateWorker<Cells>({ cellsOf: screenOf(s, i) }, (r) => (r as { cells: Cells }).cells)))));
+  const inks = d.inks.map((ink) => ({ ...ink, opaque: opaqueOf(ink) }));
+  const doc = { ...d, inks, overlap: overlapOf(d) };
+  if (!s.held) {
+    // counted from the plates until now: the cells say for certain
+    const exact = svgOver(shown.reduce((n, c) => n + (c ? dots(c, d.screen).count : 0), 0));
+    if (exact) throw new Error(exact);
+  }
+  return new Blob(svgParts(doc, shown)).arrayBuffer();
+}
+
+/**
+ * A raster's tile: smaller where a screen too big to hold whole makes its cells for each tile, so
+ * no tile needs more than REGION_CELLS of them (where they are too small to show, the plate's tone
+ * draws instead and the tile is as large as it goes).
+ */
+function tileFor(s: Screened, k: number, largest: number): number {
+  const pitch = s.doc.size.dpi / s.doc.screen.lpi;
+  if (s.held || s.doc.screen.shape === 'stochastic' || pitch * k < TONE_AT) return largest;
+  return Math.max(256, Math.min(largest, Math.floor(k * pitch * Math.sqrt(REGION_CELLS / splitOf(s.doc.screen.shape)))));
 }
 
 /** an image `w` × `h` of the whole page drawn tile by tile */
 async function raster(s: Screened, look: Look, w: number, h: number, y0 = 0, k = w / s.page.w, progress?: (share: number) => void): Promise<Uint8Array> {
   const painter = new Painter('halftone export');
   try {
-    const size = Math.min(4096, painter.g.maxSize);
+    const size = tileFor(s, k, Math.min(4096, painter.g.maxSize));
     const total = Math.ceil(w / size) * Math.ceil(h / size);
     let done = 0;
-    return await painter.g.renderTiled(w, h, 'rgba8', (tile: Tile) => {
-      const { x, y, w: tw, h: th } = tile.rect;
-      painter.paint(s, look, [x, y0 + y], k, tile, { w: tw, h: th }, true);
-      progress?.(++done / total);
-    });
+    return await painter.g.renderTiled(
+      w,
+      h,
+      'rgba8',
+      (tile: Tile) => {
+        const { x, y, w: tw, h: th } = tile.rect;
+        painter.paint(s, look, [x, y0 + y], k, tile, { w: tw, h: th }, true);
+        progress?.(++done / total);
+      },
+      { tile: size },
+    );
   } finally {
     painter.release();
   }
@@ -73,17 +122,14 @@ export async function pngBlob(d: HalftoneDoc, width: number, progress?: Progress
 
 export const pngFor = async (d: HalftoneDoc, width: number, progress?: Progress): Promise<ArrayBuffer> => (await pngBlob(d, width, progress)).arrayBuffer();
 
-/** an ink's 1-bit plate, ranked from its cells in a worker: 0 where it prints, 255 for paper */
+/** an ink's 1-bit plate, ranked from its cells in a worker (made there band by band when not held): 0 where it prints, 255 for paper */
 function bilevelPlate(s: Screened, index: number, W: number, H: number): Promise<Uint8Array> {
   const ink = s.inks[index];
-  const coverage = Float32Array.from({ length: ink.cells!.n }, (_, k) => ink.dots![3 * k + 2]);
-  const job: PlateJob = { cells: ink.cells!, coverage, shape: s.doc.screen.shape as CellShape, W, H, page: s.page };
-  const w = new Worker(new URL('./plate.worker.ts', import.meta.url), { type: 'module' });
-  return new Promise<Uint8Array>((ok, fail) => {
-    w.onmessage = ({ data }: MessageEvent<PlateDone>) => ('error' in data ? fail(new Error(data.error)) : ok(data.plate));
-    w.onerror = (e) => fail(new Error(e.message || 'The 1-bit plate stopped working.'));
-    w.postMessage(job, [coverage.buffer]);
-  }).finally(() => w.terminate());
+  const at = { W, H, page: s.page, shape: s.doc.screen.shape as CellShape };
+  const take = (r: Exclude<PlateDone, { error: string }>) => (r as { plate: Uint8Array }).plate;
+  if (!ink.cells || !ink.dots) return plateWorker({ ...at, of: screenOf(s, index) }, take);
+  const coverage = Float32Array.from({ length: ink.cells.n }, (_, k) => ink.dots![3 * k + 2]);
+  return plateWorker({ ...at, cells: ink.cells, coverage }, take, [coverage.buffer]);
 }
 
 /**

@@ -1,7 +1,7 @@
 // SVG for Illustrator: real units, the paper if it's included, then one group per visible ink named
 // after it, each holding one compound path of that ink's dots, turned shapes written already
 // turned. The dots come from screen.dots over the same cells the preview draws, so the file
-// matches it dot for dot.
+// matches it dot for dot. Overprinted, transparent inks multiply and opaque ones cover (spec §6.3).
 import { toHex } from '../color/index.ts';
 import { axes, dots, pagePx } from './screen.ts';
 import type { Cells, CellShape, DrawInk, Overlap, Paper, Screen, Size } from './types.ts';
@@ -24,8 +24,14 @@ export function svgProblem(doc: Pick<SvgDoc, 'screen'>): string | null {
     : null;
 }
 
+/** dots per piece of a path: no string past about 500 million characters can be made */
+const PIECE = 1 << 20;
+
 /** `cellsPerInk` lines up with `doc.inks`; a hidden ink's entry is never read. */
-export function halftoneSvg(doc: SvgDoc, cellsPerInk: readonly (Cells | null | undefined)[]): string {
+export const halftoneSvg = (doc: SvgDoc, cellsPerInk: readonly (Cells | null | undefined)[]): string => svgParts(doc, cellsPerInk).join('');
+
+/** The file in pieces, to join or to write one after another: a page of dots can outgrow one string. */
+export function svgParts(doc: SvgDoc, cellsPerInk: readonly (Cells | null | undefined)[]): string[] {
   const why = svgProblem(doc);
   if (why) throw new Error(why);
   const shape = doc.screen.shape as CellShape;
@@ -34,28 +40,33 @@ export function halftoneSvg(doc: SvgDoc, cellsPerInk: readonly (Cells | null | u
   const [W, H] = [String(Math.round(page.w * scale * Q) / Q), String(Math.round(page.h * scale * Q) / Q)];
   const length = (mm: number) => (doc.size.unit === 'in' ? `${+(mm / 25.4).toFixed(4)}in` : `${+mm.toFixed(3)}mm`);
   const ids = new Set(['dt-page', PAPER_ID]);
-  const blend = doc.overlap === 'overprint' ? ' style="mix-blend-mode:multiply"' : '';
-  const groups = doc.inks.map((ink, i) => {
-    if (!ink.visible) return '';
+  const overprint = doc.overlap === 'overprint';
+  const groups = doc.inks.flatMap((ink, i) => {
+    if (!ink.visible) return [];
     const c = cellsPerInk[i];
     if (!c) throw new Error(`No screen for the ink ${ink.name}.`);
-    const d = pathData(c, dots(c, doc.screen).geom, shape, scale);
-    return `<g id="${idFor(ink.name, ids)}" data-name="${esc(ink.name)}" clip-path="url(#dt-page)"${blend}><path fill="${toHex(ink.colour)}" d="${d}"/></g>\n`;
+    const blend = overprint && !ink.opaque ? ' style="mix-blend-mode:multiply"' : '';
+    return [
+      `<g id="${idFor(ink.name, ids)}" data-name="${esc(ink.name)}" clip-path="url(#dt-page)"${blend}><path fill="${toHex(ink.colour)}" d="`,
+      ...pathData(c, dots(c, doc.screen).geom, shape, scale),
+      `"/></g>\n`,
+    ];
   });
-  const how = doc.overlap === 'overprint'
-    ? 'The inks overprint through Multiply blending. For press, select each ink and turn on Overprint Fill in Window > Attributes.'
+  const opaque = doc.inks.filter((ink) => ink.visible && ink.opaque).map((ink) => ink.name);
+  const how = overprint
+    ? `The inks overprint through Multiply blending${opaque.length ? `; opaque inks (${opaque.join(', ')}) keep Normal blending and cover what is under them` : ''}. For press, select each ink and turn on Overprint Fill in Window > Attributes.`
     : 'The inks knock out: each ink covers the ones listed before it.';
   const paper = doc.paper.include ? ' The paper rectangle only shows the stock: delete it before print, or it prints as a tint.' : '';
   const note = `Halftone from Design Tools at ${+doc.screen.lpi.toFixed(2)} LPI, ${shape} dots. Each ink is one group holding one compound path. ${how}${paper}`;
-  return (
+  return [
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${length(doc.size.w)}" height="${length(doc.size.h)}" viewBox="0 0 ${W} ${H}">\n` +
-    `<!-- ${note} -->\n` +
-    `<defs><clipPath id="dt-page"><rect width="${W}" height="${H}"/></clipPath></defs>\n` +
-    (doc.paper.include ? `<rect id="${PAPER_ID}" data-name="Paper (preview only)" width="${W}" height="${H}" fill="${toHex(doc.paper.colour)}"/>\n` : '') +
-    groups.join('') +
-    `</svg>\n`
-  );
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${length(doc.size.w)}" height="${length(doc.size.h)}" viewBox="0 0 ${W} ${H}">\n` +
+      `<!-- ${note.replace(/--/g, '-')} -->\n` +
+      `<defs><clipPath id="dt-page"><rect width="${W}" height="${H}"/></clipPath></defs>\n` +
+      (doc.paper.include ? `<rect id="${PAPER_ID}" data-name="Paper (preview only)" width="${W}" height="${H}" fill="${toHex(doc.paper.colour)}"/>\n` : ''),
+    ...groups,
+    `</svg>\n`,
+  ];
 }
 
 /** a valid, unused XML id from the ink's name (Illustrator shows it as the group's name) */
@@ -77,10 +88,11 @@ function fmt(milli: number): string {
 const then = (t: string) => (t[0] === '-' ? t : ` ${t}`);
 
 /**
- * One compound path, in thousandths of a px. Each dot starts with a move relative to the last
- * dot's start, taken between rounded points so a row of hundreds never drifts, and ends closed.
+ * One compound path's data, in thousandths of a px, in pieces of PIECE dots. Each dot starts with
+ * a move relative to the last dot's start, taken between rounded points so a row of hundreds never
+ * drifts, and ends closed.
  */
-function pathData(cells: Cells, geom: Float32Array, shape: CellShape, scale: number): string {
+function pathData(cells: Cells, geom: Float32Array, shape: CellShape, scale: number): string[] {
   const { ux, uy, vx, vy } = axes(cells.angle);
   const k = scale * Q;
   const parts: string[] = [];
@@ -101,9 +113,11 @@ function pathData(cells: Cells, geom: Float32Array, shape: CellShape, scale: num
     parts.push(`${s}z`);
   };
   const tilt = then(String(+(-cells.angle).toFixed(4)));
+  const pieces: string[] = [];
   for (let i = 0; i < cells.n; i++) {
     const [a, b] = [geom[2 * i], geom[2 * i + 1]];
     if (!(a > 0 && b > 0)) continue;
+    if (parts.length >= PIECE) pieces.push(parts.splice(0).join(''));
     const [cx, cy] = [cells.x[i], cells.y[i]];
     switch (shape) {
       case 'round':
@@ -137,5 +151,6 @@ function pathData(cells: Cells, geom: Float32Array, shape: CellShape, scale: num
         break;
     }
   }
-  return parts.join('');
+  pieces.push(parts.join(''));
+  return pieces;
 }

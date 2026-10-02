@@ -17,7 +17,8 @@ export type Screen = { shape: Shape; lpi: number; minDot: number; gain: number }
 export type Tone = { black: number; white: number; gamma: number; contrast: number };
 export type Paper = { colour: Oklch; include: boolean };
 
-export type SeparateInk = { colour: Oklch; curve: [number, number][]; process?: Process };
+/** `opaque`: a spot ink that covers what is under it instead of multiplying it (white ink, spec §6.3) */
+export type SeparateInk = { colour: Oklch; curve: [number, number][]; process?: Process; opaque?: boolean };
 export type DrawInk = SeparateInk & { name: string; visible: boolean };
 
 /**

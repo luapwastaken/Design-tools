@@ -211,6 +211,7 @@ export function HalftoneCanvas({ d, v, screened, dots, stats, busy, active, onDr
       {cursorXY(p && sep ? plateAt(layout, p.x, p.y) : p, { name: unit, per, digits: unit === 'mm' ? 1 : 2 })}
       {sc && d.screen.shape !== 'stochastic' && (
         <span>
+          {!sc.held && '≈ '}
           <b>{dots.toLocaleString('en')}</b> dots
         </span>
       )}
