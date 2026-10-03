@@ -401,6 +401,18 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   const same = got.length === want.length && want.every((w, i) => toHex(w.oklch) === toHex(got[i].oklch) && got[i].type === w.type && (!w.name || got[i].name === w.name));
   check('its read-back matches the palette (names, colours, global and spot)', same, got.map((w) => [w.name, w.type]));
 
+  // the Krita format is another row of the same popover (the Library reads no .kpl, so only the write is checked)
+  patchDesign({ format: 'kpl' });
+  button('design', 'Export')?.click();
+  const exportKpl = await until(() => [...(popover()?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export Krita')));
+  if (check('the Export popover offers Export Krita', exportKpl)) {
+    const shownKpl = toastStore.get().length;
+    exportKpl!.click();
+    const savedKpl = await until(() => toastStore.get().slice(shownKpl).find((t) => t.icon === 'download'));
+    check('Export Krita writes a .kpl file', /^Exported .+\.kpl\.$/.test(String(savedKpl?.message ?? '')) && (await until(() => !popover())), savedKpl?.message);
+  }
+  patchDesign({ format: 'ase' });
+
   // each tab keeps its state when switched: Build's half-typed paste is still there after Check and Preview
   patchDesign({ tab: 'build', build: 'paste' });
   const box = await until(() => host('design')?.querySelector<HTMLTextAreaElement>('textarea[aria-label="Colours to parse"]'));

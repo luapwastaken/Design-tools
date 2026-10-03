@@ -3,7 +3,7 @@
 // files each pass leaves, prints PASS or FAIL and exits non-zero on any failure. The folder is
 // deleted on a pass and kept on a failure.
 import { spawn } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import electron from 'electron';
@@ -63,6 +63,11 @@ check('a quit with a task running asks "Quit anyway?" and goes ahead', /\[smoke\
 const exports = join(dir, 'exports');
 const exported = ['smoke export.png', join('design', 'one.txt'), join('design', 'two.txt')];
 check('the exports are on disk', exported.every((f) => existsSync(join(exports, f))), exported.filter((f) => !existsSync(join(exports, f))).join(', '));
+// Krita sniffs a .kpl's raw bytes for the mimetype, so the file the app wrote must open with it stored
+const kpl = existsSync(exports) && readdirSync(exports, { recursive: true }).find((f) => String(f).endsWith('.kpl'));
+const kplBytes = kpl ? readFileSync(join(exports, String(kpl))) : Buffer.alloc(0);
+const kplStored = kplBytes.length > 65 && kplBytes.toString('latin1', 0, 4) === 'PK\x03\x04' && kplBytes.readUInt16LE(8) === 0 && kplBytes.toString('latin1', 30, 65) === 'mimetypeapplication/x-krita-palette';
+check('the Krita export is a zip opening with its stored mimetype', kplStored, kpl);
 // the paint engine's stroke sheet is the look to review: PAINT_SHEET_OUT=<file> keeps a copy past the folder's deletion
 const sheet = existsSync(exports) && readdirSync(exports, { recursive: true }).find((f) => String(f).endsWith('paint-sheet.png'));
 check('the paint engine left its stroke sheet', !!sheet);

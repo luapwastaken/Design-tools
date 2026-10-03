@@ -1,7 +1,7 @@
 // Export (Design spec §4, Illustration spec §2): every format through the shared export path
 // (lib/export saveFile), in a popover under the doc bar's Export button.
 import { useRef, useState } from 'react';
-import { writeAco, writeAse, writeCss, writeGpl, writeJson, writeProcreate, writeSheetSvg, writeTailwind } from '../../../shared/palette/writers.ts';
+import { writeAco, writeAse, writeCss, writeGpl, writeJson, writeKpl, writeProcreate, writeSheetSvg, writeTailwind } from '../../../shared/palette/writers.ts';
 import type { Swatch, ToolId } from '../../../shared/types.ts';
 import { saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
@@ -9,7 +9,7 @@ import { Button, Popover, Select, TextInput, toast } from '../../ui/index.ts';
 import { plural } from './names.ts';
 import s from './ExportPalette.module.css';
 
-export type ExportFormat = 'ase' | 'aco' | 'gpl' | 'css' | 'tailwind' | 'procreate' | 'json' | 'svg' | 'png';
+export type ExportFormat = 'ase' | 'aco' | 'gpl' | 'css' | 'tailwind' | 'procreate' | 'kpl' | 'json' | 'svg' | 'png';
 
 type Format = { label: string; ext: string; filter: string; desc: string; write(name: string, list: Swatch[]): string | Uint8Array | Promise<Uint8Array> };
 
@@ -20,6 +20,7 @@ const FORMATS: Record<ExportFormat, Format> = {
   css: { label: 'CSS', ext: 'css', filter: 'CSS', desc: 'Custom properties named by role, in OKLCH with a hex twin.', write: (_, l) => writeCss(l) },
   tailwind: { label: 'Tailwind', ext: 'js', filter: 'Tailwind config', desc: 'A tailwind.config colours block, named by role.', write: (_, l) => writeTailwind(l) },
   procreate: { label: 'Procreate', ext: 'swatches', filter: 'Procreate swatches', desc: 'A .swatches file Procreate opens as a palette.', write: writeProcreate },
+  kpl: { label: 'Krita', ext: 'kpl', filter: 'Krita palette', desc: 'Krita palettes, each ramp a group.', write: writeKpl },
   json: { label: 'JSON', ext: 'json', filter: 'JSON', desc: 'Names, roles, hex and full-precision OKLCH.', write: writeJson },
   svg: { label: 'Sheet SVG', ext: 'svg', filter: 'SVG colour sheet', desc: 'A colour sheet with every swatch and its values, as vector.', write: (n, l) => writeSheetSvg(n, l) },
   png: { label: 'Sheet PNG', ext: 'png', filter: 'PNG image', desc: 'The colour sheet as a PNG at twice its size.', write: (n, l) => sheetPng(writeSheetSvg(n, l)) },

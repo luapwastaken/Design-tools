@@ -150,6 +150,68 @@ export function writeProcreate(name: string, swatches: Swatch[]): Uint8Array {
   return zipSync({ 'Swatches.json': strToU8(JSON.stringify(palettes)) });
 }
 
+// ── Krita KPL ────────────────────────────────────────────────────────────────────────────────────
+
+/** the colours in no ramp fill the palette's own group this many to a row */
+const KPL_ROW = 16;
+/** Krita clamps a palette's columns here; a longer ramp wraps onto more rows */
+const KPL_MAX_COLUMNS = 4096;
+/** the profile Krita's own 8-bit sRGB colours name; every Krita ships it */
+const KPL_SPACE = 'sRGB-elle-V2-srgbtrc.icc';
+const XML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+
+/** one line (a tab or newline in an attribute reads back as a space anyway), minus the characters XML 1.0 can't hold */
+const xmlText = (s: string) => oneLine(s.replace(/[\u0000-\u0008\u000e-\u001f\u007f-\u009f￾￿]/g, ''));
+const xmlAttr = (s: string) => xmlText(s).replace(/[&<>"]/g, (ch) => XML_ESCAPES[ch]);
+
+/**
+ * A Krita palette: a zip of mimetype, colorset.xml and profiles.xml. Each Illustration ramp is a
+ * group laid out light to dark, and the colours in no ramp fill the palette's own group. Krita
+ * sniffs the raw bytes for the mimetype, so that entry comes first and STORED. It drops swatches
+ * silently where a group has no `rows`, and fails the whole file on an empty profiles.xml.
+ */
+export function writeKpl(name: string, swatches: Swatch[]): Uint8Array {
+  const loose = swatches.filter((s) => s.group === undefined);
+  const ramps = sets(name, swatches.filter((s) => s.group !== undefined));
+  const columns = Math.min(KPL_MAX_COLUMNS, Math.max(1, Math.min(KPL_ROW, loose.length), ...ramps.map((r) => r.list.length)));
+
+  const entries = (list: Swatch[], width: number, pad: string) =>
+    list.flatMap((s, i) => {
+      const [r, g, b] = rgb255(s.oklch).map((c) => c / 255);
+      return [
+        `<ColorSetEntry spot="false" name="${xmlAttr(label(s))}" id="" bitdepth="U8">`,
+        ` <RGB r="${r}" g="${g}" b="${b}" space="${KPL_SPACE}"/>`,
+        ` <Position row="${Math.floor(i / width)}" column="${i % width}"/>`,
+        '</ColorSetEntry>',
+      ].map((line) => pad + line);
+    });
+
+  // two ramps can share a base name, and Krita merges groups of one name
+  const taken = new Set<string>();
+  const groups = ramps.flatMap(({ name: ramp, list }) => {
+    const base = xmlText(ramp) || 'Ramp';
+    let unique = base;
+    for (let n = 2; taken.has(unique); n++) unique = `${base} ${n}`;
+    taken.add(unique);
+    const lightToDark = [...list].sort((a, b) => (a.step ?? 0) - (b.step ?? 0));
+    return [` <Group name="${xmlAttr(unique)}" rows="${Math.ceil(list.length / columns)}">`, ...entries(lightToDark, columns, '  '), ' </Group>'];
+  });
+
+  const xml = [
+    `<ColorSet version="2.0" name="${xmlAttr(name.trim() || 'Palette')}" comment="" columns="${columns}" rows="${Math.ceil(loose.length / KPL_ROW)}">`,
+    ...entries(loose, KPL_ROW, ' '),
+    ...groups,
+    '</ColorSet>',
+    '',
+  ].join('\n');
+
+  return zipSync({
+    mimetype: [strToU8('application/x-krita-palette'), { level: 0 }],
+    'colorset.xml': strToU8(xml),
+    'profiles.xml': strToU8('<Profiles/>\n'),
+  });
+}
+
 // ── bytes (big-endian) ───────────────────────────────────────────────────────────────────────────
 
 const u16 = (v: number) => [(v >>> 8) & 255, v & 255];
