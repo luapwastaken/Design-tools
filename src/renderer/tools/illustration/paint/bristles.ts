@@ -3,7 +3,7 @@
 // contact to its new one, so its streak is continuous at any spacing; a grain in stroke space
 // (shaders) breaks the streaks up. Load runs down per hair with travel.
 import type { Step } from './input.ts';
-import { BRISTLES as B, LOAD, PICKUP, STREAKS } from './tuning.ts';
+import { BRISTLES as B, FILM, LOAD, PICKUP, STREAKS, WET } from './tuning.ts';
 import type { BrushKind, Medium, StrokeTool } from './types.ts';
 
 /** the footprint's width at a pressure, painting px */
@@ -12,6 +12,27 @@ export function brushWidth(brush: BrushKind, size: number, pressure: number): nu
   if (brush === 'round') return size * (0.2 + 0.8 * p ** 0.8);
   if (brush === 'flat') return size * (0.88 + 0.12 * p);
   return size * (0.6 + 0.4 * p);
+}
+
+/** a watercolour hair's strength by the paint it holds: what is left on it runs down along the stroke */
+const wetRun = (load: number) => WET.strength.floor + WET.strength.slope * load;
+
+/** the strength a watercolour stroke starts at, by its Load: pale below the knee, as before above it (WET.strength) */
+export function wetStrength(load: number): number {
+  const { knee, power } = WET.strength;
+  return load >= knee ? wetRun(load) : wetRun(knee) * (load / knee) ** power;
+}
+
+/**
+ * Watercolour: how strong the paint is where only the water has reached (a wash's leading edge), against
+ * the film's start. The hairs have run down since, and the film behind them with them, though only part
+ * of the way: a pixel is touched by about spread.wet hairs, each replacing FILM of what the film held.
+ * Left at the start's strength that edge would be a darker cap with a seam where the hairs begin.
+ */
+export function headStrength(b: Brush): number {
+  if (!b.wet) return 1;
+  const replaced = 1 - (1 - FILM) ** B.spread.wet;
+  return 1 - replaced + (replaced * wetRun(b.loadMean)) / wetRun(b.load);
 }
 
 /**
@@ -53,6 +74,8 @@ export type Brush = {
   streak: { hard: number; length: number; amount: number };
   /** px of travel a full hair lasts */
   capacity: number;
+  /** watercolour: the Load curve's share of the strength the hairs' own load would give (1 from the knee up) */
+  thin: number;
   /** pickup per 12 px of travel: gouache and the smudge; 0 for watercolour */
   pickup: number;
   /** this step's width, the mean load and the footprint's last centre and water (the body pass) */
@@ -94,7 +117,9 @@ const smooth = (a: number, b: number, x: number) => {
 
 export type BrushSpec = { kind: BrushKind; tool: StrokeTool; medium: Medium; size: number; load: number; seed: number };
 
-export function makeBrush(o: BrushSpec): Brush {
+export function makeBrush(spec: BrushSpec): Brush {
+  // a smudge drags across the full brush width whatever brush is chosen: always the Flat's even row
+  const o: BrushSpec = spec.tool === 'smudge' ? { ...spec, kind: 'flat' } : spec;
   const r = rng(o.seed * 7919);
   const wet = o.tool === 'paint' && o.medium === 'wet';
   const places: { u: number; len: number; clump: number }[] = [];
@@ -135,8 +160,9 @@ export function makeBrush(o: BrushSpec): Brush {
   const streak = o.kind === 'dry' ? STREAKS.dry : wet ? STREAKS.wet : STREAKS.gouache;
   // bigger brushes hold more but spend it faster per px
   const capacity = (wet ? LOAD.wet : LOAD.gouache) * Math.sqrt(40 / Math.max(o.size, 8)) * (0.4 + o.load);
-  const pickup = o.tool === 'smudge' ? PICKUP.smudge * o.load : wet ? 0 : PICKUP.gouache;
-  return { kind: o.kind, tool: o.tool, wet, size: o.size, load: o.load, hairs, streak, capacity, pickup, width: 0, loadMean: o.load, centre: null };
+  const pickup = o.tool === 'smudge' ? PICKUP.smudge : wet ? 0 : PICKUP.gouache;
+  const thin = wet ? wetStrength(o.load) / wetRun(o.load) : 1;
+  return { kind: o.kind, tool: o.tool, wet, size: o.size, load: o.load, hairs, streak, capacity, thin, pickup, width: 0, loadMean: o.load, centre: null };
 }
 
 /** the brush's width at this step, tilt and the smudge's steady width included */
@@ -173,7 +199,8 @@ export function brushStep(b: Brush, st: Step, row: number, out: StepOut): void {
   for (const h of b.hairs) {
     const reach = h.len * (0.3 + 0.7 * st.p) - (b.kind === 'round' ? 0.55 * h.u * h.u * (1 - st.p) : 0);
     // a round touches down as a round dab: its side hairs meet the paper a little after the middle ones
-    const start = b.kind === 'round' ? 0.5 * W * (1 - Math.sqrt(Math.max(0, 1 - h.u * h.u))) : 0;
+    // (a tap is the whole dab at once)
+    const start = b.kind === 'round' && !st.tap ? 0.5 * W * (1 - Math.sqrt(Math.max(0, 1 - h.u * h.u))) : 0;
     const contact = smooth(0.24, 0.42, reach) * (start > 0 ? smooth(start - 1, start + 2, st.s) : 1);
     // hairs aren't rigid: each wanders across the stroke, slowly; a round's side hairs trail its middle
     const splay = b.kind === 'flat' ? 1 : 0.9 + 0.2 * st.p;
@@ -186,7 +213,7 @@ export function brushStep(b: Brush, st: Step, row: number, out: StepOut): void {
     let gate = 0;
     // watercolour carries its load as the paint's strength in the film, which blends softly along
     // the stroke; the hairs lay water wherever they touch
-    const conc = b.wet ? 0.35 + 0.65 * h.load : 1;
+    const conc = b.wet ? b.thin * wetRun(h.load) : 1;
     if (b.tool === 'smudge') {
       amt = contact;
       h.use += (st.ds * contact) / PICKUP.smudgeUse;
@@ -197,27 +224,31 @@ export function brushStep(b: Brush, st: Step, row: number, out: StepOut): void {
       if (!b.wet || b.kind === 'dry') gate = Math.min(0.95, Math.max(0, gateStart - h.load * LOAD.gatePerLoad - st.p * LOAD.gatePerP));
     }
     loadSum += h.load;
-    const prev = h.last ?? { x, y, a: amt, s: st.s - st.ds };
-    if ((amt > 0.004 || prev.a > 0.004) && out.nBristles < out.bristles.length / BRISTLE_STRIDE) {
+    // a tap is a dab centred here, as much of one as st.tap says: a Round's hair is a chord of its disc,
+    // the others a short row
+    const half = (st.tap ?? 0) * (b.kind === 'round' ? (W * Math.sqrt(Math.max(0, 1 - h.u * h.u))) / 2 : (W * B.tapLength) / 2);
+    const from = st.tap ? { x: x - st.dx * half, y: y - st.dy * half, a: amt, s: st.s - half } : (h.last ?? { x, y, a: amt, s: st.s - st.ds });
+    const to = { x: x + st.dx * half, y: y + st.dy * half, a: amt, s: st.s + half };
+    if ((amt > 0.004 || from.a > 0.004) && out.nBristles < out.bristles.length / BRISTLE_STRIDE) {
       const f = out.bristles;
       const o = out.nBristles++ * BRISTLE_STRIDE;
-      f[o] = prev.x;
-      f[o + 1] = prev.y;
-      f[o + 2] = x;
-      f[o + 3] = y;
+      f[o] = from.x;
+      f[o + 1] = from.y;
+      f[o + 2] = to.x;
+      f[o + 3] = to.y;
       f[o + 4] = hw;
-      f[o + 5] = prev.a;
+      f[o + 5] = from.a;
       f[o + 6] = amt;
       f[o + 7] = h.id;
-      f[o + 8] = prev.s;
-      f[o + 9] = st.s;
+      f[o + 8] = from.s;
+      f[o + 9] = to.s;
       f[o + 10] = gate;
       f[o + 11] = conc;
       f[o + 12] = row;
-      f[o + 13] = h.last ? 0 : 1;
+      f[o + 13] = h.last && !st.tap ? 0 : 1;
       f[o + 14] = h.clump;
       f[o + 15] = h.edge;
-      out.box = grow(grow(out.box, x, y, hw + 2), prev.x, prev.y, hw + 2);
+      out.box = grow(grow(out.box, to.x, to.y, hw + 2), from.x, from.y, hw + 2);
     }
     if (h.id < B.max && b.pickup > 0) {
       const o = (row * B.max + h.id) * 4;
@@ -235,7 +266,7 @@ export function brushStep(b: Brush, st: Step, row: number, out: StepOut): void {
   }
   b.loadMean = loadSum / b.hairs.length;
   b.width = W;
-  if (b.wet && b.kind !== 'dry') body(b, cx, cy, W, nx, ny, out);
+  if (b.wet && b.kind !== 'dry') body(b, cx, cy, W, nx, ny, ((st.tap ?? 0) * W * B.tapLength) / 2, out);
   else out.box = grow(out.box, cx, cy, W / 2 + 3);
 }
 
@@ -245,7 +276,7 @@ export function brushStep(b: Brush, st: Step, row: number, out: StepOut): void {
  * lays its edge across the stroke at every step, with corners rounded a little. The Dry brush has
  * none: only its hairs leave marks.
  */
-function body(b: Brush, cx: number, cy: number, W: number, nx: number, ny: number, out: StepOut): void {
+function body(b: Brush, cx: number, cy: number, W: number, nx: number, ny: number, tapHalf: number, out: StepOut): void {
   const put = (x0: number, y0: number, x1: number, y1: number, hw: number) => {
     out.bodies.set([x0, y0, x1, y1, hw, 1, 1, 0], out.nBodies++ * BODY_STRIDE);
     out.box = grow(grow(out.box, x0, y0, hw + 3), x1, y1, hw + 3);
@@ -254,7 +285,8 @@ function body(b: Brush, cx: number, cy: number, W: number, nx: number, ny: numbe
     const c = b.centre ?? { x: cx, y: cy, water: 1 };
     put(c.x, c.y, cx, cy, (W / 2) * 1.04);
   } else {
-    const r = Math.min(W / 2, B.flatCorner);
+    // a tap's dab is as long as the corners are round
+    const r = Math.min(W / 2, Math.max(B.flatCorner, tapHalf));
     const reach = W / 2 - r;
     put(cx - nx * reach, cy - ny * reach, cx + nx * reach, cy + ny * reach, r + 0.02 * W);
   }

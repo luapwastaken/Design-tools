@@ -3,6 +3,3 @@ export * from './types.ts';
 export { PaintEngine } from './engine.ts';
 export { toSample } from './input.ts';
 export { brushWidth } from './bristles.ts';
-export { liveEngine } from './probe.ts';
-export { renderSheet, type SheetReport } from './sheet.ts';
-export { paintEngineChecks } from './smoke-checks.ts';

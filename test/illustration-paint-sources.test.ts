@@ -37,6 +37,19 @@ test('a loaded brush carries the traits the engine reads, staining included', ()
   assert.equal(l.opacity, P.phthaloB.opacity);
 });
 
+test('a palette colour is marked for the engine to lay harder; a tube is not', () => {
+  const [tube, palette] = sourcesOf([P.ultra], [{ key: 'r', name: 'Skin', swatches: [swatch('a', [0.6, 0.1, 40])] }]);
+  assert.equal(loadedOf(tube.pigment, tube.swatch).swatch, undefined);
+  assert.equal(loadedOf(palette.pigment, palette.swatch).swatch, true);
+  assert.equal(loadedOf(P.ultra).swatch, undefined);
+});
+
+test('a well of palette colours alone is laid as they are; one tube in it and the mix is the tubes to weigh', () => {
+  const sources = sourcesOf([P.ultra], [{ key: 'r', name: 'Skin', swatches: [swatch('a', [0.6, 0.1, 40]), swatch('b', [0.5, 0.1, 60])] }]);
+  assert.equal(wellMix([{ id: 'swatch:a', parts: 1 }, { id: 'swatch:b', parts: 2 }], sources)!.loaded.swatch, true);
+  assert.equal(wellMix([{ id: 'swatch:a', parts: 1 }, { id: 'ultra', parts: 1 }], sources)!.loaded.swatch, undefined);
+});
+
 test('the well mixes by parts with km.ts: ultramarine and hansa make a green, its traits averaged by parts', () => {
   const sources = sourcesOf(PIGMENTS, []);
   assert.equal(wellMix([], sources), null);

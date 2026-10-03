@@ -57,7 +57,7 @@ export function Recipes({ d, v, sel, owned, hidden, onTry, className }: Props) {
       scroll
       flush
       className={className}
-      footer={<span className={s.fine}>Parts by volume, tinting strength included. Tube colours vary: mix, then adjust by eye.</span>}
+      footer={<span className={s.fine}>Parts by volume, tinting strength included. Tube colours vary: mix, then adjust by eye. Try it in gouache for the mix at full strength; one watercolour pass is a first wash.</span>}
     >
       <div className={s.opts}>
         <Segmented label="Paints per mix" options={MAX} value={String(v.maxPaints) as '1' | '2' | '3'} onChange={(m) => patchView({ maxPaints: Number(m) as 1 | 2 | 3 })} />

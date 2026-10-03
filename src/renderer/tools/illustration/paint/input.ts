@@ -89,6 +89,8 @@ export type Step = {
   tilt: TiltShape;
   /** ms, the time of the path at this point */
   t: number;
+  /** a click, a tap or a short drag ends in a dab (the brush gives it a footprint): 1 is a whole dab, less is a smaller one */
+  tap?: number;
 };
 
 type Pt = { x: number; y: number; p: number; t: number; tilt: PointerSample['tilt'] };
@@ -149,8 +151,11 @@ export class StrokeInput {
   #prev: Step | null = null;
   #raw: PointerSample;
   #first: Step | null;
+  /** a brush that turns with the stroke holds its first dab until the stroke has a heading */
+  readonly #hold: boolean;
 
-  constructor(o: { size: number; pen: boolean }, first: PointerSample) {
+  constructor(o: { size: number; pen: boolean; hold?: boolean }, first: PointerSample) {
+    this.#hold = !!o.hold;
     this.size = o.size;
     this.pen = o.pen;
     this.#fp = new OneEuro(I.pressureCutoff, o.pen ? 4 : 0, I.dCutoff);
@@ -185,7 +190,8 @@ export class StrokeInput {
         path.push(...catmullRom(b, c, d, beyond(d, c, b), this.#piece()));
       } else path.push(...catmullRom(beyond(b, c, c), b, c, beyond(c, b, b), this.#piece()));
     }
-    const out = this.#first ? [this.#first] : [];
+    const first = this.#first;
+    const out = first ? [first] : [];
     this.#first = null;
     // the frame cap: a long frame spaces its steps wider rather than drawing more of them
     let length = this.#since;
@@ -197,7 +203,32 @@ export class StrokeInput {
       out.push(this.#step(this.#at, this.#since));
       this.#since = 0;
     }
+    if (this.#hold && first) {
+      // the curve is a sample behind, so the first dab alone would face right whatever the stroke does:
+      // it waits for the second step and turns to face it (a click still dabs, at the lift)
+      if (out.length === 1 && !end) {
+        this.#first = first;
+        return [];
+      }
+      if (out.length > 1) [first.dx, first.dy] = [out[1].dx, out[1].dy];
+    }
+    if (end) {
+      const w = this.#tapWeight();
+      if (w > 0) out.push(this.#tap(w));
+    }
     return out;
+  }
+
+  /** how much of a whole dab the stroke ends in: all of it for a click or a wobble, none once it has travelled on */
+  #tapWeight(): number {
+    return 1 - smooth(this.size * I.tapTravel, this.size * I.tapEnd, this.#travel);
+  }
+
+  /** the last step again, `w` of a dab: at a dab's pressure (a mouse's own, a pen's as it pressed but not feather-light) */
+  #tap(w: number): Step {
+    const q = this.#prev!;
+    const dab = this.pen ? Math.max(I.tapFloor, q.p) : I.tapPressure;
+    return { ...q, p: Math.max(q.p, dab * w + q.p * (1 - w)), ds: 0, tap: w };
   }
 
   #piece(): number {

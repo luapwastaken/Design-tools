@@ -1,7 +1,7 @@
 // The engine's GPU side (plan §1, §2): its programs, its textures and one function per pass.
 // Everything is made by one gpuScope('paint'), so release() frees it all.
 import type { Gpu, Instances, Program, Rect, Texture } from '../../../lib/gpu/index.ts';
-import { BODY_LAYOUT, BODY_STRIDE, BRISTLE_LAYOUT, BRISTLE_STRIDE } from './bristles.ts';
+import { BODY_LAYOUT, BODY_STRIDE, BRISTLE_LAYOUT, BRISTLE_STRIDE, headStrength, wetStrength } from './bristles.ts';
 import { PAPER as PAPER_GLSL } from './glsl/common.ts';
 import { COMPOSITE } from './glsl/composite.ts';
 import { DECODE, ENCODE, LIT, SCREEN } from './glsl/display.ts';
@@ -95,7 +95,7 @@ export function beginStroke(g: Gpu, p: Programs, s: Surfaces, live: LiveStroke):
   const mode = live.o.tool === 'smudge' ? 2 : live.o.medium === 'wet' ? 0 : 1;
   if (mode === 0) {
     // the paint at the brush's starting strength (bristles.ts: conc)
-    const c = 0.35 + 0.65 * live.o.load;
+    const c = wetStrength(live.o.load);
     const k = live.paint;
     s.film.forEach((t, i) => g.clear(t, [k[i * 4] * c, k[i * 4 + 1] * c, k[i * 4 + 2] * c, k[i * 4 + 3] * c]));
     return;
@@ -118,6 +118,8 @@ export function drawStroke(g: Gpu, p: Programs, s: Surfaces, live: LiveStroke, s
     const inputs = { u_under: s.base, u_pos: s.stepPos, u_prm: s.stepPrm, u_c0: from[0], u_c1: from[1], u_c2: from[2], u_c3: from[3], u_c4: from[4] };
     const uniforms = {
       u_smudge: smudge ? 1 : 0,
+      u_heightPower: PICKUP.smudgeHeightPower,
+      u_hold: PICKUP.smudgeHold * live.o.load,
       u_fullHeight: PICKUP.fullHeight,
       u_dirtMax: PICKUP.dirtMax,
       u_pushOut: PICKUP.pushOut,
@@ -162,7 +164,11 @@ export function drawStroke(g: Gpu, p: Programs, s: Surfaces, live: LiveStroke, s
     inputs: { u_base: s.base, u_mask: s.mask, u_k0: s.film[0], u_k1: s.film[1], u_k2: s.film[2], u_k3: s.film[3], u_paper: s.paper },
     uniforms: {
       u_mode: mode,
-      u_thick: mode === 0 ? WET.thick : mode === 1 ? GOUACHE.thick : SMUDGE.thick,
+      u_thick: mode === 0 ? WET.thick : mode === 1 ? GOUACHE.thick : SMUDGE.cover,
+      u_smudgeAlpha: SMUDGE.alpha,
+      u_dryBoost: WET.dryBoost,
+      u_head: headStrength(b),
+      u_headAmount: WET.headAmount,
       u_rimK: WET.rimK,
       u_rimW: WET.rimW,
       u_edgeAmp: Math.min(WET.wanderMax, live.o.size * WET.wander),
@@ -215,7 +221,7 @@ export function grown(r: Rect, by: number): Rect {
 
 /** the relief-lit look of `rect` */
 export function lit(g: Gpu, p: Programs, s: Surfaces, rect: Rect): void {
-  g.pass(p.lit, { output: s.lit, rect, inputs: { u_shown: s.shown, u_paper: s.paper }, uniforms: { u_relief: PAPER.relief, u_fill: PAPER.fill, u_stand: PAPER.stand, u_wash: PAPER.washHeight } });
+  g.pass(p.lit, { output: s.lit, rect, inputs: { u_shown: s.shown, u_paper: s.paper }, uniforms: { u_relief: PAPER.relief, u_fill: PAPER.fill, u_stand: PAPER.stand, u_wash: PAPER.washHeight, u_mottle: PAPER.mottle } });
 }
 
 /** the lit painting at the screen texture's size, sRGB */

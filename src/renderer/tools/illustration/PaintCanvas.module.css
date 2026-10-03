@@ -59,12 +59,13 @@
   width: min(calc(100cqw - 24px), calc((100cqh - 24px) * 1.6));
   aspect-ratio: 2048 / 1280;
   box-shadow: 0 0 0 1px var(--edge);
-  cursor: none;
-  touch-action: none;
 }
+/* the pasteboard takes the pointer too (a stroke can start off the paper), so the cursor and touch rules are the view's */
+.view { cursor: none; touch-action: none; }
 .canvas:focus-visible { outline: 1px solid var(--signal); outline-offset: 2px; }
+.picking, .waiting { cursor: default; }
 .picking .canvas { cursor: crosshair; }
-.waiting .canvas { cursor: default; }
+.note, .confirm { cursor: default; }
 
 /* the cursor over the paper: the 2px dot, and the brush's footprint around it (hidden from the lift
    until the pointer moves on); it moves by transform, with no transition */
@@ -148,7 +149,8 @@
 
 /* ── the tray ── */
 /* three rows at most, then it scrolls (the wheel works on it), so a palette of many ramps doesn't
-   take the paper's height; the padding keeps the chips' rings and focus bars inside the scroll */
+   take the paper's height; the padding keeps the chips' rings and focus bars inside the scroll, and
+   the height is three whole rows (4 + 3 × 22 + 2 × 8 + 8; in the small window 4 + 3 × 16 + 2 × 8 + 8), so no sliver of a fourth shows */
 .tray {
   display: flex;
   flex: 1 1 0;
@@ -158,7 +160,7 @@
   gap: 8px 4px;
   min-width: 0;
   min-height: 38px;
-  max-height: 98px;
+  max-height: 94px;
   margin: -4px 0 -8px -4px;
   padding: 4px 4px 8px;
   overflow-y: auto;
@@ -237,7 +239,7 @@
 
 /* a smaller window: smaller chips, so the tray gives the paper more of the height */
 @container paint (max-width: 600px) {
-  .tray { gap: 7px 4px; max-height: 76px; }
+  .tray { gap: 8px 4px; max-height: 76px; }
   .chip { width: 16px; height: 16px; }
   .set { gap: 4px; margin-left: 6px; }
   .trayRow { flex-direction: column; }

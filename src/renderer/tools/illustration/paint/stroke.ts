@@ -1,20 +1,20 @@
 // The live stroke's CPU half: pointer samples to steps (input.ts), steps to bristle and body
 // instances and pickup rows (bristles.ts), one frame at a time. Pure, so the tests run every sheet
 // stroke through it; the engine uploads what it makes and runs the frame's passes.
-import { paint15 } from '../../../../shared/paint/km15.ts';
+import { paint15, strengthen15 } from '../../../../shared/paint/km15.ts';
 import { BODY_STRIDE, BRISTLE_STRIDE, brushStep, makeBrush, type Box, type Brush, type StepOut } from './bristles.ts';
 import { StrokeInput } from './input.ts';
-import { BRISTLES, INPUT } from './tuning.ts';
+import { BRISTLES, INPUT, SWATCH } from './tuning.ts';
 import { HEIGHT, WIDTH, type PointerSample, type Rect, type StrokeOptions } from './types.ts';
 
 /** what one frame drew: counts, the rect it touched (whole px, inside the painting), and its oldest sample */
 export type FrameOut = { steps: number; bristles: number; bodies: number; rect: Rect | null; oldest: number };
 
-/** the brush's paint as the shaders take it: 15 K then S */
+/** the brush's paint as the shaders take it: 15 K then S. A palette colour is pushed harder, so one pass reads as it does on the ramp */
 function paintUniform(o: StrokeOptions): Float32Array {
   const u = new Float32Array(16);
   if (!o.loaded) return u;
-  const p = paint15(o.loaded.paint);
+  const p = o.loaded.swatch ? strengthen15(paint15(o.loaded.paint), SWATCH[o.medium]) : paint15(o.loaded.paint);
   u.set(p.K);
   u[15] = p.S;
   return u;
@@ -57,7 +57,8 @@ export class LiveStroke {
     this.seed = seed;
     this.brush = makeBrush({ kind: o.brush, tool: o.tool, medium: o.medium, size: o.size, load: o.load, seed });
     this.paint = paintUniform(o);
-    this.#input = new StrokeInput({ size: o.size, pen: first.pressure !== null }, first);
+    // Flat, Dry brush and Smudge turn with the stroke, so their first dab waits for a heading
+    this.#input = new StrokeInput({ size: o.size, pen: first.pressure !== null, hold: o.brush !== 'round' || o.tool === 'smudge' }, first);
     const steps = INPUT.maxSteps;
     this.out = {
       bristles: new Float32Array(steps * BRISTLES.max * BRISTLE_STRIDE),

@@ -14,7 +14,7 @@ export function useBrush(v: PaintSettings, sources: Source[], onSettings: (patch
   const brush = useMemo((): Brush | null => {
     if (v.paint === 'well') return mix && { id: 'well', loaded: mix.loaded, oklch: mix.oklch, name: 'Well mix' };
     const src = sources.find((x) => x.id === v.paint);
-    return src ? { id: src.id, loaded: loadedOf(src.pigment), oklch: src.pigment.oklch, name: src.name } : null;
+    return src ? { id: src.id, loaded: loadedOf(src.pigment, src.swatch), oklch: src.pigment.oklch, name: src.name } : null;
   }, [v.paint, sources, mix]);
 
   const prev = useRef<Source[] | null>(null);

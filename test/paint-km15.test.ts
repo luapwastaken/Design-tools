@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { converter } from 'culori';
 import { linearRgb, toOklch } from '../src/shared/color/index.ts';
 import { BANDS, mix, paintOf } from '../src/shared/paint/km.ts';
-import { BASIS15, colour15, GROUPS, layer15, linear15, mix15, N15, paint15, reflectance15, W15 } from '../src/shared/paint/km15.ts';
+import { BASIS15, colour15, GROUPS, layer15, linear15, mix15, N15, paint15, reflectance15, strengthen15, W15 } from '../src/shared/paint/km15.ts';
 import { PIGMENTS } from '../src/shared/paint/pigments.ts';
 import { KM } from '../src/renderer/tools/illustration/paint/glsl/km.ts';
 import { mixCases } from '../src/renderer/tools/illustration/paint/km-cases.ts';
@@ -93,4 +93,20 @@ test('the GLSL constants are 15 finite numbers each, in four vec4s with the 16th
     assert.equal(values[15], 0, name);
   }
   assert.ok(!/NaN|Infinity/.test(KM));
+});
+
+test('strengthening a paint pushes it harder and keeps its colour: K and S scale together', () => {
+  const p = byId.ultra;
+  const strong = strengthen15(p, 36);
+  assert.equal(strong.S, 36 * p.S);
+  assert.ok(strong.K.every((k, i) => Math.abs(k - 36 * p.K[i]) <= 1e-12 * Math.abs(k)));
+  const [a, b] = [colour15(p), colour15(strong)];
+  a.forEach((v, i) => assert.ok(Math.abs(v - b[i]) < 1e-9, `${a} ${b}`));
+  // one wash of it over paper is as dark as 36 washes' worth of thickness
+  const R = (q: typeof p, x: number) => linear15(Array.from(q.K, (k, i) => layer15(k, q.S, x, 0.85 + 0.01 * i * 0)));
+  const thin = R(p, 0.03);
+  const thick = R(strong, 0.03);
+  assert.ok(thick.every((v, i) => v < thin[i]), `${thin} ${thick}`);
+  const same = R(p, 36 * 0.03);
+  same.forEach((v, i) => assert.ok(Math.abs(v - thick[i]) < 1e-9, `${same} ${thick}`));
 });

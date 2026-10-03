@@ -9,7 +9,7 @@ import type { Pigment } from '../../../shared/paint/pigments.ts';
 import { ConfirmInline, Icon, toast } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { brushWidth, toSample, WIDTH, type PaintingState, type PointerSample } from './paint/index.ts';
-import { addToWell, SIZE, sourcesOf, WELL_MAX, type PaintSettings, type PaletteSet } from './paint-sources.ts';
+import { addToWell, loadHint, SIZE, sourcesOf, WELL_MAX, type PaintSettings, type PaletteSet } from './paint-sources.ts';
 import { PaintBar } from './PaintBar.tsx';
 import { Tray, Well } from './PaintTray.tsx';
 import { useBrush } from './useBrush.ts';
@@ -41,7 +41,7 @@ const BLANK: PaintingState = { depth: 0, redoDepth: 0, lastIsClear: false, blank
 const RING_SLOP = 2;
 const oklchOf = ([r, g, b]: [number, number, number]) => toOklch({ mode: 'rgb', r, g, b });
 
-type Stroke = { id: number; box: DOMRect; onKey(e: globalThis.KeyboardEvent): void };
+type Stroke = { id: number; onKey(e: globalThis.KeyboardEvent): void };
 
 export function PaintCanvas(p: PaintCanvasProps) {
   const v = p.settings;
@@ -134,15 +134,20 @@ export function PaintCanvas(p: PaintCanvasProps) {
     });
   };
 
-  const onPointerDown = (e: PointerEvent<HTMLCanvasElement>) => {
-    if (e.button !== 0 || !engine || stroke.current || save.loading) return;
-    const box = e.currentTarget.getBoundingClientRect();
-    const first = toSample(e.nativeEvent, box);
-    if (v.tool === 'pick' || e.altKey) return pickAt(first);
+  // the paper and the pasteboard around it take the pointer, so a stroke can start off the paper and
+  // paint cleanly to its edge; the notes and the Clear confirmation on top do not. The paper's box is
+  // read at every event: the layout can move under a stroke (Ctrl+L, the inspector, a proposals row).
+  const paper = (e: PointerEvent<HTMLElement>) => e.target === canvas.current;
+  const onPointerDown = (e: PointerEvent<HTMLElement>) => {
+    const cv = canvas.current!;
+    if (e.button !== 0 || !engine || stroke.current || save.loading || (!paper(e) && e.target !== e.currentTarget)) return;
+    const first = toSample(e.nativeEvent, cv.getBoundingClientRect());
+    if (v.tool === 'pick' || e.altKey) return paper(e) ? pickAt(first) : undefined;
     const smudge = v.tool === 'smudge';
     const b = brushRef.current;
-    if (!smudge && !b) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    if (!smudge && !b) return void toast.show({ icon: 'brush', message: loadHint(!sources.length) });
+    if (!paper(e)) cv.focus({ preventScroll: true });
+    cv.setPointerCapture(e.pointerId);
     const onKey = (k: globalThis.KeyboardEvent) => {
       if (k.key !== 'Escape') return;
       k.preventDefault();
@@ -150,7 +155,7 @@ export function PaintCanvas(p: PaintCanvasProps) {
       endStroke(false);
     };
     addEventListener('keydown', onKey, true);
-    stroke.current = { id: e.pointerId, box, onKey };
+    stroke.current = { id: e.pointerId, onKey };
     lift.current = null;
     ring.current!.hidden = false;
     // painting on after a Clear: its toast's Undo would take this stroke with it
@@ -158,20 +163,21 @@ export function PaintCanvas(p: PaintCanvasProps) {
     engine.begin({ tool: smudge ? 'smudge' : 'paint', medium: v.medium, brush: v.brushes[v.medium], size: v.size, load: v.load / 100, loaded: smudge ? null : b!.loaded }, first);
   };
 
-  const onPointerMove = (e: PointerEvent<HTMLCanvasElement>) => {
+  const onPointerMove = (e: PointerEvent<HTMLElement>) => {
     moveCursor(e);
     const st = stroke.current;
-    if (v.tool === 'pick' && !st) return readUnder(toSample(e.nativeEvent, e.currentTarget.getBoundingClientRect()));
+    const box = canvas.current!.getBoundingClientRect();
+    if (v.tool === 'pick' && !st) return paper(e) ? readUnder(toSample(e.nativeEvent, box)) : undefined;
     if (!engine || st?.id !== e.pointerId) return;
     const events = e.nativeEvent.getCoalescedEvents?.() ?? [];
-    engine.move((events.length ? events : [e.nativeEvent]).map((ev) => toSample(ev, st.box)));
+    engine.move((events.length ? events : [e.nativeEvent]).map((ev) => toSample(ev, box)));
     if (engine.liveWidth > 0) sizeRing(engine.liveWidth);
   };
 
-  const onPointerUp = (e: PointerEvent<HTMLCanvasElement>) => {
+  const onPointerUp = (e: PointerEvent<HTMLElement>) => {
     const st = stroke.current;
     if (st?.id !== e.pointerId) return;
-    endStroke(true, toSample(e.nativeEvent, st.box));
+    endStroke(true, toSample(e.nativeEvent, canvas.current!.getBoundingClientRect()));
     // the ring leaves the fresh paint in view until the pointer moves on
     ring.current!.hidden = true;
     lift.current = { x: e.clientX, y: e.clientY };
@@ -250,24 +256,27 @@ export function PaintCanvas(p: PaintCanvasProps) {
         clearBtn={clearBtn}
       />
 
-      <div ref={view} className={cx(s.view, v.tool === 'pick' && s.picking, !ready && s.waiting)}>
+      <div
+        ref={view}
+        className={cx(s.view, v.tool === 'pick' && s.picking, !ready && s.waiting)}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onLostPointerCapture={() => endStroke(true)}
+        onPointerEnter={(e) => {
+          moveCursor(e);
+          hoverRing();
+        }}
+        onPointerLeave={() => {
+          cursor.current!.hidden = true;
+        }}
+      >
         <canvas
           ref={canvas}
           className={s.canvas}
           tabIndex={0}
           aria-label="Painting. Drag to paint; [ and ] change the brush size; Ctrl+Z undoes a stroke, Ctrl+Y redoes it."
           aria-disabled={!ready || undefined}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onLostPointerCapture={() => endStroke(true)}
-          onPointerEnter={(e) => {
-            moveCursor(e);
-            hoverRing();
-          }}
-          onPointerLeave={() => {
-            cursor.current!.hidden = true;
-          }}
           onKeyDown={onKeyDown}
         />
         <div ref={cursor} className={s.cursor} hidden aria-hidden="true">

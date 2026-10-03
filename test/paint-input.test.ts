@@ -16,8 +16,8 @@ function samples(path: (u: number) => [number, number], ms: number, hz: number, 
 }
 
 /** a whole stroke fed in batches of `batch` samples a frame; the last sample is the lift */
-function run(list: PointerSample[], size: number, batch: number, pen = false): Step[][] {
-  const input = new StrokeInput({ size, pen }, list[0]);
+function run(list: PointerSample[], size: number, batch: number, pen = false, hold = false): Step[][] {
+  const input = new StrokeInput({ size, pen, hold }, list[0]);
   const frames: Step[][] = [];
   const rest = list.slice(1, -1);
   for (let i = 0; i < rest.length; i += batch) frames.push(input.frame(rest.slice(i, i + batch)));
@@ -112,4 +112,60 @@ test('tilt widens a Round and shifts it toward the barrel', () => {
   assert.ok(half.widen > 1 && flat.widen > half.widen && flat.widen <= INPUT.tiltWiden + 1e-9);
   assert.ok(half.ox > 0 && Math.abs(half.oy) < 1e-9);
   assert.ok(flat.oy > 0 && Math.abs(flat.ox) < 1e-9);
+});
+
+test('a brush that turns with the stroke holds its first dab until it has a heading, then faces it', () => {
+  // straight down at 700 px/s: the curve is a sample behind, so the first frames have no step but the first
+  const list = samples(line(1000, 300, 1000, 900), 860, 125);
+  const held = run(list, 90, 2, false, true);
+  assert.equal(held[0].length, 0, 'nothing is drawn until the stroke has a heading');
+  const steps = held.flat();
+  assert.deepEqual([steps[0].x, steps[0].y], [list[0].x, list[0].y]);
+  assert.ok(Math.abs(steps[0].dx) < 1e-9 && Math.abs(steps[0].dy - 1) < 1e-9, `first dab faces (${steps[0].dx}, ${steps[0].dy})`);
+  // without the hold, the first dab is at pointer-down, facing right
+  const prompt = run(list, 90, 2, false, false);
+  assert.equal(prompt[0].length, 1);
+  assert.deepEqual([prompt[0][0].dx, prompt[0][0].dy], [1, 0]);
+});
+
+test('a click, a tap or a wobble ends in a dab; a real stroke does not', () => {
+  const tapped = (list: PointerSample[], size: number, pen = false, hold = false) => run(list, size, 2, pen, hold).flat().filter((s) => s.tap);
+  // a click: one sample down, one up; held or not, a mouse dab is at the dab pressure
+  for (const hold of [false, true]) {
+    const click = tapped([sample(500, 500, 1000), sample(500, 500, 1090)], 80, false, hold);
+    assert.equal(click.length, 1, `hold ${hold}`);
+    assert.equal(click[0].p, INPUT.tapPressure);
+    assert.deepEqual([click[0].x, click[0].y], [500, 500]);
+  }
+  // a pen's is its own pressure, never feather-light
+  assert.equal(tapped([sample(500, 500, 1000, 0.6), sample(500, 500, 1090, 0.6)], 80, true)[0].p, 0.6);
+  assert.equal(tapped([sample(500, 500, 1000, 0.05), sample(500, 500, 1090, 0.05)], 80, true)[0].p, INPUT.tapFloor);
+  // a wobble of a few px is a whole dab too, a stroke that has travelled past the brush's size is none
+  assert.equal(tapped(samples(line(500, 500, 510, 504), 90, 125), 80)[0].tap, 1);
+  assert.equal(tapped(samples(line(500, 500, 700, 500), 300, 125), 80).length, 0);
+  // and it all goes by the size: a drag that is a whole dab to a big brush is a part of one to a small one
+  const drag30 = samples(line(500, 500, 530, 500), 400, 125);
+  assert.equal(tapped(drag30, 400)[0].tap, 1);
+  const small = tapped(drag30, 40)[0].tap!;
+  assert.ok(small > 0 && small < 1, `small brush ${small}`);
+});
+
+test('a drag ends in less of a dab as it lengthens, with no jump and no bump (stippling is not dot or sliver)', () => {
+  const size = 80;
+  for (const pen of [false, true]) {
+    let was = { w: 1, p: NaN };
+    for (let len = 0; len <= size * INPUT.tapEnd + 10; len += 2) {
+      const list = samples(line(500, 500, 500 + len, 500), 40 + len * 6, 125, () => (pen ? 0.6 : null));
+      const dab = run(list, size, 2, pen).flat().find((s) => s.tap);
+      const w = dab?.tap ?? 0;
+      assert.ok(w <= was.w + 1e-9, `${len} px: dab ${w} after ${was.w}`);
+      assert.ok(was.w - w <= 0.12, `${len} px: dab drops ${was.w} to ${w}`);
+      if (dab) {
+        assert.ok(!(Math.abs(dab.p - was.p) > 0.1), `${len} px: pressure jumps ${was.p} to ${dab.p}`);
+        was.p = dab.p;
+      }
+      was.w = w;
+    }
+    assert.equal(was.w, 0, 'gone once the stroke has travelled its size');
+  }
 });

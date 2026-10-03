@@ -86,7 +86,8 @@ export const SHEET: SheetStroke[] = [
   { ...gw, name: 'pen taper', cell: [2, 2], brush: 'round', size: 60, load: 0.9, pigment: 'rumber', path: line(50, 80, 460, 80), ms: 900, pressure: swell(0.05) },
   { ...gw, name: 'mouse stroke', cell: [2, 2], brush: 'round', size: 60, load: 0.9, pigment: 'rumber', path: line(50, 200, 460, 200), ms: 900, pointer: 'mouse' },
   { ...gw, name: 'pen tilted 45 degrees', cell: [2, 2], brush: 'round', size: 60, load: 0.9, pigment: 'rumber', path: line(50, 330, 460, 330), ms: 900, pressure: () => 0.8, tilt: { altitude: Math.PI / 4, azimuth: Math.PI / 2 } },
-  ...[0.2, 0.5, 0.7, 1].map((load, k): SheetStroke => ({ ...gw, name: `load ${Math.round(load * 100)}`, cell: [3, 2], brush: 'round', size: 44, load, pigment: 'dioxazine', path: line(30, 60 + 95 * k, 480, 60 + 95 * k), ms: 1000 })),
+  // the loads where a 450 px stroke still runs dry (the checks' full-width ladder is in sheet.ts)
+  ...[0.3, 0.4, 0.5, 0.7].map((load, k): SheetStroke => ({ ...gw, name: `load ${Math.round(load * 100)}`, cell: [3, 2], brush: 'round', size: 44, load, pigment: 'dioxazine', path: line(30, 60 + 95 * k, 480, 60 + 95 * k), ms: 1000 })),
 ];
 
 /** painting px of a point on a stroke's path */

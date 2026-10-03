@@ -1,14 +1,12 @@
-// The live canvas registers its engine here, so the smoke pass and CDP probes can reach it. In smoke
-// folders only, window.dtPaint also holds it and the stroke sheet (the PNG as base64, for CDP).
-import { createStore } from '../../common/store.ts';
+// window.dtPaint: the live engine (live.ts) and the stroke sheet (the PNG as base64) for CDP probes.
+// Loaded by useEngine in smoke folders only (a dynamic import), so none of it ships to the user.
 import { internals, PaintEngine } from './engine.ts';
+import { liveEngine } from './live.ts';
 import { paintStroke, renderSheet } from './sheet.ts';
 import { gpuGlazes, paintEngineChecks } from './smoke-checks.ts';
 import { gpuScope } from '../../../lib/gpu/index.ts';
 import { glazeCases } from './km-cases.ts';
 import { loadedOf, SHEET } from './sheet-strokes.ts';
-
-export const liveEngine = createStore<PaintEngine | null>(null);
 
 async function base64(b: Blob): Promise<string> {
   const bytes = new Uint8Array(await b.arrayBuffer());

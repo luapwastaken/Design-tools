@@ -20,6 +20,13 @@ type Paintings = {
 
 const why = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+/** every save writes a new file: the ones no palette points at any more go (the service keeps anything
+ *  under a minute old, and whatever a quarantined workspace refers to) */
+const collect = (paintings: Record<string, string>) => {
+  const keep = Object.values(paintings).flatMap((url) => /[0-9a-f]{64}/.exec(url) ?? []);
+  void window.api.invoke('workspace.gcAssets', TOOL, keep).catch(() => {});
+};
+
 export function usePainting(engine: PaintEngine | null, itemId: string | null, props: RefObject<Paintings>) {
   const eng = useRef(engine);
   eng.current = engine;
@@ -45,7 +52,9 @@ export function usePainting(engine: PaintEngine | null, itemId: string | null, p
     const { paintings, onPaintings } = props.current;
     if (!url && !(id in paintings)) return;
     const { [id]: _, ...rest } = paintings;
-    onPaintings(url ? { ...rest, [id]: url } : rest);
+    const next = url ? { ...rest, [id]: url } : rest;
+    onPaintings(next);
+    collect(next);
   };
 
   const write = (id: string | null): Promise<void> => {
@@ -120,10 +129,7 @@ export function usePainting(engine: PaintEngine | null, itemId: string | null, p
   }, [engine]);
 
   useEffect(() => {
-    // every save writes a new file: the ones no palette points at any more go (the service keeps
-    // anything under a minute old, and whatever a quarantined workspace refers to)
-    const keep = Object.values(props.current.paintings).flatMap((url) => /[0-9a-f]{64}/.exec(url) ?? []);
-    void window.api.invoke('workspace.gcAssets', TOOL, keep).catch(() => {});
+    collect(props.current.paintings);
     // a quit inside the save's delay keeps the last strokes
     const off = shell.beforeClose(() => {
       clearTimeout(timer.current);

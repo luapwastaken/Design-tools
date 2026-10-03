@@ -1,7 +1,8 @@
 // The painting engine's lifetime on the canvas: made the first time Paint shows, attached to the
 // canvas, sized to its device pixels, released with the canvas.
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { liveEngine, PaintEngine } from './paint/index.ts';
+import { PaintEngine } from './paint/index.ts';
+import { liveEngine } from './paint/live.ts';
 
 export type Started = { t: 'waiting' } | { t: 'starting'; slow: boolean } | { t: 'ready'; engine: PaintEngine } | { t: 'failed'; message: string };
 
@@ -38,7 +39,10 @@ export function useEngine(show: boolean, canvas: RefObject<HTMLCanvasElement | n
         if (!o.mounted) return e.release();
         o.engine = e;
         e.attach(canvas.current);
-        if (window.api.smoke) liveEngine.set(e);
+        if (window.api.smoke) {
+          liveEngine.set(e);
+          void import('./paint/probe.ts');
+        }
         setStarted({ t: 'ready', engine: e });
       },
       (err: unknown) => {

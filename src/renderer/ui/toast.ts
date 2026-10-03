@@ -70,6 +70,9 @@ async function undo(id: string) {
 
 export const toast = {
   show(o: ToastOptions): string {
+    // the same plain notice, still showing, is not shown twice (a press on a dead brush says it once)
+    const same = typeof o.message === 'string' && !o.undo ? list.find((x) => !x.leaving && !x.undo && x.message === o.message && x.kind === o.kind) : undefined;
+    if (same) return same.id;
     const id = crypto.randomUUID();
     const duration = o.duration ?? (o.kind === 'error' ? Infinity : o.undo ? 8000 : 5000);
     emit([...list, { ...o, id, ctrlZLive: !!o.undo && o.ctrlZ !== false, leaving: false }]);

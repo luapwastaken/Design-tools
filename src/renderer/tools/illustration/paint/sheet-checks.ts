@@ -60,7 +60,12 @@ function autocorr(p: Painting, pts: [number, number][], dx: number, dy: number, 
   return num / Math.sqrt(va * vb || 1);
 }
 
-export type Aux = { smudge: { name: string; band: number; at50: number; at300: number }[] };
+export type Aux = {
+  /** gouache smudges out of bands: the band's density, the trail's at 50 and 300 px, and its worst ΔE00 from the source-to-paper line */
+  smudge: { name: string; band: number; at50: number; at300: number; off: number }[];
+  /** where a full-width Flat stroke at each Load runs dry, px */
+  runs: { load: number; out: number }[];
+};
 
 /** the sheet's painting, measured; `lifted` per stroke, `paper` the bare value, `aux` the smudge trails painted apart */
 export function measureSheet(p: Painting, shown: Painting, lifted: boolean[], paper: number[], aux: Aux): Check[] {
@@ -137,17 +142,11 @@ export function measureSheet(p: Painting, shown: Painting, lifted: boolean[], pa
     add('taper: the pen ends 35 % of the middle or less, the mouse start 40 % or less', Math.max(...ends) <= 0.35 * mid && mStart <= 0.4 * mMid, { pen: [ends[0], mid, ends[1]], mouse: [mStart, mMid] });
   }
 
-  // load ladder: a fuller brush runs dry later
+  // load ladder: a fuller brush runs dry later, and at the defaults (Load 70) a stroke lasts about a canvas width
   {
-    const outs = [20, 50, 70, 100].map((n) => {
-      const s = stroke(`load ${n}`);
-      for (let u = 0.1; u <= 1; u += 0.01) {
-        const covered = [-6, -3, 0, 3, 6].filter((c) => density(px(p, at(s, u)[0], at(s, u)[1] + c)) > 0.3).length;
-        if (covered < 3) return round(u, 2);
-      }
-      return 1;
-    });
-    add('load ladder: dry-out comes later as load rises', outs.every((v, i) => !i || v >= outs[i - 1]) && outs[0] < outs[3], outs);
+    const outs = aux.runs.map((r) => r.out);
+    add('load ladder: dry-out comes later as load rises', outs.every((v, i) => !i || v >= outs[i - 1]) && outs[0] < outs[3], aux.runs);
+    add('load ladder: at Load 70 a Flat stroke lasts 1500 px or more', aux.runs.find((r) => r.load === 0.7)!.out >= 1500, aux.runs);
   }
 
   // smudge: across the full width, never stronger than its sources, fading, staining resists
@@ -165,6 +164,7 @@ export function measureSheet(p: Painting, shown: Painting, lifted: boolean[], pa
     const [red, blue] = aux.smudge;
     add('smudge: at 300 px the trail holds 50 % or less of its density at 50 px', aux.smudge.every((t) => t.at300 <= 0.5 * t.at50), aux.smudge);
     add('smudge: Phthalo (staining) smudges weaker than Cadmium Red', blue.at50 / blue.band < red.at50 / red.band, aux.smudge.map((t) => ({ name: t.name, share: round(t.at50 / t.band) })));
+    add('smudge: a trail only thins: within ΔE00 4 of the line from its source to the paper', aux.smudge.every((t) => t.off <= 4), aux.smudge.map((t) => ({ name: t.name, off: t.off })));
   }
 
   // watercolour rim: denser at the edge, narrow, anti-aliased. In optical density, which follows the

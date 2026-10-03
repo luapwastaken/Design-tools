@@ -12,7 +12,7 @@ vec3 dec(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), st
 
 export const LIT = `
 uniform sampler2D u_shown, u_paper;
-uniform float u_relief, u_fill, u_stand, u_wash;
+uniform float u_relief, u_fill, u_stand, u_wash, u_mottle;
 out vec4 o;
 float H(ivec2 p) {
   p = clamp(p, ivec2(0), textureSize(u_shown, 0) - 1);
@@ -21,9 +21,12 @@ float H(ivec2 p) {
 }
 void main() {
   ivec2 p = ivec2(fragPixel());
-  vec3 c = texelFetch(u_shown, p, 0).rgb;
+  vec4 s = texelFetch(u_shown, p, 0);
+  float a = clamp((s.a - u_wash) / (1.0 - u_wash), 0.0, 1.0);
+  // the sheet's pulp, a slow mottle a little lighter and darker (thick paint hides it)
+  float pulp = 1.0 + u_mottle * (texelFetch(u_paper, p, 0).g - 0.5) * (1.0 - a);
   float slope = H(p + ivec2(1, 0)) - H(p - ivec2(1, 0)) + H(p + ivec2(0, 1)) - H(p - ivec2(0, 1));
-  o = vec4(c * (1.0 + u_relief * 0.5 * slope), 1.0);
+  o = vec4(s.rgb * pulp * (1.0 + u_relief * 0.5 * slope), 1.0);
 }`;
 
 export const SCREEN = `${SRGB}

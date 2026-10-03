@@ -1,8 +1,10 @@
 // The stroke sheet (plan §4.7): every brush in both media, replayed through the public API as a pen
 // or a mouse would feed it (60 fps batches, flushed), into one painting. The PNG shows it as the
 // screen does, relief included; the report holds the measured values against the plan's thresholds.
+import { deltaE, toOklch } from '../../../../shared/color/index.ts';
 import { rgbaPng } from '../../../lib/png.ts';
 import { internals, PaintEngine } from './engine.ts';
+import { PAPER_RGB } from './paper.ts';
 import { screen } from './passes.ts';
 import { density, measureSheet, type Aux, type Check } from './sheet-checks.ts';
 import { framesOf, line, optionsOf, samplesOf, SHEET, type SheetStroke } from './sheet-strokes.ts';
@@ -47,8 +49,17 @@ export function hashOf(bytes: Uint8Array): string {
   return h.toString(16);
 }
 
-/** long smudges out of a Cadmium Red and a Phthalo Blue band, painted apart from the sheet */
-async function smudgeTrails(o: { split?: boolean }): Promise<Aux> {
+const oklch = (c: ArrayLike<number>) => toOklch({ mode: 'lrgb', r: c[0], g: c[1], b: c[2] });
+
+/** the least ΔE00 from a colour to the straight line from `src` to the paper: 0 when it is only `src`, thinned */
+function offLine(c: ArrayLike<number>, src: number[]): number {
+  let best = Infinity;
+  for (let t = 0; t <= 1.0001; t += 0.02) best = Math.min(best, deltaE(oklch(c), oklch(PAPER_RGB.map((p, i) => p + (src[i] - p) * t))));
+  return best;
+}
+
+/** long smudges out of gouache bands (Cadmium Red, Phthalo Blue, Cadmium Yellow, Ultramarine), painted apart from the sheet */
+async function smudgeTrails(o: { split?: boolean }): Promise<Aux['smudge']> {
   const e = await PaintEngine.create(o);
   try {
     const band = (name: string, pigment: string, y: number): SheetStroke => ({ name, cell: [0, 0], tool: 'paint', medium: 'dry', brush: 'flat', size: 110, load: 0.9, pigment, path: line(100, y, 400, y), ms: 700, pointer: 'pen', pressure: () => 1 });
@@ -56,8 +67,15 @@ async function smudgeTrails(o: { split?: boolean }): Promise<Aux> {
     const rows = [
       { name: 'cadred', y: 300 },
       { name: 'phthaloB', y: 800 },
+      { name: 'cadyellow', y: 550 },
+      { name: 'ultra', y: 1050 },
     ];
     rows.forEach((r, k) => paintStroke(e, band(r.name, r.name, r.y), 40 + k));
+    // the band's colour, before the drag: the middle rows of its untouched start
+    const sources = rows.map((r) => {
+      const d = e.probe.read('base', { x: 180, y: r.y - 8, w: 1, h: 17 });
+      return [0, 1, 2].map((c) => Array.from({ length: 17 }, (_, j) => d[j * 4 + c]).sort((a, b) => a - b)[8]);
+    });
     const ends = rows.map((r) => {
       const d = e.probe.read('base', { x: 0, y: r.y, w: WIDTH, h: 1 });
       let x = 400;
@@ -65,17 +83,47 @@ async function smudgeTrails(o: { split?: boolean }): Promise<Aux> {
       return x;
     });
     rows.forEach((r, k) => paintStroke(e, drag(r.y), 50 + k));
-    return {
-      smudge: rows.map((r, k) => {
-        const d = e.probe.read('base', { x: 0, y: r.y - 20, w: WIDTH, h: 41 });
-        const at = (x: number) => {
-          let sum = 0;
-          for (let j = 0; j < 41; j++) sum += density([d[(j * WIDTH + x) * 4], d[(j * WIDTH + x) * 4 + 1], d[(j * WIDTH + x) * 4 + 2]]);
-          return +(sum / 41).toFixed(3);
-        };
-        return { name: r.name, band: at(180), at50: at(ends[k] + 50), at300: at(ends[k] + 300) };
-      }),
-    };
+    return rows.map((r, k) => {
+      const d = e.probe.read('base', { x: 0, y: r.y - 20, w: WIDTH, h: 41 });
+      const at = (x: number) => {
+        let sum = 0;
+        for (let j = 0; j < 41; j++) sum += density([d[(j * WIDTH + x) * 4], d[(j * WIDTH + x) * 4 + 1], d[(j * WIDTH + x) * 4 + 2]]);
+        return +(sum / 41).toFixed(3);
+      };
+      // the trail's densest pixel at each distance past the band: how far off the source-to-paper line it sits
+      const bandD = at(180);
+      const off = [25, 50, 75, 105].map((past) => {
+        const c = e.probe.read('base', { x: ends[k] + past, y: r.y - 60, w: 1, h: 121 });
+        const px = Array.from({ length: 121 }, (_, j) => [c[j * 4], c[j * 4 + 1], c[j * 4 + 2]]);
+        const peak = px.reduce((m, p) => (density(p) > density(m) ? p : m));
+        return density(peak) > 0.03 * bandD ? offLine(peak, sources[k]) : 0;
+      });
+      return { name: r.name, band: bandD, at50: at(ends[k] + 50), at300: at(ends[k] + 300), off: +Math.max(...off).toFixed(2) };
+    });
+  } finally {
+    e.release();
+  }
+}
+
+/** Flat strokes at the defaults' size across the whole painting at rising Load: where each runs dry (painting px; the width if it never does) */
+async function runs(o: { split?: boolean }): Promise<Aux['runs']> {
+  const e = await PaintEngine.create(o);
+  try {
+    return [0.2, 0.4, 0.7, 1].map((load, k) => {
+      const y = 200 + k * 300;
+      paintStroke(e, { name: `run ${load}`, cell: [0, 0], tool: 'paint', medium: 'dry', brush: 'flat', size: 80, load, pigment: 'cadred', path: line(40, y, WIDTH - 40, y), ms: 1400, pointer: 'mouse' }, 60 + k);
+      const d = e.probe.read('base', { x: 0, y: y - 24, w: WIDTH, h: 49 });
+      // paint (height over 0.3) across the middle of the stroke, per 100 px
+      const cover = (x0: number) => {
+        let n = 0;
+        for (let x = x0; x < x0 + 100; x++) for (let j = 0; j < 49; j++) if (d[(j * WIDTH + x) * 4 + 3] > 0.3) n++;
+        return n / 4900;
+      };
+      const start = cover(100);
+      let out = WIDTH;
+      for (let x = 200; x < WIDTH - 140; x += 100) if (cover(x) < 0.5 * start) { out = x; break; }
+      return { load, out };
+    });
   } finally {
     e.release();
   }
@@ -96,7 +144,7 @@ export async function renderSheet(o: { split?: boolean } = {}): Promise<{ png: B
     }
     const i = internals.get(e)!;
     await i.settled();
-    const checks = measureSheet(e.probe.read('base'), e.probe.read('shown'), lifted, paper, await smudgeTrails(o));
+    const checks = measureSheet(e.probe.read('base'), e.probe.read('shown'), lifted, paper, { smudge: await smudgeTrails(o), runs: await runs(o) });
     const png = await rgbaPng(displayPixels(e), WIDTH, HEIGHT);
     return { png, report: { ms: Math.round(performance.now() - t0), checks, hash: hashOf(i.cpu) }, bytes: i.cpu.slice() };
   } finally {

@@ -7,7 +7,7 @@ import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import { IconButton, NumberField, Segmented, Select, Slider, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import type { BrushKind, PaintingState } from './paint/index.ts';
-import { BRUSHES, LOAD, SIZE, type PaintSettings, type PaintTool } from './paint-sources.ts';
+import { BRUSHES, LOAD, loadHint, SIZE, type PaintSettings, type PaintTool } from './paint-sources.ts';
 import s from './PaintCanvas.module.css';
 
 const TOOLS: { value: PaintTool; label: string; icon: 'brush' | 'gesture' | 'colorize'; tip: string }[] = [
@@ -20,6 +20,7 @@ const MEDIA: { value: PaintSettings['medium']; label: string; tip: string }[] = 
   { value: 'dry', label: 'Gouache', tip: 'Gouache: opaque; covers, and mixes with the paint under it.' },
 ];
 const SMUDGE_MEDIUM = 'Smudge pushes whatever paint is there, in either medium.';
+const SMUDGE_BRUSH = 'Smudge always drags across the full width, whatever the brush.';
 
 type Fit = 'full' | 'short' | 'compact' | 'wrap';
 const fitOf = (w: number): Fit => (w >= 1000 ? 'full' : w >= 880 ? 'short' : w >= 700 ? 'compact' : 'wrap');
@@ -54,7 +55,7 @@ export function PaintBar(p: PaintBarProps) {
 
   const smudge = v.tool === 'smudge';
   const tracks = fit === 'full' || fit === 'short';
-  const hint = p.emptyTray ? 'Tick a paint you own to load the brush' : 'Click a paint in the tray to load the brush';
+  const hint = loadHint(p.emptyTray);
   /** `width`: the field's once the track has gone and its label sits inside it; past 92 the slider is wider too */
   const number = (label: string, width: number, value: number, range: { min: number; max: number }, unit: string, onChange: (x: number) => void) =>
     tracks ? (
@@ -87,7 +88,15 @@ export function PaintBar(p: PaintBarProps) {
         </span>
       ) : (
         <span className={cx(s.group, s.brushGroup)}>
-          <Select<BrushKind> label="Brush" options={BRUSHES} value={v.brushes[v.medium]} onChange={(b) => p.onSettings({ brushes: { ...v.brushes, [v.medium]: b } })} className={s.brushSelect} />
+          {smudge ? (
+            <Tooltip content={SMUDGE_BRUSH}>
+              <span className={s.mediaOff}>
+                <Select<BrushKind> label="Brush" options={BRUSHES} value={v.brushes[v.medium]} onChange={() => {}} className={s.brushSelect} disabled />
+              </span>
+            </Tooltip>
+          ) : (
+            <Select<BrushKind> label="Brush" options={BRUSHES} value={v.brushes[v.medium]} onChange={(b) => p.onSettings({ brushes: { ...v.brushes, [v.medium]: b } })} className={s.brushSelect} />
+          )}
           {/* a smudge carries no paint of its own */}
           {!smudge && <OnBrush brush={p.brush} hint={hint} named={fit === 'full'} />}
         </span>
@@ -98,7 +107,7 @@ export function PaintBar(p: PaintBarProps) {
         {number(smudge ? 'Strength' : 'Load', smudge ? 120 : 92, v.load, LOAD, '%', (load) => p.onSettings({ load }))}
       </span>
       <span className={cx(s.group, s.acts)}>
-        <IconButton icon="undo" label="Undo on the canvas: the last strokes, or a Clear" shortcut="Ctrl+Z" size="sm" disabled={!p.ready || !p.painting.depth} onClick={p.onUndo} />
+        <IconButton icon="undo" label={`Undo on the canvas: the last strokes, or a Clear${p.painting.depth ? ` (${p.painting.depth} kept)` : ''}`} shortcut="Ctrl+Z" size="sm" disabled={!p.ready || !p.painting.depth} onClick={p.onUndo} />
         <IconButton icon="redo" label="Redo on the canvas" shortcut="Ctrl+Y" size="sm" disabled={!p.ready || !p.painting.redoDepth} onClick={p.onRedo} />
         <IconButton ref={p.clearBtn} icon="delete_sweep" label="Clear the painting" size="sm" disabled={!p.ready || p.painting.blank} onClick={p.onClear} />
       </span>

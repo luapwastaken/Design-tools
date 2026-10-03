@@ -31,6 +31,9 @@ export const WELL_MAX = 4;
 /** recipes put white in at up to 128 parts, and any recipe fits the well */
 export const PARTS_MAX = 128;
 
+/** what to do when nothing is on the brush: `emptyTray`, nothing owned to load at all */
+export const loadHint = (emptyTray: boolean): string => (emptyTray ? 'Tick a paint you own to load the brush' : 'Click a paint in the tray to load the brush');
+
 export const BRUSHES: { value: BrushKind; label: string }[] = [
   { value: 'round', label: 'Round' },
   { value: 'flat', label: 'Flat' },
@@ -91,19 +94,22 @@ export function sourcesOf(pigments: Pigment[], sets: PaletteSet[]): Source[] {
   ];
 }
 
-export const loadedOf = (p: Pigment): Loaded => ({ paint: paintOf(p), opacity: p.opacity, granulation: p.granulation, staining: p.staining });
+/** `swatch`: a palette colour, which the engine lays harder (its paint is weak beside a tube's) so it reads as itself */
+export const loadedOf = (p: Pigment, swatch = false): Loaded => ({ paint: paintOf(p), opacity: p.opacity, granulation: p.granulation, staining: p.staining, ...(swatch && { swatch }) });
 
 /** the well's paints mixed by parts (km.ts); its traits the parts' average. Null when empty. */
 export function wellMix(well: WellPart[], sources: Source[]): { loaded: Loaded; oklch: Oklch } | null {
   const parts = well.flatMap((w) => {
     const s = sources.find((x) => x.id === w.id);
-    return s ? [{ pigment: s.pigment, parts: w.parts }] : [];
+    return s ? [{ pigment: s.pigment, swatch: s.swatch, parts: w.parts }] : [];
   });
   const total = parts.reduce((t, p) => t + p.parts, 0);
   if (!total) return null;
   const paint = mixCurves(parts.map((p) => ({ paint: paintOf(p.pigment), amount: p.parts })));
   const avg = (k: 'opacity' | 'granulation' | 'staining') => parts.reduce((t, p) => t + p.pigment[k] * p.parts, 0) / total;
-  return { loaded: { paint, opacity: avg('opacity'), granulation: avg('granulation'), staining: avg('staining') }, oklch: colourOf(paint) };
+  // a well of palette colours alone is laid as they are; one tube in it and the mix is the tube's to weigh
+  const swatch = parts.every((p) => p.swatch);
+  return { loaded: { paint, opacity: avg('opacity'), granulation: avg('granulation'), staining: avg('staining'), ...(swatch && { swatch }) }, oklch: colourOf(paint) };
 }
 
 /** add one part of a paint (a new paint joins at 1 part); null when the well is full */

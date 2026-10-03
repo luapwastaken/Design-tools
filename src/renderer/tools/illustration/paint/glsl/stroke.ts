@@ -39,7 +39,7 @@ void main() {
  */
 export const CARRY = (split: 'all' | 'paint' | 'state') => `${KM}
 uniform sampler2D u_under, u_pos, u_prm, u_c0, u_c1, u_c2, u_c3, u_c4;
-uniform float u_smudge, u_fullHeight, u_dirtMax, u_pushOut, u_prevRow, u_first;
+uniform float u_smudge, u_heightPower, u_hold, u_fullHeight, u_dirtMax, u_pushOut, u_prevRow, u_first;
 ${split === 'state' ? '' : filmOuts(0)}
 ${split === 'paint' ? '' : `layout(location = ${split === 'all' ? 4 : 0}) out vec4 o_state;`}
 void main() {
@@ -58,9 +58,10 @@ void main() {
       vec4 col = vec4(0.0);
       for (int k = -2; k <= 2; k++) col += texelFetch(u_under, clamp(ivec2(q.xy + q.zw * float(k)), ivec2(0), textureSize(u_under, 0) - 1), 0);
       col /= 5.0;
-      // what stands on the paper can move: a thin wash gives a little, and a staining paint, sunk
-      // in, less than one that sits on top
-      float amount = clamp(col.a / u_fullHeight, 0.0, 1.0);
+      // what stands on the paper can move: a thin wash gives a little (a smudge takes by the square
+      // root of the height, so a wash still moves), and a staining paint, sunk in, less than one that
+      // sits on top
+      float amount = pow(clamp(col.a / u_fullHeight, 0.0, 1.0), u_smudge > 0.5 ? u_heightPower : 1.0);
       if (amount >= 0.02) {
         float take = r.y * amount;
         // what's taken joins what's carried by amount, so a light first touch soon counts for little
@@ -68,7 +69,8 @@ void main() {
         K = mixSpec(K, paintOf(reflectance(max(col.rgb, vec3(0.0))), ${f(PLAIN_S)}), t);
         S = mix(S, ${f(PLAIN_S)}, t);
         has = 1.0;
-        if (u_smudge > 0.5) carried = max(carried, min(1.2 * amount, carried + take * 1.2));
+        // a hair carries up to its Strength's worth of what it took
+        if (u_smudge > 0.5) carried = max(carried, min(u_hold * amount, carried + take * 1.2));
         else dirt = min(u_dirtMax, dirt + take * (1.0 - dirt));
       }
     }

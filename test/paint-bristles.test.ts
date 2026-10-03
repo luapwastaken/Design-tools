@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BRISTLE_STRIDE, brushStep, brushWidth, makeBrush, type Brush, type BrushSpec, type StepOut } from '../src/renderer/tools/illustration/paint/bristles.ts';
+import { BRISTLE_STRIDE, brushStep, brushWidth, headStrength, makeBrush, wetStrength, type Brush, type BrushSpec, type StepOut } from '../src/renderer/tools/illustration/paint/bristles.ts';
 import { NO_TILT, type Step } from '../src/renderer/tools/illustration/paint/input.ts';
 import { framesOf, line, optionsOf, samplesOf, SHEET, type SheetStroke } from '../src/renderer/tools/illustration/paint/sheet-strokes.ts';
 import { LiveStroke } from '../src/renderer/tools/illustration/paint/stroke.ts';
+import { BRISTLES, FILM, WET } from '../src/renderer/tools/illustration/paint/tuning.ts';
 import { budget } from './perf.ts';
 
 const out = (): StepOut => ({ bristles: new Float32Array(128 * BRISTLE_STRIDE), nBristles: 0, bodies: new Float32Array(64), nBodies: 0, pos: new Float32Array(128 * 64 * 4), prm: new Float32Array(128 * 64 * 4), box: null });
@@ -135,4 +136,83 @@ test('a 200 px fling at 6000 px/s stays inside a frame budget on the CPU', () =>
   const mean = ms.reduce((a, b) => a + b, 0) / ms.length;
   assert.ok(mean <= budget(2), `mean ${mean.toFixed(2)} ms`);
   assert.ok(Math.max(...ms) <= budget(6), `max ${Math.max(...ms).toFixed(2)} ms`);
+});
+
+test('a smudge is the Flat row whatever brush is chosen, so it drags the full width', () => {
+  const flat = makeBrush(spec({ tool: 'smudge', kind: 'flat', medium: 'dry', seed: 5 }));
+  for (const kind of ['round', 'dry'] as const) {
+    const b = makeBrush(spec({ tool: 'smudge', kind, medium: 'dry', seed: 5 }));
+    assert.equal(b.kind, 'flat');
+    assert.deepEqual(b.hairs, flat.hairs);
+  }
+  // and its hairs reach across the whole width (the Dry brush's random clumps would leave gaps)
+  const list = hairs(makeBrush(spec({ tool: 'smudge', kind: 'dry', medium: 'dry', load: 0.7 })), 0.7);
+  assert.ok(footprint(list) >= 0.85 * 80, `footprint ${footprint(list)}`);
+  // the strength sets how much it can carry, not how fast it picks up
+  assert.equal(makeBrush(spec({ tool: 'smudge', load: 0.2 })).pickup, makeBrush(spec({ tool: 'smudge', load: 1 })).pickup);
+});
+
+test('a watercolour Load is a pale wash well below the knee, and as it always was above it', () => {
+  const s = WET.strength;
+  for (const load of [0.7, 0.85, 1]) assert.ok(Math.abs(wetStrength(load) - (s.floor + s.slope * load)) < 1e-12, `load ${load}`);
+  const curve = [0.05, 0.15, 0.4, 0.7, 1].map(wetStrength);
+  curve.forEach((v, i) => assert.ok(!i || v > curve[i - 1], `${curve}`));
+  assert.ok(Math.abs(wetStrength(s.knee - 1e-9) - wetStrength(s.knee)) < 1e-6, 'continuous at the knee');
+  assert.ok(wetStrength(0.05) < 0.03 && wetStrength(0.4) < 0.5 * wetStrength(1), `${curve}`);
+  // the brush's hairs start at that strength, then run down along the stroke from it
+  const b = makeBrush(spec({ load: 0.4 }));
+  assert.ok(Math.abs(b.thin * (s.floor + s.slope * b.load) - wetStrength(0.4)) < 1e-12);
+  assert.equal(makeBrush(spec({ load: 0.9 })).thin, 1);
+});
+
+test('where only the water has reached, a wash is as strong as the film behind it, partway down its run', () => {
+  const b = makeBrush(spec({ load: 1 }));
+  assert.ok(Math.abs(headStrength(b) - 1) < 1e-12, 'a full brush: the film starts at full');
+  b.loadMean = 0;
+  const replaced = 1 - (1 - FILM) ** BRISTLES.spread.wet;
+  const floor = 1 - replaced + (replaced * WET.strength.floor) / (WET.strength.floor + WET.strength.slope);
+  assert.ok(Math.abs(headStrength(b) - floor) < 1e-12 && floor > 0.5 && floor < 1, `${floor}`);
+  assert.equal(headStrength(makeBrush(spec({ medium: 'dry' }))), 1);
+});
+
+/** the capsules one tap step lays: where each runs and how wide */
+function dab(kind: BrushSpec['kind'], medium: BrushSpec['medium'], weight = 1) {
+  const b = makeBrush(spec({ kind, medium, size: 80, load: 1 }));
+  const o = out();
+  const tap: Step = { ...step(1000, 0.85, 0, 0), tap: weight };
+  brushStep(b, tap, 0, o);
+  const caps = [];
+  for (let i = 0; i < o.nBristles; i++) {
+    const f = o.bristles.subarray(i * BRISTLE_STRIDE, (i + 1) * BRISTLE_STRIDE);
+    caps.push({ x0: f[0], y0: f[1], x1: f[2], y1: f[3], hw: f[4], amt: f[6] });
+  }
+  return { b, caps, W: b.width };
+}
+
+test('a tap lays a footprint: a Round a disc, a Flat a short row, every hair down at once', () => {
+  const round = dab('round', 'dry');
+  assert.equal(round.caps.length, round.b.hairs.length, 'every hair touches, side hairs too');
+  const xs = round.caps.flatMap((c) => [c.x0 - c.hw, c.x1 + c.hw]);
+  const ys = round.caps.flatMap((c) => [c.y0 - c.hw, c.y1 + c.hw]);
+  const across = Math.max(...ys) - Math.min(...ys);
+  const along = Math.max(...xs) - Math.min(...xs);
+  assert.ok(Math.abs(across - round.W) < 0.12 * round.W && Math.abs(along - round.W) < 0.12 * round.W, `${along.toFixed(1)} x ${across.toFixed(1)} for a ${round.W.toFixed(1)} disc`);
+  const flat = dab('flat', 'dry');
+  const len = Math.max(...flat.caps.map((c) => c.x1 - c.x0));
+  assert.ok(Math.abs(len - flat.W * BRISTLES.tapLength) < 1, `a Flat dab is ${len.toFixed(1)} px long`);
+  assert.ok(flat.caps.every((c) => c.amt > 0.5));
+  // watercolour: the wash's own footprint is the ring's size too
+  const wet = dab('round', 'wet');
+  assert.ok(wet.b.centre && wet.W > 0.95 * 80 * 0.9);
+});
+
+test('a part of a dab is a shorter footprint along the stroke, down to the end of the stroke itself', () => {
+  const along = (d: ReturnType<typeof dab>) => {
+    const xs = d.caps.flatMap((c) => [c.x0 - c.hw, c.x1 + c.hw]);
+    return Math.max(...xs) - Math.min(...xs);
+  };
+  for (const kind of ['round', 'flat'] as const) {
+    const lengths = [1, 0.7, 0.4, 0.1].map((w) => along(dab(kind, 'dry', w)));
+    assert.ok(lengths.every((v, i) => i === 0 || v < lengths[i - 1]), `${kind}: ${lengths.map((v) => v.toFixed(1))}`);
+  }
 });

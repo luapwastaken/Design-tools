@@ -54,6 +54,9 @@ export function mix15(parts: { paint: Paint15; amount: number }[]): Paint15 {
   return { K, S };
 }
 
+/** the same paint pushed `k` times as hard: K and S scaled together, so it keeps its colour (km.ts's tint) */
+export const strengthen15 = (p: Paint15, k: number): Paint15 => ({ K: p.K.map((v) => v * k), S: p.S * k });
+
 /** R∞ from K/S, in the form that doesn't cancel for dark paints (Phthalo reaches K/S 5000) */
 const rInf = (q: number): number => 1 / (1 + q + Math.sqrt(q * q + 2 * q));
 

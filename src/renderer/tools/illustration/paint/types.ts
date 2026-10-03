@@ -11,8 +11,8 @@ export type Medium = 'wet' | 'dry';
 /** Round, Flat, Dry brush */
 export type BrushKind = 'round' | 'flat' | 'dry';
 export type StrokeTool = 'paint' | 'smudge';
-/** what a brush holds: km.ts paint plus the traits the engine reads */
-export type Loaded = { paint: Paint; opacity: number; granulation: number; staining: number };
+/** what a brush holds: km.ts paint plus the traits the engine reads; `swatch`: a palette colour, which the engine lays harder so it reads as itself */
+export type Loaded = { paint: Paint; opacity: number; granulation: number; staining: number; swatch?: boolean };
 /** sRGB, 0..1 */
 export type Rgb = [number, number, number];
 
