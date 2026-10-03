@@ -285,7 +285,6 @@ export function PaintCanvas(p: PaintCanvasProps) {
         </div>
         {started.t === 'starting' && started.slow && (
           <span className={s.note} role="status">
-            <Icon name="progress_activity" size={16} className={s.spin} />
             Getting the paper ready
           </span>
         )}

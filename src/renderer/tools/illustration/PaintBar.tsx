@@ -2,12 +2,14 @@
 // clear. One line down to a 724 px section (1920 with the Library open): below 1000 px the paint's
 // name goes (the chip keeps it in its tooltip), below 880 px the slider tracks go (the fields and
 // their scrubbing labels stay), and below 700 px it may wrap, between groups only.
-import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
-import { cssColor, type Oklch } from '../../../shared/color/index.ts';
+import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { cssColor } from '../../../shared/color/index.ts';
 import { IconButton, NumberField, Segmented, Select, Slider, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import type { BrushKind, PaintingState } from './paint/index.ts';
-import { BRUSHES, LOAD, loadHint, SIZE, type PaintSettings, type PaintTool } from './paint-sources.ts';
+import { washColour } from './paint/wash.ts';
+import { BRUSHES, chipTip, LOAD, loadHint, SIZE, type PaintSettings, type PaintTool } from './paint-sources.ts';
+import type { Brush } from './useBrush.ts';
 import s from './PaintCanvas.module.css';
 
 const TOOLS: { value: PaintTool; label: string; icon: 'brush' | 'gesture' | 'colorize'; tip: string }[] = [
@@ -28,7 +30,7 @@ const fitOf = (w: number): Fit => (w >= 1000 ? 'full' : w >= 880 ? 'short' : w >
 export type PaintBarProps = {
   v: PaintSettings;
   onSettings(patch: Partial<PaintSettings>): void;
-  brush: { name: string; oklch: Oklch } | null;
+  brush: Pick<Brush, 'name' | 'oklch' | 'loaded'> | null;
   /** nothing in the tray at all */
   emptyTray: boolean;
   /** Pick's live readout, written straight to the DOM */
@@ -98,7 +100,7 @@ export function PaintBar(p: PaintBarProps) {
             <Select<BrushKind> label="Brush" options={BRUSHES} value={v.brushes[v.medium]} onChange={(b) => p.onSettings({ brushes: { ...v.brushes, [v.medium]: b } })} className={s.brushSelect} />
           )}
           {/* a smudge carries no paint of its own */}
-          {!smudge && <OnBrush brush={p.brush} hint={hint} named={fit === 'full'} wash={v.medium === 'wet'} />}
+          {!smudge && <OnBrush brush={p.brush} hint={hint} named={fit === 'full'} medium={v.medium} kind={v.brushes[v.medium]} load={v.load} size={v.size} />}
         </span>
       )}
       <span className={s.grow} />
@@ -117,13 +119,19 @@ export function PaintBar(p: PaintBarProps) {
   );
 }
 
-/** the loaded paint's chip, and its name while the bar has room (the chip's tooltip has it otherwise) */
-function OnBrush({ brush, hint, named, wash }: { brush: PaintBarProps['brush']; hint: string; named: boolean; wash: boolean }) {
-  const chip = brush ? { background: cssColor(brush.oklch) } : undefined;
-  // the chip is the paint as it comes from the tube; a watercolour stroke is a thin wash of it
-  const thin = wash ? ' A watercolour stroke is a thin wash, so it comes out paler than this chip.' : '';
+/**
+ * The loaded paint's chip, and its name while the bar has room (the chip's tooltip has it otherwise).
+ * Watercolour shows the wash the Load and Size give on bare paper, as the engine will paint it (halfway
+ * along a stroke's run, which thins as it goes: paint/wash.ts), and follows both at once. Gouache covers,
+ * and the Dry brush lays streaks and no wash: both show the paint.
+ */
+function OnBrush({ brush, hint, named, medium, kind, load, size }: { brush: PaintBarProps['brush']; hint: string; named: boolean; medium: PaintSettings['medium']; kind: BrushKind; load: number; size: number }) {
+  const wash = medium === 'wet' && kind !== 'dry';
+  const colour = useMemo(() => brush && (wash ? washColour(brush.loaded, load / 100, size) : brush.oklch), [brush, wash, load, size]);
+  const chip = colour ? { background: cssColor(colour) } : undefined;
+  const tip = brush && chipTip(medium, kind, brush.name, brush.oklch, load);
   if (!named) {
-    const says = brush ? `On the brush: ${brush.name}.${thin}` : hint;
+    const says = brush ? (tip ?? `On the brush: ${brush.name}.`) : hint;
     return (
       <Tooltip content={says}>
         <i className={s.brushChip} role="img" aria-label={says} style={chip} />
@@ -132,7 +140,7 @@ function OnBrush({ brush, hint, named, wash }: { brush: PaintBarProps['brush']; 
   }
   return (
     <span className={s.readout}>
-      <Tooltip content={thin.trim()} disabled={!brush || !wash}>
+      <Tooltip content={tip ?? ''} disabled={!tip}>
         <i className={s.brushChip} style={chip} />
       </Tooltip>
       <Tooltip overflowOnly>

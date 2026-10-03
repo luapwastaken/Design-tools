@@ -2,6 +2,7 @@
 import { app, dialog, ipcMain, shell } from 'electron';
 import type { Api } from '../shared/api.ts';
 import type { Settings } from '../shared/types.ts';
+import type { ClipboardService } from './clipboard.ts';
 import type { Exporter } from './export.ts';
 import { inOrder } from './fsx.ts';
 import type { LibraryService } from './library/service.ts';
@@ -17,11 +18,12 @@ export type IpcContext = {
   workspace: Workspace;
   library: LibraryService;
   exporter: Exporter;
+  clipboard: ClipboardService;
   smoke: boolean;
   smokeDone(ok: boolean, report: string): void;
 };
 
-export function registerIpc({ settings, workspace: ws, library: lib, exporter, smoke, smokeDone }: IpcContext): void {
+export function registerIpc({ settings, workspace: ws, library: lib, exporter, clipboard: clip, smoke, smokeDone }: IpcContext): void {
   // What the window and the LibraryService were last given. One settings.set at a time, each applying
   // the saved result, so overlapping calls (a quick theme toggle, chooseRoot) can't leave them out of step.
   let applied = settings.get();
@@ -94,6 +96,9 @@ export function registerIpc({ settings, workspace: ws, library: lib, exporter, s
     'export.closeFolder': async (id) => exporter.closeFolder(id),
     'window.keepAwake': async (on) => keepAwake(on),
     'shell.reveal': (path) => shell.showItemInFolder(path),
+
+    'clipboard.copy': (what) => clip.copy(what),
+    'clipboard.peek': async () => clip.peek(),
   };
 
   // the preload's theme before first paint; argv's --dt-theme would be stale after a crash reload

@@ -1,0 +1,62 @@
+name: Build installer
+
+# Builds the Windows installer (NSIS .exe).
+# Trigger manually from the Actions tab, or by pushing a version tag like v2.0.0.
+# On a tag the installer is attached to a GitHub Release.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check
+        run: npm run check
+
+      - name: Build
+        run: npx electron-vite build
+
+      - name: Package
+        shell: bash
+        env:
+          # Don't try to code-sign: there is no certificate.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        # --publish never: we attach to the Release ourselves (last step), so electron-builder
+        # must not try to publish (which needs GH_TOKEN). A tag is the version: v2.0.1 builds
+        # DesignTools-Setup-2.0.1.exe whatever package.json says.
+        run: |
+          version=""
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then version="-c.extraMetadata.version=${GITHUB_REF_NAME#v}"; fi
+          npx electron-builder --win --publish never $version
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: DesignTools-Windows
+          path: dist-electron/*.exe
+          if-no-files-found: error
+
+      # On a version tag, attach the installer to a GitHub Release.
+      - name: Attach to Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist-electron/*.exe

@@ -7,7 +7,7 @@ import { leaf, saveFile, saveToFolder } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
 import { Module, NumberField, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
+import { CopyButton, ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx, plural } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { fix, KIND_LABEL, LIMIT, shownLockups, shownVersions, VERSION_LABEL, type Lockup, type LogoDoc } from './doc.ts';
@@ -32,6 +32,7 @@ export function ExportModule({ doc, d, v, lockup }: { doc: Doc; d: LogoDoc; v: L
       return r && { path: r.folder, label: `${plural(r.written.length, 'file')} into ${leaf(r.folder)}` };
     });
 
+  const markup = () => lockupSvg(d, lockup!, v.version, { padding: d.exportPadding });
   const sized = lockup && pngSize(d, layoutLockup(d, lockup), v.version);
   const pngProblem = sized && tooBig(sized.w, sized.h);
   // Export all makes every PNG: the widest one on decides
@@ -47,7 +48,8 @@ export function ExportModule({ doc, d, v, lockup }: { doc: Doc; d: LogoDoc; v: L
               main
               name="SVG"
               desc="The lockup in its version as real paths with their own fills, each part one group: editable in Illustrator."
-              action={<ExportButton ex={ex} what="SVG" lead onClick={() => void one('SVG', 'svg', 'SVG', fileName(name, lockup, v.version), async () => lockupSvg(d, lockup, v.version, { padding: d.exportPadding }))} />}
+              action={<ExportButton ex={ex} what="SVG" lead onClick={() => void one('SVG', 'svg', 'SVG', fileName(name, lockup, v.version), async () => markup())} />}
+              copy={<CopyButton ex={ex} what="SVG" lead onClick={() => void ex.copySvg('SVG', async () => markup())} />}
             />
             <ExportRow
               name="PNG"

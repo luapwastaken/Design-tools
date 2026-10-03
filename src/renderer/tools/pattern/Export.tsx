@@ -6,7 +6,7 @@ import { saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
 import { Module, NumberField, Segmented, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
+import { CopyButton, ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { LIMIT, PX_PER, sideRange, UNIT_STEP, withUnit, type PatternDoc, type Unit } from './doc.ts';
@@ -53,8 +53,10 @@ export function ExportModule({ doc, d, tile, v }: { doc: Doc; d: PatternDoc; til
       const out = await make();
       return saveFile({ tool: 'pattern', suggestedName, ext, filterName, data: typeof out === 'string' ? out : await out.arrayBuffer() });
     });
-  const swatch = () => save('swatch', 'svg', 'SVG for Illustrator', () => tileSvg(d, tile, unit), `${name} swatch`);
-  const artboard = () => save('artboard', 'svg', 'SVG', () => artboardSvg(d, tile, board.w / PX_PER[unit], board.h / PX_PER[unit], unit), name);
+  const swatchSvg = () => tileSvg(d, tile, unit);
+  const artboardMarkup = () => artboardSvg(d, tile, board.w / PX_PER[unit], board.h / PX_PER[unit], unit);
+  const swatch = () => save('swatch', 'svg', 'SVG for Illustrator', swatchSvg, `${name} swatch`);
+  const artboard = () => save('artboard', 'svg', 'SVG', artboardMarkup, name);
   const png = () =>
     save('PNG', 'png', 'PNG image', () => (v.png === 'tile' ? tilePng(tileSvg(d, tile, 'px'), { w: tile.width, h: tile.height }, k, d.dpi) : boardPng(d, tile, board, k, d.dpi)), v.png === 'tile' ? `${name} tile` : name);
 
@@ -66,6 +68,7 @@ export function ExportModule({ doc, d, tile, v }: { doc: Doc; d: PatternDoc; til
           name="Illustrator swatch"
           desc="One tile with its offsets baked in. Drag it into the Swatches panel and it repeats exactly."
           action={<ExportButton ex={ex} what="swatch" lead onClick={() => void swatch()} />}
+          copy={<CopyButton ex={ex} what="swatch" lead onClick={() => void ex.copySvg('swatch', async () => swatchSvg())} />}
         >
           <span className="lbl">
             Tile {inUnit(tile.width, unit)} × {inUnit(tile.height, unit)} {unit}
@@ -77,6 +80,7 @@ export function ExportModule({ doc, d, tile, v }: { doc: Doc; d: PatternDoc; til
           name="Artboard SVG"
           desc="A finished artboard of real vector shapes, clipped at its edge. The view shows it."
           action={<ExportButton ex={ex} what="artboard" why={boardProblem} onClick={() => void artboard()} />}
+          copy={<CopyButton ex={ex} what="artboard" why={boardProblem} onClick={() => void ex.copySvg('artboard', async () => artboardMarkup())} />}
         >
           <div className={i.pair}>
             <NumberField label="W" min={lo} max={hi} step={UNIT_STEP[unit]} unit={unit} {...aw} />

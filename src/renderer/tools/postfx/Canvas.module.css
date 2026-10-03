@@ -1,9 +1,8 @@
 .vp { min-height: 0; }
 .split { flex: none; }
 
-/* the one loop the chrome may show, only while a frame is being made (brief §8) */
-.busy { display: flex; flex: none; align-items: center; gap: 6px; color: var(--ink-2); font-size: var(--fs-meta); white-space: nowrap; }
-.spin { composes: spin from '../../ui/Progress.module.css'; }
+/* static text while a frame is being made: nothing in the chrome moves or loops (brief §8) */
+.busy { flex: none; color: var(--ink-2); font-size: var(--fs-meta); white-space: nowrap; }
 
 /* the divider: a 1px line on its device column, with a hit area either side and a grip at its middle */
 .divider {

@@ -87,6 +87,7 @@ export function checkTs(file, text, scope) {
     for (const o of objs.filter((o) => o && ts.isObjectLiteralExpression(o))) {
       for (const p of o.properties) if (!WAAPI_KEYS.has(propName(p))) add(p, 4, `.animate() animates ${propName(p) ?? p.getText(sf)}`);
     }
+    if (timing && ts.isObjectLiteralExpression(timing) && timing.properties.some((p) => propName(p) === 'iterations')) add(timing, 4, '.animate() iterations: nothing loops (brief §8)');
     const dur = timing && ts.isObjectLiteralExpression(timing) ? timing.properties.find((p) => propName(p) === 'duration')?.initializer : timing;
     if (!dur || !ts.isNumericLiteral(dur)) add(call, 4, ".animate() duration can't be checked; write it as a number");
     else if (Number(dur.text) > MAX_MS) add(call, 4, `.animate() runs ${dur.text}ms (max ${MAX_MS}ms)`);

@@ -5,7 +5,7 @@ import { saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
 import { Button, Module, NumberField } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
+import { CopyButton, ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx, plural } from '../common/names.ts';
 import { gifLimit, isAnimated, loopMs, outSize, scaleOf, used, type DitherDoc } from './doc.ts';
 import { framesTo, indexedBlob, indexedLimit, pngBlob, sizeLimit, svgFor, svgLimit } from './exports.ts';
@@ -31,6 +31,7 @@ export function ExportModule({ d, v, frame, ready, error }: { d: DitherDoc; v: D
 
   const file = (what: string, ext: string, filterName: string, data: () => Promise<ArrayBuffer | string>, kind = '') =>
     ex.file(what, async () => saveFile({ tool: 'dither', suggestedName: `${name} dither${kind}${anim ? ` ${frame + 1}` : ''}`, ext, filterName, data: await data() }));
+  const png = async () => (await pngBlob(d, frame, scale)).arrayBuffer();
   const frames = (to: 'gif' | 'folder') =>
     ex.run(to === 'gif' ? 'GIF' : 'frames', (report, b) => framesTo(d, scale, to, `${name} dither`, report, b.stop!.signal), true);
 
@@ -64,8 +65,9 @@ export function ExportModule({ d, v, frame, ready, error }: { d: DitherDoc; v: D
           name="PNG"
           desc={bigPng ?? `RGB${which}, any app opens it; each block ${scale} px.`}
           action={
-            <ExportButton ex={ex} what="PNG" lead={!anim} disabled={!ready} why={bigPng ?? none} onClick={() => void file('PNG', 'png', 'PNG image', async () => (await pngBlob(d, frame, scale)).arrayBuffer())} />
+            <ExportButton ex={ex} what="PNG" lead={!anim} disabled={!ready} why={bigPng ?? none} onClick={() => void file('PNG', 'png', 'PNG image', png)} />
           }
+          copy={<CopyButton ex={ex} what="PNG" lead={!anim} disabled={!ready} why={bigPng ?? none} onClick={() => void ex.copyPng('PNG', png)} />}
         />
 
         <ExportRow

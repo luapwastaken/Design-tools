@@ -6,7 +6,7 @@ import { liveEngine } from './paint/live.ts';
 
 export type Started = { t: 'waiting' } | { t: 'starting'; slow: boolean } | { t: 'ready'; engine: PaintEngine } | { t: 'failed'; message: string };
 
-/** a start slower than this shows a spinner */
+/** a start slower than this says so, in static text (nothing spins) */
 const SLOW_MS = 300;
 
 export function useEngine(show: boolean, canvas: RefObject<HTMLCanvasElement | null>): Started {

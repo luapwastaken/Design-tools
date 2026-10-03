@@ -6,7 +6,7 @@ import { allRuntimes, endGesture, idle } from './runtime.ts';
 import { getState } from './store.ts';
 
 // Quit (spec §4): main holds `close` and asks; the renderer finishes every write, then says whether
-// an export or import is running and which deletes still wait on their Undo toast (spec §6.3).
+// an export, copy or import is running and which deletes still wait on their Undo toast (spec §6.3).
 // Main waits up to 3s, asks Luap only when busy, and trashes those deletes only once the quit is
 // certain, so "Keep running" finds them still undoable.
 

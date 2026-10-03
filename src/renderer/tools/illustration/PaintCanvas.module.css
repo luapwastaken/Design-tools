@@ -102,7 +102,6 @@
   line-height: 1.4;
 }
 .failed > :global(.material-symbols-rounded) { flex: none; color: var(--danger); }
-.spin { composes: spin from '../../ui/Progress.module.css'; }
 
 .confirm {
   position: absolute;

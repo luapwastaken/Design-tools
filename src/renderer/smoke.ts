@@ -2,7 +2,9 @@
 // runs scripts/smoke.mjs). It drives the real shell, IPC and Library in the smoke folder, reports
 // each check, and hands the result to main (app.smokeDone), which quits through the close handshake.
 // 'full' runs the smoke list; 'quiet' is the relaunch: it restores, checks, and quits with no input.
-import { contrast, cssColor, rgb255, toHex, type Oklch } from '../shared/color/index.ts';
+import { contrast, cssColor, deltaE, parseCss, rgb255, toHex, type Oklch } from '../shared/color/index.ts';
+import { PNG_FORMAT, SVG_FORMAT } from '../shared/clipboard.ts';
+import { PIGMENTS } from '../shared/paint/pigments.ts';
 import { INKS } from '../shared/palette/inks.ts';
 import type { DocController } from '../shared/doc-api.ts';
 import { layoutLockup } from '../shared/logo/layout.ts';
@@ -32,12 +34,13 @@ import { emptyDoc as halftoneEmpty, mapInk, opaqueOf, spotInk, type HalftoneDoc 
 import { lookOf, Painter } from './tools/halftone/draw.ts';
 import { platesFor, pngBlob, svgFor } from './tools/halftone/exports.ts';
 import { ready, screen, shownDots, svgOver, totals } from './tools/halftone/screening.ts';
-import { status as halftoneStatus } from './tools/halftone/view-state.ts';
+import { patchView as patchHalftone, status as halftoneStatus } from './tools/halftone/view-state.ts';
 import { addRamp, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
 import type { PaintEngine } from './tools/illustration/paint/index.ts';
 import { liveEngine } from './tools/illustration/paint/live.ts';
 import { paintEngineChecks } from './tools/illustration/paint/smoke-checks.ts';
-import { paintSettings, type PaintSettings } from './tools/illustration/paint-sources.ts';
+import { washColour } from './tools/illustration/paint/wash.ts';
+import { loadedOf, paintSettings, type PaintSettings } from './tools/illustration/paint-sources.ts';
 import { isEmpty as noParts, lockupOf, shownLockups, type LogoDoc } from './tools/logo/doc.ts';
 import { faviconBundle, sheetSvg } from './tools/logo/files.ts';
 import { partFromImage, partFromSvg } from './tools/logo/intake.ts';
@@ -56,7 +59,7 @@ import { decodeStack, encodeStack } from './tools/postfx/share.ts';
 import { togglePlay } from './tools/postfx/Transport.tsx';
 import { playhead } from './tools/postfx/view-state.ts';
 import { toast } from './ui/index.ts';
-import { toastStore } from './ui/toast.ts';
+import { LEAVE_MS, toastStore, type ToastEntry } from './ui/toast.ts';
 
 const api = window.api;
 const report: string[] = [];
@@ -101,6 +104,8 @@ const press = (key: string, o: KeyboardEventInit = {}) =>
 const ctrlZ = () => press('z', { code: 'KeyZ', ctrlKey: true });
 const ctrlY = () => press('y', { code: 'KeyY', ctrlKey: true });
 const host = (id: ToolId) => document.querySelector<HTMLElement>(`[data-tool="${id}"]`);
+/** the Export row a button sits in, by the row's name */
+const rowOf = (b: Element) => b.closest('[data-row]')?.getAttribute('data-row');
 const shows = (el: Element | null | undefined) => !!el && el.getClientRects().length > 0;
 /** a tool's showing button whose text ends with `text` (an icon's name comes first) */
 const button = (id: ToolId, text: string) => [...(host(id)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith(text) && shows(b));
@@ -151,6 +156,10 @@ async function full(): Promise<void> {
   const info = await api.invoke('app.info');
   check('userData ends in "Design Tools"', /[\\/]Design Tools$/.test(info.userData), info.userData);
   const dir = info.userData.replace(/[\\/]Design Tools$/, '');
+  // navigator.clipboard is the one way left for the page to reach Luap's real clipboard (the Copy buttons go through main's memory fake)
+  const allowed = async (name: string) => (await navigator.permissions.query({ name: name as PermissionName })).state;
+  const clip = [await allowed('clipboard-read'), await allowed('clipboard-write')];
+  check('a test run refuses the page the system clipboard (navigator.clipboard reads and writes)', clip.every((s) => s === 'denied'), clip);
 
   const ids = shell.getState().tools.map((t) => t.id);
   check('Design, Illustration, Pattern, Logo, Dither, Halftone and Post FX are registered, and nothing else', JSON.stringify(ids) === JSON.stringify(['design', 'illustration', 'pattern', 'logo', 'dither', 'halftone', 'postfx']), ids);
@@ -214,7 +223,12 @@ async function full(): Promise<void> {
   const il = illustrationDoc();
   const plain = il.get();
   clearBases();
+  // the render's wait has no known length: static text with no icon (brief §8), gone once the picture is saved
+  const waits: ToastEntry[] = [];
+  const offWait = toastStore.subscribe(() => waits.push(...toastStore.get().filter((t) => /full-size picture/.test(String(t.message)) && !waits.some((w) => w.id === t.id))));
   await shell.sendDoc('dither', 'illustration');
+  offWait();
+  check('Send to says its render is under way in plain text with no icon, and takes it down when the picture is saved', waits.length === 1 && !waits[0].icon && !toastStore.get().some((t) => t.id === waits[0].id && !t.leaving), waits);
   const render = await find((i) => i.collection === 'Scratch' && i.kind === 'image');
   check('Send to: Dither renders into Scratch and Illustration offers its colours as bases', render && shell.getState().active === 'illustration' && (bases.get()?.items.length ?? 0) > 0, bases.get()?.items.length);
   check('and leaves the Illustration document alone', il.get() === plain && il.depth() === 0, il.depth());
@@ -290,6 +304,18 @@ async function full(): Promise<void> {
   await dither(dir);
   await postfx(dir);
   await illustration();
+
+  // brief §8: nothing loops, and there is no spinner to run: no running animation repeats, and no loaded
+  // stylesheet holds an @keyframes rule
+  const loops = document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations === Infinity);
+  const keyframes = [...document.styleSheets].flatMap((sheet) => {
+    try {
+      return [...sheet.cssRules].filter((rule) => rule instanceof CSSKeyframesRule).map((rule) => (rule as CSSKeyframesRule).name);
+    } catch {
+      return [];
+    }
+  });
+  check('nothing loops: no animation repeats and no stylesheet has @keyframes', !loops.length && !keyframes.length, [loops.length, keyframes]);
 
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
   // pending delete is trashed after it (scripts/smoke.mjs checks both)
@@ -487,7 +513,7 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
 async function toolExport(dir: string, tool: ToolId, collection: string): Promise<(row: string) => Promise<Response | null>> {
   await shell.createCollection(collection);
   return async (row) => {
-    const button = await until(() => [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export') && !b.disabled && b.parentElement?.querySelector('b')?.textContent === row));
+    const button = await until(() => [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export') && !b.disabled && rowOf(b) === row));
     if (!button) return null;
     const shown = toastStore.get().length;
     const idle = shell.getState().busy;
@@ -503,6 +529,48 @@ async function toolExport(dir: string, tool: ToolId, collection: string): Promis
     return item && 'url' in item ? fetch(item.url) : null;
   };
 }
+
+/**
+ * A tool's Copy button in the row named `row`, pressed: what the memory clipboard then holds (a test
+ * run never writes the system one) and what the toast said. Counts as running work like an export.
+ */
+async function toolCopy(tool: ToolId, row: string): Promise<{ held: Record<string, ArrayBuffer>; said: string } | null> {
+  const button = await until(() => [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Copy') && !b.disabled && rowOf(b) === row));
+  if (!button) return null;
+  // the same plain notice isn't shown twice while it still shows (and a test window is never focused, so none times out)
+  for (const t of toastStore.get()) if (t.icon === 'content_copy') toast.dismiss(t.id);
+  await sleep(LEAVE_MS + 60);
+  const shown = toastStore.get().length;
+  const idle = shell.getState().busy;
+  button.click();
+  check(`${tool}'s ${row} copy counts as running work from the moment it starts`, shell.getState().busy > idle, shell.getState().busy);
+  const done = await until(() => toastStore.get().slice(shown).find((t) => t.icon === 'content_copy'), 20_000);
+  return done ? { held: await api.invoke('clipboard.peek'), said: String(done.message) } : null;
+}
+
+const utf8 = (b: ArrayBuffer | undefined) => (b ? new TextDecoder().decode(b) : '');
+const formats = (held: Record<string, ArrayBuffer>) => JSON.stringify(Object.keys(held).sort());
+const sameBytes = (a: ArrayBuffer, b: ArrayBuffer) => {
+  const [x, y] = [new Uint8Array(a), new Uint8Array(b)];
+  return x.length === y.length && x.every((v, i) => v === y[i]);
+};
+/** markup as an XML document's root element, or null when it doesn't parse */
+function svgRoot(markup: string): Element | null {
+  const doc = new DOMParser().parseFromString(markup, 'image/svg+xml');
+  return doc.querySelector('parsererror') ? null : doc.documentElement;
+}
+/** a copied PNG read back: size, colour type (6 is RGBA) and the lowest and highest alpha of its pixels */
+async function pngAlpha(bytes: ArrayBuffer | undefined): Promise<{ w: number; h: number; colour: number; min: number; max: number; img: { w: number; h: number; px: Uint8ClampedArray } } | null> {
+  if (!bytes) return null;
+  const img = await pixelsOf(new Blob([bytes], { type: 'image/png' }));
+  let [min, max] = [255, 0];
+  for (let i = 3; i < img.px.length; i += 4) {
+    min = Math.min(min, img.px[i]);
+    max = Math.max(max, img.px[i]);
+  }
+  return { w: img.w, h: img.h, colour: new Uint8Array(bytes)[25], min, max, img };
+}
+const PNG_COPY = JSON.stringify(['image/png', PNG_FORMAT].sort());
 
 /** a PNG's pixel size and its pHYs resolution in dpi (null without one) */
 function pngInfo(bytes: Uint8Array): { w: number; h: number; dpi: number | null } {
@@ -566,8 +634,17 @@ async function pattern(dir: string, palette: LibraryItemRef, dt: DocController<D
   // the Illustrator swatch, read back from its file: every shape over an edge is on the far side too
   const exported = await toolExport(dir, 'pattern', 'Pattern out');
   const swatch = await exported('Illustrator swatch');
-  const svg = swatch && new DOMParser().parseFromString(await swatch.text(), 'image/svg+xml').documentElement;
+  const swatchText = swatch && (await swatch.text());
+  const svg = swatchText ? new DOMParser().parseFromString(swatchText, 'image/svg+xml').documentElement : null;
   if (!check('Export writes the Illustrator swatch', svg?.nodeName === 'svg')) return;
+  const copied = await toolCopy('pattern', 'Illustrator swatch');
+  check(
+    'Copy puts the swatch SVG on the clipboard as text and as image/svg+xml: the file’s own markup, and it parses',
+    copied && copied.said === 'Copied the SVG.' && formats(copied.held) === JSON.stringify(['text/plain', SVG_FORMAT].sort()) && utf8(copied.held['text/plain']) === swatchText && utf8(copied.held[SVG_FORMAT]) === swatchText && svgRoot(utf8(copied.held['text/plain']))?.nodeName === 'svg',
+    copied && [copied.said, Object.keys(copied.held)],
+  );
+  const artboardCopy = await toolCopy('pattern', 'Artboard SVG');
+  check('Copy on the artboard puts its SVG on the clipboard, shapes and all', artboardCopy && svgRoot(utf8(artboardCopy.held['text/plain']))?.querySelectorAll('use, path, circle, rect, g').length, artboardCopy && Object.keys(artboardCopy.held));
   const d = pd.get();
   const tile = layoutTile(d);
   const reach = reachOf(d.slots);
@@ -769,6 +846,12 @@ async function logo(dir: string): Promise<void> {
     vector && /<circle/.test(vector) && /<path/.test(vector) && /fill="#000000"/.test(vector) && !/filter/.test(vector) && !/<image/.test(vector) && ![NAVY, AMBER, INK].some((c) => vector.toLowerCase().includes(c)),
     vector?.slice(0, 240),
   );
+  const copiedLogo = await toolCopy('logo', 'SVG');
+  check(
+    'Copy puts the lockup SVG on the clipboard as text and as image/svg+xml: the exported markup, and it parses',
+    copiedLogo && vector && copiedLogo.said === 'Copied the SVG.' && formats(copiedLogo.held) === JSON.stringify(['text/plain', SVG_FORMAT].sort()) && utf8(copiedLogo.held['text/plain']) === vector && utf8(copiedLogo.held[SVG_FORMAT]) === vector && svgRoot(vector)?.nodeName === 'svg',
+    copiedLogo && [copiedLogo.said, Object.keys(copiedLogo.held)],
+  );
   const png = await exported('PNG');
   const info = png && pngInfo(new Uint8Array(await png.arrayBuffer()));
   const size = pngSize(ld.get(), layoutLockup(ld.get(), lockupOf(ld.get(), 'horizontal')));
@@ -779,7 +862,7 @@ async function logo(dir: string): Promise<void> {
   const entries = ico instanceof ArrayBuffer ? await icoEntries(new Uint8Array(ico)) : null;
   check('the favicon ICO parses: 16, 32 and 48 px PNGs, each its stated size', JSON.stringify(entries) === '[[16,16,16],[32,32,32],[48,48,48]]', entries);
   const shown = toastStore.get().length;
-  [...(host('logo')?.querySelectorAll('button') ?? [])].find((b) => b.parentElement?.querySelector('b')?.textContent === 'Favicon bundle')?.click();
+  [...(host('logo')?.querySelectorAll('button') ?? [])].find((b) => rowOf(b) === 'Favicon bundle')?.click();
   const done = await until(() => toastStore.get().slice(shown).find((x) => x.icon === 'download'));
   check('Favicon bundle writes its nine files into one folder', /^Exported 9 files into /.test(String(done?.message)), done?.message);
 
@@ -946,8 +1029,21 @@ async function halftone(dir: string, dt: DocController<DitherDoc>): Promise<void
   const subpaths = [...svg!.querySelectorAll('path')].reduce((n, p) => n + (p.getAttribute('d')?.match(/[Mm]/g)?.length ?? 0), 0);
   check("its dots are the view's, one for one", subpaths === shown!.dots, [subpaths, shown!.dots]);
 
+  // Copy PNG on clear paper (the paper left out): a PNG with alpha, clear between the dots and solid in them
+  patchHalftone({ pngWidth: 360 });
+  hd.transact('Paper left out', (x) => ({ ...x, paper: { ...x.paper, include: false } }));
+  const copiedDots = await toolCopy('halftone', 'PNG for screen');
+  const dots = await pngAlpha(copiedDots?.held['image/png']);
+  check(
+    'Copy puts the screen PNG on the clipboard as the PNG format and as image/png, the same bytes: RGBA, 360 px wide, clear paper and solid dots',
+    copiedDots && dots && copiedDots.said === 'Copied the PNG.' && formats(copiedDots.held) === PNG_COPY && sameBytes(copiedDots.held[PNG_FORMAT], copiedDots.held['image/png']) && dots.colour === 6 && dots.w === 360 && dots.min === 0 && dots.max > 128,
+    dots && copiedDots && [copiedDots.said, Object.keys(copiedDots.held), dots.colour, dots.w, dots.min, dots.max],
+  );
+  hd.undo();
+  patchHalftone({ pngWidth: 2048 });
+
   // the separations, through the module's button; smoke runs write them into exports/halftone
-  const plates = [...(host('halftone')?.querySelectorAll('button') ?? [])].find((b) => b.parentElement?.querySelector('b')?.textContent === 'Separations');
+  const plates = [...(host('halftone')?.querySelectorAll('button') ?? [])].find((b) => rowOf(b) === 'Separations');
   const before = toastStore.get().length;
   plates?.click();
   const done = await until(() => toastStore.get().slice(before).find((t) => t.icon === 'download'), 20_000);
@@ -1201,6 +1297,13 @@ async function dither(dir: string): Promise<void> {
   const img = png && (await pixelsOf(await png.blob()));
   const off = img ? offBlocks(img, r!, 8) : null;
   check('pixel size 8 exports 8 px blocks: 96 × 64 px, every pixel its block’s colour in the view', off === 0, [img?.w, img?.h, off]);
+  const copiedDither = await toolCopy('dither', 'PNG');
+  const copiedPixels = await pngAlpha(copiedDither?.held['image/png']);
+  check(
+    'Copy puts the PNG on the clipboard as the PNG format and as image/png: RGBA, the file’s 96 × 64 px, every pixel its block’s colour in the view',
+    copiedDither && copiedPixels && copiedDither.said === 'Copied the PNG.' && formats(copiedDither.held) === PNG_COPY && copiedPixels.colour === 6 && offBlocks(copiedPixels.img, r!, 8) === 0 && copiedPixels.min === 255,
+    copiedPixels && [copiedPixels.w, copiedPixels.h, copiedPixels.colour, copiedPixels.min],
+  );
 
   const indexed = await exported('Indexed PNG');
   const bytes = indexed && new Uint8Array(await indexed.arrayBuffer());
@@ -1257,7 +1360,7 @@ async function dither(dir: string): Promise<void> {
     check('each GIF frame is that frame’s dither pixel for pixel, and no two are the same', offs.length === 6 && offs.every((o) => o === 0) && seen.size === 6, offs);
   }
   const shown0 = toastStore.get().length;
-  [...(host('dither')?.querySelectorAll('button') ?? [])].find((b) => b.parentElement?.querySelector('b')?.textContent === 'PNG frames')?.click();
+  [...(host('dither')?.querySelectorAll('button') ?? [])].find((b) => rowOf(b) === 'PNG frames')?.click();
   const done = await until(() => toastStore.get().slice(shown0).find((t) => t.icon === 'download'), 20_000);
   check('PNG frames writes all six into one folder', /^Exported 6 frames into /.test(String(done?.message)), done?.message);
   await shell.importFiles([1, 6].map((n) => `${dir}\\exports\\dither\\Smoke anim dither 000${n}.png`), 'Dither out');
@@ -1318,7 +1421,7 @@ async function dither(dir: string): Promise<void> {
 
 const postfxDoc = () => shell.doc('postfx') as DocController<PostFxDoc>;
 /** the button of a tool's export row (the row's name is its bold text) */
-const exportRow = (tool: ToolId, row: string) => [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => !b.disabled && b.parentElement?.querySelector('b')?.textContent === row);
+const exportRow = (tool: ToolId, row: string) => [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => !b.disabled && rowOf(b) === row && !b.textContent?.trim().endsWith('Copy'));
 
 /** an input's text as typing leaves it (React hears the input event) */
 function typeInto(el: HTMLInputElement, text: string): void {
@@ -1461,6 +1564,14 @@ async function postfx(dir: string): Promise<void> {
     'the PNG is the full 1800 × 1000 px (v1 stopped at 1600) and keeps its alpha: clear, half clear, solid',
     !!big && big.w === BW && big.h === BH && alphaAt(10, 10) === 0 && Math.abs(alphaAt(900, BH - 10) - 128) <= 1 && alphaAt(900, 500) === 255,
     big && [big.w, big.h, alphaAt(10, 10), alphaAt(900, BH - 10), alphaAt(900, 500)],
+  );
+
+  const copiedFx = await toolCopy('postfx', 'PNG');
+  const fx = await pngAlpha(copiedFx?.held['image/png']);
+  check(
+    'Copy puts the Post FX PNG on the clipboard as the PNG format and as image/png: RGBA, the full 1800 × 1000 px, its alpha kept (clear, half clear, solid)',
+    copiedFx && fx && copiedFx.said === 'Copied the PNG.' && formats(copiedFx.held) === PNG_COPY && fx.colour === 6 && fx.w === BW && fx.h === BH && fx.img.px[(10 * BW + 10) * 4 + 3] === 0 && Math.abs(fx.img.px[((BH - 10) * BW + 900) * 4 + 3] - 128) <= 1 && fx.img.px[(500 * BW + 900) * 4 + 3] === 255,
+    fx && copiedFx && [copiedFx.said, Object.keys(copiedFx.held), fx.colour, fx.w, fx.h],
   );
 
   // colour under faint alpha is exact: a canvas would premultiply (200, 50, 20) at alpha 3 into (170, 85, 0)
@@ -1838,6 +1949,41 @@ async function paintUi(id: string): Promise<void> {
   ctrlY();
   check('and Ctrl+Y redoes it', await until(() => e.state.depth === depth && !e.state.redoDepth), e.state);
   view.dispatchEvent(new PointerEvent('pointerleave'));
+
+  // the brush chip: gouache and the Dry brush show the paint; watercolour shows the wash the Load gives
+  // on bare paper (paint/wash.ts), the moment the Load, medium or paint changes
+  const ultra = PIGMENTS.find((p) => p.id === 'ultra')!;
+  const tubeLoaded = loadedOf(ultra);
+  const chip = () => section.querySelector<HTMLElement>('header [class*="brushChip"]');
+  const chipColour = () => {
+    const el = chip();
+    return el ? parseCss(getComputedStyle(el).backgroundColor) : null;
+  };
+  const chipSays = async (patch: Partial<PaintSettings>, want: Oklch) => {
+    setPaint({ paint: 'ultra', tool: 'paint', ...patch });
+    await frame();
+    await frame();
+    const got = chipColour();
+    return got && deltaE(got, want) < 0.5 ? got : null;
+  };
+  const brushes = paint().brushes;
+  const medium = paint().medium;
+  const load = paint().load;
+  const size = paint().size;
+  check('the chip is the paint itself in gouache', await chipSays({ medium: 'dry' }, ultra.oklch), chipColour());
+  check('and in watercolour the wash at Load 30', await chipSays({ medium: 'wet', load: 30, brushes: { ...brushes, wet: 'round' } }, washColour(tubeLoaded, 0.3, size)), [chipColour(), washColour(tubeLoaded, 0.3, size)]);
+  const pale = chipColour();
+  check('Load 100 darkens it at once, with no transition', (await chipSays({ load: 100 }, washColour(tubeLoaded, 1, size))) && pale && chipColour()![0] < pale[0] - 0.05 && getComputedStyle(chip()!).transitionDuration === '0s', [pale, chipColour()]);
+  const wide = chipColour();
+  check('and a narrow brush darkens it too, again at once (its wash is mostly rim)', (await chipSays({ size: 14 }, washColour(tubeLoaded, 1, 14))) && wide && chipColour()![0] < wide[0] - 0.02 && getComputedStyle(chip()!).transitionDuration === '0s', [wide, chipColour()]);
+  check('the Dry brush lays streaks, not a wash, so its chip is the paint', await chipSays({ brushes: { ...brushes, wet: 'dry' } }, ultra.oklch), chipColour());
+  await chipSays({ size, brushes: { ...brushes, wet: 'round' } }, washColour(tubeLoaded, 1, size));
+  const el = chip()!;
+  el.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+  const tip = await until(() => document.querySelector('[role="tooltip"]')?.textContent ?? null, 2000);
+  el.dispatchEvent(new PointerEvent('pointerout', { bubbles: true, pointerType: 'mouse' }));
+  check("the chip's tooltip names the wash and keeps the paint's own colour", tip === `Ultramarine Blue · a wash at Load 100 looks like this. Paint colour ${toHex(ultra.oklch).toUpperCase()}.`, tip);
+  setPaint({ medium, load, size, brushes });
 
   // the tool bar: one line at 1000px with the paint's name, and still one line at 724px
   const head = section.querySelector('header')!;

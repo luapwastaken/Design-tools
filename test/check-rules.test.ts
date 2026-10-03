@@ -38,12 +38,14 @@ const PLANTED: Record<string, string> = {
 .g { transition: transform var(--t-slow) var(--ease); } /* expect: 4 */
 .g { transition-property: box-shadow; } /* expect: 4 */
 .ok { transition: transform var(--t-fast) var(--ease), clip-path 120ms cubic-bezier(.2, .8, .2, 1); }
-.h { animation: fade 90ms; }
+.h { animation: fade 90ms; } /* expect: 4 */
 @keyframes fade { from { opacity: 0; } } /* expect: 4 */
-.spin { animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(1turn); } }
-.j { animation: grow 1s linear infinite; } /* expect: 4 */
-@keyframes grow { to { transform: scale(2); } }
+.spin { animation: spin 1s linear infinite; } /* expect: 4 */
+@keyframes spin { to { transform: rotate(1turn); } } /* expect: 4 */
+.j { animation: grow 90ms; } /* expect: 4 */
+@keyframes grow { to { transform: scale(2); } } /* expect: 4 */
+.l { animation-iteration-count: infinite; } /* expect: 4 */
+.m { animation: none; animation-name: none; }
 .k { scroll-behavior: smooth; } /* expect: 4 */`,
   'src/renderer/ui/Bad.tsx': `// a comment may say anything: → ─ §
 export const A = () => <div title="x">→</div>; // expect: 1 6
@@ -54,6 +56,8 @@ export const E = () => <i style={{ background: '#000' }} />; // expect: 2
 export const F = () => <i style={{ transition: 'transform 90ms' }} />; // expect: 4
 export const G = (el: HTMLElement) => el.animate([{ opacity: 0 }], 90); // expect: 4
 export const H = () => document.startViewTransition(); // expect: 4
+export const O = (el: HTMLElement) => el.animate([{ transform: 'none' }], { duration: 90, iterations: Infinity }); // expect: 4
+export const P = (el: HTMLElement) => el.animate([{ transform: 'none' }], { duration: 90 });
 export const I = () => <Module title="Fine: a prop" sub="× · ° Δ ≈ – … “ ” ’" />;
 export const J = (c: CanvasRenderingContext2D) => { c.fillStyle = 'white'; }; // expect: 2
 export const K = () => <circle fill="red" />; // expect: 2

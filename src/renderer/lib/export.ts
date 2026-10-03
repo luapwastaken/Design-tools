@@ -3,6 +3,7 @@
 // (`exporting` covers a tool's whole export, its rendering as well as the write), and a failure
 // becomes an error toast with main's plain message (main logs the details).
 import type { Api } from '../../shared/api.ts';
+import type { Copying } from '../../shared/clipboard.ts';
 import type { ToolId } from '../../shared/types.ts';
 import { shell } from '../shell/core/index.ts';
 import { errorText } from '../shell/core/errors.ts';
@@ -33,6 +34,9 @@ export const intoFolder = (tool: ToolId, fill: (write: (name: string, data: Arra
       await ipc.invoke('export.closeFolder', got.id);
     }
   });
+
+/** puts an SVG or a PNG on the clipboard through main (test runs write to memory); run it inside `exporting` like a save */
+export const copyToClipboard = (what: Copying): Promise<void> => ipc.invoke('clipboard.copy', what);
 
 /** the last part of a path: the file's name, or with `up` the folder above it */
 export const leaf = (path: string, up = 0): string => path.split(/[\\/]/).at(-1 - up) ?? '';

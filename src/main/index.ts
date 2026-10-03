@@ -4,6 +4,7 @@ import { cpSync, mkdirSync, mkdtempSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
+import { createClipboard } from './clipboard.ts';
 import { createExporter } from './export.ts';
 import { renameRetry } from './fsx.ts';
 import { registerIpc } from './ipc.ts';
@@ -19,8 +20,8 @@ const SMOKE_TIMEOUT_MS = 180_000;
 // Smoke folders (temp userData and Library): --smoke makes a new one (printed at start) and runs the
 // full smoke pass (src/renderer/smoke.ts); --smoke-dir=<dir> reuses one and runs no pass, for
 // driving the app by hand or by script; --smoke-quiet with it is the relaunch pass. `npm run smoke`
-// (scripts/smoke.mjs) runs --smoke, then --smoke-quiet on the same folder. The two passes run in a
-// window that is never shown; --smoke-dir shows one, unfocused, on a second monitor (window.ts).
+// (scripts/smoke.mjs) runs --smoke, then --smoke-quiet on the same folder. Every test run shows its
+// window unfocused, off every screen, with no taskbar entry (window.ts).
 // No test run shows a dialog: --smoke-answer=quit|keep answers "Quit anyway?" (default quit).
 const smokeDirArg = process.argv.find((a) => a.startsWith('--smoke-dir='))?.slice('--smoke-dir='.length);
 const smokeRun = process.argv.includes('--smoke-quiet') ? 'quiet' : process.argv.includes('--smoke') ? 'full' : null;
@@ -98,6 +99,7 @@ function start() {
     workspace,
     library,
     exporter,
+    clipboard: createClipboard({ smoke }),
     smoke,
     smokeDone(ok, report) {
       log(ok ? 'info' : 'error', 'Smoke report', report); // unpackaged, log() prints it too

@@ -34,6 +34,17 @@ export const PARTS_MAX = 128;
 /** what to do when nothing is on the brush: `emptyTray`, nothing owned to load at all */
 export const loadHint = (emptyTray: boolean): string => (emptyTray ? 'Tick a paint you own to load the brush' : 'Click a paint in the tray to load the brush');
 
+/**
+ * What the brush chip says on hover in watercolour, with the paint's own colour kept in it: the chip
+ * shows the wash the Load gives (paint/wash.ts), except for the Dry brush, which lays streaks and no
+ * wash, so its chip is the paint. Null for gouache, where the chip is the paint and needs no note.
+ */
+export function chipTip(medium: Medium, kind: BrushKind, name: string, paint: Oklch, load: number): string | null {
+  if (medium !== 'wet') return null;
+  const hex = toHex(paint).toUpperCase();
+  return kind === 'dry' ? `${name} · the dry brush lays streaks, not a wash, so this is the paint colour ${hex}.` : `${name} · a wash at Load ${load} looks like this. Paint colour ${hex}.`;
+}
+
 export const BRUSHES: { value: BrushKind; label: string }[] = [
   { value: 'round', label: 'Round' },
   { value: 'flat', label: 'Flat' },

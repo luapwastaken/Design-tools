@@ -7,6 +7,7 @@ import { gpuGlazes, paintEngineChecks } from './smoke-checks.ts';
 import { gpuScope } from '../../../lib/gpu/index.ts';
 import { glazeCases } from './km-cases.ts';
 import { loadedOf, SHEET } from './sheet-strokes.ts';
+import { measureWashes, rampPaint, tubePaint } from './wash-checks.ts';
 
 async function base64(b: Blob): Promise<string> {
   const bytes = new Uint8Array(await b.arrayBuffer());
@@ -23,6 +24,7 @@ if (typeof window !== 'undefined' && window.api?.smoke) {
     loadedOf,
     internals: (e: PaintEngine) => internals.get(e),
     paintStroke,
+    wash: { measureWashes, rampPaint, tubePaint },
     base64,
     sheet: async (split = false) => {
       const { png, report } = await renderSheet({ split });

@@ -24,15 +24,22 @@ export function wetStrength(load: number): number {
 }
 
 /**
+ * Watercolour: the film's strength against its start once the hairs lay paint at strength `run` (wetRun
+ * of what they hold). The film runs down with the hairs, though only part of the way: a pixel is touched
+ * by about spread.wet hairs, each replacing FILM of what the film held, so the rest is still the start's paint.
+ */
+function filmRatio(load: number, run: number): number {
+  const replaced = 1 - (1 - FILM) ** B.spread.wet;
+  return 1 - replaced + (replaced * run) / wetRun(load);
+}
+
+/**
  * Watercolour: how strong the paint is where only the water has reached (a wash's leading edge), against
- * the film's start. The hairs have run down since, and the film behind them with them, though only part
- * of the way: a pixel is touched by about spread.wet hairs, each replacing FILM of what the film held.
+ * the film's start. The hairs have run down since, and the film behind them with them.
  * Left at the start's strength that edge would be a darker cap with a seam where the hairs begin.
  */
 export function headStrength(b: Brush): number {
-  if (!b.wet) return 1;
-  const replaced = 1 - (1 - FILM) ** B.spread.wet;
-  return 1 - replaced + (replaced * wetRun(b.loadMean)) / wetRun(b.load);
+  return b.wet ? filmRatio(b.load, wetRun(b.loadMean)) : 1;
 }
 
 /**
@@ -115,6 +122,27 @@ const smooth = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
+/** what a hair holds at the start, by the Load: some luck (0..1), and the edge hairs (`edge` 1) hold less, so a stroke breaks up from its edges as it runs dry */
+const hairLoad = (load: number, luck: number, edge: number): number => Math.min(1, load * (0.75 + 0.5 * luck) * (1 - B.edgeDry * smooth(0.6, 1, edge)));
+
+/** px of travel a full hair lasts: bigger brushes hold more but spend it faster per px */
+const capacityOf = (size: number, load: number, wet: boolean): number => (wet ? LOAD.wet : LOAD.gouache) * Math.sqrt(40 / Math.max(size, 8)) * (0.4 + load);
+
+const RUN_GRID = 8;
+
+/**
+ * Watercolour: the strength a stroke's film has once it has travelled `travel` px, on the CPU. It is the
+ * mean over the brush's hairs, which start as makeBrush has them (a grid over luck and place across the
+ * brush) and run down travel / capacity, each laying paint at wetRun of what it holds. Checked against
+ * the engine's own strokes (wash-checks.ts, and the sweeps in decisions.md).
+ */
+export function filmStrength(load: number, size: number, travel: number): number {
+  const spent = travel / capacityOf(size, load, true);
+  let run = 0;
+  for (let i = 0; i < RUN_GRID; i++) for (let j = 0; j < RUN_GRID; j++) run += wetRun(Math.max(0, hairLoad(load, (j + 0.5) / RUN_GRID, (i + 0.5) / RUN_GRID) - spent));
+  return wetStrength(load) * filmRatio(load, run / (RUN_GRID * RUN_GRID));
+}
+
 export type BrushSpec = { kind: BrushKind; tool: StrokeTool; medium: Medium; size: number; load: number; seed: number };
 
 export function makeBrush(spec: BrushSpec): Brush {
@@ -149,8 +177,7 @@ export function makeBrush(spec: BrushSpec): Brush {
     id,
     u,
     len,
-    // the edge hairs hold a little less, so a stroke breaks up from its edges as it runs dry
-    load: o.tool === 'smudge' ? 0 : Math.min(1, o.load * (0.75 + 0.5 * r()) * (1 - B.edgeDry * smooth(0.6, 1, Math.abs(u)))),
+    load: o.tool === 'smudge' ? 0 : hairLoad(o.load, r(), Math.abs(u)),
     hw: (spread / list.length) * (0.7 + 0.6 * r()),
     clump,
     edge: smooth(0.7, 1, Math.abs(u)),
@@ -158,8 +185,7 @@ export function makeBrush(spec: BrushSpec): Brush {
     use: 0,
   }));
   const streak = o.kind === 'dry' ? STREAKS.dry : wet ? STREAKS.wet : STREAKS.gouache;
-  // bigger brushes hold more but spend it faster per px
-  const capacity = (wet ? LOAD.wet : LOAD.gouache) * Math.sqrt(40 / Math.max(o.size, 8)) * (0.4 + o.load);
+  const capacity = capacityOf(o.size, o.load, wet);
   const pickup = o.tool === 'smudge' ? PICKUP.smudge : wet ? 0 : PICKUP.gouache;
   const thin = wet ? wetStrength(o.load) / wetRun(o.load) : 1;
   return { kind: o.kind, tool: o.tool, wet, size: o.size, load: o.load, hairs, streak, capacity, thin, pickup, width: 0, loadMean: o.load, centre: null };

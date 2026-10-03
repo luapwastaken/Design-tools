@@ -6,7 +6,7 @@ import { MAX_FRAMES } from '../../lib/frames.ts';
 import { saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
 import { Module } from '../../ui/index.ts';
-import { ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
+import { CopyButton, ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx, plural } from '../common/names.ts';
 import { isStateful, RUN_IN, type PostFxDoc, type Timeline } from './doc.ts';
 import { framesTo, pngBlob, sizeLimit } from './exports.ts';
@@ -74,6 +74,7 @@ export function ExportModule({ d, t, error }: { d: PostFxDoc; t: Timeline; error
           name="PNG"
           desc={big ?? (src ? `${anim ? 'The frame on screen, at' : 'At'} full resolution, ${dim}, with its transparency${isStateful(d) ? `, drawn after the ${RUN_IN} frames before it` : ''}.` : 'Open an image, a GIF or a clip to export it.')}
           action={<ExportButton ex={ex} what="PNG" lead={!anim} why={big ?? none} onClick={() => void png()} />}
+          copy={<CopyButton ex={ex} what="PNG" lead={!anim} why={big ?? none} onClick={() => void ex.copyPng('PNG', async (report) => (await pngBlob(d, frame(), report)).arrayBuffer())} />}
           {...ex.live('PNG')}
         />
 

@@ -2,6 +2,7 @@
 // rgba16f film against km.ts, glazes through the painting's rgba16f colour against the float64
 // spectral stack, the paper against its TypeScript reference, and the stroke sheet (twice, for
 // determinism, then with the split-draw fallback forced). The sheet's PNG goes to the exports folder.
+// Then the brush chip's wash against painted watercolour strokes (wash-checks.ts).
 import { deltaE, toOklch, type Oklch } from '../../../../shared/color/index.ts';
 import { mix, paintOf } from '../../../../shared/paint/km.ts';
 import { layer15, linear15, paint15, reflectance15 } from '../../../../shared/paint/km15.ts';
@@ -13,6 +14,7 @@ import { glazeCases, mixCases } from './km-cases.ts';
 import { internals, PaintEngine } from './engine.ts';
 import { paperAt, PAPER_RGB } from './paper.ts';
 import { renderSheet } from './sheet.ts';
+import { washChecks } from './wash-checks.ts';
 
 type Check = (name: string, ok: unknown, detail?: unknown) => boolean;
 
@@ -155,4 +157,6 @@ export async function paintEngineChecks(check: Check): Promise<void> {
   } catch (e) {
     check('paint engine: the sheet ran', false, e instanceof Error ? (e.stack ?? e.message) : String(e));
   }
+
+  await washChecks(check);
 }

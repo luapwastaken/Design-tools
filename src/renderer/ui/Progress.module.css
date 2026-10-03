@@ -15,10 +15,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* the busy spinner: the one loop allowed in the chrome (brief §8); reduced motion stops it */
-.spin { color: var(--ink-2); animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(1turn); } }
-
 .bar { position: relative; height: 14px; }
 .track, .fill { position: absolute; left: 0; top: 0; height: 4px; border-radius: 2px; }
 .track { right: 0; background: var(--raise); }

@@ -4,7 +4,7 @@
 // tone), or the original frame. The readout names the palette index and colour under the pointer.
 import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
 import { cssColor, toHex } from '../../../shared/color/index.ts';
-import { cursorXY, Icon, Viewport, type ViewTransform } from '../../ui/index.ts';
+import { cursorXY, Viewport, type ViewTransform } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { workSize, type DitherDoc } from './doc.ts';
 import { imageOf } from './exports.ts';
@@ -106,7 +106,6 @@ export function DitherCanvas({ d, v, frame, result, busy }: Props) {
       bar={
         busy && (
           <span className={s.busy} role="status">
-            <Icon name="progress_activity" size={16} className={s.spin} />
             Dithering
           </span>
         )

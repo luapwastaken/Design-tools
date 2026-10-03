@@ -5,7 +5,7 @@ import { intoFolder, leaf, saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
 import { Module, NumberField, Segmented } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
+import { CopyButton, ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx, plural } from '../common/names.ts';
 import { MM_PER, printPx, type HalftoneDoc } from './doc.ts';
 import { pngFor, pngLimit, pngMaxWidth, platesFor, platesLimit, svgFor, svgWeight } from './exports.ts';
@@ -77,6 +77,7 @@ export function ExportModule({ d, v, screened, error }: { d: HalftoneDoc; v: Hal
           name="PNG for screen"
           desc={`sRGB at any width, ${d.paper.include ? 'flat on the paper' : 'clear round the dots'}${d.feel.bake && (d.feel.misregister > 0 || d.feel.texture > 0) ? ', with the print feel' : ''}.`}
           action={<ExportButton ex={ex} what="PNG" disabled={!ready} why={pngProblem ?? blocked} onClick={() => void png()} />}
+          copy={<CopyButton ex={ex} what="PNG" disabled={!ready} why={pngProblem ?? blocked} onClick={() => void ex.copyPng('PNG', (report) => pngFor(d, v.pngWidth, report))} />}
           {...ex.live('PNG')}
         >
           <div className={s.pair}>

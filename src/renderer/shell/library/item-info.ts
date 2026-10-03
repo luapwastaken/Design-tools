@@ -68,8 +68,8 @@ async function load(ref: LibraryItemRef) {
  * Images report their pixel size once their thumbnail has decoded. dt://thumb serves the file
  * itself, except TIFFs, which get a small Windows thumbnail: their size would be the thumbnail's.
  */
-export function noteImageSize(ref: LibraryItemRef, img: HTMLImageElement) {
-  if (img.naturalWidth && !/^tiff?$/i.test(ref.ext)) put(ref, { meta: `${img.naturalWidth} × ${img.naturalHeight}` });
+export function noteImageSize(ref: LibraryItemRef, w: number, h: number) {
+  if (w && !/^tiff?$/i.test(ref.ext)) put(ref, { meta: `${w} × ${h}` });
 }
 
 export const swatchWord = (n: number) => `${n} swatch${n === 1 ? '' : 'es'}`;

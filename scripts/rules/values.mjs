@@ -107,9 +107,3 @@ export function durationProblems(prop, value, vars) {
   });
 }
 
-/** Each comma item of an `animation` shorthand as { name, ms, infinite, unknown }. */
-export const readAnimation = (value, vars) =>
-  splitTop(value, ',').map((item) => {
-    const r = readItem(item, vars);
-    return { item, name: r.idents[0] ?? null, ms: r.times[0] ?? 0, infinite: r.words.includes('infinite'), unknown: r.unknown };
-  });

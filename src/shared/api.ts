@@ -1,3 +1,4 @@
+import type { Copying } from './clipboard.ts';
 import type {
   Collection,
   DocPayload,
@@ -98,6 +99,16 @@ export type Api = {
    */
   'window.keepAwake': (on: boolean) => Promise<void>;
   'shell.reveal': (path: string) => Promise<void>;
+
+  // ── clipboard ──
+  /**
+   * The Export row's Copy: an SVG as text and as the registered image/svg+xml format, a PNG as the
+   * registered PNG format and as a bitmap, in one write (src/shared/clipboard.ts). Test runs write to
+   * memory instead and never touch the system clipboard.
+   */
+  'clipboard.copy': (what: Copying) => Promise<void>;
+  /** test runs only: what the memory clipboard holds, by format; refused in a normal run */
+  'clipboard.peek': () => Promise<Record<string, ArrayBuffer>>;
 };
 
 export type ApiEvents = {

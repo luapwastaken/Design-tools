@@ -2,7 +2,8 @@
 //   1  icons only through <Icon>, non-ASCII in UI strings only from the allowlist, CSS content only ""
 //   2  colour literals only in tokens.css (as oklch), both [data-theme] blocks define the same names,
 //      and the main-process hex table (THEME_HEX) matches the tokens it stands for
-//   4  motion only on transform / translate / scale / rotate / clip-path at 120ms or less, and a
+//   4  motion only on transform / translate / scale / rotate / clip-path at 120ms or less, no
+//      @keyframes, CSS animation or looping .animate() at all (nothing loops: no spinners), and a
 //      reduced-motion rule that zeroes it all
 //   6  no OS-drawn popups: title attributes, <select>, number and colour inputs, Menu.popup
 // Rules 3 and 5 are behaviour, checked by review and the smoke run. Prints file:line for each

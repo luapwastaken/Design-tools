@@ -103,11 +103,20 @@ export function createWindow(o: {
   win = w;
   const wc = w.webContents;
 
-  // Test runs never take focus from whatever Luap is doing. The smoke passes need no window at
-  // all (it still lays out and paints, unthrottled), so nothing appears; --smoke-dir, driven by
-  // scripts that take screenshots, shows one without focus.
+  // A test run's page can't reach Luap's real clipboard through navigator.clipboard either: its reads and
+  // writes are refused (the copy sites already toast a failure). The Export row's Copy goes through main,
+  // which writes to memory instead (clipboard.ts). Everything else is allowed, as Electron does by default.
+  if (o.smoke) {
+    const refused = new Set(['clipboard-read', 'clipboard-sanitized-write', 'deprecated-sync-clipboard-read']);
+    wc.session.setPermissionRequestHandler((_wc, permission, allow) => allow(!refused.has(permission)));
+    wc.session.setPermissionCheckHandler((_wc, permission) => !refused.has(permission));
+  }
+
+  // Test runs never take focus from whatever Luap is doing, and appear off every screen, but they do
+  // show a window. One that is never shown is given a frame about once a second (measured: 110
+  // animation frames in a two-minute smoke pass, against 2100 shown), which slows everything that waits
+  // for one (Post FX's playback and preview, a video's frame callback) until a wait now and then runs out.
   w.once('ready-to-show', () => {
-    if (o.smokeRun) return;
     if (!o.smoke) return w.show();
     w.setSkipTaskbar(true);
     w.showInactive();
@@ -167,7 +176,7 @@ export function createWindow(o: {
 }
 
 /**
- * Spec §4 quit: ask the renderer to flush and wait up to 3s; ask Luap only if an export or import
+ * Spec §4 quit: ask the renderer to flush and wait up to 3s; ask Luap only if an export, copy or import
  * is still running. There is no "unsaved changes" prompt: every commit is already written. Deletes
  * still waiting on their Undo toast go to the Recycle Bin only once the quit is certain, so "Keep
  * running" finds them still undoable.
@@ -189,7 +198,7 @@ async function mayClose(w: BrowserWindow, trashOnQuit: (ids: string[]) => Promis
   return quit;
 }
 
-const QUIT_ANYWAY = 'An export or import is still running. Quit anyway?';
+const QUIT_ANYWAY = 'An export, copy or import is still running. Quit anyway?';
 
 /**
  * Test runs never show the box: a modal takes the foreground, and Luap's typing would land in it.

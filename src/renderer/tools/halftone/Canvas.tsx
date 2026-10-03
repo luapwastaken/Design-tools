@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
 import { pagePx } from '../../../shared/halftone/screen.ts';
-import { cursorXY, Icon, Viewport, type ViewTransform } from '../../ui/index.ts';
+import { cursorXY, Viewport, type ViewTransform } from '../../ui/index.ts';
 import { InkProbe } from './Meters.tsx';
 import { filmOf, lookOf, Painter, type Look } from './draw.ts';
 import { MM_PER, type HalftoneDoc } from './doc.ts';
@@ -233,7 +233,6 @@ export function HalftoneCanvas({ d, v, screened, dots, stats, busy, active, onDr
       bar={
         busy && (
           <span className={s.busy} role="status">
-            <Icon name="progress_activity" size={16} className={s.spin} />
             Screening
           </span>
         )

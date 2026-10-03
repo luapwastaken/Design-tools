@@ -87,8 +87,9 @@ export async function sendDoc(from: ToolId, to: ToolId): Promise<void> {
   }
   const doc = r.doc.get();
   const was = getState().active;
-  // a full-size render can take seconds: say so where Luap is looking, not only in the status bar
-  const working = toast.show({ icon: 'hourglass_top', message: `Rendering ${r.def.label}'s full-size picture to send it…`, duration: Infinity });
+  // a full-size render can take seconds: say so where Luap is looking, not only in the status bar.
+  // How long it takes isn't known, so it is static text, with no icon and no bar (brief §8)
+  const working = toast.show({ message: `Rendering ${r.def.label}'s full-size picture to send it…`, duration: Infinity });
   const ref = await runBusy(async () => {
     const out = await guard(`${r.def.label} couldn't render`, () => r.def.render!(doc));
     if (!out) return null;

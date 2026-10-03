@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --test \"test/**/*.test.ts\"",
     "smoke": "electron-vite build && node scripts/smoke.mjs",
+    "dist": "electron-vite build && electron-builder --win --publish never",
     "check": "npm run typecheck && npm test && npm run check:rules",
     "check:rules": "node scripts/check-rules.mjs"
   },
@@ -35,6 +36,7 @@
     "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "44.1.1",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "typescript": "^5.9.0",
     "vite": "^7.0.0"
