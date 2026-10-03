@@ -20,7 +20,7 @@ import { kaleidoscope, twirl, wave } from './distort.ts';
 import { datamosh } from './video.ts';
 import { EFFECT_IDS, type Effect, type EffectId, type Group, type ParamValue } from './types.ts';
 
-export type { Blend, ColourParam, Ctx, Effect, EffectId, Group, NumberParam, Param, ParamValue, ChoiceParam, ToggleParam } from './types.ts';
+export type { Blend, ColourParam, Ctx, Effect, EffectId, Group, Memory, NumberParam, Param, ParamValue, ChoiceParam, ToggleParam } from './types.ts';
 export type EffectInfo = Effect;
 export { BLENDS, blendIndex, isValue, EFFECT_IDS };
 

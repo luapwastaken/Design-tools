@@ -36,6 +36,9 @@ export type ChoiceParam = Base<'choice', number> & { options: readonly string[] 
 export type ColourParam = Base<'colour', Oklch> & { tone?: number };
 export type Param = NumberParam | ToggleParam | ChoiceParam | ColourParam;
 
+/** what a layer whose effect remembers frames (datamosh) has: the frame it last drew, and how many frames in a row went into it */
+export type Memory = { f: number; run: number } | undefined;
+
 export type Effect = {
   id: EffectId;
   label: string;
@@ -70,6 +73,8 @@ export type Ctx = {
   scale: number;
   /** where the frame sits in the loop, [0, 1); a moving effect must be periodic in it */
   t: number;
+  /** how long the loop is, seconds: a moving effect's rates are a second long (params.ts perLoop), so a clip's pace doesn't depend on its length */
+  seconds: number;
   /** the source frame, for video; null for a still */
   frame: number | null;
   /** this layer's settings, in range */

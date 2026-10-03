@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Texture } from '../src/renderer/lib/gpu/index.ts';
 import { BLENDS, blendIndex, defaultsOf, EFFECT_IDS, EFFECTS, effectOf, fromPalette, GROUPS, isValue, valuesOf, type Ctx, type Effect, type ParamValue } from '../src/renderer/tools/postfx/effects/index.ts';
-import { tick, turn } from '../src/renderer/tools/postfx/effects/params.ts';
+import { perLoop, tick, turn } from '../src/renderer/tools/postfx/effects/params.ts';
+import { score } from '../src/renderer/tools/postfx/effects/search.ts';
 import type { Oklch } from '../src/shared/color/index.ts';
 
 test('the curated list: every effect once, in its group, with the spec’s moving and video-only ones', () => {
@@ -30,7 +31,7 @@ test('every setting is well formed: defaults in range and on the step, keys uniq
       assert.deepEqual(p.fit(p.def), p.def, where);
       if (p.kind === 'number') {
         assert.ok(p.min < p.max && p.step > 0 && p.def >= p.min && p.def <= p.max, where);
-        if (p.unit) assert.ok(['%', 'px', '°', '/loop'].includes(p.unit), where);
+        if (p.unit) assert.ok(['%', 'px', '°', '/s'].includes(p.unit), where);
       }
       if (p.kind === 'choice') assert.ok(p.options.length >= 2 && p.def < p.options.length, where);
     }
@@ -91,14 +92,14 @@ const tex = (w: number, h: number, name: string) => ({ width: w, height: h, name
 const ENGINE = new Set(['u_rect', 'u_full', 'u_flip']);
 const SIZE: Record<string, number> = { float: 1, int: 1, bool: 1, vec2: 2, vec3: 3, vec4: 4 };
 
-function fake(e: Effect, params: Record<string, ParamValue>, o: { t?: number; frame?: number | null; mem?: Record<string, number> } = {}) {
+function fake(e: Effect, params: Record<string, ParamValue>, o: { t?: number; frame?: number | null; mem?: Record<string, number>; seconds?: number } = {}) {
   const runs: Run[] = [];
   const kept = new Map<string, Texture>();
   const values = valuesOf(e.id, params);
   const input = tex(640, 360, 'input');
   const ctx: Ctx = {
     g: null as never,
-    input, w: 640, h: 360, scale: 1, t: o.t ?? 0, frame: o.frame ?? null,
+    input, w: 640, h: 360, scale: 1, t: o.t ?? 0, seconds: o.seconds ?? 2, frame: o.frame ?? null,
     n: (k) => values[k] as number,
     on: (k) => values[k] as boolean,
     rgb: () => [0.5, 0.5, 0.5],
@@ -200,4 +201,61 @@ test('datamosh advances only on the next frame: the same frame redraws from the 
 
   step(9);
   assert.deepEqual({ f: mem.f, back: mem.back }, { f: 9, back: 0 }, 'a seek starts clean');
+});
+
+test('datamosh counts the frames in a row behind it, which a seek or a clean start sets back to none', () => {
+  const dm = effectOf('datamosh')!;
+  const mem: Record<string, number> = {};
+  const step = (frame: number) => fake(dm, {}, { frame, mem });
+  step(10);
+  assert.equal(mem.run, 0);
+  for (const f of [11, 12, 13]) step(f);
+  assert.equal(mem.run, 3);
+  step(13);
+  assert.equal(mem.run, 3, 'a redraw adds none');
+  step(40);
+  assert.equal(mem.run, 0);
+});
+
+test('a rate a second is held to whole counts in the loop, none only for none', () => {
+  assert.equal(perLoop(0, 2), 0);
+  assert.equal(perLoop(0.5, 2), 1);
+  assert.equal(perLoop(12, 2), 24);
+  assert.equal(perLoop(12, 120), 1440, 'a long clip runs at the same pace, not a slower one');
+  assert.equal(perLoop(0.05, 0.5), 1, 'above 0 is never none, or the loop could not come round');
+  assert.equal(perLoop(1.4, 1), 1);
+});
+
+test('what moves keeps its pace a second whatever the loop: a clip of 2 s or 2 minutes boils 12 times a second', () => {
+  const grain = effectOf('grain')!;
+  for (const seconds of [2, 10, 120]) {
+    const frames = seconds * 25;
+    const seeds = new Set(Array.from({ length: 25 }, (_, i) => fake(grain, { boil: 12 }, { t: i / frames, seconds }).runs[0].uniforms.u_seed));
+    assert.ok(seeds.size >= 12 && seeds.size <= 13, `${seconds} s: ${seeds.size} patterns in the first second`);
+  }
+  const glitch = effectOf('glitch')!;
+  const [short, long] = [2, 60].map((seconds) => new Set(Array.from({ length: 25 }, (_, i) => fake(glitch, { changes: 4 }, { t: i / (seconds * 25), seconds }).runs[0].uniforms.u_seed)).size);
+  assert.ok(Math.abs(short - long) <= 1, `${short} and ${long} changes in a second`);
+});
+
+test('a light leak travels no faster in a short loop: it wanders less, so its brightness never pulses', () => {
+  const leak = effectOf('light-leak')!;
+  const reach = (seconds: number) => {
+    const at = (t: number) => fake(leak, { drift: 100 }, { t, seconds }).runs[0].uniforms.u_p1 as number[];
+    const [x0, y0] = at(0);
+    return Math.max(...Array.from({ length: 50 }, (_, i) => Math.hypot(at(i / 50)[0] - x0, at(i / 50)[1] - y0)));
+  };
+  const [slow, fast] = [reach(2), reach(0.5)];
+  assert.ok(fast < slow / 3, `0.5 s reaches ${fast.toFixed(1)} px, 2 s ${slow.toFixed(1)} px`);
+});
+
+test('typing an effect’s name finds it first: its name, then its group, then what it says of itself', () => {
+  const top = (q: string) => [...EFFECTS].map((fx) => ({ fx, at: score(fx, q) })).filter((r) => r.at > 0).sort((a, b) => b.at - a.at)[0]?.fx.label;
+  assert.equal(top('edges'), 'Edges', 'Vignette also says “edges”, in its description');
+  assert.equal(top('lens'), 'Lens distortion');
+  assert.equal(top('light'), 'Light leak');
+  assert.equal(top('colour'), 'Grade', 'a group, and its first');
+  assert.equal(top('kuw'), 'Kuwahara paint');
+  assert.equal(top('aberr'), 'Chromatic aberration', 'a word of its name');
+  assert.equal(top('zzz'), undefined);
 });

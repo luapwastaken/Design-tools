@@ -17,10 +17,17 @@ const CLOSE_WAIT_MS = 3000;
 type CloseReply = { busy: boolean; pendingTrash: string[] };
 
 let win: BrowserWindow | null = null;
+/** whether the window was made to be slowed when it is hidden (test windows were not) */
+let throttles = true;
 let closeWaiter: ((reply: CloseReply) => void) | null = null;
 
 export function send<K extends keyof ApiEvents>(name: K, payload: ApiEvents[K]): void {
   if (win && !win.isDestroyed()) win.webContents.send(name, payload);
+}
+
+/** the renderer's 'window.keepAwake': for as long as an export runs, a hidden or minimised window keeps its speed */
+export function keepAwake(on: boolean): void {
+  if (win && !win.isDestroyed()) win.webContents.setBackgroundThrottling(throttles && !on);
 }
 
 /** parent for dialogs */
@@ -67,6 +74,7 @@ export function createWindow(o: {
   trashOnQuit(ids: string[]): Promise<void>;
 }): BrowserWindow {
   const hex = THEME_HEX[o.theme];
+  throttles = !o.smoke;
   const w = new BrowserWindow({
     ...(o.smoke ? testPlacement() : {}),
     width: 1600,
@@ -83,7 +91,7 @@ export function createWindow(o: {
       nodeIntegration: false,
       sandbox: true,
       // a smoke window behind other windows must not have its timers slowed to once a second
-      backgroundThrottling: !o.smoke,
+      backgroundThrottling: throttles,
       // --dt-theme is the preload's fallback; it asks main for the current theme first
       additionalArguments: [`--dt-theme=${o.theme}`, ...(o.smoke ? ['--dt-smoke'] : []), ...(o.smokeRun ? [`--dt-smoke-run=${o.smokeRun}`] : [])],
     },
@@ -108,6 +116,8 @@ export function createWindow(o: {
   // and Ctrl+wheel don't zoom the page (checked on Electron 44), and the keys still reach the renderer
   // for canvas zoom. Blocking them in before-input-event would hide them from the renderer too.
   wc.on('did-finish-load', () => void wc.setVisualZoomLevelLimits(1, 1));
+  // an export that died with its page (a crash, a reload) never turned this off
+  wc.on('did-start-navigation', (_e, _url, _inPlace, isMainFrame) => isMainFrame && keepAwake(false));
   wc.on('before-input-event', (e, input) => {
     if (input.type === 'keyDown' && input.key === 'F12' && !app.isPackaged) {
       wc.toggleDevTools();

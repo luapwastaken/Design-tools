@@ -16,7 +16,7 @@ import { blendIndex, COMPOSITE } from './composite.ts';
 import { fx } from './glsl.ts';
 import { effectOf } from './index.ts';
 import { valuesFor } from './params.ts';
-import type { Blend, Ctx, ParamValue } from './types.ts';
+import type { Blend, Ctx, Memory, ParamValue } from './types.ts';
 
 export type StackLayer = { id: string; effect: string; on: boolean; opacity: number; blend: Blend; params: Readonly<Record<string, ParamValue>> };
 
@@ -27,6 +27,8 @@ export type RenderOptions = {
   frame?: number | null;
   /** px of this render per px of the full-resolution image (1 for exports) */
   scale?: number;
+  /** the loop's length in seconds, which moving effects' rates a second are measured against (default 2) */
+  seconds?: number;
 };
 
 type Kept = { textures: Map<string, Texture>; mem: Record<string, number> };
@@ -52,6 +54,7 @@ export class Stack {
     const t = Number.isFinite(o.t) ? o.t! - Math.floor(o.t!) : 0;
     const frame = o.frame ?? null;
     const scale = o.scale && o.scale > 0 ? o.scale : 1;
+    const seconds = o.seconds && o.seconds > 0 ? o.seconds : 2;
     const [w, h] = [input.width, input.height];
     for (const tex of this.#busy) this.#put(tex);
     this.#busy.clear();
@@ -67,7 +70,7 @@ export class Stack {
       if (!layer.on || !(layer.opacity > 0) || (effect.videoOnly && frame === null)) continue;
       seen.add(layer.id);
       const values = valuesFor(effect.params, layer.params);
-      const out = effect.passes(this.#ctx(cur, layer.id, values, { t, frame, scale }));
+      const out = effect.passes(this.#ctx(cur, layer.id, values, { t, frame, scale, seconds }));
       const next = layer.blend === 'normal' && layer.opacity >= 1 ? out : this.#composite(cur, out, layer);
       for (const tex of this.#busy) if (tex !== next) this.#put(tex);
       this.#busy = new Set(this.#busy.has(next) ? [next] : []);
@@ -75,6 +78,12 @@ export class Stack {
     }
     for (const [id, k] of this.#kept) if (!seen.has(id)) this.#drop(id, k);
     return cur;
+  }
+
+  /** what the layer's effect remembers of the frames it drew (datamosh), if it remembers any */
+  memory(id: string): Memory {
+    const m = this.#kept.get(id)?.mem;
+    return m && m.f !== undefined ? { f: m.f, run: m.run ?? 0 } : undefined;
   }
 
   /** `tex` as 8-bit RGBA, straight alpha, rows from the top: what a PNG holds */
@@ -99,7 +108,7 @@ export class Stack {
     this.#unlisten ??= this.g.onRestore(() => this.#forget());
   }
 
-  #ctx(input: Texture, id: string, values: Record<string, ParamValue>, o: { t: number; frame: number | null; scale: number }): Ctx {
+  #ctx(input: Texture, id: string, values: Record<string, ParamValue>, o: { t: number; frame: number | null; scale: number; seconds: number }): Ctx {
     const g = this.g;
     const kept = this.#kept.get(id) ?? { textures: new Map(), mem: {} };
     this.#kept.set(id, kept);

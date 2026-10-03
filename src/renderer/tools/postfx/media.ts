@@ -27,6 +27,8 @@ const OPEN_MS = 20_000;
 const SEEK_MS = 10_000;
 /** rVFC fires within a frame or two of `seeked`; a hidden page may never fire it, and then the frame's own timestamp stands */
 const PRESENT_MS = 250;
+/** once it has not fired twice running (a minimised window presents nothing) the wait is this short, or an export would take a quarter second a frame */
+const QUICK_MS = 20;
 const BITMAP = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' } as const;
 
 const TYPE_EXT: Record<string, string> = { quicktime: 'mov', 'x-matroska': 'mkv', 'x-msvideo': 'avi', 'x-ms-wmv': 'wmv', jpeg: 'jpg', 'svg+xml': 'svg' };
@@ -79,14 +81,20 @@ export async function exportAnimation(o: {
   to: 'gif' | 'folder';
   /** the GIF's name, or the name before each frame's number */
   name: string;
-  /** loop frame `i` through the stack, from its source frame `image` (closed after); `t` is timing.phase(i) */
-  render(image: ImageBitmap, i: number, t: number): Promise<FrameImage>;
+  /** loop frame `i` through the stack, from its source frame `image` (closed after) */
+  render(image: ImageBitmap, i: number): Promise<FrameImage>;
+  /** a frame the GIF skips (it keeps every second one of a fast clip), run through the stack all the same, for an effect that remembers frames; none draws only the kept ones */
+  advance?(image: ImageBitmap, i: number): Promise<void>;
+  /** PNG frames are written from the straight RGBA, keeping colour under faint alpha (lib/frames) */
+  straightAlpha?: boolean;
   progress?: (done: number, detail?: string) => void;
   signal?: AbortSignal;
 }): Promise<{ path: string; label: string } | null> {
   const t = o.timing;
   const plan = o.to === 'gif' ? gifPlan(t, MAX_FRAMES) : null;
   const media = await openMedia(o.source);
+  // the last source frame run through the stack
+  let at = -1;
   try {
     return await exportFrames({
       tool: ID,
@@ -95,15 +103,25 @@ export async function exportAnimation(o: {
       fps: t.fps,
       delays: plan?.delays,
       to: o.to,
+      straightAlpha: o.straightAlpha,
       progress: o.progress,
       signal: o.signal,
       render: async (k) => {
         const i = plan ? plan.frames[k] : k;
+        for (let j = at + 1; o.advance && j < i; j++) {
+          const skipped = await media.frame(j);
+          try {
+            await o.advance(skipped, j);
+          } finally {
+            skipped.close();
+          }
+        }
         const image = await media.frame(i);
         try {
-          return await o.render(image, i, t.phase(i));
+          return await o.render(image, i);
         } finally {
           image.close();
+          at = i;
         }
       },
     });
@@ -285,29 +303,35 @@ function openClip(url: string, name: string) {
     await seeked;
     // a file served without byte ranges can't seek: Chromium lands at 0 and shows its first frame
     if (Number.isFinite(el.duration) && Math.abs(el.currentTime - Math.min(t, el.duration)) > 1e-3)
-      throw new Error(`${name} couldn't be read at ${t.toFixed(2)} s: the video only plays from the start here, so its frames can't be read one by one.`);
+      throw new Error(`${name} can't be read at ${t.toFixed(2)} s: it only plays from the start here.`);
   };
+
+  /** how many frames in a row rVFC never confirmed */
+  let unconfirmed = 0;
 
   /**
    * Seeks to `t` and gives the frame now on screen (yours to close) and its time. It must be the one
    * rVFC says was presented: a copy taken before the new frame arrived would carry another mediaTime.
+   * Where rVFC says nothing, the frame's own time has to be within `near` seconds below `t` (the frame
+   * before the right one is further), else it is read again; the third try stands as it is.
    */
-  const present = async (t: number): Promise<{ vf: VideoFrame; ts: number }> => {
+  const present = async (t: number, near = Infinity): Promise<{ vf: VideoFrame; ts: number }> => {
     await ready;
     for (let tries = 1; ; tries++) {
       let handle = 0;
       const presented = new Promise<number>((ok) => (handle = el.requestVideoFrameCallback((_, meta) => ok(meta.mediaTime))));
       await seek(t);
-      const m = await Promise.race([presented, sleep(PRESENT_MS)]);
+      const m = await Promise.race([presented, sleep(unconfirmed >= 2 ? QUICK_MS : PRESENT_MS)]);
+      unconfirmed = m === null ? unconfirmed + 1 : 0;
       el.cancelVideoFrameCallback(handle);
       let vf: VideoFrame;
       try {
         vf = new VideoFrame(el);
       } catch {
-        throw new Error(`${name} gave no picture at ${t.toFixed(3)} s. ${videoProblem(name, null)}`);
+        throw new Error(videoProblem(name, null));
       }
       const ts = vf.timestamp / 1e6;
-      if (m === null || Math.abs(ts - m) < 1e-4) return { vf, ts };
+      if (m === null ? ts > t - near || tries === 3 : Math.abs(ts - m) < 1e-4) return { vf, ts };
       vf.close();
       if (tries === 3) throw new Error(`${name} couldn't be read exactly at ${t.toFixed(3)} s: the video kept showing another frame.`);
     }
@@ -396,7 +420,7 @@ function openClip(url: string, name: string) {
     async frame(i: number, t0: number, fps: number, frames: number): Promise<ImageBitmap> {
       if (!(Number.isInteger(i) && i >= 0 && i < frames)) throw new RangeError(`There is no frame ${i + 1}; ${name} has ${frames}.`);
       const t = Math.min(seekTime(i, t0, fps), el.duration);
-      const { vf, ts } = await present(t);
+      const { vf, ts } = await present(t, 1 / fps);
       try {
         if (ts > t + 1e-4) throw new Error(`Frame ${i + 1} of ${name} couldn't be read exactly: the video showed a later one.`);
         return await createImageBitmap(vf, BITMAP);

@@ -7,7 +7,7 @@ import { Icon } from '../../ui/index.ts';
 import { useHeld } from '../common/held.ts';
 import type { Doc } from './actions.ts';
 import { PostFxCanvas } from './Canvas.tsx';
-import { frameAt, offered, timeline, type PostFxDoc } from './doc.ts';
+import { offered, timeline, type PostFxDoc } from './doc.ts';
 import { ExportModule } from './Export.tsx';
 import { LayerModule } from './Layer.tsx';
 import { LoopModule } from './Loop.tsx';
@@ -17,17 +17,17 @@ import { Preview, shown } from './preview.ts';
 import { StackModule } from './Stack.tsx';
 import { Start } from './Start.tsx';
 import { holdFrame, Transport } from './Transport.tsx';
-import { getView, patchView, playhead, status, useView } from './view-state.ts';
+import { getView, pausedFrame, patchView, playhead, status, useView } from './view-state.ts';
 import s from './View.module.css';
 
 const INSPECTOR = { min: 340, max: 460, reset: 380 };
 
 /**
- * The preview while the tool shows. Paused, it shows the playhead's frame (the document's `time`,
- * or a scrub on its way there); playing, media.ts drives it. Only the canvas and the transport
- * redraw with each frame: this hook listens to the playhead outside React.
+ * The preview while the tool shows. Paused, it shows the playhead's frame (the view's `time`, or a
+ * scrub on its way there); playing, media.ts drives it. Only the canvas and the transport redraw
+ * with each frame: this hook listens to the playhead outside React.
  */
-function usePreview(doc: Doc, d: PostFxDoc, active: boolean) {
+function usePreview(d: PostFxDoc, time: number, active: boolean) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const preview = useRef<Preview | null>(null);
@@ -56,14 +56,24 @@ function usePreview(doc: Doc, d: PostFxDoc, active: boolean) {
     follow();
     return () => {
       off();
-      // switching tools pauses, and the frame it stopped on stays in the document
+      // switching tools pauses, and the frame it stopped on stays
       const { frame, playing } = playhead.get();
-      if (playing) holdFrame(doc, live.current.t, frame);
+      if (playing) holdFrame(live.current.t, frame);
       p.release();
       preview.current = null;
       setBusy(false);
     };
   }, [active]);
+
+  // another source opens paused at its first frame, whatever was playing (spec §5 q3: nothing animates until play)
+  const asset = d.source?.asset;
+  const was = useRef(asset);
+  useEffect(() => {
+    if (was.current === asset) return;
+    was.current = asset;
+    patchView({ time: 0 });
+    playhead.set({ frame: 0, playing: false });
+  }, [asset]);
 
   // a change of settings: the frame on screen again, or the next one playing takes it
   useEffect(() => {
@@ -81,10 +91,10 @@ function usePreview(doc: Doc, d: PostFxDoc, active: boolean) {
     p.play(live.current.d, Math.min(playhead.get().frame, t.count - 1));
   }, [t.count, t.fps]);
 
-  // the paused frame follows the document (undo, a relaunch, another source)
+  // the paused frame follows the view's time (a relaunch, a timeline of another length)
   useEffect(() => {
-    if (!playhead.get().playing) playhead.set({ frame: frameAt(t, d.time), playing: false });
-  }, [d.time, t]);
+    if (!playhead.get().playing) playhead.set({ frame: pausedFrame(t), playing: false });
+  }, [time, t]);
 
   return { t, busy, error: d.source ? error : null };
 }
@@ -92,7 +102,7 @@ function usePreview(doc: Doc, d: PostFxDoc, active: boolean) {
 export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const d = useSyncExternalStore(doc.subscribe, doc.get);
   const v = useView();
-  const { t, busy, error } = usePreview(doc, d, active);
+  const { t, busy, error } = usePreview(d, v.time, active);
   const slow = useHeld(busy);
   const last = shown.use();
 
@@ -130,12 +140,12 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         ) : (
           <Start doc={doc} />
         )}
-        {d.source && t.count > 1 && <Transport doc={doc} d={d} t={t} active={active} />}
+        {d.source && t.count > 1 && <Transport t={t} active={active} />}
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
       <aside className={s.insp} aria-label="Inspector">
         <StackModule doc={doc} d={d} />
-        <LayerModule doc={doc} d={d} />
+        <LayerModule doc={doc} d={d} t={t} />
         <PresetsModule doc={doc} d={d} />
         <LoopModule doc={doc} d={d} t={t} />
         <ExportModule d={d} t={t} error={error} />

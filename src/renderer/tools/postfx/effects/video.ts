@@ -5,7 +5,8 @@
 // every export advanced the smear): the layer's input and output at the last frame and the one
 // before. The next frame advances it; the same frame again redraws from the one before, so a
 // setting changed while paused never smears further; any other frame (a seek) starts clean. An
-// export from frame 0 is therefore the same every time.
+// export from frame 0 is therefore the same every time. `run` counts the frames in a row behind the
+// last one, so the tool can tell a frame that has its run-in (doc.ts leadIn) from one that began clean.
 import { fx } from './glsl.ts';
 import { num } from './params.ts';
 import type { Ctx, Effect } from './types.ts';
@@ -86,11 +87,13 @@ export const datamosh: Effect = {
       c.run(COPY, {}, { into: c.keep(`in${other}`) });
       m.at = other;
       m.back = 1;
+      m.run = (m.run ?? 0) + 1;
     } else {
       c.run(COPY, {}, { into: c.keep(`in${at}`) });
       c.run(COPY, {}, { into: c.keep(`out${at}`) });
       m.at = at;
       m.back = 0;
+      m.run = 0;
     }
     m.f = f;
     return c.keep(`out${m.at}`);

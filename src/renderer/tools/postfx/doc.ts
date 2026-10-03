@@ -1,7 +1,9 @@
 // The Post FX document (plan: Document), the limits every edit keeps, the stack's own edits, and the
 // timeline a document plays on: a clip's or a GIF's own frames, or for a still with moving effects
-// a loop of `loop.seconds` at `loop.fps` whose last frame runs into the first (spec §3 Loop).
-import { BLENDS, defaultsOf, effectOf, type Blend, type EffectId, type ParamValue } from './effects/index.ts';
+// a loop of `loop.seconds` at `loop.fps` whose last frame runs into the first (spec §3 Loop). Where
+// the playhead rests is the view's (view-state.ts), not the document's: moving it is no edit, so
+// Undo never has to step back over it.
+import { BLENDS, defaultsOf, effectOf, type Blend, type EffectId, type Memory, type ParamValue } from './effects/index.ts';
 import type { Source } from './media.ts';
 import { timingOf, type Timing } from './media-time.ts';
 
@@ -17,8 +19,6 @@ export type PostFxDoc = {
   stack: Layer[];
   /** for stills with moving effects */
   loop: { seconds: number; fps: number };
-  /** seconds into the timeline where the paused frame sits, so a paused preview (and what exports) is deterministic */
-  time: number;
 };
 
 export const LIMIT = {
@@ -30,14 +30,11 @@ export const LIMIT = {
 
 const clamp = (v: number, [lo, hi]: readonly [number, number]) => Math.min(hi, Math.max(lo, v));
 
-export const emptyDoc = (): PostFxDoc => ({ source: null, stack: [], loop: { seconds: 2, fps: 25 }, time: 0 });
+export const emptyDoc = (): PostFxDoc => ({ source: null, stack: [], loop: { seconds: 2, fps: 25 } });
 
 /** the rules no edit may break, applied after each one */
 export function fix(d: PostFxDoc): PostFxDoc {
-  const loop = { seconds: Math.round(clamp(d.loop.seconds, LIMIT.seconds) * 100) / 100, fps: Math.round(clamp(d.loop.fps, LIMIT.fps)) };
-  const next = { ...d, loop };
-  const t = timeline(next);
-  return { ...next, time: t.count > 1 ? Math.min(Math.max(0, d.time), startOf(t, t.count - 1)) : 0 };
+  return { ...d, loop: { seconds: Math.round(clamp(d.loop.seconds, LIMIT.seconds) * 100) / 100, fps: Math.round(clamp(d.loop.fps, LIMIT.fps)) } };
 }
 
 // ── the timeline ─────────────────────────────────────────────────────────────────────────────
@@ -97,3 +94,35 @@ export const isBlend = (v: unknown): v is Blend => BLENDS.some((b) => b.id === v
 
 /** a video-only effect (datamosh) has nothing to work on in a still or a GIF's loop of one image */
 export const offered = (d: Pick<PostFxDoc, 'source'>, effect: EffectId): boolean => !effectOf(effect)?.videoOnly || d.source?.kind === 'video';
+
+// ── effects with a memory ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Datamosh smears one frame into the next, so a frame on its own is drawn after the ones before it. This
+ * many: a second of 30 fps, whose smear a Refresh of a few per cent has mostly let go of. A sequence
+ * from the first frame has all of them; stepping or playing carries on from wherever it was.
+ */
+export const RUN_IN = 30;
+
+/** a layer whose effect remembers the frames before (datamosh) and is drawing */
+export const remembers = (l: Layer): boolean => l.on && l.opacity > 0 && !!effectOf(l.effect)?.videoOnly;
+
+/** a clip with a layer that remembers the frames before */
+export const isStateful = (d: Pick<PostFxDoc, 'source' | 'stack'>): boolean => d.source?.kind === 'video' && d.stack.some(remembers);
+
+/** the frames before `frame` that are its run-in: up to RUN_IN of them, in order */
+export const runIn = (frame: number): number[] => {
+  const n = Math.min(frame, RUN_IN);
+  return Array.from({ length: n }, (_, k) => frame - n + k);
+};
+
+/**
+ * The frames to run through the stack, in order, before `frame` so every stateful layer has its run-in,
+ * or none when each one has it already (it last drew this frame or the one before, after enough
+ * frames in a row).
+ */
+export function leadIn(frame: number, memory: readonly Memory[]): number[] {
+  const need = Math.min(frame, RUN_IN);
+  const ready = memory.every((m) => m && ((m.f === frame && m.run >= need) || (m.f === frame - 1 && m.run >= need - 1)));
+  return ready ? [] : runIn(frame);
+}

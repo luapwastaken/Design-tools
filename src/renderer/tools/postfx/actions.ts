@@ -40,8 +40,8 @@ async function svgAsPng(file: File): Promise<Blob> {
   }
 }
 
-/** a new source starts at its first frame */
-const withSource = (d: PostFxDoc, source: Source): PostFxDoc => fix({ ...d, source, time: 0 });
+/** a new source starts at its first frame (View.tsx brings the playhead back to it) */
+const withSource = (d: PostFxDoc, source: Source): PostFxDoc => fix({ ...d, source });
 
 /** bumped by each open, so one that reads slowly never lands over a later one */
 let opening = 0;
@@ -140,21 +140,37 @@ export function resetLayer(doc: Doc, id: string): void {
   doc.transact(`Reset ${labelOf(l)}`, (d) => mapLayer(d, id, (x) => ({ ...x, opacity: 1, blend: 'normal', params: fresh.params })));
 }
 
-/** a preset or a pasted code replaces the stack in one step; Undo brings the old one back */
-function replaceStack(doc: Doc, label: string, layers: Layer[]): void {
+/**
+ * A preset or a pasted code replaces the stack in one step; Undo brings the old one back. A stack
+ * built by hand that is replaced says so, with an Undo toast, as a delete does (brief rule 3).
+ */
+function replaceStack(doc: Doc, label: string, layers: Layer[], what: string, saysSo: boolean): void {
+  const lost = doc.get().stack.length;
   const fresh = layers.map((l) => ({ ...l, id: crypto.randomUUID(), params: { ...l.params } }));
   doc.transact(label, (d) => ({ ...d, stack: fresh }));
   select(fresh[0]?.id ?? null);
-  const skipped = fresh.filter((l) => !offered(doc.get(), l.effect));
+  const after = doc.get();
+  if (saysSo && lost)
+    toast.show({
+      icon: 'layers',
+      message: `Replaced ${plural(lost, 'layer')} with ${what}.`,
+      when: () => doc.get() === after,
+      undo: () => {
+        if (doc.get() !== after) return void toast.show({ icon: 'info', message: 'The change is no longer the last step. Use Undo in the tool.' });
+        doc.undo();
+      },
+    });
+  const skipped = fresh.filter((l) => !offered(after, l.effect));
   if (skipped.length) toast.show({ icon: 'info', message: `${skipped.map(labelOf).join(' and ')} ${skipped.length === 1 ? 'works' : 'work'} on video only, so ${skipped.length === 1 ? 'it is' : 'they are'} skipped until a clip is open.` });
 }
 
-export const applyPreset = (doc: Doc, p: Preset): void => replaceStack(doc, `Use the ${p.name} preset`, p.layers);
+/** `saysSo`: the stack it replaces isn't a preset itself, so what is lost is only here */
+export const applyPreset = (doc: Doc, p: Preset, saysSo: boolean): void => replaceStack(doc, `Use the ${p.name} preset`, p.layers, `the ${p.name} preset`, saysSo);
 
 /** a pasted share code (the field has checked it reads) */
 export function importCode(doc: Doc, code: string): void {
   const layers = decodeStack(code);
-  replaceStack(doc, `Paste a stack of ${plural(layers.length, 'layer')}`, layers);
+  replaceStack(doc, `Paste a stack of ${plural(layers.length, 'layer')}`, layers, 'the pasted stack', true);
 }
 
 // ── colours from a palette ───────────────────────────────────────────────────────────────────

@@ -21,7 +21,9 @@ const same = (a: Layer[], b: Layer[]) =>
   a.length === b.length && a.every((l, n) => l.effect === b[n].effect && l.on === b[n].on && l.opacity === b[n].opacity && l.blend === b[n].blend && JSON.stringify(l.params) === JSON.stringify(b[n].params));
 
 function pick(doc: Doc, p: Preset) {
-  applyPreset(doc, p);
+  const d = doc.get();
+  const here = [...BUILT_INS, ...saved.get().list].some((x) => same(d.stack, x.layers));
+  applyPreset(doc, p, !here);
   from.set(p.id);
 }
 
@@ -95,6 +97,10 @@ export function PresetsModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
   const [naming, setNaming] = useState(false);
   const [focus, setFocus] = useState(0);
   useEffect(() => void loadSaved(), []);
+  const save = (name: string) => {
+    setNaming(false);
+    void savePreset(name, d.stack).then((p) => p && from.set(p.id));
+  };
 
   const all = [...BUILT_INS, ...mine.list];
   const match = all.find((p) => same(d.stack, p.layers));
@@ -136,17 +142,17 @@ export function PresetsModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
             )}
           </div>
           {naming && (
-            <TextInput
-              value=""
-              label="Name"
-              autoFocus
-              placeholder={freeName('My preset')}
-              onCommit={(v) => {
-                setNaming(false);
-                void savePreset(v, d.stack).then((p) => p && from.set(p.id));
+            // Enter on the empty field takes the name it suggests (TextInput treats an unchanged field as Esc)
+            <div
+              onKeyDownCapture={(e) => {
+                if (e.key !== 'Enter' || (e.target as HTMLInputElement).value !== '') return;
+                e.preventDefault();
+                e.stopPropagation();
+                save('');
               }}
-              onCancel={() => setNaming(false)}
-            />
+            >
+              <TextInput value="" label="Name" autoFocus placeholder={freeName('My preset')} onCommit={save} onCancel={() => setNaming(false)} />
+            </div>
           )}
           {mine.error ? (
             <p className={i.warn} role="status">

@@ -3,12 +3,13 @@
 // exactly `count` frames rendered offline and in order, streamed one at a time to the GIF encoder in
 // a worker, or written as numbered PNGs into one folder, with progress and cancel.
 import type { ToolId } from '../../shared/types.ts';
-import { intoFolder, saveFile } from './export.ts';
+import { toast } from '../ui/index.ts';
+import { intoFolder, keepAwake, saveFile } from './export.ts';
 import { gifDelays, readGif, scaleUp, type FrameImage, type Rgba } from './gif.ts';
 import type { GifJob, GifReply } from './gif.worker.ts';
 import { decodeImage, unsupportedImage } from './load.ts';
 import { encodeIndexedPng } from './png-indexed.ts';
-import { withDpi } from './png.ts';
+import { rgbaPng as straightPng, withDpi } from './png.ts';
 
 export type { FrameImage, Indexed, Rgba } from './gif.ts';
 export type { Rgba8 } from './png-indexed.ts';
@@ -29,6 +30,8 @@ export type Frames = {
 };
 
 const fileName = (b: Blob) => (b instanceof File ? b.name : '');
+/** the last part of a path, or the one `up` parts before it */
+const leaf = (path: string, up = 0) => path.split(/[\\/]/).at(-1 - up) ?? '';
 const stem = (name: string) => name.replace(/\.[^.]+$/, '');
 const byName = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
 
@@ -148,6 +151,8 @@ export type ExportFramesOptions = {
   scale?: number;
   /** written into each PNG frame */
   dpi?: number;
+  /** RGBA frames keep their colour under faint alpha: written as straight alpha (lib/png), where a canvas premultiplies it away */
+  straightAlpha?: boolean;
   progress?: (done: number, detail?: string) => void;
   signal?: AbortSignal;
 };
@@ -159,7 +164,8 @@ export async function exportFrames(o: ExportFramesOptions): Promise<{ path: stri
   if (!Number.isInteger(scale) || scale < 1) throw new Error(`The scale has to be a whole number from 1 up, not ${scale}.`);
   if (o.delays && o.delays.length !== n) throw new Error(`${o.delays.length} delays can't time ${n} frames.`);
   const step = (i: number) => o.progress?.(i / n, i < n ? `Frame ${i + 1} of ${n}` : 'Writing');
-  return o.to === 'gif' ? gif(o, n, scale, step) : folder(o, n, scale, step);
+  // a window hidden or minimised mid-export would otherwise be slowed to a crawl
+  return keepAwake(() => (o.to === 'gif' ? gif(o, n, scale, step) : folder(o, n, scale, step)));
 }
 
 async function gif(o: ExportFramesOptions, n: number, scale: number, step: (i: number) => void) {
@@ -175,7 +181,7 @@ async function gif(o: ExportFramesOptions, n: number, scale: number, step: (i: n
     step(n);
     const bytes = await enc.finish();
     const path = await saveFile({ tool: o.tool, suggestedName: o.name, ext: 'gif', filterName: 'Animated GIF', data: bytes.buffer });
-    return path ? { path, label: path.split(/[\\/]/).pop()! } : null;
+    return path ? { path, label: leaf(path) } : null;
   } finally {
     enc.close();
   }
@@ -184,26 +190,40 @@ async function gif(o: ExportFramesOptions, n: number, scale: number, step: (i: n
 /** the folder is chosen first, then each frame is written as it is made: a long 4K sequence is never in memory whole */
 async function folder(o: ExportFramesOptions, n: number, scale: number, step: (i: number) => void) {
   const digits = Math.max(4, String(n).length);
+  let written = 0;
+  let first = '';
   const at = await intoFolder(o.tool, async (write) => {
     for (let i = 0; i < n; i++) {
       if (o.signal?.aborted) return false;
       step(i);
       const f = await o.render(i);
-      const png = 'indices' in f ? await encodeIndexedPng(f.indices, f.w, f.h, f.palette, { scale, dpi: o.dpi }) : await rgbaPng(f, scale, o.dpi);
-      await write(`${o.name} ${String(i + 1).padStart(digits, '0')}.png`, await png.arrayBuffer());
+      const png = 'indices' in f ? await encodeIndexedPng(f.indices, f.w, f.h, f.palette, { scale, dpi: o.dpi }) : await rgbaPng(f, scale, o.dpi, o.straightAlpha);
+      const path = await write(`${o.name} ${String(i + 1).padStart(digits, '0')}.png`, await png.arrayBuffer());
+      first ||= path;
+      written = i + 1;
     }
     step(n);
     return true;
   });
-  return at === null ? null : { path: at, label: `${n === 1 ? '1 frame' : `${n} frames`} into ${at.split(/[\\/]/).pop()}` };
+  // a stopped sequence leaves what it wrote: say so, so a short one isn't taken for a whole one
+  if (at === null && written && o.signal?.aborted) {
+    const where = leaf(first, 1);
+    toast.show({ icon: 'info', message: `Stopped after ${written} of ${n} frames. ${written === 1 ? 'That frame is' : `Those ${written} are`} in ${where ? `the ${where} folder` : 'the folder'}.` });
+  }
+  return at === null ? null : { path: at, label: `${n === 1 ? '1 frame' : `${n} frames`} into ${leaf(at)}` };
 }
 
-async function rgbaPng(f: Rgba, scale: number, dpi?: number): Promise<Blob> {
+async function rgbaPng(f: Rgba, scale: number, dpi?: number, straight = false): Promise<Blob> {
   const [w, h] = [f.width * scale, f.height * scale];
   const px = scale === 1 ? f.data : new Uint8ClampedArray(scaleUp(new Uint32Array(f.data.buffer, f.data.byteOffset, f.width * f.height), f.width, f.height, scale).buffer);
-  const canvas = new OffscreenCanvas(w, h);
-  canvas.getContext('2d')!.putImageData(new ImageData(px, w, h), 0, 0);
-  const png = await canvas.convertToBlob({ type: 'image/png' });
+  let png: Blob;
+  if (straight) {
+    png = await straightPng(new Uint8Array(px.buffer, px.byteOffset, px.byteLength), w, h);
+  } else {
+    const canvas = new OffscreenCanvas(w, h);
+    canvas.getContext('2d')!.putImageData(new ImageData(px, w, h), 0, 0);
+    png = await canvas.convertToBlob({ type: 'image/png' });
+  }
   return dpi === undefined ? png : withDpi(png, dpi);
 }
 

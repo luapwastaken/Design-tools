@@ -23,7 +23,7 @@ export function encodeStack(stack: Layer[]): string {
 export function decodeStack(code: string): Layer[] {
   const text = code.trim();
   if (/^PFX1\./i.test(text)) throw new Error('That code is from the old Post FX. Its effects have changed, so it can’t be read here.');
-  if (!text.startsWith(PREFIX)) throw new Error(`A Post FX code starts with ${PREFIX}`);
+  if (text.slice(0, PREFIX.length).toUpperCase() !== PREFIX) throw new Error(`A Post FX code starts with ${PREFIX}`);
   let raw: unknown;
   try {
     raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(fromBase64Url(text.slice(PREFIX.length))));
@@ -32,7 +32,10 @@ export function decodeStack(code: string): Layer[] {
   }
   const r = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
   if (typeof r.v === 'number' && r.v > VERSION) throw new Error('That code is from a newer Design Tools. Update the app to read it.');
-  return layersFrom(r.layers, 'That code');
+  const layers = layersFrom(r.layers, 'That code');
+  // a stack with nothing in it would only empty the one that is there
+  if (!layers.length) throw new Error('That code holds no effects.');
+  return layers;
 }
 
 /**

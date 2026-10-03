@@ -7,7 +7,7 @@ import { inOrder } from './fsx.ts';
 import type { LibraryService } from './library/service.ts';
 import { errorText, log } from './log.ts';
 import type { SettingsStore } from './settings.ts';
-import { applyTheme, closeReplied, requireWindow } from './window.ts';
+import { applyTheme, closeReplied, keepAwake, requireWindow } from './window.ts';
 import type { Workspace } from './workspace.ts';
 
 type Handlers = { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<Api[K]> | Awaited<ReturnType<Api[K]>> };
@@ -92,6 +92,7 @@ export function registerIpc({ settings, workspace: ws, library: lib, exporter, s
     'export.openFolder': (tool) => exporter.openFolder(tool),
     'export.intoFolder': (id, name, data) => exporter.intoFolder(id, name, data),
     'export.closeFolder': async (id) => exporter.closeFolder(id),
+    'window.keepAwake': async (on) => keepAwake(on),
     'shell.reveal': (path) => shell.showItemInFolder(path),
   };
 

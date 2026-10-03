@@ -33,6 +33,23 @@ export const intoFolder = (tool: ToolId, fill: (write: (name: string, data: Arra
     }
   });
 
+let awake = 0;
+
+/**
+ * Runs `fn` with the window kept at full speed even if it is hidden or minimised meanwhile, which
+ * Chromium would otherwise slow to a frame a second: a long export started in view finishes at the
+ * speed it began. Exports overlap safely: it goes back to normal when the last one is done.
+ */
+export async function keepAwake<T>(fn: () => Promise<T>): Promise<T> {
+  const set = (on: boolean) => ipc.invoke('window.keepAwake', on).catch(() => {}); // only speed is at stake
+  if (!awake++) await set(true);
+  try {
+    return await fn();
+  } finally {
+    if (!--awake) await set(false);
+  }
+}
+
 async function run<T>(fn: () => Promise<T | null>): Promise<T | null> {
   try {
     return await shell.runBusy(fn);

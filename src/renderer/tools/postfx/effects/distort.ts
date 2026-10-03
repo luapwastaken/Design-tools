@@ -1,6 +1,6 @@
 // Distort: wave, twirl, kaleidoscope. Each moves where a pixel reads from; nothing changes brightness.
 import { fx } from './glsl.ts';
-import { choice, num, toggle, turn } from './params.ts';
+import { choice, num, perLoop, toggle, turn } from './params.ts';
 import type { Effect } from './types.ts';
 
 const WAVE = fx(`uniform int u_ripple;
@@ -26,7 +26,7 @@ export const wave: Effect = {
   id: 'wave',
   label: 'Wave',
   group: 'distort',
-  about: 'Waves or ripples that bend the image, travelling whole wavelengths a loop',
+  about: 'Waves or ripples that bend the image, travelling a set number of wavelengths a second',
   moving: true,
   params: [
     choice('mode', 'Mode', ['Waves', 'Ripples']),
@@ -34,7 +34,7 @@ export const wave: Effect = {
     num('wavelength', 'Wavelength', 4, 2000, 1, 160, 'px'),
     num('direction', 'Direction', 0, 360, 1, 90, '°'),
     num('phase', 'Phase', 0, 360, 1, 0, '°'),
-    num('cycles', 'Cycles', 0, 8, 1, 1, '/loop'),
+    num('cycles', 'Speed', 0, 2, 0.25, 0.5, '/s'),
     num('x', 'Centre X', 0, 100, 1, 50, '%'),
     num('y', 'Centre Y', 0, 100, 1, 50, '%'),
   ],
@@ -45,7 +45,7 @@ export const wave: Effect = {
       u_amp: c.n('amplitude') * c.scale,
       u_length: c.n('wavelength') * c.scale,
       u_along: [Math.cos(a), Math.sin(a)],
-      u_phase: (c.n('phase') * Math.PI) / 180 + turn(c.t, c.n('cycles')),
+      u_phase: (c.n('phase') * Math.PI) / 180 + turn(c.t, perLoop(c.n('cycles'), c.seconds)),
       u_centre: [c.n('x') / 100, c.n('y') / 100],
     });
   },

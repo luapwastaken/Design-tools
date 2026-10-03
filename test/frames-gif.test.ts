@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { gifDelays, gifWriter, readGif, scaleUp, type Indexed } from '../src/renderer/lib/gif.ts';
+import { cutAlpha, gifDelays, gifWriter, readGif, scaleUp, type Indexed } from '../src/renderer/lib/gif.ts';
 import { budget } from './perf.ts';
 
 const sum = (a: number[]) => a.reduce((s, x) => s + x, 0);
@@ -84,6 +84,17 @@ test('RGBA frames find their own colours; alpha makes a clear index', () => {
   const [solid, clear] = readGif(g.finish()).frames;
   assert.equal(solid.clear, null);
   assert.equal(typeof clear.clear, 'number');
+});
+
+test('a GIF pixel is clear or solid, cut at half: a faint glow is cleared whole, never printed as a slab', () => {
+  const px = Uint8ClampedArray.of(250, 240, 200, 255, 250, 240, 200, 128, 250, 240, 200, 127, 250, 240, 200, 3, 250, 240, 200, 0);
+  const cut = cutAlpha(px);
+  assert.deepEqual([...cut], [250, 240, 200, 255, 250, 240, 200, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  assert.equal(px[3], 255, 'the frame it was cut from is left as it was');
+  // a frame that is all faint writes as all clear
+  const g = gifWriter();
+  g.add({ data: new Uint8ClampedArray(4 * 4 * 4).map((_, i) => (i % 4 === 3 ? 10 : 200)), width: 4, height: 4 }, 4);
+  assert.equal(typeof readGif(g.finish()).frames[0].clear, 'number');
 });
 
 test('the writer refuses frames that would make a broken GIF', () => {

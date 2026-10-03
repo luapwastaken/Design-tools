@@ -9,7 +9,8 @@ import { ColorField, Icon, IconButton, menu, Module, Segmented, Select, Slider, 
 import { cx } from '../../ui/cx.ts';
 import { labelOf, resetLayer, type Doc } from './actions.ts';
 import { BLENDS, effectOf, GROUPS, type Param } from './effects/index.ts';
-import { mapLayer, offered, type Layer, type PostFxDoc } from './doc.ts';
+import { perLoop } from './effects/params.ts';
+import { mapLayer, offered, RUN_IN, type Layer, type PostFxDoc, type Timeline } from './doc.ts';
 import { VIDEO_ONLY_TIP } from './EffectPicker.tsx';
 import { useView } from './view-state.ts';
 import s from './Layer.module.css';
@@ -79,7 +80,13 @@ function paletteMenu(l: Layer, library: ReturnType<typeof shell.getState>['libra
   ]);
 }
 
-export function LayerModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
+/** what the rates a second come to in this loop: whole counts, so the loop comes round exactly */
+function loopNote(params: readonly Param[], l: Layer, seconds: number): string {
+  const counts = params.flatMap((p) => (p.kind === 'number' && p.unit === '/s' ? [`${p.label} ${perLoop((l.params[p.key] as number | undefined) ?? p.def, seconds)}`] : []));
+  return `Over this ${seconds.toFixed(2)} s loop: ${counts.join(', ')}. Whole counts, so it repeats exactly.`;
+}
+
+export function LayerModule({ doc, d, t }: { doc: Doc; d: PostFxDoc; t: Timeline }) {
   const { selected } = useView();
   const library = useShell((st) => st.library);
   const l = d.stack.find((x) => x.id === selected) ?? null;
@@ -122,6 +129,12 @@ export function LayerModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
             ))}
           </div>
         )}
+        {fx.moving && <p className={s.note}>{loopNote(fx.params, l, t.kind === 'still' ? d.loop.seconds : t.seconds)}</p>}
+        {fx.videoOnly && !skipped && (
+          <p className={s.note}>
+            Each frame builds on the one before. A frame on its own is drawn after the {RUN_IN} before it, as the playing picture is; a PNG sequence from the start has all of them.
+          </p>
+        )}
         {colours && (
           <div className={cx(s.row, s.rule)}>
             <span className={cx('lbl', s.lab)}>Colours from</span>
@@ -132,8 +145,7 @@ export function LayerModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
               onClick={(e: MouseEvent<HTMLButtonElement>) => menu.open(e.currentTarget.getBoundingClientRect(), paletteMenu(l, library), { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined })}
             >
               <SwatchStrip colors={fx.params.flatMap((p) => (p.kind === 'colour' && p.tone !== undefined ? [cssColor((l.params[p.key] as Oklch | undefined) ?? p.def)] : []))} height={14} className={s.strip} />
-              <span className={s.fromName}>A Library palette</span>
-              <Icon name="unfold_more" size={16} />
+              <span className={s.fromName}>Pick from a Library palette…</span>
             </button>
           </div>
         )}

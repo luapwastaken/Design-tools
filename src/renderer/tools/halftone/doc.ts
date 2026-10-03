@@ -131,7 +131,11 @@ export const NEAR_WHITE = 0.9;
  */
 export const groundIsPaper = (ground: Oklch, inks: Oklch[]): boolean => inks.every((c) => c[0] < ground[0]) || inks.some((c) => c[0] > NEAR_WHITE);
 
-/** whether a spot ink covers what is under it; process inks are transparent by nature */
+/**
+ * Whether a spot ink covers what is under it; process inks are transparent by nature. Opaque changes
+ * the plates' tones (the separation is refitted when an ink covers, since the paper's tint is then
+ * spent only under it) but not how a plate is drawn: an opaque ink cuts nothing out of the others.
+ */
 export const opaqueOf = (ink: Pick<Ink, 'process' | 'opaque' | 'colour'>): boolean => !ink.process && (ink.opaque ?? ink.colour[0] > NEAR_WHITE);
 
 export const mapInk = (d: HalftoneDoc, id: string, fn: (i: Ink) => Ink): HalftoneDoc => ({ ...d, inks: d.inks.map((i) => (i.id === id ? fn(i) : i)) });

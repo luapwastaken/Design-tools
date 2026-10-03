@@ -7,14 +7,13 @@ import { Icon, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { placeBelow } from '../../ui/popover.ts';
 import { EFFECTS, GROUPS, type EffectId, type EffectInfo } from './effects/index.ts';
+import { score } from './effects/search.ts';
 import m from '../../ui/Menu.module.css';
 import s from './EffectPicker.module.css';
 
 export const VIDEO_ONLY_TIP = 'Video only: it smears the motion from one frame of a clip into the next, so a still has nothing to smear.';
 
 type Row = { fx: EffectInfo; ok: boolean };
-
-const words = (fx: EffectInfo) => `${fx.label} ${GROUPS.find((g) => g.id === fx.group)?.label ?? ''} ${fx.about}`.toLowerCase();
 
 type Props = {
   anchor: DOMRect;
@@ -33,9 +32,20 @@ export function EffectPicker({ anchor, owner, video, onPick, onClose }: Props) {
   const list = useRef<HTMLDivElement>(null);
   const uid = useId();
 
+  // typing ranks them: the best answer first, in the group that holds it, so Enter adds what was named
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return GROUPS.map((g) => ({ ...g, rows: EFFECTS.filter((fx) => fx.group === g.id && (!q || words(fx).includes(q))).map((fx): Row => ({ fx, ok: !fx.videoOnly || video })) })).filter((g) => g.rows.length);
+    const made = GROUPS.map((g) => ({
+      ...g,
+      rows: EFFECTS.filter((fx) => fx.group === g.id)
+        .map((fx) => ({ row: { fx, ok: !fx.videoOnly || video } as Row, at: q ? score(fx, q) : 1 }))
+        .filter((r) => r.at > 0),
+    })).filter((g) => g.rows.length);
+    if (!q) return made.map((g) => ({ ...g, rows: g.rows.map((r) => r.row) }));
+    const best = (g: (typeof made)[number]) => Math.max(...g.rows.map((r) => r.at));
+    return made
+      .sort((a, b) => best(b) - best(a))
+      .map((g) => ({ ...g, rows: g.rows.sort((a, b) => b.at - a.at).map((r) => r.row) }));
   }, [query, video]);
   const rows = groups.flatMap((g) => g.rows);
   const usable = rows.flatMap((r, i) => (r.ok ? [i] : []));
@@ -138,7 +148,7 @@ export function EffectPicker({ anchor, owner, video, onPick, onClose }: Props) {
                   onClick={() => pick(i)}
                 >
                   <span className={m.text}>{r.fx.label}</span>
-                  {r.fx.moving && !r.fx.videoOnly && <Icon name="motion_play" size={16} className={s.moves} />}
+                  {r.fx.moving && !r.fx.videoOnly && <Icon name="waves" size={16} className={s.moves} />}
                 </div>
               );
               return r.ok ? row : <Tooltip key={r.fx.id} content={VIDEO_ONLY_TIP}>{row}</Tooltip>;
@@ -148,7 +158,7 @@ export function EffectPicker({ anchor, owner, video, onPick, onClose }: Props) {
         {!rows.length && <p className={s.none}>No effect is called “{query.trim()}”.</p>}
       </div>
       <p className={s.foot}>
-        <Icon name="motion_play" size={14} /> moves when played
+        <Icon name="waves" size={14} /> moves when played
       </p>
     </div>,
     document.body,

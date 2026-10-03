@@ -18,6 +18,7 @@ import { decodeFrames } from './lib/frames.ts';
 import { gifWriter, readGif } from './lib/gif.ts';
 import { decodeImage } from './lib/load.ts';
 import type { Rgba8 } from './lib/png-indexed.ts';
+import { rgbaPng } from './lib/png.ts';
 import { shell } from './shell/core/index.ts';
 import { select as selectInDesign } from './tools/design/actions.ts';
 import { newSwatch as designSwatch, recolour as recolourInDesign, type DesignDoc } from './tools/design/doc.ts';
@@ -1315,6 +1316,24 @@ async function pngRgba(w: number, h: number, px: (x: number, y: number) => numbe
   return (await c.convertToBlob({ type: 'image/png' })).arrayBuffer();
 }
 
+/** a PNG's RGBA bytes as stored (a canvas would premultiply them); only for the files lib/png writes: filter none or Up */
+async function rawRgba(png: Blob): Promise<{ w: number; h: number; px: Uint8Array } | null> {
+  const b = new Uint8Array(await png.arrayBuffer());
+  const v = new DataView(b.buffer);
+  const [w, h] = [v.getUint32(16), v.getUint32(20)];
+  const idat: Uint8Array[] = [];
+  for (let at = 8; at < b.length; at += 12 + v.getUint32(at)) if (String.fromCharCode(...b.subarray(at + 4, at + 8)) === 'IDAT') idat.push(b.subarray(at + 8, at + 8 + v.getUint32(at)));
+  const raw = new Uint8Array(await new Response(new Blob(idat as BlobPart[]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer());
+  const row = w * 4;
+  const px = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    const filter = raw[y * (row + 1)];
+    if (filter !== 0 && filter !== 2) return null;
+    for (let i = 0; i < row; i++) px[y * row + i] = (raw[y * (row + 1) + 1 + i] + (filter === 2 && y ? px[(y - 1) * row + i] : 0)) & 255;
+  }
+  return { w, h, px };
+}
+
 /** a frame's index is drawn into it as 8 blocks of 16 px along the top: white for a 1, bit 0 at the left */
 const BLOCK = 16;
 const readIndex = (img: { w: number; px: Uint8ClampedArray }) =>
@@ -1424,6 +1443,16 @@ async function postfx(dir: string): Promise<void> {
     big && [big.w, big.h, alphaAt(10, 10), alphaAt(900, BH - 10), alphaAt(900, 500)],
   );
 
+  // colour under faint alpha is exact: a canvas would premultiply (200, 50, 20) at alpha 3 into (170, 85, 0)
+  const FW = 40;
+  const faint = new Uint8Array(FW * FW * 4);
+  for (let y = 0; y < FW; y++) for (let x = 0; x < FW; x++) faint.set([200, 50, 20, 1 + ((x + y) % 10)], (y * FW + x) * 4);
+  await shell.sendItem(await put('Smoke faint', await (await rgbaPng(faint, FW, FW)).arrayBuffer()), 'postfx');
+  pd.transact('Empty the stack', (d) => ({ ...d, stack: [] }));
+  const faintOut = await exported('PNG');
+  const back = faintOut && (await rawRgba(await faintOut.blob()));
+  check('a PNG keeps the colour under alpha of 1 to 10 exactly, as a straight RGBA PNG', !!back && back.w === FW && back.px.length === faint.length && back.px.every((v, i) => v === faint[i]), back && [back.px.slice(0, 4)]);
+
   // a still with grain: a loop of exactly N frames, and frame N is frame 0
   const card = await put('Smoke fx card', await pngRgba(256, 160, (x, y) => [x, Math.floor((y * 255) / 159), (x ^ y) & 255, x < 40 && y < 24 ? 0 : 255]));
   await shell.sendItem(card, 'postfx');
@@ -1453,7 +1482,7 @@ async function postfx(dir: string): Promise<void> {
     const bmp = await decodeImage(await (await fetch(pd.get().source!.asset)).blob());
     const src = stack.g.texture(bmp, 'rgba16f');
     bmp.close();
-    const at = (t: number) => stack.bytes(stack.render(src, pd.get().stack, { t, scale: 1 })).slice();
+    const at = (t: number) => stack.bytes(stack.render(src, pd.get().stack, { t, scale: 1, seconds: loop.seconds })).slice();
     const [f0, f1, fN, f9] = [at(0), at(0.1), at(1), at(0.9)];
     check('frame N of the loop is frame 0 to the byte: the grain comes round exactly', f0.every((v, i) => v === fN[i]) && f0.some((v, i) => v !== f1[i]), f0.filter((v, i) => v !== fN[i]).length);
     const [first, second, last] = [await frameOf(1), await frameOf(2), await frameOf(10)];
@@ -1465,7 +1494,7 @@ async function postfx(dir: string): Promise<void> {
   }
 
   // share codes
-  pd.transact('A stack', (d) => ({ ...d, stack: [layerOf('grade', { lift: 7 }), layerOf('vhs', { wobble: 5, speed: 2 }), layerOf('duotone')] }));
+  pd.transact('A stack', (d) => ({ ...d, stack: [layerOf('grade', { lift: 7 }), layerOf('vhs', { wobble: 5, speed: 1 }), layerOf('duotone')] }));
   const made = pd.get().stack;
   const bare = (l: typeof made) => JSON.stringify(l.map(({ effect, on, opacity, blend, params }) => ({ effect, on, opacity, blend, params })));
   const code = encodeStack(made);
@@ -1505,15 +1534,21 @@ async function postfx(dir: string): Promise<void> {
   await sleep(600);
   const rest = playhead.get();
   check('nothing plays until play is pressed: a moving stack rests on its first frame', !rest.playing && rest.frame === 0, rest);
-  togglePlay(pd, timeline(pd.get()));
+  togglePlay(timeline(pd.get()));
   const ran = playhead.get().playing && !!(await until(() => playhead.get().frame > 0, 10_000));
   shell.setActive('dither');
   check('Play plays the loop, and switching to another tool pauses it', ran && !!(await until(() => !playhead.get().playing, 3000)), playhead.get());
   shell.setActive('postfx');
+  // a source opened while playing opens paused on its first frame: nothing animates until play is pressed
+  togglePlay(timeline(pd.get()));
+  const playingAgain = playhead.get().playing && !!(await until(() => playhead.get().frame > 0, 10_000));
+  await shell.sendItem(wide, 'postfx');
+  await sleep(800);
+  check('a source opened while playing opens paused, on its first frame', playingAgain && !playhead.get().playing && playhead.get().frame === 0, [playingAgain, playhead.get()]);
 
   // no flicker, exact loops, half floats, a preview that is the export
   const flicker = flickerChecks();
-  check(`no moving effect flickers: ${flicker.length} runs of 60 frames, the mean luminance moving under 2% a frame`, flicker.length >= 10 && flicker.every((c) => c.ok), flicker.filter((c) => !c.ok));
+  check(`no moving effect flickers, at its defaults or the worst its settings allow, in the shortest loop and a slow one: ${flicker.length} runs, the light moving under 2% of mid-grey a frame`, flicker.length >= 100 && flicker.every((c) => c.ok), flicker.filter((c) => !c.ok));
   const gpu = [...loopChecks(), ...pipelineChecks(), ...datamoshChecks(), ...scaleChecks()];
   check(`every moving effect loops exactly; stacks stay in half floats; datamosh repeats; a small preview is the export (${gpu.length} checks)`, gpu.every((c) => c.ok), gpu.filter((c) => !c.ok));
 

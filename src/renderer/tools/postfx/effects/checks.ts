@@ -1,11 +1,13 @@
 // GPU checks for the effects (plan unit F) that node --test can't run: no moving effect flickers
-// (60 frames on a mid-grey card, mean luminance never changes 2 % from one frame to the next, the
-// wrap from the last frame to the first included), loops are exact (frame N is frame 0, and the
-// step across the wrap is no bigger than any other), half floats between passes, alpha kept,
-// datamosh the same every time, and a half-scale preview as bright as the export. They run in the
-// page (allChecks(), about 2 s): the smoke run, or a harness over CDP.
+// (mid-grey and a barred card, at its defaults and at the worst its settings allow, in the shortest
+// loop, the default one and a slow one: mean light never changes more than 2 % of mid-grey's between
+// frames, the wrap from the last frame to the first included), loops are exact (the step across the
+// wrap is no bigger than any other, and continuous motion is continuous up to it), half floats between
+// passes, alpha kept, datamosh the same every time, and a half-scale preview as bright as the export.
+// They run in the page (allChecks(), about 6 s): the smoke run, or a harness over CDP.
 import { hexToOklch, linearRgb } from '../../../../shared/color/index.ts';
 import { defaultsOf, EFFECTS } from './index.ts';
+import { leadIn, runIn } from '../doc.ts';
 import { Stack, type StackLayer } from './stack.ts';
 import type { Texture } from '../../../lib/gpu/index.ts';
 import type { EffectId, ParamValue } from './types.ts';
@@ -13,6 +15,7 @@ import type { EffectId, ParamValue } from './types.ts';
 export type Check = { name: string; ok: boolean; detail: string };
 
 const FRAMES = 60;
+/** the most the light may change from one frame to the next, as a share of mid-grey's, at 25 frames a second and up */
 const MAX_STEP = 0.02;
 
 const hex2 = (v: number) => v.toString(16).padStart(2, '0');
@@ -44,6 +47,16 @@ const TEXTURED: Card = (x, y) => {
   return [Math.min(255, x + check), Math.min(255, y + check), Math.min(255, ring + check * 2), 255];
 };
 
+// stripes and soft rings with no ramp: moving them about keeps the same light (a ramp's would change as it shifts)
+const BARS: Card = (x, y) => {
+  const bar = (x >> 5) & 1 ? 190 : 70;
+  const ring = 60 * (0.5 + 0.5 * Math.cos(Math.hypot(x - 128, y - 128) / 6));
+  return [bar, (bar + ring) / 1.5, 255 - bar + ring / 2, 255];
+};
+/** a card this wide is a 1920 px image seen small: effects' px settings are scaled to it, as a preview does */
+const CARD = 256;
+const CARD_SCALE = CARD / 1920;
+
 function card(stack: Stack, w: number, h: number, fn: Card): Texture {
   const data = new Float32Array(w * h * 4);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) fn(x, y).forEach((v, c) => (data[(y * w + x) * 4 + c] = v / 255));
@@ -60,33 +73,50 @@ const layer = (effect: EffectId, params: Record<string, ParamValue> = {}, more: 
   ...more,
 });
 
-/** the moving effects at their defaults, and with their clock at its fastest */
+/** the setting each moving effect's pace comes from */
+const CLOCK: Record<string, string> = { grain: 'boil', vhs: 'speed', glitch: 'changes', wave: 'cycles', 'light-leak': 'cycles' };
+
+/** the effects whose motion has no stepped clock in it (VHS and grain re-seed their noise on a clock) */
+const CONTINUOUS = ['light-leak', 'wave'];
+
+/** the moving effects at their defaults, with their clock at its fastest, and at the worst their settings allow: every number at its most, or at its least with the clock at its fastest */
 function movingCases(): { name: string; layer: StackLayer }[] {
-  const clock: Record<string, string> = { grain: 'boil', vhs: 'speed', glitch: 'changes', wave: 'cycles', 'light-leak': 'cycles' };
   return EFFECTS.filter((e) => e.moving).flatMap((e) => {
-    const key = clock[e.id];
-    const p = e.params.find((x) => x.key === key);
-    const fastest = p?.kind === 'number' ? p.max : undefined;
+    const key = CLOCK[e.id];
+    const nums = e.params.flatMap((p) => (p.kind === 'number' ? [p] : []));
+    const fastest = nums.find((p) => p.key === key)!.max;
     return [
       { name: `${e.id} (defaults)`, layer: layer(e.id) },
-      ...(fastest === undefined ? [] : [{ name: `${e.id} (${key} ${fastest})`, layer: layer(e.id, { [key]: fastest }) }]),
+      { name: `${e.id} (${key} ${fastest})`, layer: layer(e.id, { [key]: fastest }) },
+      { name: `${e.id} (every setting at most)`, layer: layer(e.id, Object.fromEntries(nums.map((p) => [p.key, p.max]))) },
+      { name: `${e.id} (every setting at least, ${key} ${fastest})`, layer: layer(e.id, Object.fromEntries(nums.map((p) => [p.key, p.key === key ? fastest : p.min]))) },
     ];
   });
 }
 
-const frames = (stack: Stack, src: Texture, l: StackLayer, n = FRAMES) => Array.from({ length: n }, (_, i) => stack.bytes(stack.render(src, [l], { t: i / n })));
+/** the loops the Loop settings allow, shortest and fastest first, then the default, then a slow one: seconds and frames a second */
+const LOOPS: [number, number][] = [[0.5, 50], [2, 25], [4, 12]];
+
+/** a frame's limit: 2 % at 25 frames a second and up; slower than that the same a second, which is what looks like flicker */
+const stepLimit = (fps: number) => MAX_STEP * Math.max(1, 25 / fps);
+
+const frames = (stack: Stack, src: Texture, l: StackLayer, n = FRAMES, o: { seconds?: number; scale?: number } = {}) => Array.from({ length: n }, (_, i) => stack.bytes(stack.render(src, [l], { t: i / n, ...o })));
 
 export function flickerChecks(): Check[] {
   const stack = new Stack('post fx checks');
   const out: Check[] = [];
   try {
-    for (const [cardName, fn] of [['mid-grey', GREY], ['textured', TEXTURED]] as const) {
-      const src = card(stack, 256, 256, fn);
+    const mid = LIGHT[128];
+    for (const [cardName, fn] of [['mid-grey', GREY], ['bars', BARS]] as const) {
+      const src = card(stack, CARD, CARD, fn);
       for (const c of movingCases()) {
-        const lum = frames(stack, src, c.layer).map(meanLuminance);
-        let worst = 0;
-        for (let i = 0; i < FRAMES; i++) worst = Math.max(worst, Math.abs(lum[(i + 1) % FRAMES] - lum[i]) / lum[i]);
-        out.push({ name: `no flicker: ${c.name} on ${cardName}`, ok: worst < MAX_STEP, detail: `largest frame-to-frame change ${(worst * 100).toFixed(3)} % (limit 2 %)` });
+        for (const [seconds, fps] of LOOPS) {
+          const n = Math.round(seconds * fps);
+          const lum = frames(stack, src, c.layer, n, { seconds, scale: CARD_SCALE }).map(meanLuminance);
+          let worst = 0;
+          for (let i = 0; i < n; i++) worst = Math.max(worst, Math.abs(lum[(i + 1) % n] - lum[i]) / mid);
+          out.push({ name: `no flicker: ${c.name} on ${cardName}, ${seconds} s at ${fps} fps`, ok: worst < stepLimit(fps), detail: `largest frame-to-frame change ${(worst * 100).toFixed(3)} % of mid-grey (limit ${(stepLimit(fps) * 100).toFixed(1)} %)` });
+        }
       }
     }
   } finally {
@@ -102,11 +132,14 @@ export function loopChecks(): Check[] {
   try {
     const srcA = card(a, 256, 256, TEXTURED);
     const srcB = card(b, 256, 256, TEXTURED);
-    for (const c of movingCases()) {
-      const first = a.bytes(a.render(srcA, [c.layer], { t: 0 }));
-      // frame N of an N-frame loop, drawn by a second stack
-      const last = b.bytes(b.render(srcB, [c.layer], { t: FRAMES / FRAMES }));
-      out.push({ name: `exact loop: ${c.name}`, ok: same(first, last), detail: same(first, last) ? 'frame 60 = frame 0, byte for byte' : `frame 60 differs by up to ${maxDiff(first, last)} levels` });
+    for (const c of movingCases().filter((x) => x.name.endsWith('(defaults)'))) {
+      // continuous motion has no step at the wrap: a hair before the end draws what the start does (stepped clocks, grain and glitch, change at the wrap by design)
+      if (CONTINUOUS.includes(c.layer.effect)) {
+        const first = a.bytes(a.render(srcA, [c.layer], { t: 0 }));
+        const almost = b.bytes(b.render(srcB, [c.layer], { t: 1 - 1e-4 }));
+        const gap = meanDiff(first, almost);
+        out.push({ name: `exact loop: ${c.name}`, ok: gap < 0.05, detail: `a hair before the end differs from the start by ${gap.toFixed(4)} levels on average` });
+      }
       const f = frames(a, srcA, c.layer);
       let step = 0;
       for (let i = 1; i < FRAMES; i++) step = Math.max(step, meanDiff(f[i - 1], f[i]));
@@ -207,6 +240,20 @@ export function datamoshChecks(): Check[] {
     add('datamosh is the same every time', identical, 'two stacks from frame 0 to 9 agree byte for byte');
     add('datamosh redraws a frame without advancing', redraw, 'frame 5 drawn twice is the same');
     add('datamosh moshes', !!last && !!plain && meanDiff(last, plain) > 1, `frame 9 differs from its plain frame by ${last && plain ? meanDiff(last, plain).toFixed(2) : '?'} levels on average`);
+
+    // what the tool reads to tell a frame that has its run-in from one that began clean (doc.ts leadIn)
+    const mem = a.memory(mosh.id);
+    add('datamosh remembers its run of frames', mem?.f === 9 && mem.run === 9 && leadIn(9, [mem]).length === 0 && leadIn(20, [mem]).length === 20, `after frames 0 to 9: ${JSON.stringify(mem)}`);
+
+    // a frame reached by a seek is drawn after its run-in, and is the picture playing from the start gives it
+    let seek: Uint8Array | null = null;
+    for (const i of [...runIn(9), 9]) {
+      const f = frame(b, i);
+      const r = b.bytes(b.render(f, [mosh], { frame: i }));
+      f.release();
+      if (i === 9) seek = r;
+    }
+    add('datamosh drawn after its run-in is the frame played to', !!seek && !!last && same(seek, last), 'frame 9 after the frames before it agrees with frames 0 to 9 in order, byte for byte');
   } finally {
     a.release();
     b.release();

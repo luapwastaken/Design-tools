@@ -52,16 +52,33 @@ export function scaleUp<T extends Uint8Array | Uint32Array>(src: T, w: number, h
   return out;
 }
 
-/** An RGBA frame's own 256 colours. GIF has one clear index, so alpha becomes clear or solid. */
+/**
+ * An RGBA frame's own 256 colours. GIF has one clear index, so alpha becomes clear or solid, cut at
+ * half: a pixel under it is cleared whole (its colour would otherwise match solid entries, and a faint
+ * glow would print as a slab), and one over it is solid.
+ */
 function quantized({ data, width, height }: Rgba): Indexed {
-  // gifenc reads the pixels through their whole buffer
-  const px = data.byteOffset === 0 && data.byteLength === data.buffer.byteLength ? data : data.slice();
   let clear = false;
-  for (let i = 3; i < px.length && !clear; i += 4) clear = px[i] < 255;
+  for (let i = 3; i < data.length && !clear; i += 4) clear = data[i] < 255;
+  // gifenc reads the pixels through their whole buffer, and a clear frame is cut on a copy
+  const px = clear ? cutAlpha(data) : data.byteOffset === 0 && data.byteLength === data.buffer.byteLength ? data : data.slice();
   // rgb444 bins find the palette 10× faster than rgb565 (0.1 s against 1 s at 1080p); the finer
   // rgb565 keys then pick each pixel's colour
   const palette = quantize(px, 256, clear ? { format: 'rgba4444', oneBitAlpha: true } : { format: 'rgb444' });
   return { indices: applyPalette(px, palette, clear ? 'rgba4444' : 'rgb565'), w: width, h: height, palette: palette as unknown as Rgba8[] };
+}
+
+/** a copy with every pixel at least half opaque made solid, and the rest cleared to 0, 0, 0, 0 */
+export function cutAlpha(data: Uint8ClampedArray): Uint8ClampedArray<ArrayBuffer> {
+  const out = new Uint8ClampedArray(data.length);
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 128) continue;
+    out[i] = data[i];
+    out[i + 1] = data[i + 1];
+    out[i + 2] = data[i + 2];
+    out[i + 3] = 255;
+  }
+  return out;
 }
 
 /** A looping GIF built a frame at a time. Every frame is whole and clears when it ends, so a clear pixel never shows the frame before. */

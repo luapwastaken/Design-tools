@@ -13,13 +13,17 @@ import s from './Canvas.module.css';
 
 const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-/** transparency sits on a quiet checker of 8 screen px, so what the alpha keeps is plain to see */
+/**
+ * Transparency sits on a neutral checker of 8 screen px, in the rule and tick tones. The well tones it
+ * had were a hair apart and the same as the pasteboard in the dark theme; these are far from it in both
+ * themes, so clear pixels read as a pattern and a near-black or near-white pixel still stands out.
+ */
 function checker(ctx: CanvasRenderingContext2D, t: ViewTransform): CanvasPattern | null {
   const c = new OffscreenCanvas(16, 16);
   const g = c.getContext('2d')!;
-  g.fillStyle = token('--well');
+  g.fillStyle = token('--line');
   g.fillRect(0, 0, 16, 16);
-  g.fillStyle = token('--well-hover');
+  g.fillStyle = token('--tick');
   g.fillRect(8, 0, 8, 8);
   g.fillRect(0, 8, 8, 8);
   const p = ctx.createPattern(c, 'repeat');
@@ -53,7 +57,7 @@ export function PostFxCanvas({ d, v, busy }: Props) {
   };
 
   const render = (ctx: CanvasRenderingContext2D, t: ViewTransform) => {
-    ctx.fillStyle = checker(ctx, t) ?? token('--well');
+    ctx.fillStyle = checker(ctx, t) ?? token('--line');
     ctx.fillRect(0, 0, W, H);
     if (!mine) return;
     if (compare !== 'split') {
@@ -87,7 +91,8 @@ export function PostFxCanvas({ d, v, busy }: Props) {
   };
 
   const overlay = (t: ViewTransform): ReactNode => {
-    if (compare !== 'split') return <span className={s.tag}>{compare === 'before' ? 'Before' : 'After'}</span>;
+    // on the image's own corner, as the split's tags are, not the viewport's
+    if (compare !== 'split') return <span className={s.tag} style={{ left: Math.max(0, t.x) + 8, top: Math.max(0, t.y) + 8 }}>{compare === 'before' ? 'Before' : 'After'}</span>;
     const x = columnOf(t, split * W) / t.dpr;
     const top = Math.max(0, t.y);
     const bottom = Math.min(t.height, t.y + H * t.scale);

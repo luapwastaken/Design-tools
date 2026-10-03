@@ -61,9 +61,9 @@ const canWrite = () => {
   return st.ready && !st.error;
 };
 
-/** a name not yet taken: "Grain", then "Grain 2" */
-export function freeName(name: string): string {
-  const taken = new Set(saved.get().list.map((p) => p.name.toLowerCase()));
+/** a name not yet taken: "Grain", then "Grain 2" (`except`: a preset being renamed doesn't clash with itself) */
+export function freeName(name: string, except?: string): string {
+  const taken = new Set(saved.get().list.filter((p) => p.id !== except).map((p) => p.name.toLowerCase()));
   const base = name.trim() || 'My preset';
   if (!taken.has(base.toLowerCase())) return base;
   for (let n = 2; ; n++) if (!taken.has(`${base} ${n}`.toLowerCase())) return `${base} ${n}`;
@@ -78,7 +78,7 @@ export async function savePreset(name: string, stack: Layer[]): Promise<Preset |
 
 export async function renamePreset(id: string, name: string): Promise<void> {
   if (!canWrite()) return;
-  await write(saved.get().list.map((p) => (p.id === id ? { ...p, name: name.trim() } : p))).catch(() => {});
+  await write(saved.get().list.map((p) => (p.id === id ? { ...p, name: freeName(name, id) } : p))).catch(() => {});
 }
 
 /** after the armed confirm: gone at once, with an Undo toast that puts it back where it was (brief rule 3) */

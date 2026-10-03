@@ -29,6 +29,11 @@
 .readout b { font-weight: 400; color: var(--ink); }
 .live b { color: var(--signal); }
 
+/* at the narrowest work area the frame count goes first, then the clock, so the time stays as long as it can */
 @container (max-width: 560px) {
+  .of { display: none; }
+  .scrub { min-width: 140px; }
+}
+@container (max-width: 470px) {
   .readout { display: none; }
 }

@@ -2,7 +2,7 @@
 // or strobes (spec §5 q3): no brightness pulses, no flashing static, and what moves is periodic in
 // the loop, so it repeats with no jump.
 import { fx } from './glsl.ts';
-import { choice, num, tick, toggle } from './params.ts';
+import { choice, num, perLoop, tick, toggle } from './params.ts';
 import type { Effect } from './types.ts';
 
 const GRAIN = fx(`uniform float u_amount;
@@ -24,14 +24,14 @@ export const grain: Effect = {
   id: 'grain',
   label: 'Film grain',
   group: 'retro',
-  about: 'Film grain that can boil, changing a set number of times a loop',
+  about: 'Film grain that can boil, changing a set number of times a second',
   moving: true,
   params: [
     num('amount', 'Amount', 0, 100, 1, 15, '%'),
     num('size', 'Size', 0.5, 8, 0.1, 1.5, 'px'),
     toggle('colour', 'Colour grain', false),
     num('shadows', 'In the shadows', 0, 100, 1, 0, '%'),
-    num('boil', 'Boil', 0, 60, 1, 24, '/loop'),
+    num('boil', 'Boil', 0, 12, 1, 12, '/s'),
   ],
   passes: (c) =>
     c.run(GRAIN, {
@@ -39,7 +39,7 @@ export const grain: Effect = {
       u_size: Math.max(0.05, c.n('size') * c.scale),
       u_shadows: c.n('shadows') / 100,
       u_colour: c.on('colour') ? 1 : 0,
-      u_seed: tick(c.t, c.n('boil')),
+      u_seed: tick(c.t, perLoop(c.n('boil'), c.seconds)),
     }),
 };
 
@@ -133,20 +133,21 @@ export const vhs: Effect = {
     num('bleed', 'Colour bleed', 0, 60, 1, 12, 'px'),
     num('noise', 'Noise', 0, 100, 1, 30, '%'),
     num('tracking', 'Tracking', 0, 100, 1, 30, '%'),
-    num('speed', 'Speed', 0, 8, 1, 1, '/loop'),
+    num('speed', 'Speed', 0, 1, 0.25, 0.5, '/s'),
   ],
   passes(c) {
-    const speed = c.n('speed');
-    const period = Math.max(1, speed * 8);
+    // the tape rolls `rolls` times a loop; its noise starts over 12 times a second however fast it runs
+    const rolls = perLoop(c.n('speed'), c.seconds);
+    const period = Math.max(1, rolls * 8);
     return c.run(VHS, {
       u_wobble: c.n('wobble') * c.scale,
       u_bleed: c.n('bleed') * c.scale,
       u_noise: c.n('noise') / 100,
       u_track: c.n('tracking') / 100,
-      u_band: 0.3 + ((c.t * speed) % 1),
-      u_z: speed ? c.t * period : 0,
+      u_band: 0.3 + ((c.t * rolls) % 1),
+      u_z: rolls ? c.t * period : 0,
       u_period: period,
-      u_seed: tick(c.t, speed * 24),
+      u_seed: tick(c.t, rolls ? perLoop(12, c.seconds) : 0),
       u_line: Math.max(0.25, 2 * c.scale),
     });
   },
@@ -181,7 +182,7 @@ export const glitch: Effect = {
     num('amount', 'Amount', 0, 100, 1, 40, '%'),
     num('bands', 'Bands', 4, 200, 1, 32),
     num('split', 'RGB split', 0, 50, 0.5, 6, 'px'),
-    num('changes', 'Changes', 0, 48, 1, 8, '/loop'),
+    num('changes', 'Changes', 0, 12, 1, 4, '/s'),
     num('seed', 'Pattern', 0, 999, 1, 1),
   ],
   passes: (c) =>
@@ -189,7 +190,7 @@ export const glitch: Effect = {
       u_amount: c.n('amount') / 100,
       u_bands: c.n('bands'),
       u_split: c.n('split') * c.scale,
-      u_seed: c.n('seed') * 1000 + tick(c.t, c.n('changes')),
+      u_seed: c.n('seed') * 1000 + tick(c.t, perLoop(c.n('changes'), c.seconds)),
     }),
 };
 

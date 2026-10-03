@@ -158,7 +158,7 @@ const VIDEO_EXTS = /\.(mp4|m4v|webm|mov|mkv|ogv|avi|wmv|mpe?g|3gp|flv|mxf)$/i;
 export const isVideoFile = (type: string, name: string): boolean => type.startsWith('video/') || (!type.startsWith('image/') && VIDEO_EXTS.test(name));
 
 /**
- * Why a video didn't open, in plain words, from what Chromium reported: its MediaError code (3
+ * Why a video didn't open, in plain words (short enough to fit a toast's one line), from what Chromium reported: its MediaError code (3
  * decode, 4 not supported) and message, or neither when it opened with no picture Chromium can
  * decode (a ProRes .mov can open as its sound alone).
  */
@@ -166,5 +166,5 @@ export function videoProblem(name: string, error: { code: number; message: strin
   const msg = error?.message ?? '';
   if (/COULD_NOT_OPEN|COULD_NOT_PARSE|open context failed/i.test(msg) || (error?.code === 3 && !/codec|decoder/i.test(msg)))
     return `${name} couldn't be read as a video. The file may be damaged or incomplete.`;
-  return `${name} uses a video codec this app can't decode (ProRes, DNxHR and some HEVC files, for example). Export it as an H.264 MP4 or a VP9 WebM, or as a PNG sequence.`;
+  return `${name} can't be decoded here (ProRes, DNxHR, some HEVC). Re-export as H.264 MP4 or VP9 WebM.`;
 }

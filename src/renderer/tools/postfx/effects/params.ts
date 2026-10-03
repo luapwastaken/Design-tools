@@ -54,5 +54,12 @@ const wrap = (t: number) => (Number.isFinite(t) ? t - Math.floor(t) : 0);
 /** which of `n` patterns shows at loop phase `t` (grain boil, glitch changes); 0 for n = 0 */
 export const tick = (t: number, n: number): number => (n > 0 ? Math.floor(wrap(t) * n) % n : 0);
 
+/**
+ * Whole times a clock runs in a loop of `seconds`, for `rate` times a second. Always whole, so the loop
+ * comes round exactly, and never none while the rate is above 0. The settings' own maximum is what keeps
+ * it slow (at most 2 a second, and the shortest loop, 0.5 s, then holds 1).
+ */
+export const perLoop = (rate: number, seconds: number): number => (rate > 0 ? Math.max(1, Math.round(rate * seconds)) : 0);
+
 /** an angle that turns `cycles` whole times over the loop, radians */
 export const turn = (t: number, cycles: number): number => 2 * Math.PI * cycles * wrap(t);

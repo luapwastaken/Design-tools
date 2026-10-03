@@ -186,7 +186,7 @@ export function StackModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
                     {fx?.moving && !skipped && (
                       <Tooltip content="Moves when played: it loops with the timeline">
                         <span className={s.moves}>
-                          <Icon name="motion_play" size={14} />
+                          <Icon name="waves" size={14} />
                         </span>
                       </Tooltip>
                     )}

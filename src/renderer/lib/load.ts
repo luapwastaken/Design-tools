@@ -7,12 +7,18 @@ import type { TiffReply } from './tiff.worker.ts';
 /** what createImageBitmap reads here, plus TIFF through utif2 and SVG through an <img> */
 const READS = /^image\/(png|jpeg|webp|gif|bmp|avif|tiff|svg\+xml)$/;
 
-/** null when decodeImage can read a file of this type, else why not. `name` gives the extension when the type is vague. */
+const PSD = "PSD files aren't supported. Export a PNG or TIFF.";
+
+/**
+ * null when decodeImage can read a file of this type, else why not. `name` gives the extension when
+ * the type is vague: Explorer hands over some files (PSD, HEIC) with no type at all.
+ */
 export function unsupportedImage(type: string, name = ''): string | null {
-  if (!type || READS.test(type)) return null; // no type: let the decoder decide
+  if (READS.test(type)) return null;
   const ext = (/\.([a-z0-9]+)$/i.exec(name)?.[1] ?? type.split('/')[1] ?? '').toLowerCase();
-  if (ext === 'psd' || type === 'image/vnd.adobe.photoshop') return "PSD files aren't supported. Export a PNG or TIFF.";
+  if (ext === 'psd' || type === 'image/vnd.adobe.photoshop') return PSD;
   if (ext === 'heic' || ext === 'heif') return "HEIC photos aren't supported. Export a JPEG or PNG.";
+  if (!type) return null; // no type and no name that says: let the decoder decide
   const what = /^[a-z0-9]{1,5}$/.test(ext) ? `${ext.toUpperCase()} files aren't` : "This file isn't";
   return `${what} an image this tool can open. Use a PNG, JPEG, WebP, GIF, BMP, AVIF, TIFF or SVG.`;
 }
@@ -27,8 +33,10 @@ export function unsupportedImage(type: string, name = ''): string | null {
 export async function decodeImage(blob: Blob, name = 'The image', { asShown = false } = {}): Promise<ImageBitmap> {
   const why = unsupportedImage(blob.type, name);
   if (why) throw new Error(why);
-  // by content, so a TIFF with a vague type or the wrong extension still opens
-  const tiff = tiffKind(new Uint8Array(await blob.slice(0, 4).arrayBuffer()));
+  // by content, so a TIFF with a vague type or the wrong extension still opens, and a PSD renamed says what it is
+  const head = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+  if (String.fromCharCode(...head) === '8BPS') throw new Error(PSD);
+  const tiff = tiffKind(head);
   if (tiff === 'big') throw new Error(`${name} is a BigTIFF, which can't be opened here. Save it as a standard TIFF or a PNG.`);
   if (tiff) return readInWorker(blob, name);
   try {

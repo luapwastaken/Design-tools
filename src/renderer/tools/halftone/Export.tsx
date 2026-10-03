@@ -2,7 +2,7 @@
 // plates, all from the one cell list the view draws, through the shared export path.
 import { useState, type ReactNode } from 'react';
 import { svgProblem } from '../../../shared/halftone/svg.ts';
-import { saveFile, saveToFolder } from '../../lib/export.ts';
+import { keepAwake, saveFile, saveToFolder } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
 import { Button, IconButton, Module, NumberField, Progress, Segmented, toast } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
@@ -51,7 +51,8 @@ export function ExportModule({ d, v, screened, error }: { d: HalftoneDoc; v: Hal
   const run = async (what: string, make: (progress: (done: number, detail?: string) => void) => Promise<{ path: string; label: string } | null>) => {
     setBusy({ what, done: null });
     try {
-      const out = await make((done, detail) => setBusy({ what, done, detail }));
+      // a window hidden or minimised meanwhile keeps its speed
+      const out = await keepAwake(() => make((done, detail) => setBusy({ what, done, detail })));
       if (!out) return;
       patchView({ last: { name: out.label, path: out.path, at: Date.now() } });
       toast.show({ icon: 'download', message: `Exported ${out.label}.` });
@@ -77,7 +78,9 @@ export function ExportModule({ d, v, screened, error }: { d: HalftoneDoc; v: Hal
     });
 
   const off = busy !== null || !ready;
-  const svgOff = svgProblem(d) ?? blocked ?? (screened && !fm ? svgOver(shownDots(screened, d), !screened.held) : null);
+  // why the SVG can't be made from this document: said in its row, where it is read, as well as on the button
+  const svgWhy = svgProblem(d) ?? (screened && !fm ? svgOver(shownDots(screened, d), !screened.held) : null);
+  const svgOff = svgWhy ?? blocked;
   const weight = screened && !fm ? svgWeight(screened, d) : null;
   // a 1-bit cell of n × n print pixels holds n² + 1 tones; under 8 × 8 it reads as coarse
   const cellPx = d.size.dpi / d.screen.lpi;
@@ -90,7 +93,7 @@ export function ExportModule({ d, v, screened, error }: { d: HalftoneDoc; v: Hal
         <Row
           main
           name="SVG for Illustrator"
-          desc={`Vector dots, one group per ink, each ink one compound path, sized in ${unit === 'mm' ? 'mm' : 'inches'}. It matches the view dot for dot.`}
+          desc={svgWhy ? <span className={s.danger}>{svgWhy}</span> : `Vector dots, one group per ink, each ink one compound path, sized in ${unit === 'mm' ? 'mm' : 'inches'}. It matches the view dot for dot.`}
           action={
             <Button variant="primary" size="lg" icon="download" disabled={off || !!svgOff} tooltip={svgOff ?? undefined} onClick={() => void svg()}>
               {busy?.what === 'SVG' ? 'Exporting…' : 'Export'}

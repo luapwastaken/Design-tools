@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BUILT_INS, RECIPES } from '../src/renderer/tools/postfx/builtins.ts';
-import { duplicateLayer, emptyDoc, fix, frameAt, isMoving, layerOf, LIMIT, moveLayer, offered, startOf, timeline, type PostFxDoc, type Source } from '../src/renderer/tools/postfx/doc.ts';
+import { duplicateLayer, emptyDoc, fix, frameAt, isMoving, isStateful, layerOf, leadIn, LIMIT, moveLayer, offered, RUN_IN, runIn, startOf, timeline, type PostFxDoc, type Source } from '../src/renderer/tools/postfx/doc.ts';
 import { effectOf } from '../src/renderer/tools/postfx/effects/index.ts';
 import { decodeStack, encodeStack, layersFrom, PREFIX } from '../src/renderer/tools/postfx/share.ts';
 
@@ -35,6 +35,14 @@ test('old, damaged, foreign and newer codes each say what is wrong', () => {
   assert.throws(() => decodeStack('hello'), /starts with PFX2\./);
   assert.throws(() => decodeStack(`${PREFIX}%%%`), /cut short or damaged/);
   assert.throws(() => decodeStack(PREFIX + Buffer.from('{"v":9,"layers":[]}').toString('base64url')), /newer Design Tools/);
+});
+
+test('a code that holds no effects, or starts in lower case, is handled plainly', () => {
+  const empty = PREFIX + Buffer.from(JSON.stringify({ v: 2, layers: [] })).toString('base64url');
+  assert.throws(() => decodeStack(empty), /holds no effects/);
+  const one = encodeStack([layerOf('grain')]);
+  assert.equal(decodeStack(`pfx2.${one.slice(PREFIX.length)}`).length, 1, 'the prefix is read in either case');
+  assert.throws(() => decodeStack(`xfp2.${one.slice(PREFIX.length)}`), /starts with PFX2\./);
 });
 
 test('values from outside are put back in range, missing ones take their defaults, odd blends go normal', () => {
@@ -83,10 +91,7 @@ test('a clip and a GIF are their own loop, whatever the loop settings say', () =
   assert.equal(startOf(g, 2), 0.2);
 });
 
-test('the paused time stays on the timeline: past the end it holds the last frame, a still holds 0', () => {
-  const d = fix({ ...withStack(clip), time: 99 });
-  assert.equal(frameAt(timeline(d), d.time), 89);
-  assert.equal(fix({ ...withStack(still, 'grade'), time: 3 }).time, 0);
+test('the loop keeps to what the controls allow', () => {
   const loop = fix({ ...withStack(still, 'grain'), loop: { seconds: 40, fps: 400 } });
   assert.deepEqual(loop.loop, { seconds: LIMIT.seconds[1], fps: LIMIT.fps[1] });
 });
@@ -107,4 +112,28 @@ test('datamosh is offered on a clip only', () => {
   assert.equal(offered({ source: gif }, 'datamosh'), false);
   assert.equal(offered({ source: clip }, 'datamosh'), true);
   assert.equal(offered({ source: still }, 'grain'), true);
+});
+
+test('datamosh is drawn after its run-in: the frames before it, or none when it has them', () => {
+  assert.deepEqual(runIn(0), []);
+  assert.deepEqual(runIn(3), [0, 1, 2]);
+  assert.deepEqual(runIn(100), Array.from({ length: RUN_IN }, (_, k) => 70 + k));
+  const mem = (f: number, run: number) => ({ f, run });
+  assert.deepEqual(leadIn(100, [undefined]), runIn(100), 'a layer that has drawn nothing needs all of it');
+  assert.deepEqual(leadIn(100, [mem(99, RUN_IN)]), [], 'one step on from a frame that had it');
+  assert.deepEqual(leadIn(100, [mem(100, RUN_IN)]), [], 'the same frame again');
+  assert.deepEqual(leadIn(100, [mem(99, 5)]), runIn(100), 'a run that began clean a few frames ago is not enough');
+  assert.deepEqual(leadIn(100, [mem(40, 40)]), runIn(100), 'a seek');
+  assert.deepEqual(leadIn(100, [mem(99, RUN_IN), undefined]), runIn(100), 'every layer has to have it');
+  assert.deepEqual(leadIn(4, [mem(3, 3)]), [], 'near the start there are only so many before it');
+  assert.deepEqual(leadIn(4, [mem(3, 0)]), runIn(4));
+});
+
+test('only a clip with datamosh drawing has frames to remember', () => {
+  assert.equal(isStateful(withStack(clip, 'datamosh')), true);
+  assert.equal(isStateful(withStack(clip, 'grain')), false);
+  assert.equal(isStateful(withStack(still, 'grain')), false);
+  const hidden = withStack(clip, 'datamosh');
+  hidden.stack[0] = { ...hidden.stack[0], on: false };
+  assert.equal(isStateful(hidden), false);
 });

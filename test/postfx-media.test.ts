@@ -128,10 +128,11 @@ test('a video is known by its type, or by its extension when the type is vague; 
 
 test('a video that will not open says why in plain words, and what to export instead', () => {
   const codec = videoProblem('Render.mov', { code: 4, message: 'DEMUXER_ERROR_NO_SUPPORTED_STREAMS: FFmpegDemuxer: no supported streams' });
-  assert.match(codec, /^Render\.mov uses a video codec this app can't decode \(ProRes/);
-  assert.match(codec, /H\.264 MP4 or a VP9 WebM, or as a PNG sequence\.$/);
+  assert.match(codec, /^Render\.mov can't be decoded here \(ProRes/);
+  assert.match(codec, /Re-export as H\.264 MP4 or VP9 WebM\.$/);
+  assert.ok(codec.length < 100, 'one line of a toast');
   assert.equal(videoProblem('Render.mov', null), codec, 'the sound opened but the picture did not: the same reason');
   assert.match(videoProblem('Broken.mp4', { code: 4, message: 'DEMUXER_ERROR_COULD_NOT_OPEN: FFmpegDemuxer: open context failed' }), /^Broken\.mp4 couldn't be read as a video\. The file may be damaged/);
   assert.match(videoProblem('Cut.mp4', { code: 3, message: 'PIPELINE_ERROR_DECODE: VDA Error 4' }), /damaged/);
-  assert.match(videoProblem('Deep.mp4', { code: 3, message: 'DECODER_ERROR_NOT_SUPPORTED: video decoder initialization failed' }), /codec/);
+  assert.match(videoProblem('Deep.mp4', { code: 3, message: 'DECODER_ERROR_NOT_SUPPORTED: video decoder initialization failed' }), /can't be decoded/);
 });

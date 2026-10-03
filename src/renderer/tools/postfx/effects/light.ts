@@ -1,7 +1,7 @@
 // Light and lens: bloom, vignette, chromatic aberration, light leak, lens distortion.
 import { blurShader } from './blur.ts';
 import { fx } from './glsl.ts';
-import { choice, colour, num, turn } from './params.ts';
+import { choice, colour, num, perLoop, turn } from './params.ts';
 import type { Effect } from './types.ts';
 
 // what's above the threshold, as light, blurred across; then down, then added back
@@ -139,7 +139,7 @@ export const lightLeak: Effect = {
   id: 'light-leak',
   label: 'Light leak',
   group: 'light',
-  about: 'Warm light washing in from one side, drifting as the loop plays',
+  about: 'Warm light washing in from one side, drifting as it plays',
   moving: true,
   params: [
     colour('first', 'Colour', [0.78, 0.16, 55]),
@@ -147,15 +147,18 @@ export const lightLeak: Effect = {
     num('intensity', 'Intensity', 0, 150, 1, 60, '%'),
     num('size', 'Size', 10, 150, 1, 60, '%'),
     num('from', 'From', 0, 360, 1, 315, '°'),
-    num('drift', 'Drift', 0, 100, 1, 40, '%'),
-    num('cycles', 'Cycles', 0, 4, 1, 1, '/loop'),
+    num('drift', 'Drift', 0, 100, 1, 80, '%'),
+    num('cycles', 'Speed', 0, 1, 0.25, 0.5, '/s'),
   ],
   passes(c) {
     // two glows off one side of the frame, each going round its own small closed path once a cycle
     const D = Math.hypot(c.w, c.h) / 2;
     const side = (c.n('from') * Math.PI) / 180;
-    const a = turn(c.t, c.n('cycles'));
-    const wander = (c.n('drift') / 100) * 0.18 * D;
+    const cycles = perLoop(c.n('cycles'), c.seconds);
+    const a = turn(c.t, cycles);
+    // Light brought in and out of the frame is what changes a frame's brightness, so how fast it
+    // travels is held to a cycle every 2 s at full drift: a loop too short for that wanders less
+    const wander = (c.n('drift') / 100) * 0.09 * D * Math.min(1, (0.5 * c.seconds) / Math.max(1, cycles));
     const at = (angle: number, dist: number, dx: number, dy: number) => [
       c.w / 2 + Math.cos(angle) * dist * D + dx * wander,
       c.h / 2 + Math.sin(angle) * dist * D + dy * wander,

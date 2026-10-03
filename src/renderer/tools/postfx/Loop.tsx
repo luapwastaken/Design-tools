@@ -13,6 +13,8 @@ export function LoopModule({ doc, d, t }: { doc: Doc; d: PostFxDoc; t: Timeline 
   const fps = useDocNumber(doc, { label: 'Change the loop frame rate', key: 'loop:fps', get: (x) => x.loop.fps, set: (x, v) => fix({ ...x, loop: { ...x.loop, fps: v } }) });
   const own = t.kind === 'gif' || t.kind === 'video';
   const noun = t.kind === 'gif' ? 'The GIF' : 'The clip';
+  // with nothing moving there is no loop to set: the controls wait, set back, until a moving effect is in the stack
+  const idle = t.kind !== 'loop';
   return (
     <Module title="Loop" readout={t.count > 1 ? `${plural(t.count, 'frame')} · ${t.seconds.toFixed(2)} s` : 'Still'}>
       <div className={s.stack}>
@@ -35,10 +37,10 @@ export function LoopModule({ doc, d, t }: { doc: Doc; d: PostFxDoc; t: Timeline 
         ) : (
           <>
             <div className={s.group}>
-              <Slider label="Length" min={LIMIT.seconds[0]} max={LIMIT.seconds[1]} step={0.1} precision={1} unit="s" {...seconds} />
+              <Slider label="Length" min={LIMIT.seconds[0]} max={LIMIT.seconds[1]} step={0.1} precision={1} unit="s" disabled={idle} {...seconds} />
               <div className={s.row}>
-                <NumberField label="FPS" min={LIMIT.fps[0]} max={LIMIT.fps[1]} step={1} width={120} {...fps} />
-                <span className={s.note}>{plural(Math.max(1, Math.round(d.loop.seconds * d.loop.fps)), 'frame')} a loop</span>
+                <NumberField label="FPS" min={LIMIT.fps[0]} max={LIMIT.fps[1]} step={1} width={120} disabled={idle} {...fps} />
+                {!idle && <span className={s.note}>{plural(Math.max(1, Math.round(d.loop.seconds * d.loop.fps)), 'frame')} a loop</span>}
               </div>
             </div>
             <p className={s.note}>

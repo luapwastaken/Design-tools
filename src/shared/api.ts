@@ -91,6 +91,12 @@ export type Api = {
   /** one file into an open folder, with the same overwrite and naming rules; its path */
   'export.intoFolder': (id: number, name: string, data: ArrayBuffer | string) => Promise<string>;
   'export.closeFolder': (id: number) => Promise<void>;
+  /**
+   * An export that takes a while turns this on, and off after: while on, the window is not slowed when
+   * it is hidden or minimised (Chromium would give a hidden page a frame a second), so the export
+   * keeps its speed. Off, the window goes back to how it was made.
+   */
+  'window.keepAwake': (on: boolean) => Promise<void>;
   'shell.reveal': (path: string) => Promise<void>;
 };
 

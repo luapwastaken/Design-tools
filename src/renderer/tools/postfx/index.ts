@@ -4,11 +4,11 @@
 import type { ToolDefinition } from '../../shell/tool.ts';
 import { fetchBlob } from '../common/take.ts';
 import { duplicate, pickFile, sourceOf, takeFiles, withPalette } from './actions.ts';
-import { emptyDoc, fix, frameAt, timeline, type PostFxDoc } from './doc.ts';
+import { emptyDoc, fix, timeline, type PostFxDoc } from './doc.ts';
 import { pngBlob } from './exports.ts';
 import { StatusSlot } from './StatusSlot.tsx';
 import { stepFrame, togglePlay } from './Transport.tsx';
-import { getView, patchView, playhead } from './view-state.ts';
+import { getView, pausedFrame, patchView, playhead } from './view-state.ts';
 import { View } from './View.tsx';
 
 // `\` shows the original, and again goes back to the view it came from
@@ -23,7 +23,7 @@ export const tool: ToolDefinition<PostFxDoc> = {
   id: 'postfx',
   label: 'Post FX',
   group: 'image',
-  icon: 'filter_vintage',
+  icon: 'star_shine',
   shortcut: 7,
   docVersion: 1,
   createEmptyDoc: emptyDoc,
@@ -42,15 +42,14 @@ export const tool: ToolDefinition<PostFxDoc> = {
     if (!('url' in item)) return current;
     // the shell draws patterns, logos and SVGs as PNGs ("as an image"); a Library image keeps its own file
     const blob = await fetchBlob(item.url, item.ref.name);
-    return fix({ ...current, source: await sourceOf(blob, item.ref.name, item.ref.kind === 'image' ? item.ref.ext.toLowerCase() : 'png'), time: 0 });
+    return fix({ ...current, source: await sourceOf(blob, item.ref.name, item.ref.kind === 'image' ? item.ref.ext.toLowerCase() : 'png') });
   },
 
   /** the full-resolution PNG of the frame on screen (plan unit V: at the current time) */
   async render(d) {
     if (!d.source) throw new Error('There is no image to send yet.');
-    const t = timeline(d);
     const { frame, playing } = playhead.get();
-    return { blob: await pngBlob(d, playing ? frame : frameAt(t, d.time)), name: d.source.name, ext: 'png' };
+    return { blob: await pngBlob(d, playing ? frame : pausedFrame(timeline(d))), name: d.source.name, ext: 'png' };
   },
 
   async onFiles(files, _how, doc) {
@@ -68,9 +67,9 @@ export const tool: ToolDefinition<PostFxDoc> = {
       ...(sel && d.stack.some((l) => l.id === sel) ? [{ keys: 'Ctrl+D', label: 'Duplicate the selected layer', run: () => duplicate(doc, sel) }] : []),
       ...(d.source && t.count > 1
         ? [
-            { keys: 'ArrowLeft', label: 'Previous frame', run: () => stepFrame(doc, timeline(doc.get()), -1) },
-            { keys: 'ArrowRight', label: 'Next frame', run: () => stepFrame(doc, timeline(doc.get()), 1) },
-            { keys: 'K', label: 'Play or pause', run: () => togglePlay(doc, timeline(doc.get())) },
+            { keys: 'ArrowLeft', label: 'Previous frame', run: () => stepFrame(timeline(doc.get()), -1) },
+            { keys: 'ArrowRight', label: 'Next frame', run: () => stepFrame(timeline(doc.get()), 1) },
+            { keys: 'K', label: 'Play or pause', run: () => togglePlay(timeline(doc.get())) },
           ]
         : []),
     ];

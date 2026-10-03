@@ -15,6 +15,8 @@
 .text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .name { font-size: var(--fs-row); font-weight: 600; }
 .desc { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
+/* its progress, across the row under the button that was pressed */
+.live { grid-column: 1 / -1; margin-top: 10px; }
 
 .last {
   display: flex;
