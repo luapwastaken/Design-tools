@@ -1,7 +1,8 @@
 // Output size (spec §3): the page in mm or inches at a print DPI. The screen's frequency counts
 // per inch of this page, so the dot count is real (v1 tied it to pixels).
-import { Button, IconButton, Module, NumberField, Segmented, useDocNumber } from '../../ui/index.ts';
+import { IconButton, Module, NumberField, Segmented, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
+import { fmtPx } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { fix, LIMIT, MM_PER, PAGES, printPx, UNIT_STEP, type HalftoneDoc, type Unit } from './doc.ts';
 import s from './Inspector.module.css';
@@ -22,6 +23,7 @@ const range = (unit: Unit): [number, number] => {
 };
 
 const near = (a: number, b: number) => Math.abs(a - b) < 0.05;
+const IMAGE = 'image';
 
 /** the image's own resolution at this size: what the screen has to work from */
 export function sourcePpi(d: HalftoneDoc): number | null {
@@ -47,6 +49,9 @@ export function OutputModule({ doc, d }: { doc: Doc; d: HalftoneDoc }) {
     doc.transact(`Make the page ${p.label}`, (x) => ({ ...x, size: { ...x.size, w: portrait ? p.w : p.h, h: portrait ? p.h : p.w } }));
   const src = d.source;
   const matches = src && near(d.size.h, (d.size.w * src.h) / src.w);
+  const shapeToImage = () => src && doc.transact('Shape the page to the image', (x) => fix({ ...x, size: { ...x.size, h: (x.size.w * src.h) / src.w } }));
+  // "Image" is a page size too: the width kept, the image's proportions; lit only while no named page fits
+  const picks = [...PAGES.map((p) => ({ value: p.label, label: p.label, tip: `${p.w} × ${p.h} mm` })), ...(src ? [{ value: IMAGE, label: 'Image', tip: "Keep the width and give the page the image's proportions" }] : [])];
   const px = printPx(d);
   const ppi = sourcePpi(d);
   const want = 2 * d.screen.lpi;
@@ -54,19 +59,12 @@ export function OutputModule({ doc, d }: { doc: Doc; d: HalftoneDoc }) {
   return (
     <Module
       title="Output size"
-      readout={`${px.w.toLocaleString('en')} × ${px.h.toLocaleString('en')} px`}
+      readout={fmtPx(px.w, px.h)}
       actions={<Segmented mono fit options={UNITS} value={unit} onChange={(u) => doc.transact(`Show sizes in ${u}`, (x) => ({ ...x, size: { ...x.size, unit: u } }))} />}
     >
       <div className={s.stack}>
-        <div className={s.picks} role="group" aria-label="Page sizes">
-          {PAGES.map((p) => (
-            <Button key={p.label} size="xs" variant={page === p ? 'secondary' : 'ghost'} onClick={() => setPage(p)} tooltip={`${p.w} × ${p.h} mm`}>
-              {p.label}
-            </Button>
-          ))}
-          <Button size="xs" variant={matches ? 'secondary' : 'ghost'} disabled={!src} onClick={() => src && doc.transact('Shape the page to the image', (x) => fix({ ...x, size: { ...x.size, h: (x.size.w * src.h) / src.w } }))} tooltip="Keep the width and give the page the image's proportions">
-            Image
-          </Button>
+        <div className={s.row}>
+          <Segmented mono fit options={picks} value={page?.label ?? (matches ? IMAGE : '')} onChange={(v) => (v === IMAGE ? shapeToImage() : setPage(PAGES.find((p) => p.label === v)!))} />
           <span className={s.grow} />
           <IconButton icon={portrait ? 'crop_portrait' : 'crop_landscape'} label={portrait ? 'Portrait: turn to landscape' : 'Landscape: turn to portrait'} size="sm" onClick={() => doc.transact(portrait ? 'Turn the page to landscape' : 'Turn the page to portrait', (x) => ({ ...x, size: { ...x.size, w: x.size.h, h: x.size.w } }))} />
         </div>

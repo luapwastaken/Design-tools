@@ -12,7 +12,7 @@ import { View } from './View.tsx';
 /** the part the next SVG or image fills, as Send to and the Library name it */
 const asPart = (png: boolean): Use => {
   const role = nextRole(shell.doc('logo').get() as LogoDoc | null);
-  return { mode: 'apply', label: `AS ${role.toUpperCase()}${png ? ' (PNG)' : ''}` };
+  return { mode: 'apply', label: `${role.toUpperCase()}${png ? ' (PNG)' : ''}` };
 };
 
 export const tool: ToolDefinition<LogoDoc> = {
@@ -21,6 +21,7 @@ export const tool: ToolDefinition<LogoDoc> = {
   group: 'make',
   icon: 'branding_watermark',
   shortcut: 4,
+  needsAlpha: true,
   docVersion: 1,
   createEmptyDoc: emptyDoc,
   isEmpty,
@@ -42,7 +43,7 @@ export const tool: ToolDefinition<LogoDoc> = {
     get image() {
       return asPart(true);
     },
-    palette: { mode: 'apply', label: 'COLOUR' },
+    palette: { mode: 'apply', label: 'COLOURS' },
   },
   async receive(item, _use, current) {
     const role = nextRole(current);

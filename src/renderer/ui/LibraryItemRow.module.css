@@ -39,6 +39,8 @@
 .squeeze { flex: 1 1 auto; width: auto; min-width: 0; }
 .kind { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .keep { flex: none; }
+/* the gap a flex line would otherwise swallow: one character, as a space in the mono face */
+.use { margin-left: 1ch; }
 .lit { color: var(--ink-2); }
 .open { margin-left: 10px; color: var(--signal); }
 

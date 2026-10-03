@@ -3,15 +3,15 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { INKS } from '../../../shared/palette/inks.ts';
-import { shell } from '../../shell/core/index.ts';
 import { ColorField, ConfirmInline, FieldError, Icon, IconButton, menu, Module, NumberField, Segmented, SwatchStrip, TextInput, Toggle, useDocColour, useDocNumber, type MenuItem } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { plural } from '../common/names.ts';
+import { paletteMenu, useReadAhead } from '../common/palettes.ts';
 import { addInk, LIBRARIES, removeInk, setMode, type Doc } from './actions.ts';
 import { Curve } from './Curve.tsx';
 import { Dial } from './Dial.tsx';
-import { foldAngle, isIdentity, LIMIT, mapInk, opaqueOf, overlapOf, sharedScreen, type HalftoneDoc, type Ink } from './doc.ts';
-import { inksFrom, patchView, useView } from './view-state.ts';
+import { foldAngle, isIdentity, LIMIT, mapInk, opaqueOf, overlapOf, sharedScreen, type HalftoneDoc, type Ink, type InksFrom } from './doc.ts';
+import { patchView, useView } from './view-state.ts';
 import s from './Inks.module.css';
 import i from './Inspector.module.css';
 
@@ -32,8 +32,7 @@ const LIB_NAME = { riso: 'Riso', ral: 'RAL', hks: 'HKS', ncs: 'NCS' } as const;
 const libInk = (lib: keyof typeof LIB_NAME, k: (typeof INKS)['riso'][number]) => ({ name: lib === 'ral' ? `${k.id.replace(/^RAL/, 'RAL ')} ${k.name}` : k.name, colour: k.oklch });
 
 /** Riso, RAL, HKS and NCS as submenus, and the palette the inks came from; `pick` gets the choice */
-function inkMenu(pick: (name: string, colour: Oklch) => void): MenuItem[] {
-  const from = inksFrom.get();
+function inkMenu(from: InksFrom | null | undefined, pick: (name: string, colour: Oklch) => void): MenuItem[] {
   const palette: MenuItem[] = from
     ? [{ header: from.name }, ...from.swatches.map((w) => ({ label: w.name, swatch: cssColor(w.colour), onSelect: () => pick(w.name, w.colour) })), 'separator']
     : [];
@@ -51,13 +50,6 @@ function inkMenu(pick: (name: string, colour: Oklch) => void): MenuItem[] {
 }
 
 const openAt = (e: MouseEvent<HTMLButtonElement>, items: MenuItem[]) => menu.open(e.currentTarget.getBoundingClientRect(), items, { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined });
-
-/** the Library's palettes, by collection; picking one sends it here as the inks */
-function paletteMenu(): MenuItem[] {
-  const groups = (shell.getState().library?.collections ?? []).map((c) => ({ name: c.name || 'Library root', items: c.items.filter((x) => x.kind === 'palette') })).filter((g) => g.items.length);
-  if (!groups.length) return [{ label: 'No palettes in the Library yet', disabled: true }];
-  return groups.flatMap((g) => [{ header: g.name }, ...g.items.map((ref) => ({ label: ref.name, onSelect: () => void shell.sendItem(ref, 'halftone') }))]);
-}
 
 /** a plate as a small picture: its ink on the paper, at the plate's tone, covering it if the ink does */
 function PlateThumb({ plate, ink, paper, cover }: { plate: ReturnType<PlateOf>; ink: Oklch; paper: Oklch; cover: boolean }) {
@@ -99,7 +91,7 @@ function InkRow({ doc, d, ink, n, plate, open, onOpen }: { doc: Doc; d: Halftone
   });
   const fm = d.screen.shape === 'stochastic';
   const channel = ink.process ? ink.process.toUpperCase() : `${n + 1}`;
-  const from = inksFrom.use();
+  const from = d.inksFrom;
   const inPalette = from?.swatches.some((w) => toHex(w.colour) === toHex(ink.colour));
   // the angle column is too narrow for its message: it goes on a line of its own under the row
   const [angleError, setAngleError] = useState<string | null>(null);
@@ -159,7 +151,7 @@ function InkEditor({ doc, d, ink }: { doc: Doc; d: HalftoneDoc; ink: Ink }) {
     <div className={s.editor}>
       <div className={i.row}>
         <ColorField {...colour} name={ink.name} className={i.grow} />
-        <IconButton icon="format_paint" label="Use an ink from Riso, RAL, HKS or NCS" size="sm" onClick={(e) => openAt(e, inkMenu(swap))} />
+        <IconButton icon="format_paint" label="Use an ink from Riso, RAL, HKS or NCS" size="sm" onClick={(e) => openAt(e, inkMenu(d.inksFrom, swap))} />
       </div>
       {!ink.process && <TextInput label="Name" value={ink.name} validate={(v) => (v.trim() ? null : 'An ink needs a name: it names its layer and plate.')} onCommit={(v) => doc.transact(`Rename ${ink.name}`, (x) => mapInk(x, ink.id, (k) => ({ ...k, name: v.trim() })))} />}
       {!ink.process && <OpaqueSwitch doc={doc} d={d} ink={ink} />}
@@ -210,7 +202,8 @@ export function InksModule({ doc, d, plateOf }: { doc: Doc; d: HalftoneDoc; plat
   // which ink's settings are open is view state: it stays open across a tool switch
   const openId = useView().curve;
   const setOpen = (curve: string | null) => patchView({ curve });
-  const from = inksFrom.use();
+  const from = d.inksFrom;
+  useReadAhead();
   const spot = d.mode === 'spot';
   const overlap = overlapOf(d);
   const shared = sharedScreen(d);
@@ -224,7 +217,7 @@ export function InksModule({ doc, d, plateOf }: { doc: Doc; d: HalftoneDoc; plat
       sub={visible === d.inks.length ? plural(d.inks.length, 'plate') : `${visible} of ${plural(d.inks.length, 'plate')}`}
       actions={
         spot && (
-          <IconButton icon="add" label={full ? `Spot inks stop at ${LIMIT.spot}` : 'Add a spot ink'} size="sm" disabled={full} onClick={(e) => openAt(e, inkMenu((name, c) => addInk(doc, name, c)))} />
+          <IconButton icon="add" label={full ? `Spot inks stop at ${LIMIT.spot}` : 'Add a spot ink'} size="sm" disabled={full} onClick={(e) => openAt(e, inkMenu(d.inksFrom, (name, c) => addInk(doc, name, c)))} />
         )
       }
     >
@@ -233,7 +226,7 @@ export function InksModule({ doc, d, plateOf }: { doc: Doc; d: HalftoneDoc; plat
         {spot && (
           <div className={i.row}>
             <span className={cx('lbl', i.lab)}>Inks from</span>
-            <button type="button" className={s.from} aria-haspopup="menu" onClick={(e) => openAt(e, paletteMenu())}>
+            <button type="button" className={s.from} aria-haspopup="menu" onClick={(e) => openAt(e, paletteMenu('halftone'))}>
               <SwatchStrip colors={(fromShown ? from.swatches.map((w) => w.colour) : d.inks.map((k) => k.colour)).map(cssColor)} height={14} className={s.strip} />
               <span className={s.fromName}>{fromShown ? from.name : (library ?? 'Picked by hand')}</span>
               <Icon name="unfold_more" size={16} />

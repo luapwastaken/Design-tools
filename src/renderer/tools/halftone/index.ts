@@ -2,15 +2,17 @@
 // physical size, as an SVG for Illustrator, a screen PNG and separations that all match the view.
 // Spec: docs/superpowers/specs/2026-09-29-halftone-tool.md; plan unit V.
 import type { ToolDefinition } from '../../shell/tool.ts';
-import { displayName } from '../common/names.ts';
+import { flipOriginal } from '../common/flip.ts';
 import { fetchBlob } from '../common/take.ts';
 import { pickImage, sourceOf, takeFiles, withPalette } from './actions.ts';
 import { emptyDoc, type HalftoneDoc } from './doc.ts';
 import { pngBlob, pngLimit } from './exports.ts';
 import { placement } from './screening.ts';
 import { StatusSlot } from './StatusSlot.tsx';
-import { getView, inksFrom, patchView } from './view-state.ts';
+import { getView, patchView } from './view-state.ts';
 import { View } from './View.tsx';
+
+const flip = flipOriginal(() => getView().show, (show) => patchView({ show }), 'original', 'result');
 
 export const tool: ToolDefinition<HalftoneDoc> = {
   id: 'halftone',
@@ -26,16 +28,14 @@ export const tool: ToolDefinition<HalftoneDoc> = {
 
   accepts: {
     image: { mode: 'open', label: 'IMAGE' },
-    pattern: { mode: 'open', label: 'AS IMAGE' },
-    logo: { mode: 'open', label: 'AS IMAGE' },
-    svg: { mode: 'open', label: 'AS IMAGE' },
+    pattern: { mode: 'open', label: 'IMAGE' },
+    logo: { mode: 'open', label: 'IMAGE' },
+    svg: { mode: 'open', label: 'IMAGE' },
     palette: { mode: 'apply', label: 'INKS' },
   },
   async receive(item, _use, current) {
     if (item.kind === 'palette') {
-      const next = withPalette(current, item.ref.name, item.payload.swatches);
-      inksFrom.set({ name: item.ref.name, swatches: item.payload.swatches.map((w) => ({ name: displayName(w), colour: w.oklch })) });
-      return next;
+      return withPalette(current, item.ref.name, item.payload.swatches);
     }
     if (!('url' in item)) return current;
     // the shell draws patterns, logos and SVGs as PNGs ("as an image"); a Library image keeps its own file
@@ -61,7 +61,7 @@ export const tool: ToolDefinition<HalftoneDoc> = {
 
   shortcuts: (doc) => [
     { keys: 'Ctrl+O', label: 'Open an image', run: () => pickImage(doc) },
-    { keys: '\\', label: 'Switch between the result and the original', run: () => patchView({ show: getView().show === 'original' ? 'result' : 'original' }) },
+    { keys: '\\', label: 'Switch between the result and the original', run: flip },
   ],
   StatusSlot,
   View,

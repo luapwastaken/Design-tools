@@ -4,10 +4,10 @@
 // a worker, or written as numbered PNGs into one folder, with progress and cancel.
 import type { ToolId } from '../../shared/types.ts';
 import { toast } from '../ui/index.ts';
-import { intoFolder, keepAwake, saveFile } from './export.ts';
+import { exporting, intoFolder, leaf, saveFile } from './export.ts';
 import { gifDelays, readGif, scaleUp, type FrameImage, type Rgba } from './gif.ts';
 import type { GifJob, GifReply } from './gif.worker.ts';
-import { decodeImage, unsupportedImage } from './load.ts';
+import { decodeImage, unreadable, unsupportedImage } from './load.ts';
 import { encodeIndexedPng } from './png-indexed.ts';
 import { rgbaPng as straightPng, withDpi } from './png.ts';
 
@@ -30,8 +30,6 @@ export type Frames = {
 };
 
 const fileName = (b: Blob) => (b instanceof File ? b.name : '');
-/** the last part of a path, or the one `up` parts before it */
-const leaf = (path: string, up = 0) => path.split(/[\\/]/).at(-1 - up) ?? '';
 const stem = (name: string) => name.replace(/\.[^.]+$/, '');
 const byName = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
 
@@ -51,7 +49,7 @@ export async function decodeFrames(input: Blob | readonly Blob[]): Promise<Frame
     const one = list[0];
     const head = new Uint8Array(await one.slice(0, 6).arrayBuffer());
     if (String.fromCharCode(...head).startsWith('GIF8')) {
-      const gif = await openGif(one, stem(fileName(one)));
+      const gif = await openGif(one, stem(fileName(one)), fileName(one));
       if (gif) return gif;
     }
     return sequence(list, stem(fileName(one)));
@@ -65,14 +63,14 @@ export async function decodeFrames(input: Blob | readonly Blob[]): Promise<Frame
   return sequence(files, first.replace(/[\s._-]*\d+$/, '') || first);
 }
 
-const damaged = (name: string) => `${name || 'The GIF'} couldn't be read as an animation. The file may be damaged.`;
+const damaged = (name: string) => unreadable(name || 'The GIF', 'an animation');
 
-/** null for a GIF with one frame, which opens as a still */
-async function openGif(blob: Blob, name: string): Promise<Frames | null> {
+/** null for a GIF with one frame, which opens as a still; `label` names the file in a message, extension and all */
+async function openGif(blob: Blob, name: string, label = name): Promise<Frames | null> {
   const bytes = new Uint8Array(await blob.arrayBuffer());
   const blocks = readGif(bytes).frames;
   if (blocks.length < 2) return null;
-  if (blocks.length > MAX_FRAMES) throw new Error(`${name || 'This GIF'} has ${blocks.length.toLocaleString('en')} frames. The most this tool can take is ${MAX_FRAMES}; trim it first.`);
+  if (blocks.length > MAX_FRAMES) throw new Error(`${label || 'This GIF'} has ${blocks.length.toLocaleString('en')} frames. The most this tool can take is ${MAX_FRAMES}; trim it first.`);
   const decoder = new ImageDecoder({ data: bytes, type: 'image/gif', colorSpaceConversion: 'none' });
   try {
     await Promise.all([decoder.tracks.ready, decoder.completed]);
@@ -101,7 +99,7 @@ async function openGif(blob: Blob, name: string): Promise<Frames | null> {
     };
   } catch {
     decoder.close();
-    throw new Error(damaged(name));
+    throw new Error(damaged(label));
   }
 }
 
@@ -164,8 +162,9 @@ export async function exportFrames(o: ExportFramesOptions): Promise<{ path: stri
   if (!Number.isInteger(scale) || scale < 1) throw new Error(`The scale has to be a whole number from 1 up, not ${scale}.`);
   if (o.delays && o.delays.length !== n) throw new Error(`${o.delays.length} delays can't time ${n} frames.`);
   const step = (i: number) => o.progress?.(i / n, i < n ? `Frame ${i + 1} of ${n}` : 'Writing');
-  // a window hidden or minimised mid-export would otherwise be slowed to a crawl
-  return keepAwake(() => (o.to === 'gif' ? gif(o, n, scale, step) : folder(o, n, scale, step)));
+  // counted as running work from the first frame (the quit check), and a window hidden or minimised
+  // mid-export would otherwise be slowed to a crawl
+  return exporting(() => (o.to === 'gif' ? gif(o, n, scale, step) : folder(o, n, scale, step)));
 }
 
 async function gif(o: ExportFramesOptions, n: number, scale: number, step: (i: number) => void) {

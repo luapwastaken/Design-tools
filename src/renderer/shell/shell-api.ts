@@ -38,11 +38,10 @@ export type ShellState = {
   /** per-tool breadcrumb name */
   docNames: Partial<Record<ToolId, string>>;
   crashed: Partial<Record<ToolId, CrashInfo>>;
-  /** persistent problem for the status bar (a write that keeps failing, a dead watcher) */
+  /** persistent problem for the status bar (a write that keeps failing) */
   statusWarning: string | null;
   /** running exports/imports; the close handshake asks before quitting while > 0 */
   busy: number;
-  isPackaged: boolean;
 };
 
 export interface Shell {
@@ -63,8 +62,8 @@ export interface Shell {
   chooseLibraryRoot(): Promise<void>;
 
   // ── items ──
-  /** tools that accept this kind, with how they use it (Send to submenu) */
-  targetsFor(kind: ItemKind): { tool: ToolDefinition<any>; use: Use }[];
+  /** tools that accept this kind, with how they use it (Send to submenu); `from`: the tool sending, whose render may not suit one */
+  targetsFor(kind: ItemKind, from?: ToolId): { tool: ToolDefinition<any>; use: Use }[];
   /** the active tool's use label for this kind, or null (Library row highlight) */
   acceptedLabel(kind: ItemKind): string | null;
   /** where double-click / Open / a drop into a tool would send this kind; null: nothing opens it (the row tooltip says why) */

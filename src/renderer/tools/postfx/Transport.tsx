@@ -1,16 +1,13 @@
 // The transport (plan unit V) for a clip, a GIF or a still's loop: play and pause (also a quick tap of
 // Space, foundation spec §9), step, and scrub. Nothing plays until you press play (spec §5 q3), and
 // a pause, a step or a scrub leaves the frame in the view, so it is what shows and exports.
-import { useEffect, useRef, type RefObject } from 'react';
-import { isTextField } from '../../shell/core/keys.ts';
+import { useRef } from 'react';
 import { IconButton, Slider } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
+import { useSpaceTap } from '../common/spaceTap.ts';
 import { startOf, type Timeline } from './doc.ts';
 import { pausedFrame, patchView, playhead } from './view-state.ts';
 import s from './Transport.module.css';
-
-/** a Space press shorter than this, with no drag in it, is a tap: longer, it pans the view */
-const TAP_MS = 250;
 
 /** the frame on screen kept as the paused one (the view's time, never a step of history: Undo stays with the edits) */
 export function holdFrame(t: Timeline, frame: number): void {
@@ -28,42 +25,6 @@ export function togglePlay(t: Timeline): void {
 
 export const stepFrame = (t: Timeline, by: number): void => holdFrame(t, (playhead.get().frame + by + t.count) % t.count);
 
-/**
- * A tap of Space plays and pauses (spec §9: only a text field keeps Space), unless the tap was a pan.
- * The focused button isn't pressed by it; Enter still presses buttons, and an open menu keeps Space.
- */
-function useSpaceTap(el: RefObject<HTMLElement | null>, active: boolean, toggle: () => void) {
-  const run = useRef(toggle);
-  run.current = toggle;
-  useEffect(() => {
-    if (!active) return;
-    let down: number | null = null;
-    const onDown = (e: KeyboardEvent) => {
-      if (e.key !== ' ' || e.ctrlKey || e.altKey || e.metaKey) return;
-      const f = document.activeElement as HTMLElement | null;
-      if ((f && (isTextField(f) || f.closest('[role="menu"], [role="listbox"]'))) || !el.current || !el.current.getClientRects().length || el.current.closest('[inert]')) return;
-      e.preventDefault();
-      if (!e.repeat) down = performance.now();
-    };
-    const onUp = (e: KeyboardEvent) => {
-      if (e.key !== ' ' || down === null) return;
-      e.preventDefault();
-      if (performance.now() - down < TAP_MS) run.current();
-      down = null;
-    };
-    const cancel = () => (down = null);
-    addEventListener('keydown', onDown);
-    addEventListener('keyup', onUp);
-    addEventListener('pointerdown', cancel, true);
-    addEventListener('blur', cancel);
-    return () => {
-      removeEventListener('keydown', onDown);
-      removeEventListener('keyup', onUp);
-      removeEventListener('pointerdown', cancel, true);
-      removeEventListener('blur', cancel);
-    };
-  }, [active]);
-}
 
 const clock = (sec: number) => `${Math.floor(sec / 60)}:${(sec % 60).toFixed(2).padStart(5, '0')}`;
 

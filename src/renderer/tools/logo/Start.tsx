@@ -1,6 +1,7 @@
 // The empty state (plan unit V): two places to drop, the icon and the wordmark. Each drawing says
 // what the tool will do with that part: the icon gets handles, the wordmark is read for its cap
 // height and baseline.
+import { StartFrame } from '../common/DropStart.tsx';
 import type { Doc } from './actions.ts';
 import { PartZone } from './PartDrop.tsx';
 import s from './Start.module.css';
@@ -24,14 +25,11 @@ const WordmarkGlyph = () => (
 
 export function Start({ doc }: { doc: Doc }) {
   return (
-    <div className={s.start}>
+    <StartFrame note="SVG keeps every lockup editable in Illustrator; a PNG works too, with a flat tint for the colour versions. Padding in the file never counts: parts are measured by their artwork. Ctrl V pastes SVG markup into the icon first, then the wordmark.">
       <div className={s.zones}>
         <PartZone doc={doc} role="icon" glyph={<IconGlyph />} />
         <PartZone doc={doc} role="wordmark" glyph={<WordmarkGlyph />} />
       </div>
-      <p className={s.note}>
-        SVG keeps every lockup editable in Illustrator; a PNG works too, with a flat tint for the colour versions. Padding in the file never counts: parts are measured by their artwork. Ctrl V pastes SVG markup into the icon first, then the wordmark.
-      </p>
-    </div>
+    </StartFrame>
   );
 }

@@ -3,13 +3,13 @@
 import { toHex, type Oklch } from '../../../shared/color/index.ts';
 import type { DocController } from '../../../shared/doc-api.ts';
 import { extractPalette } from '../../../shared/dither/palette.ts';
-import type { LibraryItemRef, PalettePayload, Swatch } from '../../../shared/types.ts';
+import type { PalettePayload, Swatch } from '../../../shared/types.ts';
 import { decodeFrames, naturalOrder } from '../../lib/frames.ts';
-import { unsupportedImage } from '../../lib/load.ts';
-import { rasterize } from '../../shell/core/rasterize.ts';
 import { shell } from '../../shell/core/index.ts';
+import { ipc } from '../../shell/core/ipc.ts';
 import { toast } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
+import { baseName, claims, extOf, isSvg, putAsset, svgAsPng } from '../common/take.ts';
 import { LIMIT, paletteOf, used, type DitherDoc, type Source } from './doc.ts';
 import { withLook, type Look } from './looks.ts';
 import { workFrame } from './source.ts';
@@ -20,16 +20,13 @@ const ID = 'dither';
 /** a sequence plays at film rate until you say otherwise */
 const SEQUENCE_FPS = 24;
 
-const baseName = (file: string) => file.replace(/\.[^.]*$/, '') || 'Pasted image';
-const extOf = (blob: Blob, name: string) => (/\.([a-z0-9]{1,8})$/i.exec(name)?.[1] ?? /^image\/([a-z]+)/.exec(blob.type)?.[1] ?? 'png').toLowerCase();
-const put = async (blob: Blob, ext: string) => (await window.api.invoke('workspace.putAsset', ID, await blob.arrayBuffer(), ext)).url;
 
 /** read to be sure it opens, then copied into the workspace at full resolution (foundation spec §7.2); a GIF keeps its own timing */
 export async function sourceOf(blob: Blob, name: string, ext = extOf(blob, name)): Promise<Source> {
   const f = await decodeFrames(blob);
   const { w, h, count, delays } = f;
   f.close();
-  const assets = [await put(blob, ext)];
+  const assets = [await putAsset(ID, blob, ext)];
   if (count < 2 || !delays) return { assets, name, w, h, fps: null, delays: null, frames: 1 };
   const mean = delays.reduce((a, b) => a + b, 0) / count;
   return { assets, name, w, h, fps: Math.round(Math.min(LIMIT.fps[1], Math.max(LIMIT.fps[0], 1000 / mean))), delays, frames: count };
@@ -41,22 +38,10 @@ async function sequenceOf(files: File[]): Promise<Source> {
   const { name, w, h, count } = f;
   f.close();
   const assets: string[] = [];
-  for (const file of naturalOrder(files)) assets.push(await put(file, extOf(file, file.name)));
+  for (const file of naturalOrder(files)) assets.push(await putAsset(ID, file, extOf(file, file.name)));
   return { assets, name, w, h, fps: SEQUENCE_FPS, delays: null, frames: count };
 }
 
-const isSvg = (f: File) => f.type === 'image/svg+xml' || /\.svg$/i.test(f.name);
-const isImage = (f: File) => isSvg(f) || (f.type.startsWith('image/') && !unsupportedImage(f.type, f.name)) || /\.tiff?$/i.test(f.name);
-
-/** an SVG file drawn as the shell draws a Library SVG "as an image": 4096 px on its long side */
-async function svgAsPng(file: File): Promise<Blob> {
-  const url = URL.createObjectURL(file);
-  try {
-    return await rasterize({ kind: 'svg', url, ref: { name: baseName(file.name) } as LibraryItemRef });
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
 
 /** bumped by each open, so one that reads slowly never lands over a later one */
 let opening = 0;
@@ -66,7 +51,7 @@ let opening = 0;
  * of a sequence. What isn't an image is left for the Library.
  */
 export async function takeFiles(doc: Doc, files: File[]): Promise<File[]> {
-  const images = files.filter(isImage);
+  const images = files.filter(claims);
   if (!images.length) return files;
   const stills = images.filter((f) => !isSvg(f));
   const mine = ++opening;
@@ -158,7 +143,7 @@ export async function editInDesign(d: DitherDoc): Promise<void> {
     notes: '',
   };
   try {
-    const { ref } = await window.api.invoke('library.create', 'Scratch', d.palette.name || 'Dither palette', payload);
+    const { ref } = await ipc.invoke('library.create', 'Scratch', d.palette.name || 'Dither palette', payload);
     saved.set(key, ref.id);
     toast.show({ icon: 'info', message: `Saved ${ref.name} to Scratch so Design can edit it. Design’s Send to brings it back here.` });
     await shell.sendItem(ref, 'design');

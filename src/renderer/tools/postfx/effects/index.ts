@@ -48,7 +48,6 @@ export const GROUPS: readonly { id: Group; label: string }[] = [
 const BY_ID = new Map<string, Effect>(EFFECTS.map((e) => [e.id, e]));
 
 export const effectOf = (id: string): Effect | undefined => BY_ID.get(id);
-export const isEffectId = (id: unknown): id is EffectId => typeof id === 'string' && (EFFECT_IDS as readonly string[]).includes(id);
 
 export function defaultsOf(id: EffectId): Record<string, ParamValue> {
   const fx = effectOf(id);

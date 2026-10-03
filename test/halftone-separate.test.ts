@@ -2,22 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { linearRgb, rgb255, toOklch, type Oklch } from '../src/shared/color/index.ts';
 import { INKS } from '../src/shared/palette/inks.ts';
-import {
-  encodeTable,
-  inksAt,
-  knockedOut,
-  lookup,
-  MAX_SPOT,
-  NEUTRAL_TONE,
-  separation,
-  stats,
-  toneAt,
-  toPlates,
-  totalInk,
-  type Process,
-  type SeparateInk,
-  type Tone,
-} from '../src/shared/halftone/index.ts';
+import { knockedOut, stats, totalInk } from '../src/shared/halftone/coverage.ts';
+import { inksAt, MAX_SPOT, separation, toPlates } from '../src/shared/halftone/separate.ts';
+import { encodeTable, lookup, NEUTRAL_TONE, toneAt } from '../src/shared/halftone/tone.ts';
+import { type Process, type SeparateInk, type Tone } from '../src/shared/halftone/types.ts';
 
 const IDENTITY: [number, number][] = [[0, 0], [1, 1]];
 const ink = (colour: Oklch, process?: Process): SeparateInk => ({ colour, curve: IDENTITY, process });

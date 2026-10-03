@@ -2,9 +2,10 @@
 // artboard or a PNG. Spec: docs/superpowers/specs/2026-09-29-pattern-tool.md; plan unit V.
 import type { ToolDefinition } from '../../shell/tool.ts';
 import { toast } from '../../ui/index.ts';
+import { plural } from '../common/names.ts';
 import { fetchBlob } from '../common/take.ts';
 import { leftOut, newPattern, reseed, slotFrom, takeFiles, withSlots } from './actions.ts';
-import { emptyDoc, fromPayload, toPayload, withPalette, type PatternDoc } from './doc.ts';
+import { emptyDoc, fromPayload, MAX_COLOURS, toPayload, withPalette, type PatternDoc } from './doc.ts';
 import { StatusSlot } from './StatusSlot.tsx';
 import { replacing } from './view-state.ts';
 import { View } from './View.tsx';
@@ -29,8 +30,8 @@ export const tool: ToolDefinition<PatternDoc> = {
   accepts: {
     pattern: { mode: 'open', label: 'PATTERN' },
     palette: { mode: 'apply', label: 'SHAPE COLOURS' },
-    logo: { mode: 'apply', label: 'AS SHAPE' },
-    svg: { mode: 'apply', label: 'AS SHAPE' },
+    logo: { mode: 'apply', label: 'SHAPE' },
+    svg: { mode: 'apply', label: 'SHAPE' },
   },
   async receive(item, _use, current) {
     // a Library pick for one slot's Replace; anything else that arrives adds a shape
@@ -39,9 +40,12 @@ export const tool: ToolDefinition<PatternDoc> = {
     switch (item.kind) {
       case 'pattern':
         return tool.fromItem!(item);
-      case 'palette':
+      case 'palette': {
         if (!current.slots.some((s) => s.recolour)) toast.show({ icon: 'info', message: 'Every shape keeps its own colours. Turn on Colour from palette on a shape to use these.' });
-        return withPalette(current, item.payload.swatches);
+        const { doc, left } = withPalette(current, item.payload.swatches);
+        if (left) toast.show({ icon: 'info', message: `A pattern holds ${MAX_COLOURS} shape colours, so the last ${plural(left, 'colour')} of ${item.ref.name} stayed out.` });
+        return doc;
+      }
       case 'logo':
       case 'svg': {
         const svg = item.kind === 'logo' ? (item.payload.icon ?? item.payload.wordmark) : await (await fetchBlob(item.url, item.ref.name)).text();

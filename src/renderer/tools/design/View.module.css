@@ -20,12 +20,3 @@
 .pane { min-width: 0; min-height: 0; }
 .pane[hidden] { display: none; }
 
-.insp {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  min-height: 0;
-  overflow: auto;
-  scrollbar-gutter: stable;
-}
-.insp > * { flex: none; }

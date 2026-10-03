@@ -12,7 +12,8 @@ const ASSET_GRACE_MS = 60_000;
 
 export type Workspace = ReturnType<typeof createWorkspace>;
 
-export function createWorkspace(userData: string) {
+/** `onDamaged`: a state file that can't be read and has no good copy behind it was set aside at `kept` */
+export function createWorkspace(userData: string, onDamaged?: (kept: string) => void) {
   const checked = (tool: string) => {
     if (!TOOL.test(tool)) throw new Error(`Unknown tool "${tool}"`);
     return tool;
@@ -41,12 +42,29 @@ export function createWorkspace(userData: string) {
   return {
     async load(tool: ToolId): Promise<WorkspaceState | null> {
       const { state, prev } = statePaths(tool);
+      let broken: string | null = null;
       for (const file of [state, prev]) {
+        let text: string;
         try {
-          return JSON.parse(await readFile(file, 'utf8')) as WorkspaceState;
+          text = await readFile(file, 'utf8');
         } catch {
-          // missing or damaged: try the previous good copy
+          continue; // missing: try the previous good copy
         }
+        try {
+          return JSON.parse(text) as WorkspaceState;
+        } catch {
+          broken ??= text; // damaged: try the previous good copy too
+        }
+      }
+      // something was there and nothing could be read: the tool starts empty, so keep what was there and say so
+      if (broken !== null) {
+        const kept = join(toolDir(tool), 'crashed', `${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+        await inOrder(state, async () => {
+          await writeAtomic(kept, broken);
+          await rm(state, { force: true });
+          await rm(prev, { force: true });
+        });
+        onDamaged?.(kept);
       }
       return null;
     },

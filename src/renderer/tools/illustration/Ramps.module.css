@@ -6,12 +6,14 @@
   --pad-r: 8px;
   --col-gap: 10px;
   --gutter: 8px;
+  /* the view button's strip above the rows */
+  --tools: 28px;
   position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
   /* six rows, and at least four in a short window, where the job below needs the height more */
-  max-height: min(calc(6 * 54px + 8px), 42vh, max(calc(4 * 54px + 8px), 100vh - 640px));
+  max-height: min(calc(6 * 54px + 8px + var(--tools)), 42vh, max(calc(4 * 54px + 8px + var(--tools)), 100vh - 640px));
   overflow: hidden;
   border-radius: var(--r-mod);
   background: var(--module);
@@ -21,8 +23,8 @@
 
 .list { display: flex; flex-direction: column; min-height: 0; padding: 4px 0; overflow: auto; scrollbar-gutter: stable; }
 
-/* the palette's corner, on the band: it stays put while the rows scroll under it */
-.viewBtn { position: absolute; top: 9px; right: calc(var(--gutter) + var(--pad-r) + var(--acts) + var(--col-gap) + 6px); z-index: 1; }
+/* the view button, above the rows rather than over a step; it stays put while they scroll */
+.tools { display: flex; flex: none; align-items: center; justify-content: flex-end; height: var(--tools); padding: 4px calc(var(--gutter) + var(--pad-r)) 0; }
 
 /* One row: grip, name, the steps on the band, then the hero star and More. */
 .row {

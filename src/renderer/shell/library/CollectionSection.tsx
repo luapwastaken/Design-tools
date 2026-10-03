@@ -70,7 +70,7 @@ export function CollectionSection(p: Props) {
         {!fixedCollection(c.name) && (
           <IconButton
             icon={c.locked ? 'lock' : 'lock_open'}
-            label={c.locked ? `Unlock ${label}` : `Lock ${label}`}
+            label={c.locked ? `Unlock ${label}` : `Lock ${label}: tools can’t edit what’s in it`}
             size="xs"
             tabIndex={-1}
             className={s.lock}

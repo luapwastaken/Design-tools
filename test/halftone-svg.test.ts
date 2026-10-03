@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { toHex, type Oklch } from '../src/shared/color/index.ts';
-import { cells, dots, halftoneSvg, svgParts, svgProblem, type Cells, type CellShape, type DrawInk, type SvgDoc } from '../src/shared/halftone/index.ts';
+import { cells, dots } from '../src/shared/halftone/screen.ts';
+import { halftoneSvg, svgParts, svgProblem, type SvgDoc } from '../src/shared/halftone/svg.ts';
+import { type Cells, type CellShape, type DrawInk } from '../src/shared/halftone/types.ts';
 import { getAttr, isEl, parseSvg, walk, type El } from '../src/shared/svg/xml.ts';
 
 const IDENTITY: [number, number][] = [[0, 0], [1, 1]];

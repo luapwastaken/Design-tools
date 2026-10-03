@@ -21,6 +21,9 @@ const MAX_PLATE = 250e6;
 /** rows drawn and read at once for a plate, so a big one never needs a second full-size copy in RGBA */
 const BAND = 2048;
 
+/** the widest screen PNG this page can make inside the 64-megapixel limit (the W field stops here, so it never offers what the Export can't make) */
+export const pngMaxWidth = (page: { w: number; h: number }): number => Math.max(16, Math.min(16384, Math.floor(Math.sqrt((MAX_PNG * page.w) / page.h))));
+
 export const pngLimit = (w: number, h: number): string | null =>
   w * h > MAX_PNG ? `${w} × ${h} px is more than a PNG here can hold (64 megapixels). Make it narrower.` : null;
 
@@ -132,12 +135,15 @@ function bilevelPlate(s: Screened, index: number, W: number, H: number): Promise
   return plateWorker({ ...at, cells: ink.cells, coverage }, take, [coverage.buffer]);
 }
 
+type PlateFile = { name: string; data: ArrayBuffer };
+
 /**
  * One TIFF per visible ink at print resolution: 0 where it prints, 255 where the paper shows.
  * Knocked out, each plate is clear wherever an ink printed after it shows, so the press lays down
- * what the view shows (every plate prints; nothing under the top ink may).
+ * what the view shows (every plate prints; nothing under the top ink may). With `sink` each file
+ * goes there as soon as it is made and none is kept, so a big job never holds every plate at once.
  */
-export async function platesFor(d: HalftoneDoc, bits: 8 | 1, name: string, progress?: Progress): Promise<{ name: string; data: ArrayBuffer }[]> {
+export async function platesFor(d: HalftoneDoc, bits: 8 | 1, name: string, progress?: Progress, sink?: (file: PlateFile) => Promise<void>): Promise<PlateFile[]> {
   const why = platesLimit(d);
   if (why) throw new Error(why);
   const s = await screen(d, true);
@@ -146,7 +152,7 @@ export async function platesFor(d: HalftoneDoc, bits: 8 | 1, name: string, progr
   const knockout = overlapOf(d) === 'knockout';
   // pixel by pixel, the inks printed later cover the plate: the top ink first, keeping what it covers
   const covered = knockout ? new Uint8Array(W * H) : null;
-  const files: { name: string; data: ArrayBuffer }[] = new Array(shown.length);
+  const files: PlateFile[] = new Array(shown.length);
   const order = [...shown.entries()].reverse();
   for (const [done, [n, { ink, index }]] of order.entries()) {
     const label = `Plate ${done + 1} of ${shown.length}: ${ink.name}`;
@@ -172,7 +178,9 @@ export async function platesFor(d: HalftoneDoc, bits: 8 | 1, name: string, progr
     progress?.((done + 1) / shown.length, label);
     const tiff = writeTiff(grey, W, H, d.size.dpi, bits);
     const channel = ink.process ? ink.process.toUpperCase() : `${index + 1}`;
-    files[n] = { name: `${name} ${channel} ${ink.name}.tif`, data: tiff.buffer.slice(tiff.byteOffset, tiff.byteOffset + tiff.byteLength) as ArrayBuffer };
+    const file = { name: `${name} ${channel} ${ink.name}.tif`, data: tiff.buffer.slice(tiff.byteOffset, tiff.byteOffset + tiff.byteLength) as ArrayBuffer };
+    if (sink) await sink(file);
+    else files[n] = file;
   }
-  return files;
+  return sink ? [] : files;
 }

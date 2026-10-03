@@ -282,10 +282,20 @@ export function reconcile(): void {
   checking = checking.then(checkItems).catch((e) => log('warn', 'Checking open documents against the Library failed', errorText(e)));
 }
 
+/** the Library folder was away at the last look: what failed to save meanwhile is written again when it is back */
+let folderDown = false;
+
 async function checkItems(): Promise<void> {
   // the whole Library folder is gone (renamed, a drive unplugged): its items aren't, one by one. The
   // documents stay as they were; a write says NOT SAVED until the folder is back (spec §11)
-  if (!getState().library?.ok) return refreshAll();
+  if (!getState().library?.ok) {
+    folderDown = true;
+    return refreshAll();
+  }
+  if (folderDown) {
+    folderDown = false;
+    for (const r of allRuntimes()) if (r.failed && r.pending === 0) retry(r);
+  }
   for (const r of docRuntimes()) {
     const src = r.doc.source();
     if (!src) continue;

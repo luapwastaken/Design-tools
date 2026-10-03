@@ -21,6 +21,9 @@ export type Ink = {
   opaque?: boolean;
 };
 
+/** the palette the spot inks came from: the Inks from row names it, and its colours are offered when an ink is added or swapped */
+export type InksFrom = { name: string; swatches: { name: string; colour: Oklch }[] };
+
 export type HalftoneDoc = {
   /** the image, copied into the workspace (foundation spec §7.2); `asset` is its dt:// url */
   source: { asset: string; name: string; w: number; h: number } | null;
@@ -35,6 +38,8 @@ export type HalftoneDoc = {
   tone: { black: number; white: number; gamma: number; contrast: number };
   /** preview only, and the screen PNG when `bake` */
   feel: { misregister: number; texture: number; bake: boolean };
+  /** in the document, so a restart keeps it and Undo takes it back with the inks it came with */
+  inksFrom?: InksFrom | null;
 };
 
 export const MM_PER: Record<Unit, number> = { mm: 1, in: 25.4 };

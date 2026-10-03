@@ -6,6 +6,8 @@ import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { toast } from '../../ui/index.ts';
 import { DocBar, type DocTab } from '../common/DocBar.tsx';
 import { useSettled } from '../common/settled.ts';
+import { InspectorColumn } from '../common/InspectorColumn.tsx';
+import { NotesModule } from '../common/Notes.tsx';
 import { addSwatch, eyedrop, newPalette, type Doc } from './actions.ts';
 import { Build } from './Build.tsx';
 import { Checks } from './Checks.tsx';
@@ -101,9 +103,10 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
           onChange={(w) => patchView({ inspector: w })}
         />
       </div>
-      <aside className={s.insp} aria-label="Inspector">
+      <InspectorColumn>
         <Inspector doc={doc} d={d} v={v} />
-      </aside>
+        <NotesModule doc={doc} />
+      </InspectorColumn>
     </div>
   );
 }

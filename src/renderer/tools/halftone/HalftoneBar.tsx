@@ -1,8 +1,9 @@
 // The Halftone document bar (the Instrument board's canvas head): the image and its size, the
-// Result | Separations | Original switch, another image, undo and Send to.
+// Original | Result | Separations switch, another image, undo and Send to.
 import { IconButton, Segmented, UndoRedo } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { DocTitle, SendTo } from '../common/DocBar.tsx';
+import { fmtPx } from '../common/names.ts';
 import { pickImage, type Doc } from './actions.ts';
 import type { HalftoneDoc } from './doc.ts';
 import { sourcePpi } from './Output.tsx';
@@ -11,9 +12,9 @@ import s from '../common/DocBar.module.css';
 import own from './View.module.css';
 
 const SHOWS: { value: Show; label: string; tip?: string }[] = [
+  { value: 'original', label: 'Original', tip: 'The image as it sits on the page, before screening (\\ switches)' },
   { value: 'result', label: 'Result' },
   { value: 'separations', label: 'Separations' },
-  { value: 'original', label: 'Original', tip: 'The image as it sits on the page, before screening (\\ switches)' },
 ];
 
 export function HalftoneBar({ doc, d, v }: { doc: Doc; d: HalftoneDoc; v: HalftoneView }) {
@@ -24,7 +25,7 @@ export function HalftoneBar({ doc, d, v }: { doc: Doc; d: HalftoneDoc; v: Halfto
       <DocTitle>{src?.name ?? 'No image'}</DocTitle>
       {src && (
         <span className={cx('lbl', own.imageSize)}>
-          {src.w.toLocaleString('en')} × {src.h.toLocaleString('en')} px{ppi ? ` · ${Math.round(ppi)} ppi` : ''}
+          {fmtPx(src.w, src.h)}{ppi ? ` · ${Math.round(ppi)} ppi` : ''}
         </span>
       )}
       <IconButton icon="image" label={src ? 'Open another image' : 'Open an image'} shortcut="Ctrl+O" size="sm" onClick={() => pickImage(doc)} />

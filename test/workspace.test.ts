@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readdir, readFile, rm, utimes, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
@@ -32,6 +32,22 @@ test('rapid saves land in order', async () => {
 test('a damaged state.json falls back to state.prev.json', async () => {
   await writeFile(stateFile, '{"toolId":');
   assert.deepEqual(await ws.load('dither'), state(5));
+});
+
+test('a damaged state.json with no good copy is kept, reported, and the tool starts empty', async () => {
+  const kept: string[] = [];
+  const own = createWorkspace(root, (path) => kept.push(path));
+  await rm(join(root, 'workspace', 'halftone'), { recursive: true, force: true });
+  await mkdir(join(root, 'workspace', 'halftone'), { recursive: true });
+  await writeFile(join(root, 'workspace', 'halftone', 'state.json'), '{"toolId":"halft');
+  assert.equal(await own.load('halftone'), null);
+  assert.equal(kept.length, 1);
+  assert.equal(await readFile(kept[0], 'utf8'), '{"toolId":"halft', 'the raw text is what was set aside');
+  assert.equal(await own.load('halftone'), null);
+  assert.equal(kept.length, 1, 'it is said once: the next start finds nothing damaged');
+  // nothing there at all is not damage
+  assert.equal(await own.load('postfx'), null);
+  assert.equal(kept.length, 1);
 });
 
 test('quarantine keeps the document and clears the state', async () => {

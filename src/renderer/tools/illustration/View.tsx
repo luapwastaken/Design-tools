@@ -7,6 +7,8 @@ import { cx } from '../../ui/cx.ts';
 import { toast } from '../../ui/index.ts';
 import { DocBar } from '../common/DocBar.tsx';
 import { plural } from '../common/names.ts';
+import { InspectorColumn } from '../common/InspectorColumn.tsx';
+import { NotesModule } from '../common/Notes.tsx';
 import { addBase, eyedrop, newPalette, type Doc } from './actions.ts';
 import { CheckPane, useChecks } from './CheckPane.tsx';
 import { named } from './doc.ts';
@@ -71,9 +73,10 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         </div>
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
-      <aside className={s.insp} aria-label="Inspector">
+      <InspectorColumn>
         <StepInspector doc={doc} d={d} v={v} />
-      </aside>
+        <NotesModule doc={doc} />
+      </InspectorColumn>
       {/* the empty state's "Pick from an image" */}
       <input
         type="file"

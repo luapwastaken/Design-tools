@@ -59,7 +59,7 @@ function Yours({ doc, d, p }: { doc: Doc; d: PostFxDoc; p: Preset }) {
         <Tooltip content={p.name} overflowOnly>
           <span className={s.text}>{p.name}</span>
         </Tooltip>
-        <span className={s.count}>{p.layers.length}</span>
+        <span className={s.count}>{p.layers.length} fx</span>
       </button>
       <IconButton
         icon="more_horiz"
@@ -125,7 +125,7 @@ export function PresetsModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
             <Tooltip key={p.id} content={p.about}>
               <button type="button" aria-pressed={match?.id === p.id} tabIndex={n === focus ? 0 : -1} className={cx(s.key, match?.id === p.id && s.on)} onFocus={() => setFocus(n)} onClick={() => match?.id !== p.id && pick(doc, p)}>
                 <span className={s.text}>{p.name}</span>
-                <span className={s.count}>{p.layers.length}</span>
+                <span className={s.count}>{p.layers.length} fx</span>
               </button>
             </Tooltip>
           ))}

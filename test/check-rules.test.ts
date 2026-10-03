@@ -57,7 +57,9 @@ export const H = () => document.startViewTransition(); // expect: 4
 export const I = () => <Module title="Fine: a prop" sub="× · ° Δ ≈ – … “ ” ’" />;
 export const J = (c: CanvasRenderingContext2D) => { c.fillStyle = 'white'; }; // expect: 2
 export const K = () => <circle fill="red" />; // expect: 2
-export const L = { plates: ['cyan', 'black'], label: 'Black plate' };`,
+export const L = { plates: ['cyan', 'black'], label: 'Black plate' };
+export const M = () => <i>a&nbsp;· b</i>; // expect: 1
+export const N = () => <i>a&middot; b &#215; c &#x2192;</i>; // expect: 1`,
   'src/main/menu.ts': `export const m = (menu: any) => menu.popup({}); // expect: 6
 export const bg = '#123456'; // expect: 2`,
   'src/main/window.ts': `export const THEME_HEX = {

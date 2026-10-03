@@ -23,6 +23,8 @@ export type ToastOptions = {
 
 export type ToastEntry = ToastOptions & {
   id: string;
+  /** who was in front when it showed (see `toast.owner`) */
+  owner?: string;
   /** Ctrl+Z still means this toast's Undo: no tool commit since it appeared (spec §8) */
   ctrlZLive: boolean;
   leaving: boolean;
@@ -69,13 +71,17 @@ async function undo(id: string) {
 }
 
 export const toast = {
+  /** says who is in front (the shell sets it to the active tool), so a toast bound to one tool's document can go when another takes over */
+  owner: (): string | undefined => undefined,
+  /** true while something else owns Ctrl+Z (the paint canvas, with the pointer over the paper): no toast answers it, so none shows the hint */
+  ctrlZOff: (): boolean => false,
   show(o: ToastOptions): string {
     // the same plain notice, still showing, is not shown twice (a press on a dead brush says it once)
     const same = typeof o.message === 'string' && !o.undo ? list.find((x) => !x.leaving && !x.undo && x.message === o.message && x.kind === o.kind) : undefined;
     if (same) return same.id;
     const id = crypto.randomUUID();
     const duration = o.duration ?? (o.kind === 'error' ? Infinity : o.undo ? 8000 : 5000);
-    emit([...list, { ...o, id, ctrlZLive: !!o.undo && o.ctrlZ !== false, leaving: false }]);
+    emit([...list, { ...o, id, owner: toast.owner(), ctrlZLive: !!o.undo && o.ctrlZ !== false, leaving: false }]);
     if (Number.isFinite(duration)) {
       timers.set(id, { left: duration, since: 0, holds: new Set(document.hasFocus() ? [] : ['blur']) });
       run(id);
@@ -85,12 +91,21 @@ export const toast = {
   dismiss: (id: string) => close(id, 'dismiss'),
   /** the toast Ctrl+Z should undo right now, if any (the keymap asks before the tool's history) */
   activeCtrlZ(): { id: string; run(): void } | null {
+    if (toast.ctrlZOff()) return null;
     const t = list.findLast((x) => !x.leaving && x.ctrlZLive && (x.when?.() ?? true));
     return t ? { id: t.id, run: () => void undo(t.id) } : null;
   },
-  /** something a toast's `when` reads changed: redraw the Ctrl Z hint */
+  /**
+   * `to` takes over: the notices bound to another tool's document (they say what they did without
+   * naming the tool, and their Undo is that tool's) are dismissed. Errors, and what isn't bound to
+   * a document (the Library's), stay.
+   */
+  leave(to: string) {
+    for (const t of list) if (t.when && t.kind !== 'error' && t.owner !== undefined && t.owner !== to) close(t.id, 'dismiss');
+  },
+  /** something a toast's `when`, or `ctrlZOff`, reads changed: redraw the Ctrl Z hint */
   refresh() {
-    if (list.some((x) => x.when)) emit([...list]);
+    if (list.length) emit([...list]);
   },
   /** a tool committed: Ctrl+Z belongs to the tool again; toasts keep their Undo button */
   noteCommit() {

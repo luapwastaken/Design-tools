@@ -47,12 +47,3 @@
   .imageSize { display: none; }
 }
 
-.insp {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  min-height: 0;
-  overflow: auto;
-  scrollbar-gutter: stable;
-}
-.insp > * { flex: none; }

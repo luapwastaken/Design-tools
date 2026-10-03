@@ -38,6 +38,8 @@ export type Platform = {
   log?(message: string, details: string): void;
   /** how often to look at the Library folder itself; default 2s */
   rootPollMs?: number;
+  /** something Luap should hear (a toast): the watcher gave up */
+  notice?(message: string): void;
 };
 
 const WATCH_DEBOUNCE_MS = 250;
@@ -668,8 +670,10 @@ export class LibraryService {
     const now = this.platform.now();
     const restart = now - this.lastWatchError > WATCH_RETRY_MS;
     this.lastWatchError = now;
+    this.platform.log?.(restart ? 'Library: the folder watcher failed and is restarting' : 'Library: the folder watcher failed again and stays off until the window is focused', '');
     if (restart) return void this.rescanAll();
     this.unwatch();
+    this.platform.notice?.("The Library can't watch its folder for changes right now. It looks again when you come back to this window.");
     void this.refresh();
   }
 

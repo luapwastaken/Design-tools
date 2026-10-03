@@ -1,22 +1,26 @@
-/* each output: its name and what it gives, then its button (the other tools' Export); the main
-   deliverable sits in a well of its own as on the Instrument board */
+/* an Export module: each output is its name and what it gives, then its button, then its own
+   settings; the lead one sits in a well of its own as on the Instrument board */
 .list { display: flex; flex-direction: column; }
 .item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   column-gap: 14px;
+  row-gap: 9px;
   padding: 12px 0;
 }
+.item:first-child { padding-top: 0; }
 .item:last-child { padding-bottom: 0; }
 .item + .item { box-shadow: 0 -1px 0 var(--line); }
-.main { align-items: center; margin-bottom: 4px; padding: 10px 10px 10px 12px; border-radius: var(--r-ctl); background: var(--well); }
+/* after the rules above, so a lead row that is first or last keeps its well's padding */
+.item.main { align-items: center; margin-bottom: 4px; padding: 10px 10px 10px 12px; border-radius: var(--r-ctl); background: var(--well); }
 .main + .item { box-shadow: none; }
 .text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .name { font-size: var(--fs-row); font-weight: 600; }
 .desc { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
+.more { display: flex; grid-column: 1 / -1; flex-direction: column; gap: 7px; }
 /* its progress, across the row under the button that was pressed */
-.live { grid-column: 1 / -1; margin-top: 10px; }
+.live { grid-column: 1 / -1; }
 
 .last {
   display: flex;

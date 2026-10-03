@@ -6,7 +6,7 @@ import { hexToOklch } from '../../../shared/color/index.ts';
 import { isPaper } from '../../../shared/logo/svg.ts';
 import { clipToView, namespace, parseSize } from '../../../shared/svg/index.ts';
 import { parseSvg, walk } from '../../../shared/svg/xml.ts';
-import { decodeImage } from '../../lib/load.ts';
+import { asSvg, decodeImage } from '../../lib/load.ts';
 import { measureArtwork } from '../../lib/svg-measure.ts';
 import { measureType } from '../../lib/type-metrics.ts';
 import type { Part, Role } from './doc.ts';
@@ -24,14 +24,10 @@ const PICTURE_MAX = 4096;
  * does on its own however far from the artboard stray art lies (Illustrator keeps the pasteboard).
  * An SVG that only wraps a picture (a converter's, Canva's) is taken as that picture.
  */
-export async function partFromSvg(svg: string, name: string, role: Role): Promise<Part> {
+export async function partFromSvg(svg: string, name: string, role: Role, label = name): Promise<Part> {
   const id = prefix(role);
-  let markup: string;
-  try {
-    markup = namespace(svg.trim(), id);
-  } catch {
-    throw new Error(`${name} isn't an SVG this can read.`);
-  }
+  // `label` names a dropped file, extension and all, as every tool's message does
+  const markup = await asSvg(label, () => namespace(svg.trim(), id));
   const picture = pictureOnly(markup);
   if (picture) return partFromImage(await pictureOf(markup, picture), name, role);
   const m = await measureArtwork(markup).catch((e: Error) => {

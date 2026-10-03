@@ -2,6 +2,7 @@
 // can't be read. Every GIF frame and DPI arrive with the tools that need them.
 
 // only the worker imports tiff.ts, so utif2 stays out of the page's bundle
+import { SvgError } from '../../shared/svg/xml.ts';
 import type { TiffReply } from './tiff.worker.ts';
 
 /** what createImageBitmap reads here, plus TIFF through utif2 and SVG through an <img> */
@@ -30,7 +31,9 @@ export function unsupportedImage(type: string, name = ''): string | null {
  * GIFs give their first frame; TIFFs their largest page, 16-bit rounded to 8, with any embedded
  * profile left unapplied. Rejects with a plain sentence, never hangs, on anything unreadable.
  */
-export async function decodeImage(blob: Blob, name = 'The image', { asShown = false } = {}): Promise<ImageBitmap> {
+export async function decodeImage(blob: Blob, label = 'The image', { asShown = false } = {}): Promise<ImageBitmap> {
+  // a file says its own name, with its extension, as every tool's message names it
+  const name = blob instanceof File && blob.name ? blob.name : label;
   const why = unsupportedImage(blob.type, name);
   if (why) throw new Error(why);
   // by content, so a TIFF with a vague type or the wrong extension still opens, and a PSD renamed says what it is
@@ -55,7 +58,23 @@ export async function decodeImage(blob: Blob, name = 'The image', { asShown = fa
   }
 }
 
-const damaged = (name: string) => `${name} couldn't be read as an image. The file may be damaged.`;
+/**
+ * What every tool says of a file it couldn't read, so the same failure reads the same everywhere:
+ * "bad.svg couldn't be read as an SVG. The file may be damaged." The name keeps its extension.
+ */
+export const unreadable = (name: string, what = 'an image', why = 'The file may be damaged.'): string => `${name} couldn't be read as ${what}. ${why}`;
+
+const damaged = (name: string) => unreadable(name);
+
+/** runs `read` on an SVG file's markup; a refusal of the markup reads like any other unreadable file */
+export async function asSvg<T>(name: string, read: () => T | Promise<T>): Promise<T> {
+  try {
+    return await read();
+  } catch (e) {
+    if (e instanceof SvgError) throw new Error(unreadable(name, 'an SVG', e.reason === 'damaged' ? undefined : "Its top element isn't <svg>."));
+    throw e;
+  }
+}
 
 /** 'II' then 42 little-endian, or 'MM' then 42 big-endian; 43 is a BigTIFF (64-bit offsets, which utif2 can't follow) */
 export function tiffKind(b: Uint8Array): 'tiff' | 'big' | null {

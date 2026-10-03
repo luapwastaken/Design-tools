@@ -4,6 +4,7 @@ import { artboardProblem, artboardSvg, tileSvg, type SvgInput } from '../../../s
 import type { Tile } from '../../../shared/pattern/types.ts';
 import { framed, type ViewBox } from '../../../shared/svg/index.ts';
 import { withDpi } from '../../lib/png.ts';
+import { fmtPx } from '../common/names.ts';
 
 /** what one canvas can hold here, and what a PNG export may ask for */
 export const MAX_SIDE = 16384;
@@ -27,7 +28,7 @@ export async function drawSvg(svg: string, w: number, h: number, box?: ViewBox):
 /** why a PNG this size can't be made, or null */
 export function tooBig(w: number, h: number): string | null {
   if (w <= MAX_SIDE && h <= MAX_SIDE && w * h <= MAX_PIXELS) return null;
-  return `That PNG would be ${w} × ${h} px. PNGs stop at ${MAX_SIDE} px a side and ${Math.round(MAX_PIXELS / 1e6)} megapixels: lower the DPI or the size.`;
+  return `That PNG would be ${fmtPx(w, h)}. PNGs stop at ${MAX_SIDE} px a side and ${Math.round(MAX_PIXELS / 1e6)} megapixels: lower the DPI or the size.`;
 }
 
 const whole = (v: number) => Math.max(1, Math.round(v));
@@ -53,7 +54,7 @@ export async function boardPng(d: SvgInput, tile: Tile, board: { w: number; h: n
     return withDpi(await (await drawSvg(artboardSvg(d, tile, board.w, board.h, 'px'), w, h)).convertToBlob({ type: 'image/png' }), dpi);
   }
   const [tw, th] = [whole(tile.width * k), whole(tile.height * k)];
-  if (tooBig(tw, th)) throw new Error(`One tile would be ${tw} × ${th} px at this DPI, too big to draw. Lower the DPI.`);
+  if (tooBig(tw, th)) throw new Error(`One tile would be ${fmtPx(tw, th)} at this DPI, too big to draw. Lower the DPI.`);
   const c = new OffscreenCanvas(w, h);
   const ctx = c.getContext('2d')!;
   const p = ctx.createPattern(await drawSvg(tileSvg(d, tile, 'px'), tw, th), 'repeat')!;

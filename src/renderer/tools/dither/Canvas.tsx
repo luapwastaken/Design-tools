@@ -13,29 +13,28 @@ import { sourceFrame, sourceId } from './source.ts';
 import { patchView, under, type DitherView } from './view-state.ts';
 import s from './Canvas.module.css';
 
-/** the frame at full resolution for Original; a copy, since the reader may close its own */
+/**
+ * The frame at full resolution for Original; a copy, since the reader may close its own. A copy is
+ * closed only once the next one has replaced it (or the view is done), never while it is still
+ * the one being drawn.
+ */
 function useOriginal(d: DitherDoc, frame: number, on: boolean): ImageBitmap | null {
   const [img, setImg] = useState<ImageBitmap | null>(null);
   const src = d.source;
   useEffect(() => {
     if (!on || !src) return setImg(null);
     let live = true;
-    let mine: ImageBitmap | null = null;
     sourceFrame(src, frame)
       .then((b) => createImageBitmap(b))
       .then(
-        (b) => {
-          if (!live) return b.close();
-          mine = b;
-          setImg(b);
-        },
+        (b) => (live ? setImg(b) : b.close()),
         () => {},
       );
     return () => {
       live = false;
-      mine?.close();
     };
   }, [src?.assets, frame, on]);
+  useEffect(() => () => img?.close(), [img]);
   return img;
 }
 
@@ -64,7 +63,7 @@ export function DitherCanvas({ d, v, frame, result, busy }: Props) {
 
   const render = (ctx: CanvasRenderingContext2D, t: ViewTransform) => {
     if (original) {
-      if (!img) return;
+      if (!img || !img.width) return; // a closed bitmap reads as 0 wide and throws when drawn
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       return ctx.drawImage(img, 0, 0, W, H);

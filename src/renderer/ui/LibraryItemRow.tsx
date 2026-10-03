@@ -16,7 +16,7 @@ export type LibraryItemRowProps = {
   /** 44×30 thumbnail content (SwatchStrip, an <img>); the row frames it */
   thumb: ReactNode;
   selected?: boolean;
-  /** the active tool's use label when it accepts this item: INKS, AS SHAPE (one that only repeats the kind lights the kind instead) */
+  /** the active tool's use label when it accepts this item: INKS, SHAPE (one that only repeats the kind lights the kind instead) */
   accepted?: string;
   /**
    * tool label when the item is open in a tool (spec §6.4): OPEN IN <TOOL>, or just OPEN when that
@@ -52,12 +52,13 @@ export function LibraryItemRow(p: LibraryItemRowProps) {
   const [dragging, setDragging] = useState(false);
   // a use label that only repeats the kind (PALETTE · PALETTE) isn't shown: the lit kind says it
   const use = accepted?.toUpperCase() === KIND[item.kind].toUpperCase() ? undefined : accepted;
-  // Too narrow for the whole meta line: the size goes first, then the use label (the lit kind still
-  // says the tool takes it), then OPEN IN <TOOL> shortens to OPEN. Only then is the kind cut.
+  // Too narrow for the whole meta line: the size goes first, then OPEN IN <TOOL> shortens to OPEN
+  // (its tooltip has the tool), then the use label (the lit kind still says the tool takes it), so
+  // the row you are working on keeps the label the others have. Only then is the kind cut.
   const box = useRef<HTMLSpanElement>(null);
   const line = useRef<HTMLSpanElement>(null);
   const level = useFit(box, line, 5, `${meta}|${use}|${openIn}|${openHere}`);
-  const longTag = !!openIn && !openHere && level < 3;
+  const longTag = !!openIn && !openHere && level < 2;
   const row = (
     <div
       id={p.id}
@@ -114,7 +115,7 @@ export function LibraryItemRow(p: LibraryItemRowProps) {
               {KIND[item.kind]}
               {meta && level < 1 && ` ${meta}`}
             </span>
-            {use && level < 2 && <span className={s.keep}>&nbsp;· {use}</span>}
+            {use && level < 3 && <span className={cx(s.keep, s.use)}>· {use}</span>}
             {openIn && (
               <Tooltip content={`Open in ${openIn}`} disabled={longTag}>
                 <span className={cx(s.keep, s.open)}>{longTag ? `Open in ${openIn}` : 'Open'}</span>

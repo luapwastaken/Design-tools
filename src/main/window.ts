@@ -1,6 +1,7 @@
 // The one app window (spec §4): caption overlay colours, input and navigation guards, crash reload,
 // and the close handshake with the renderer.
 import { app, BrowserWindow, dialog, screen } from 'electron';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ApiEvents } from '../shared/api.ts';
 import type { Theme } from '../shared/types.ts';
@@ -13,6 +14,8 @@ export const THEME_HEX = {
 } as const;
 
 const CLOSE_WAIT_MS = 3000;
+/** the window's own icon (taskbar, alt-tab) when run from the project; an installed build carries its icon in the exe */
+const ICON = join(app.getAppPath(), 'build', 'icon.ico');
 
 type CloseReply = { busy: boolean; pendingTrash: string[] };
 
@@ -82,6 +85,7 @@ export function createWindow(o: {
     minWidth: 1280,
     minHeight: 800,
     backgroundColor: hex.page,
+    ...(existsSync(ICON) ? { icon: ICON } : {}),
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: hex.ground, symbolColor: hex.ink2, height: 40 },
     show: false,

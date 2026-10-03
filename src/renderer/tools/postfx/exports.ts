@@ -4,6 +4,7 @@
 // written from the straight RGBA (lib/png), so colour under faint alpha stays exact.
 import { gpuScope, type Texture } from '../../lib/gpu/index.ts';
 import { rgbaPng } from '../../lib/png.ts';
+import { fmtPx } from '../common/names.ts';
 import { isStateful, runIn, timeline, type PostFxDoc, type Source, type Timeline } from './doc.ts';
 import { Stack } from './effects/stack.ts';
 import { exportAnimation, openMedia } from './media.ts';
@@ -14,13 +15,12 @@ type Progress = (done: number, detail?: string) => void;
 const MAX_PX = 64e6;
 
 let limits: ReturnType<typeof gpuScope> | null = null;
-const px = (w: number, h: number) => `${w.toLocaleString('en')} × ${h.toLocaleString('en')} px`;
 
 /** why this source can't be exported at full resolution, or null */
 export function sizeLimit(s: Pick<Source, 'w' | 'h'>): string | null {
   const max = (limits ??= gpuScope('postfx limits')).maxSize;
-  if (max && Math.max(s.w, s.h) > max) return `${px(s.w, s.h)} is wider than this graphics card can process at once (${max.toLocaleString('en')} px a side). Resize it in another app first.`;
-  if (s.w * s.h > MAX_PX) return `${px(s.w, s.h)} is more than a PNG here can hold (64 megapixels). Resize it in another app first.`;
+  if (max && Math.max(s.w, s.h) > max) return `${fmtPx(s.w, s.h)} is wider than this graphics card can process at once (${max.toLocaleString('en')} px a side). Resize it in another app first.`;
+  if (s.w * s.h > MAX_PX) return `${fmtPx(s.w, s.h)} is more than a PNG here can hold (64 megapixels). Resize it in another app first.`;
   return null;
 }
 

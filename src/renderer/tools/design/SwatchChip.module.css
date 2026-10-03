@@ -46,10 +46,11 @@
   white-space: nowrap;
 }
 /* a long free role stays on one line, clear of the More button, so every chip's rows line up */
-.role { overflow: hidden; margin-right: 22px; text-overflow: ellipsis; white-space: nowrap; }
+.role { overflow: hidden; margin-right: 22px; color: var(--ink-2); text-overflow: ellipsis; white-space: nowrap; }
 /* a blank name shows the nearest colour name, one step quieter */
 .auto { color: var(--ink-2); }
-.unlit { color: var(--ink-4); }
+/* an unset role is information, not a disabled control: a step quieter than a set one, but readable (ink-4 is for disabled) */
+.unlit { color: var(--ink-3); }
 /* "#6B6F76 · L 54.1 · .012 · 262", wrapping between its parts on a narrow chip */
 .data {
   display: flex;

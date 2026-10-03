@@ -3,15 +3,15 @@
 import { useState, type KeyboardEvent } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import { fitChroma, wrapHue } from '../../../shared/palette/space.ts';
-import { ColorField, ConfirmInline, IconButton, Module, Segmented, Toggle, Tooltip, useDocColour } from '../../ui/index.ts';
+import { ColorField, ConfirmInline, IconButton, menu, Module, Segmented, Toggle, Tooltip, useDocColour } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { displayName, plural } from '../common/names.ts';
+import { paletteMenu, useReadAhead } from '../common/palettes.ts';
 import { removeColour, type Doc } from './actions.ts';
-import { emptyDoc, type PatternDoc } from './doc.ts';
+import { emptyDoc, MAX_COLOURS, type PatternDoc } from './doc.ts';
 import s from './Colour.module.css';
 import i from './Inspector.module.css';
 
-const MAX_COLOURS = 12;
 const MODES = [
   { value: 'by-slot' as const, label: 'By shape' },
   { value: 'random' as const, label: 'Random' },
@@ -42,6 +42,7 @@ export function ColourModule({ doc, d }: { doc: Doc; d: PatternDoc }) {
     set: (x, o) => ({ ...x, palette: x.palette.map((c, j) => (j === at ? o : c)) }),
   });
   const users = d.slots.filter((x) => x.recolour && !x.colour).length;
+  useReadAhead();
 
   const add = () => {
     const [l, c, h] = d.palette[at] ?? [0.5, 0.12, 250];
@@ -66,7 +67,11 @@ export function ColourModule({ doc, d }: { doc: Doc; d: PatternDoc }) {
   };
 
   return (
-    <Module title="Colour" sub={plural(d.palette.length, 'shape colour')}>
+    <Module
+      title="Colour"
+      sub={plural(d.palette.length, 'shape colour')}
+      actions={<IconButton icon="palette" label="Shape colours from a Library palette" size="sm" onClick={(e) => menu.open(e.currentTarget.getBoundingClientRect(), paletteMenu('pattern'), { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined })} />}
+    >
       <div className={i.stack}>
         <div className={i.row}>
           <Toggle
@@ -87,13 +92,16 @@ export function ColourModule({ doc, d }: { doc: Doc; d: PatternDoc }) {
             <span className={i.dim}>{users ? `${plural(users, 'shape')} take${users === 1 ? 's' : ''} them` : 'No shape takes them yet'}</span>
           </div>
           <div className={s.strip} role="radiogroup" aria-label="Shape colours" onKeyDown={onKey}>
-            {d.palette.map((c, j) => (
-              <Tooltip key={j} content={`Colour ${j + 1}: ${displayName({ name: '', oklch: c })}`}>
-                <button type="button" role="radio" aria-checked={j === at} tabIndex={j === at ? 0 : -1} className={cx(s.chip, j === at && s.on)} onClick={() => setPicked(j)}>
-                  <i style={{ background: cssColor(c) }} />
-                </button>
-              </Tooltip>
-            ))}
+            {d.palette.map((c, j) => {
+              const says = `Colour ${j + 1}: ${displayName({ name: '', oklch: c })}`;
+              return (
+                <Tooltip key={j} content={says}>
+                  <button type="button" role="radio" aria-label={says} aria-checked={j === at} tabIndex={j === at ? 0 : -1} className={cx(s.chip, j === at && s.on)} onClick={() => setPicked(j)}>
+                    <i style={{ background: cssColor(c) }} />
+                  </button>
+                </Tooltip>
+              );
+            })}
             <IconButton icon="add" label={d.palette.length >= MAX_COLOURS ? `${MAX_COLOURS} colours is the most` : 'Add a colour next to the picked one'} size="sm" disabled={d.palette.length >= MAX_COLOURS} onClick={add} className={s.add} />
           </div>
           {arming && d.palette.length > 1 ? (

@@ -22,8 +22,8 @@
 }
 .grid[hidden] { display: none; }
 
-/* over the colour of the first row's last chip, on the on-content plate */
-.corner { position: absolute; top: 18px; right: 18px; z-index: 3; display: flex; align-items: center; gap: 4px; }
+/* above the chips, never over one: the view button (on the on-content plate, so it reads on any surround) and the selection count */
+.tools { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 .readout {
   display: flex;
   align-items: center;

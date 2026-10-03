@@ -105,7 +105,7 @@ export type ApiEvents = {
   'library.changed': LibraryIndex;
   /** main wants to close the window: flush, then call 'app.closeReply' */
   'app.closeRequest': null;
-  /** main-side problem worth a toast (e.g. the watcher died and was restarted) */
+  /** main-side problem worth a toast (e.g. the Library's watcher failed twice running and stopped) */
   'app.notice': { level: 'info' | 'warn' | 'error'; message: string };
 };
 

@@ -12,8 +12,7 @@
     "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": false,
     "noFallthroughCasesInSwitch": true,
-    "types": ["node", "vite/client"],
-    "paths": { "@shared/*": ["./src/shared/*"] }
+    "types": ["node", "vite/client"]
   },
   "include": ["electron.vite.config.ts", "src/**/*", "test/**/*", "scripts/**/*.ts"]
 }

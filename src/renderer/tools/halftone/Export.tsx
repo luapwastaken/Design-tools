@@ -1,14 +1,14 @@
 // Export (spec §3): the SVG for Illustrator, the screen PNG at any width and the separations as TIFF
 // plates, all from the one cell list the view draws, through the shared export path.
-import { useState, type ReactNode } from 'react';
 import { svgProblem } from '../../../shared/halftone/svg.ts';
-import { keepAwake, saveFile, saveToFolder } from '../../lib/export.ts';
+import { intoFolder, leaf, saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
-import { Button, IconButton, Module, NumberField, Progress, Segmented, toast } from '../../ui/index.ts';
+import { Module, NumberField, Segmented } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { plural } from '../common/names.ts';
+import { ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
+import { fmtPx, plural } from '../common/names.ts';
 import { MM_PER, printPx, type HalftoneDoc } from './doc.ts';
-import { pngFor, pngLimit, platesFor, platesLimit, svgFor, svgWeight } from './exports.ts';
+import { pngFor, pngLimit, pngMaxWidth, platesFor, platesLimit, svgFor, svgWeight } from './exports.ts';
 import { shownDots, svgOver, type Screened } from './screening.ts';
 import { patchView, type HalftoneView } from './view-state.ts';
 import s from './Export.module.css';
@@ -18,26 +18,12 @@ const BITS = [
   { value: '1' as const, label: '1-bit', tip: '1-bit plates: ink or no ink, for a Riso master or film' },
 ];
 
-function Row({ name, desc, children, action, main }: { name: string; desc: ReactNode; children?: ReactNode; action: ReactNode; main?: boolean }) {
-  return (
-    <div className={cx(s.item, main && s.main)}>
-      <div className={s.text}>
-        <b className={s.name}>{name}</b>
-        <p className={s.desc}>{desc}</p>
-      </div>
-      {action}
-      {children && <div className={s.more}>{children}</div>}
-    </div>
-  );
-}
-
 const fmt = (mm: number, unit: HalftoneDoc['size']['unit']) => (mm / MM_PER[unit]).toFixed(unit === 'mm' ? 1 : 2);
-const clock = (at: number) => new Date(at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
 /** `error`: why the document as it is can't be screened; every export waits for a screen that can */
 export function ExportModule({ d, v, screened, error }: { d: HalftoneDoc; v: HalftoneView; screened: Screened | null; error: string | null }) {
   const name = useShell((st) => st.docNames.halftone) ?? d.source?.name ?? 'Halftone';
-  const [busy, setBusy] = useState<{ what: string; done: number | null; detail?: string } | null>(null);
+  const ex = useExport((last) => patchView({ last }));
   const fm = d.screen.shape === 'stochastic';
   const visible = d.inks.filter((i) => i.visible);
   const px = printPx(d);
@@ -48,39 +34,27 @@ export function ExportModule({ d, v, screened, error }: { d: HalftoneDoc; v: Hal
   const noInk = !d.source ? 'Open an image first.' : visible.length ? null : 'Every ink is hidden, so there is nothing to export. Show one first.';
   const blocked = noInk ?? error;
 
-  const run = async (what: string, make: (progress: (done: number, detail?: string) => void) => Promise<{ path: string; label: string } | null>) => {
-    setBusy({ what, done: null });
-    try {
-      // a window hidden or minimised meanwhile keeps its speed
-      const out = await keepAwake(() => make((done, detail) => setBusy({ what, done, detail })));
-      if (!out) return;
-      patchView({ last: { name: out.label, path: out.path, at: Date.now() } });
-      toast.show({ icon: 'download', message: `Exported ${out.label}.` });
-    } catch (e) {
-      toast.show({ kind: 'error', message: `Couldn't make the ${what}: ${e instanceof Error ? e.message : String(e)}` });
-    } finally {
-      setBusy(null);
-    }
-  };
-  const file = (what: string, ext: string, filterName: string, suggestedName: string, data: (p: (done: number, detail?: string) => void) => Promise<ArrayBuffer | string>) =>
-    run(what, async (p) => {
-      const path = await saveFile({ tool: 'halftone', suggestedName, ext, filterName, data: await data(p) });
-      return path ? { path, label: path.split(/[\\/]/).pop()! } : null;
-    });
+  const file = (what: string, ext: string, filterName: string, suggestedName: string, data: (report: (done: number, detail?: string) => void) => Promise<ArrayBuffer | string>) =>
+    ex.file(what, async (report) => saveFile({ tool: 'halftone', suggestedName, ext, filterName, data: await data(report) }));
 
   const svg = () => file('SVG', 'svg', 'SVG for Illustrator', `${name} halftone`, () => svgFor(d));
-  const png = () => file('PNG', 'png', 'PNG image', `${name} halftone`, (p) => pngFor(d, v.pngWidth, p));
+  const png = () => file('PNG', 'png', 'PNG image', `${name} halftone`, (report) => pngFor(d, v.pngWidth, report));
+  // the folder is asked for first and each plate is written as it is made, so no job holds them all
   const plates = () =>
-    run('separations', async (p) => {
-      const files = await platesFor(d, v.bits, name, p);
-      const r = await saveToFolder({ tool: 'halftone', files });
-      return r && { path: r.folder, label: `${plural(r.written.length, 'plate')} into ${r.folder.split(/[\\/]/).pop()}` };
+    ex.run('separations', async (report) => {
+      let n = 0;
+      const folder = await intoFolder('halftone', async (write) => {
+        await platesFor(d, v.bits, name, report, async (f) => {
+          await write(f.name, f.data);
+          n++;
+        });
+        return true;
+      });
+      return folder ? { path: folder, label: `${plural(n, 'plate')} into ${leaf(folder)}` } : null;
     });
 
-  const off = busy !== null || !ready;
   // why the SVG can't be made from this document: said in its row, where it is read, as well as on the button
   const svgWhy = svgProblem(d) ?? (screened && !fm ? svgOver(shownDots(screened, d), !screened.held) : null);
-  const svgOff = svgWhy ?? blocked;
   const weight = screened && !fm ? svgWeight(screened, d) : null;
   // a 1-bit cell of n × n print pixels holds n² + 1 tones; under 8 × 8 it reads as coarse
   const cellPx = d.size.dpi / d.screen.lpi;
@@ -89,59 +63,38 @@ export function ExportModule({ d, v, screened, error }: { d: HalftoneDoc; v: Hal
 
   return (
     <Module title="Export" readout={`${fmt(d.size.w, unit)} × ${fmt(d.size.h, unit)} ${unit}`}>
-      <div className={s.list}>
-        <Row
+      <ExportList>
+        <ExportRow
           main
           name="SVG for Illustrator"
           desc={svgWhy ? <span className={s.danger}>{svgWhy}</span> : `Vector dots, one group per ink, each ink one compound path, sized in ${unit === 'mm' ? 'mm' : 'inches'}. It matches the view dot for dot.`}
-          action={
-            <Button variant="primary" size="lg" icon="download" disabled={off || !!svgOff} tooltip={svgOff ?? undefined} onClick={() => void svg()}>
-              {busy?.what === 'SVG' ? 'Exporting…' : 'Export'}
-            </Button>
-          }
+          action={<ExportButton ex={ex} what="SVG" lead disabled={!ready} why={svgWhy ?? blocked} onClick={() => void svg()} />}
         >
           {weight && <span className="lbl">{weight}</span>}
-        </Row>
+        </ExportRow>
 
-        <Row
+        <ExportRow
           name="PNG for screen"
           desc={`sRGB at any width, ${d.paper.include ? 'flat on the paper' : 'clear round the dots'}${d.feel.bake && (d.feel.misregister > 0 || d.feel.texture > 0) ? ', with the print feel' : ''}.`}
-          action={
-            <Button icon="download" disabled={off || !!pngProblem || !!blocked} tooltip={pngProblem ?? blocked ?? undefined} onClick={() => void png()}>
-              {busy?.what === 'PNG' ? 'Exporting…' : 'Export'}
-            </Button>
-          }
+          action={<ExportButton ex={ex} what="PNG" disabled={!ready} why={pngProblem ?? blocked} onClick={() => void png()} />}
+          {...ex.live('PNG')}
         >
           <div className={s.pair}>
-            <NumberField label="W" min={16} max={16384} unit="px" value={v.pngWidth} onChange={(pngWidth) => patchView({ pngWidth })} />
-            <span className={cx(s.size, pngProblem && s.danger)}>
-              {v.pngWidth.toLocaleString('en')} × {pngH.toLocaleString('en')} px
-            </span>
+            <NumberField label="W" min={16} max={pngMaxWidth(d.size)} unit="px" value={v.pngWidth} onChange={(pngWidth) => patchView({ pngWidth })} />
+            <span className={cx(s.size, pngProblem && s.danger)}>{fmtPx(v.pngWidth, pngH)}</span>
           </div>
-        </Row>
+        </ExportRow>
 
-        <Row
+        <ExportRow
           name="Separations"
-          desc={`${plural(visible.length, 'plate')} at ${d.size.dpi} ppi (${px.w.toLocaleString('en')} × ${px.h.toLocaleString('en')} px), ${v.bits === 1 ? '1-bit' : 'greyscale'} TIFF, into one folder. Black is ink.${visible.length < d.inks.length ? ' Hidden inks stay out.' : ''}${coarse ? ` A 1-bit cell holds ${coarse} tones at this dpi.` : ''}`}
-          action={
-            <Button icon="folder_open" disabled={off || !!plateProblem || !!blocked} tooltip={plateProblem ?? blocked ?? undefined} onClick={() => void plates()}>
-              {busy?.what === 'separations' ? 'Exporting…' : 'Export…'}
-            </Button>
-          }
+          desc={`${plural(visible.length, 'plate')} at ${d.size.dpi} ppi (${fmtPx(px.w, px.h)}), ${v.bits === 1 ? '1-bit' : 'greyscale'} TIFF, into one folder. Black is ink.${visible.length < d.inks.length ? ' Hidden inks stay out.' : ''}${coarse ? ` A 1-bit cell holds ${coarse} tones at this dpi.` : ''}`}
+          action={<ExportButton ex={ex} what="separations" folder disabled={!ready} why={plateProblem ?? blocked} onClick={() => void plates()} />}
+          {...ex.live('separations')}
         >
           <Segmented options={BITS} value={v.bits === 1 ? '1' : '8'} onChange={(b) => patchView({ bits: b === '1' ? 1 : 8 })} />
-        </Row>
-
-        {busy && busy.done !== null && <Progress label={`Making the ${busy.what}`} value={busy.done} detail={busy.detail} />}
-      </div>
-      {v.last && (
-        <div className={s.last}>
-          <span className="lbl">Last export</span>
-          <span className={s.lastName}>{v.last.name}</span>
-          <span className={s.lastAt}>{clock(v.last.at)}</span>
-          <IconButton icon="folder_open" label="Show in Explorer" size="xs" onClick={() => void window.api.invoke('shell.reveal', v.last!.path).catch(() => toast.show({ kind: 'error', message: `${v.last!.name} isn't there any more.` }))} />
-        </div>
-      )}
+        </ExportRow>
+      </ExportList>
+      <LastExport last={v.last} />
     </Module>
   );
 }

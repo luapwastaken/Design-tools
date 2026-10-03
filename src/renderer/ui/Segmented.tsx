@@ -6,7 +6,7 @@ import { Tooltip } from './Tooltip.tsx';
 import s from './Segmented.module.css';
 
 export type SegmentedProps<T extends string> = {
-  /** `tip`: the full name, for a label shortened to fit (it becomes the tooltip and the accessible name) */
+  /** `tip`: the tooltip, and the accessible name of an icon alone; with a label, the label stays the name (voice control says it) and `tip` is its description */
   options: { value: T; label: string; icon?: IconName; tip?: string }[];
   value: T;
   onChange(v: T): void;
@@ -50,7 +50,8 @@ export function Segmented<T extends string>({ options, value, onChange, label, m
             type="button"
             role="radio"
             aria-checked={i === at}
-            aria-label={o.tip}
+            aria-label={o.label ? undefined : o.tip}
+            aria-description={o.label ? o.tip : undefined}
             tabIndex={i === at || (at < 0 && i === 0) ? 0 : -1}
             disabled={disabled}
             className={i === at ? s.on : undefined}

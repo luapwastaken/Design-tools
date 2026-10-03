@@ -1,6 +1,7 @@
 // Exporting (spec §10.4). Main picks the place (the save dialog, remembering the folder per tool
-// and type) and replaces reversibly. Here each export counts as running work for the quit check,
-// and a failure becomes an error toast with main's plain message (main logs the details).
+// and type) and replaces reversibly. Here each export counts as running work for the quit check
+// (`exporting` covers a tool's whole export, its rendering as well as the write), and a failure
+// becomes an error toast with main's plain message (main logs the details).
 import type { Api } from '../../shared/api.ts';
 import type { ToolId } from '../../shared/types.ts';
 import { shell } from '../shell/core/index.ts';
@@ -33,6 +34,9 @@ export const intoFolder = (tool: ToolId, fill: (write: (name: string, data: Arra
     }
   });
 
+/** the last part of a path: the file's name, or with `up` the folder above it */
+export const leaf = (path: string, up = 0): string => path.split(/[\\/]/).at(-1 - up) ?? '';
+
 let awake = 0;
 
 /**
@@ -49,6 +53,13 @@ export async function keepAwake<T>(fn: () => Promise<T>): Promise<T> {
     if (!--awake) await set(false);
   }
 }
+
+/**
+ * One export from its first render to its last write: running work for the quit check and the status
+ * bar, at full speed even if the window is hidden or minimised. Nesting is safe (the saves inside
+ * count too, and `keepAwake` counts overlaps).
+ */
+export const exporting = <T,>(fn: () => Promise<T>): Promise<T> => shell.runBusy(() => keepAwake(fn));
 
 async function run<T>(fn: () => Promise<T | null>): Promise<T | null> {
   try {

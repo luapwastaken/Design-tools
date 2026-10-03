@@ -41,6 +41,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* the name as a button: nothing to see until the pointer is over it */
+.titleBtn { display: block; max-width: 100%; overflow: hidden; border-radius: var(--r-ctl); color: inherit; font: inherit; font-stretch: inherit; letter-spacing: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: text; }
+.titleBtn:hover { background: var(--well-hover); }
+.rename { flex: 0 1 280px; min-width: 140px; }
 .grow { flex: 1; }
 .sep { flex: none; width: 1px; height: 16px; margin: 0 2px; background: var(--line); }
 
@@ -60,6 +64,8 @@
 .iconsOnly .tab { gap: 4px; padding: 0 8px; }
 .labelsOnly .tab { padding: 0 8px; }
 .tight { gap: 6px; padding-left: 10px; }
+/* a colour tool's bar: the name is what tells two palettes apart, so it keeps room before anything else gives */
+.jobs .title { min-width: 100px; }
 .tab:disabled { color: var(--ink-4); cursor: default; }
 /* a label the bar has no room for: still the button's name, just not drawn */
 .hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

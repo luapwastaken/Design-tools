@@ -13,6 +13,8 @@ export type Bounds = ShapeSlot['bounds'];
 export { PX_PER };
 
 export const MAX_SLOTS = 6;
+/** shape colours in the palette: the Colour module's add stops here, and so does a palette sent in */
+export const MAX_COLOURS = 12;
 export const LIMIT = {
   count: [1, 20],
   size: [4, 600],
@@ -173,15 +175,19 @@ export function paletteColour(d: PatternDoc, id: string): Oklch | null {
  * A palette as the shape colours (Send to: SHAPE COLOURS). A swatch whose job is a ground becomes the
  * background; the rest colour the shapes, every recolouring shape following the palette again. A
  * shape that keeps its own colours keeps them (spec §5 q2): flattening a many-coloured logo is its
- * own switch's job, never a side effect.
+ * own switch's job, never a side effect. Up to MAX_COLOURS; `left` is how many stayed out.
  */
-export function withPalette(d: PatternDoc, swatches: Swatch[]): PatternDoc {
+export function withPalette(d: PatternDoc, swatches: Swatch[]): { doc: PatternDoc; left: number } {
   const ground = swatches.find((w) => w.role === 'Background') ?? swatches.find((w) => isGround(w.role));
   const inks: Oklch[] = swatches.filter((w) => w !== ground).map((w) => w.oklch);
+  const all = inks.length ? inks : swatches.map((w) => w.oklch);
   return {
-    ...d,
-    palette: inks.length ? inks : swatches.map((w) => w.oklch),
-    background: ground ? ground.oklch : d.background,
-    slots: d.slots.map((s) => (s.recolour ? { ...s, colour: null } : s)),
+    doc: {
+      ...d,
+      palette: all.slice(0, MAX_COLOURS),
+      background: ground ? ground.oklch : d.background,
+      slots: d.slots.map((s) => (s.recolour ? { ...s, colour: null } : s)),
+    },
+    left: Math.max(0, all.length - MAX_COLOURS),
   };
 }

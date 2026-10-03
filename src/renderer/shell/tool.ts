@@ -5,7 +5,7 @@ import type { DocKind, DocPayload, ItemKind, LoadedItem, ToolId } from '../../sh
 
 export type IconName = MaterialSymbol;
 
-/** How a tool uses a received item. `label` shows in the Send to submenu (mono caps): 'PALETTE', 'INKS', 'AS SHAPE'. */
+/** How a tool uses a received item. `label` shows in the Send to submenu (mono caps): 'PALETTE', 'INKS', 'SHAPE'. A noun phrase for what the tool makes of it, the same word for the same job in every tool. */
 export type Use = { mode: 'open' | 'apply'; label: string };
 
 export type Shortcut = {
@@ -52,7 +52,11 @@ export interface ToolDefinition<Doc = unknown> {
    */
   receive(item: LoadedItem, use: Use, current: Doc): Promise<Doc>;
   /** image tools: the full-resolution result from the base settings (spec §7.4) */
-  render?(doc: Doc, opts: { maxEdge?: number }): Promise<{ blob: Blob; name: string; ext: string }>;
+  render?(doc: Doc): Promise<{ blob: Blob; name: string; ext: string }>;
+  /** render() always gives a flat picture, no transparent pixels (Dither flattens on white), so a tool that needs transparency isn't offered it */
+  opaque?: boolean;
+  /** an image this tool takes has to have a transparent background (Logo's parts), so an opaque tool's render is not for it */
+  needsAlpha?: boolean;
 
   /**
    * drop and paste of OS files: true when it took them all, false to let the shell offer them to

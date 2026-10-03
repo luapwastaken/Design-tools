@@ -1,8 +1,8 @@
 // Colour > Design: build, check and export brand and UI palettes.
 // Spec: docs/superpowers/specs/2026-09-28-colour-design-tool.md; plan unit V.
-import { unsupportedImage } from '../../lib/load.ts';
+import { asSvg, unsupportedImage } from '../../lib/load.ts';
 import type { ToolDefinition } from '../../shell/tool.ts';
-import { fetchBlob } from '../common/take.ts';
+import { baseName, fetchBlob, isSvg } from '../common/take.ts';
 import { armDelete, duplicate, eyedrop, newPalette, step } from './actions.ts';
 import { emptyDoc, fromPayload, toPayload, type DesignDoc } from './doc.ts';
 import { clearProposals } from './proposals.ts';
@@ -29,8 +29,8 @@ export const tool: ToolDefinition<DesignDoc> = {
 
   accepts: {
     palette: { mode: 'open', label: 'PALETTE' },
-    image: { mode: 'apply', label: 'EXTRACT' },
-    logo: { mode: 'apply', label: 'BRAND COLOURS' },
+    image: { mode: 'apply', label: 'COLOURS' },
+    logo: { mode: 'apply', label: 'COLOURS' },
     svg: { mode: 'apply', label: 'COLOURS' },
   },
   // images, logos and SVGs give proposals (ghost chips), never document changes: the document
@@ -55,10 +55,10 @@ export const tool: ToolDefinition<DesignDoc> = {
   },
 
   async onFiles(files) {
-    const file = files.find((f) => (f.type.startsWith('image/') || /\.svg$/i.test(f.name)) && !unsupportedImage(f.type, f.name));
+    const file = files.find((f) => (f.type.startsWith('image/') || isSvg(f)) && !unsupportedImage(f.type, f.name));
     if (!file) return false;
-    const name = file.name.replace(/\.[^.]*$/, '') || 'Pasted image';
-    if (file.type === 'image/svg+xml' || /\.svg$/i.test(file.name)) takeSvg([await file.text()], name);
+    const name = baseName(file.name);
+    if (isSvg(file)) await asSvg(file.name, async () => takeSvg([await file.text()], name));
     else await takeImage(file, name);
     // one source of proposals at a time; the rest (a second image, an .ase) go to the Library
     return files.filter((f) => f !== file);

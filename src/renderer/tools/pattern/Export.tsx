@@ -1,12 +1,13 @@
 // Export (spec §3): the Illustrator swatch, a vector artboard and a PNG, every size in a real unit,
 // all through the shared export path (lib/export saveFile).
-import { useState, type ReactNode } from 'react';
 import { artboardProblem, artboardSvg, tileSvg } from '../../../shared/pattern/svg.ts';
 import type { Tile } from '../../../shared/pattern/types.ts';
 import { saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
-import { Button, Module, NumberField, Segmented, toast, useDocNumber } from '../../ui/index.ts';
+import { Module, NumberField, Segmented, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
+import { ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
+import { fmtPx } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { LIMIT, PX_PER, sideRange, UNIT_STEP, withUnit, type PatternDoc, type Unit } from './doc.ts';
 import { boardPng, tilePng, tooBig } from './raster.ts';
@@ -30,22 +31,9 @@ const inUnit = (px: number, unit: Unit) => {
   return unit === 'px' ? `${Math.round(v)}` : v.toFixed(unit === 'mm' ? 1 : 2);
 };
 
-function Row({ name, desc, children, action }: { name: string; desc: string; children?: ReactNode; action: ReactNode }) {
-  return (
-    <div className={s.item}>
-      <div className={s.text}>
-        <b className={s.name}>{name}</b>
-        <p className={s.desc}>{desc}</p>
-      </div>
-      {action}
-      {children && <div className={s.more}>{children}</div>}
-    </div>
-  );
-}
-
 export function ExportModule({ doc, d, tile, v }: { doc: Doc; d: PatternDoc; tile: Tile; v: PatternView }) {
   const name = useShell((st) => st.docNames.pattern) ?? 'Pattern';
-  const [busy, setBusy] = useState<string | null>(null);
+  const ex = useExport((last) => patchView({ last }));
   const unit = d.exportUnit;
   const [lo, hi] = sideRange(unit);
   // the artboard is px in the document; its fields are in the export unit
@@ -60,19 +48,11 @@ export function ExportModule({ doc, d, tile, v }: { doc: Doc; d: PatternDoc; til
   const pngPx = v.png === 'tile' ? { w: Math.max(1, Math.round(tile.width * k)), h: Math.max(1, Math.round(tile.height * k)) } : { w: Math.max(1, Math.round(board.w * k)), h: Math.max(1, Math.round(board.h * k)) };
   const pngProblem = tooBig(pngPx.w, pngPx.h);
 
-  const save = async (what: string, ext: string, filterName: string, make: () => string | Promise<Blob>, suggestedName: string) => {
-    setBusy(what);
-    try {
+  const save = (what: string, ext: string, filterName: string, make: () => string | Promise<Blob>, suggestedName: string) =>
+    ex.file(what, async () => {
       const out = await make();
-      const data = typeof out === 'string' ? out : await out.arrayBuffer();
-      const path = await saveFile({ tool: 'pattern', suggestedName, ext, filterName, data });
-      if (path) toast.show({ icon: 'download', message: `Exported ${path.split(/[\\/]/).pop()}.` });
-    } catch (e) {
-      toast.show({ kind: 'error', message: `Couldn't make the ${what}: ${e instanceof Error ? e.message : String(e)}` });
-    } finally {
-      setBusy(null);
-    }
-  };
+      return saveFile({ tool: 'pattern', suggestedName, ext, filterName, data: typeof out === 'string' ? out : await out.arrayBuffer() });
+    });
   const swatch = () => save('swatch', 'svg', 'SVG for Illustrator', () => tileSvg(d, tile, unit), `${name} swatch`);
   const artboard = () => save('artboard', 'svg', 'SVG', () => artboardSvg(d, tile, board.w / PX_PER[unit], board.h / PX_PER[unit], unit), name);
   const png = () =>
@@ -80,56 +60,47 @@ export function ExportModule({ doc, d, tile, v }: { doc: Doc; d: PatternDoc; til
 
   return (
     <Module title="Export" actions={<Segmented mono fit options={UNITS} value={unit} onChange={(u) => doc.transact(`Export in ${u}`, (x) => withUnit(x, u))} className={s.units} />}>
-      <div className={s.list}>
-        <Row
+      <ExportList>
+        <ExportRow
+          main
           name="Illustrator swatch"
           desc="One tile with its offsets baked in. Drag it into the Swatches panel and it repeats exactly."
-          action={
-            <Button variant="primary" icon="download" disabled={busy !== null} onClick={() => void swatch()}>
-              {busy === 'swatch' ? 'Exporting…' : 'Export'}
-            </Button>
-          }
+          action={<ExportButton ex={ex} what="swatch" lead onClick={() => void swatch()} />}
         >
           <span className="lbl">
             Tile {inUnit(tile.width, unit)} × {inUnit(tile.height, unit)} {unit}
           </span>
           {unit === 'px' && <p className={i.note}>Illustrator counts 72 px to the inch, this tool 96: a px file keeps its pixel size there, while mm and in keep their size on paper.</p>}
-        </Row>
+        </ExportRow>
 
-        <Row
+        <ExportRow
           name="Artboard SVG"
           desc="A finished artboard of real vector shapes, clipped at its edge. The view shows it."
-          action={
-            <Button icon="download" disabled={busy !== null || boardProblem !== null} onClick={() => void artboard()} tooltip={boardProblem ?? undefined}>
-              {busy === 'artboard' ? 'Exporting…' : 'Export'}
-            </Button>
-          }
+          action={<ExportButton ex={ex} what="artboard" why={boardProblem} onClick={() => void artboard()} />}
         >
           <div className={i.pair}>
             <NumberField label="W" min={lo} max={hi} step={UNIT_STEP[unit]} unit={unit} {...aw} />
             <NumberField label="H" min={lo} max={hi} step={UNIT_STEP[unit]} unit={unit} {...ah} />
           </div>
           {boardProblem && <span className={cx('lbl', s.danger)}>Too many shapes for one file</span>}
-        </Row>
+        </ExportRow>
 
-        <Row
+        <ExportRow
           name="PNG"
           desc="Pixels at the DPI, with the DPI written into the file so it opens at its size."
-          action={
-            <Button icon="download" disabled={busy !== null || pngProblem !== null} onClick={() => void png()} tooltip={pngProblem ?? undefined}>
-              {busy === 'PNG' ? 'Exporting…' : 'Export'}
-            </Button>
-          }
+          action={<ExportButton ex={ex} what="PNG" why={pngProblem} onClick={() => void png()} />}
         >
           <div className={i.pair}>
             <Segmented options={PNGS} value={v.png} onChange={(png) => patchView({ png })} />
             <NumberField label="DPI" min={LIMIT.dpi[0]} max={LIMIT.dpi[1]} {...dpi} />
           </div>
           <span className={cx('lbl', pngProblem && s.danger)}>
-            {pngPx.w} × {pngPx.h} px{pngProblem ? ' · too big' : ''}
+            {fmtPx(pngPx.w, pngPx.h)}
+            {pngProblem ? ' · too big' : ''}
           </span>
-        </Row>
-      </div>
+        </ExportRow>
+      </ExportList>
+      <LastExport last={v.last} />
     </Module>
   );
 }

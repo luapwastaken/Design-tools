@@ -4,11 +4,11 @@ import { toHex, type Oklch } from '../../../shared/color/index.ts';
 import type { DocController } from '../../../shared/doc-api.ts';
 import { INKS, type InkLibrary } from '../../../shared/palette/inks.ts';
 import { isGround } from '../../../shared/palette/roles.ts';
-import type { LibraryItemRef, Swatch } from '../../../shared/types.ts';
-import { decodeImage, unsupportedImage } from '../../lib/load.ts';
-import { rasterize } from '../../shell/core/rasterize.ts';
+import type { Swatch } from '../../../shared/types.ts';
+import { decodeImage } from '../../lib/load.ts';
 import { toast } from '../../ui/index.ts';
 import { displayName, plural } from '../common/names.ts';
+import { baseName, claims, extOf, isSvg, putAsset, svgAsPng } from '../common/take.ts';
 import { freeAngle, groundIsPaper, LIMIT, processInks, spotInk, type HalftoneDoc, type Ink } from './doc.ts';
 
 export type Doc = DocController<HalftoneDoc>;
@@ -22,33 +22,18 @@ export const LIBRARIES: { id: InkLibrary; label: string }[] = [
   { id: 'ncs', label: 'NCS' },
 ];
 
-const baseName = (file: string) => file.replace(/\.[^.]*$/, '') || 'Pasted image';
-const extOf = (blob: Blob, name: string) => (/\.([a-z0-9]{1,8})$/i.exec(name)?.[1] ?? /^image\/([a-z]+)/.exec(blob.type)?.[1] ?? 'png').toLowerCase();
 
 /** read to be sure it opens, then copied into the workspace at full resolution (foundation spec §7.2) */
 export async function sourceOf(blob: Blob, name: string, ext = extOf(blob, name)): Promise<NonNullable<HalftoneDoc['source']>> {
   const bmp = await decodeImage(blob, name);
   const { width: w, height: h } = bmp;
   bmp.close();
-  const { url } = await window.api.invoke('workspace.putAsset', ID, await blob.arrayBuffer(), ext);
-  return { asset: url, name, w, h };
-}
-
-const isSvg = (f: File) => f.type === 'image/svg+xml' || /\.svg$/i.test(f.name);
-
-/** an SVG file drawn as the shell draws a Library SVG "as an image": 4096 px on its long side */
-async function svgAsPng(file: File): Promise<Blob> {
-  const url = URL.createObjectURL(file);
-  try {
-    return await rasterize({ kind: 'svg', url, ref: { name: baseName(file.name) } as LibraryItemRef });
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  return { asset: await putAsset(ID, blob, ext), name, w, h };
 }
 
 /** the first image among dropped or pasted files, opened as one step; the rest are left for the Library */
 export async function takeFiles(doc: Doc, files: File[]): Promise<File[]> {
-  const file = files.find((f) => isSvg(f) || (f.type.startsWith('image/') && !unsupportedImage(f.type, f.name)) || /\.tiff?$/i.test(f.name));
+  const file = files.find(claims);
   if (!file) return files;
   const name = baseName(file.name);
   try {
@@ -102,6 +87,7 @@ export function withPalette(d: HalftoneDoc, name: string, swatches: Swatch[]): H
   return {
     ...d,
     mode: 'spot',
+    inksFrom: { name, swatches: swatches.map((w) => ({ name: displayName(w), colour: w.oklch })) },
     inks: use.map((w, i) => spotInk(displayName(w), w.oklch, i)),
     paper: paper ? { ...d.paper, colour: paper.oklch } : d.paper,
   };

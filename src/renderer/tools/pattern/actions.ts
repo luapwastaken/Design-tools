@@ -2,6 +2,7 @@
 import type { DocController } from '../../../shared/doc-api.ts';
 import type { BuiltinShape } from '../../../shared/pattern/builtins.ts';
 import { clipToView, namespace } from '../../../shared/svg/index.ts';
+import { unreadable } from '../../lib/load.ts';
 import { measureArtwork } from '../../lib/svg-measure.ts';
 import { shell } from '../../shell/core/index.ts';
 import { toast } from '../../ui/index.ts';
@@ -11,14 +12,15 @@ import { armed, loading } from './view-state.ts';
 export type Doc = DocController<PatternDoc>;
 
 /** a shape on its way in: markup from a file, a paste or the Library */
-export type Incoming = { svg: string; name: string };
+export type Incoming = { svg: string; name: string; /** how a message names it when it can't be read: the file's name, extension and all */ label?: string };
 
 const fail = (e: unknown) => toast.show({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
 
 /** the markup when it is an SVG this can read; otherwise throws a plain sentence naming it */
 export function readSvg(text: string, name: string): string {
   const doc = new DOMParser().parseFromString(text.trim(), 'image/svg+xml');
-  if (doc.documentElement.nodeName !== 'svg' || doc.getElementsByTagName('parsererror').length) throw new Error(`${name} isn't an SVG this can read.`);
+  const damaged = doc.getElementsByTagName('parsererror').length > 0;
+  if (damaged || doc.documentElement.nodeName !== 'svg') throw new Error(unreadable(name, 'an SVG', damaged ? undefined : "Its top element isn't <svg>."));
   return text.trim();
 }
 
@@ -27,9 +29,9 @@ export function readSvg(text: string, name: string): string {
  * (spec §5 q2), and looks as it does on its own: art past its viewBox (an Illustrator artboard's
  * bleed, a cropped icon) is clipped there, as a browser shows the file, or the pattern would draw it.
  */
-export async function slotFrom({ svg, name }: Incoming): Promise<ShapeSlot> {
+export async function slotFrom({ svg, name, label = name }: Incoming): Promise<ShapeSlot> {
   const id = slotId();
-  const markup = namespace(readSvg(svg, name), id);
+  const markup = namespace(readSvg(svg, label), id);
   const m = await measureArtwork(markup).catch(() => null);
   if (!m || !(m.w > 0 && m.h > 0)) throw new Error(`${name} draws nothing that shows, so it can't be a shape.`);
   // namespace() prefixes every id with `${id}-`, so `${id}_view` is free
@@ -160,7 +162,7 @@ export async function replaceFromClipboard(doc: Doc, id: string): Promise<void> 
 /** SVG files from a drop, a paste or the file picker; the rest are left for the Library */
 export async function takeFiles(doc: Doc, files: File[], replace: string | null = null): Promise<File[]> {
   const svgs = files.filter((f) => f.type === 'image/svg+xml' || /\.svg$/i.test(f.name));
-  const incoming = await Promise.all(svgs.map(async (f) => ({ svg: await f.text(), name: f.name.replace(/\.[^.]*$/, '') || 'Pasted shape' })));
+  const incoming = await Promise.all(svgs.map(async (f) => ({ svg: await f.text(), name: f.name.replace(/\.[^.]*$/, '') || 'Pasted shape', label: f.name })));
   await addShapes(doc, incoming, replace).catch(fail);
   return files.filter((f) => !svgs.includes(f));
 }

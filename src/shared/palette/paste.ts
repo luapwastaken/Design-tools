@@ -20,7 +20,14 @@ export function parseColours(text: string): Pasted {
   const out: Pasted = { colours: [], names: [], rejected: [] };
   const seen = new Set<string>();
   const lines = jsonLines(text) ?? text.split(/\r?\n/).map((l) => l.replace(COMMENT, ''));
-  for (const item of lines.flatMap(splitOutsideParens)) {
+  const items: string[] = [];
+  for (const line of lines) {
+    const parts = splitOutsideParens(line);
+    // "255, 128, 0" is one colour written as numbers, not three hex colours (#225555, #112288, …): say it wasn't read
+    if (parts.length > 1 && parts.every((p) => /^\d{1,3}$/.test(p))) out.rejected.push(line.trim());
+    else items.push(...parts);
+  }
+  for (const item of items) {
     const found = findColours(item);
     if (!found || found.some((f) => !f.oklch)) {
       out.rejected.push(item);

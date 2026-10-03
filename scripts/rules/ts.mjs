@@ -13,6 +13,15 @@ const MOTION_KEY = /^(transition|animation)/i;
 /** JSX attributes and assignments that take a colour */
 const COLOUR_SINKS = /^(fill|stroke|color|stopColor|floodColor|lightingColor|fillStyle|strokeStyle|shadowColor)$/;
 
+/** JSX reads these entities as the characters, which the char allowlist must see (`&nbsp;` is U+00A0 on screen) */
+const ENTITY = /&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi;
+const NAMED_ENTITIES = { nbsp: 0xa0, middot: 0xb7, times: 0xd7, deg: 0xb0, hellip: 0x2026, ndash: 0x2013, mdash: 0x2014, lsquo: 0x2018, rsquo: 0x2019, ldquo: 0x201c, rdquo: 0x201d };
+const decodeEntities = (s) =>
+  s.replace(ENTITY, (m, e) => {
+    const code = e[0] === '#' ? Number.parseInt(e[1].toLowerCase() === 'x' ? e.slice(2) : e.slice(1), e[1].toLowerCase() === 'x' ? 16 : 10) : NAMED_ENTITIES[e.toLowerCase()];
+    return code === undefined ? m : String.fromCodePoint(code);
+  });
+
 const stringValue = (n) => (n && ts.isStringLiteralLike(n) ? n.text : null);
 const propName = (n) => (n.name && (ts.isIdentifier(n.name) || ts.isStringLiteralLike(n.name)) ? n.name.text : null);
 
@@ -52,7 +61,8 @@ export function checkTs(file, text, scope) {
     if (scope.chars) {
       const seen = new Set();
       let nl = 0;
-      for (const ch of text) {
+      const shown = ts.isJsxText(node) || (ts.isStringLiteral(node) && ts.isJsxAttribute(node.parent)) ? decodeEntities(text) : text;
+      for (const ch of shown) {
         if (ch === '\n') nl++;
         if (ch > '\x7f' && !ALLOWED_CHARS.has(ch) && !seen.has(ch)) {
           seen.add(ch);

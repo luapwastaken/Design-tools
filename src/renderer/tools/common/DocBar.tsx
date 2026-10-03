@@ -1,10 +1,10 @@
-import { useSyncExternalStore, type KeyboardEvent, type MouseEvent } from 'react';
+import { useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent } from 'react';
 import type { DocController } from '../../../shared/doc-api.ts';
 import type { ToolId } from '../../../shared/types.ts';
 import { shell, useShell } from '../../shell/core/index.ts';
 import type { IconName } from '../../shell/tool.ts';
 import { cx } from '../../ui/cx.ts';
-import { Button, Icon, IconButton, menu, Tooltip, UndoRedo, type MenuItem } from '../../ui/index.ts';
+import { Button, Icon, IconButton, menu, TextInput, Tooltip, UndoRedo, type MenuItem } from '../../ui/index.ts';
 import { ExportPalette, type ExportPaletteProps } from './ExportPalette.tsx';
 import { useWidth } from './useWidth.ts';
 import s from './DocBar.module.css';
@@ -12,12 +12,13 @@ import s from './DocBar.module.css';
 const CAN_PICK = 'EyeDropper' in globalThis;
 /**
  * A narrowing bar gives way in this order (after the place, the count and Add's label, in CSS):
- * Send to's label, then the tabs' icons; the tab names are the last to go, as they say where to look.
+ * Send to's label, then the tab names (their icons stay, and the badge): the document's own name
+ * matters more than the tab labels, which the icons and tooltips carry, since two palettes are told apart by it.
  */
 const SEND_ICON = 740;
 const TAB_LABELS_ONLY = 680;
-/** below the work area's 540px minimum; from 600 down the bar's gaps tighten too */
-const TAB_ICONS_ONLY = 530;
+/** the work area is 540 to 560 with the Library open on a 1280 window: there the name keeps 140px or so; from 600 down the bar's gaps tighten too */
+const TAB_ICONS_ONLY = 620;
 const TIGHT = 600;
 
 /** `off`: why the tab can't open yet (its tooltip) */
@@ -43,14 +44,11 @@ type Props<T extends string> = {
 
 /** A colour tool's document bar: its palette's name and place, New, the jobs as tabs, undo, pick, add, Export, Send to. */
 export function DocBar<T extends string>({ tool, doc, count, onNew, tabs, onPick, add, empty, exportPalette }: Props<T>) {
-  const name = useShell((st) => st.docNames[tool]) ?? 'Untitled';
-  const collection = useSyncExternalStore(doc.subscribe, () => doc.source()?.collection ?? null);
   const { ref, width } = useWidth<HTMLDivElement>();
   const narrow = (below: number) => width > 0 && width < below;
   return (
     <div ref={ref} className={cx(s.docbar, s.jobs, narrow(TIGHT) && s.tight)}>
-      <DocTitle>{name}</DocTitle>
-      {collection !== null && <span className={cx('lbl', s.where)}>{collection || 'Library'} ·</span>}
+      <DocHead tool={tool} doc={doc} />
       <span className={cx('lbl', s.count)}>{count}</span>
       <IconButton icon="note_add" label="New palette" shortcut="Ctrl+N" size="sm" onClick={onNew} />
       <Tabs {...tabs} show={narrow(TAB_ICONS_ONLY) ? 'icons' : narrow(TAB_LABELS_ONLY) ? 'labels' : 'both'} />
@@ -114,12 +112,55 @@ function Tabs<T extends string>({ options, value, onChange, show }: Props<T>['ta
   );
 }
 
-/** The document's name at the head of a tool's bar; cut off, it shows whole in a tooltip (brief §7). */
-export const DocTitle = ({ children }: { children: string }) => (
-  <Tooltip overflowOnly>
-    <h1 className={s.title}>{children}</h1>
-  </Tooltip>
-);
+/**
+ * The document's name at the head of a tool's bar; cut off, it shows whole in a tooltip (brief §7).
+ * With `onRename` it is a button: a click turns it into the name's field.
+ */
+export const DocTitle = ({ children, onRename }: { children: string; onRename?: () => void }) =>
+  onRename ? (
+    <h1 className={s.title}>
+      <Tooltip overflowOnly>
+        <button type="button" className={s.titleBtn} onClick={onRename}>
+          {children}
+        </button>
+      </Tooltip>
+    </h1>
+  ) : (
+    <Tooltip overflowOnly>
+      <h1 className={s.title}>{children}</h1>
+    </Tooltip>
+  );
+
+/** The head of a bar for a tool whose document is a Library item: its name, then the collection it sits in. */
+export function DocHead({ tool, doc }: { tool: ToolId; doc: DocController<unknown> }) {
+  const name = useShell((st) => st.docNames[tool]) ?? 'Untitled';
+  const source = useSyncExternalStore(doc.subscribe, () => doc.source());
+  const collection = source ? source.collection : null;
+  // the Library's rename, from the bar: the item the document is, once it has one
+  const ref = useShell((st) => (source ? st.library?.collections.flatMap((c) => c.items).find((x) => x.id === source.itemId) : undefined));
+  const [renaming, setRenaming] = useState(false);
+  return (
+    <>
+      {renaming && ref ? (
+        <TextInput
+          value={ref.name}
+          autoFocus
+          selectOnFocus
+          className={s.rename}
+          validate={(v) => (v.trim() ? null : 'Give it a name.')}
+          onCommit={(v) => {
+            setRenaming(false);
+            if (v.trim() !== ref.name) void shell.renameItem(ref, v.trim());
+          }}
+          onCancel={() => setRenaming(false)}
+        />
+      ) : (
+        <DocTitle onRename={ref ? () => setRenaming(true) : undefined}>{name}</DocTitle>
+      )}
+      {collection !== null && <span className={cx('lbl', s.where)}>{collection || 'Library'} ·</span>}
+    </>
+  );
+}
 
 /**
  * A tool's item to another tool (foundation spec §7.4). `empty`: why it's off while the document is;
@@ -130,7 +171,7 @@ export function SendTo({ tool, doc, empty, noun = 'palette', tip, compact }: { t
   const open = (e: MouseEvent<HTMLButtonElement>) => {
     if (!kind) return;
     const items: MenuItem[] = shell
-      .targetsFor(kind)
+      .targetsFor(kind, tool)
       .filter((t) => t.tool.id !== tool)
       .map(({ tool: to, use }) => ({ label: to.label, icon: to.icon, hint: use.label, onSelect: () => void shell.sendDoc(tool, to.id) }));
     // detail 0: opened from the keyboard, so start on the first row

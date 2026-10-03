@@ -27,7 +27,7 @@ import { getView as designView, patchView as patchDesign } from './tools/design/
 import { used, type DitherDoc } from './tools/dither/doc.ts';
 import { lookOf as ditherLook, withLook } from './tools/dither/looks.ts';
 import { dithered, ready as ditherReady, type Result } from './tools/dither/pipeline.ts';
-import { status as ditherStatus } from './tools/dither/view-state.ts';
+import { patchView as patchDither, status as ditherStatus } from './tools/dither/view-state.ts';
 import { emptyDoc as halftoneEmpty, mapInk, opaqueOf, spotInk, type HalftoneDoc } from './tools/halftone/doc.ts';
 import { lookOf, Painter } from './tools/halftone/draw.ts';
 import { platesFor, pngBlob, svgFor } from './tools/halftone/exports.ts';
@@ -271,7 +271,7 @@ async function full(): Promise<void> {
 
   // export, through renderer/lib/export (spec §10.4)
   const exports = `${dir}\\exports\\`;
-  const out = await shell.tool('dither').render!(dt.get(), {});
+  const out = await shell.tool('dither').render!(dt.get());
   const bytes = await out.blob.arrayBuffer();
   const saved = await saveFile({ tool: 'dither', suggestedName: 'smoke export', ext: 'png', filterName: 'PNG image', data: bytes });
   check('export.save writes into the smoke exports folder', saved?.startsWith(exports), saved);
@@ -490,7 +490,10 @@ async function toolExport(dir: string, tool: ToolId, collection: string): Promis
     const button = await until(() => [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export') && !b.disabled && b.parentElement?.querySelector('b')?.textContent === row));
     if (!button) return null;
     const shown = toastStore.get().length;
+    const idle = shell.getState().busy;
     button.click();
+    // from the click, before anything is rendered: the quit check and the status bar count it
+    check(`${tool}'s ${row} export counts as running work from the moment it starts`, shell.getState().busy > idle, shell.getState().busy);
     const done = await until(() => toastStore.get().slice(shown).find((t) => t.icon === 'download'));
     const file = /^Exported (.+)\.$/.exec(String(done?.message ?? ''))?.[1];
     if (!file) return null;
@@ -681,7 +684,7 @@ async function logo(dir: string): Promise<void> {
   const padded = await svg('Ring padded', RING_PADDED);
   const word = await svg('Lump', LUMP);
   const label = () => shell.tool('logo').accepts.svg?.label;
-  check('an SVG goes into Logo as the icon first', label() === 'AS ICON', label());
+  check('an SVG goes into Logo as the icon first', label() === 'ICON', label());
   await shell.sendItem(padded, 'logo');
   const made = await until(() => (ld.state().t === 'saved' ? ld.source() : null));
   if (!check('the first Logo edit makes a logo in Scratch', made?.collection === 'Scratch', made ?? ld.state())) return;
@@ -690,7 +693,7 @@ async function logo(dir: string): Promise<void> {
     return item?.kind === 'logo' ? item.payload : null;
   });
   check('its file holds the icon and a preview that draws it', file?.icon?.includes('<circle') && /<circle/.test(file.preview.svg) && !/<image/.test(file.preview.svg), file?.preview.svg.slice(0, 160));
-  check('the next SVG goes in as the wordmark', label() === 'AS WORDMARK', label());
+  check('the next SVG goes in as the wordmark', label() === 'WORDMARK', label());
   await shell.sendItem(word, 'logo');
   const d = ld.get();
   const t = d.wordmark?.type;
@@ -980,7 +983,7 @@ async function halftone(dir: string, dt: DocController<DitherDoc>): Promise<void
   await halftoneFollowUps({ white: await put('Smoke white', 'png', await pngFrom(64, 64, () => [255, 255, 255])), grey, ramp }, hd);
 
   // Send to: Dither gets the screen PNG at the image's own resolution
-  const want = await pixelsOf((await shell.tool('halftone').render!(d, {})).blob);
+  const want = await pixelsOf((await shell.tool('halftone').render!(d)).blob);
   await shell.sendDoc('halftone', 'dither');
   const url = dt.get().source?.assets[0];
   const got = url ? await pixelsOf(await (await fetch(url)).blob()) : null;
@@ -1274,7 +1277,7 @@ async function dither(dir: string): Promise<void> {
     (document.activeElement as HTMLElement | null)?.blur();
     window.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, cancelable: true }));
   };
-  const rendered = async () => new Uint8Array(await (await shell.tool('dither').render!(dt.get(), {})).blob.arrayBuffer()).join();
+  const rendered = async () => new Uint8Array(await (await shell.tool('dither').render!(dt.get())).blob.arrayBuffer()).join();
   const was = dt.get().source;
   paste(await pngFrom(64, 48, (x) => [0, 1, 2].map(() => x * 4)));
   const one = await until(() => (dt.get().source !== was && dt.get().source?.name === 'image' ? dt.get().source : null));
@@ -1287,6 +1290,21 @@ async function dither(dir: string): Promise<void> {
     one && two && one.assets[0] !== two.assets[0] && r1 && r2 && r1.src !== r2.src && r1.indices.join() !== r2.indices.join() && png1 !== png2,
     [one?.assets, two?.assets, r1?.src, r2?.src],
   );
+
+  // the Original view showing, another picture opened: the view drew the old picture's bitmap after
+  // it was closed and stopped ("image source is detached")
+  patchDither({ show: 'original' });
+  await sleep(600);
+  paste(await pngFrom(40, 30, (x, y) => [x * 6, y * 8, 90]));
+  const third = await until(() => (dt.get().source !== two ? dt.get().source : null));
+  await sleep(1200);
+  check('with Original showing, opening another picture leaves the view working', third && !shell.getState().crashed.dither && host('dither')?.querySelector('canvas') !== null, [third?.name, shell.getState().crashed.dither]);
+  // and Undo across that open, still on Original, brings the earlier picture back the same way
+  dt.undo();
+  await sleep(1200);
+  check('Undo of that open, with Original showing, leaves the view working too', dt.get().source === two && !shell.getState().crashed.dither, [dt.get().source?.name, shell.getState().crashed.dither]);
+  patchDither({ show: 'result' });
+  await shown();
 
   // Send to Halftone: the dithered PNG, each block the pixel size
   const hd = shell.doc('halftone') as DocController<HalftoneDoc>;

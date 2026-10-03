@@ -1,10 +1,11 @@
-// The Post FX tool's screen (spec §2): the source in the Viewport with the Before | After divider, a
+// The Post FX tool's screen (spec §2): the source in the Viewport with the Original | Result divider, a
 // transport for clips, GIFs and loops, and the inspector (Stack, the selected layer, Presets, Loop,
 // Export) on the right. The preview and every export run the same stack on the same frame.
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { Icon } from '../../ui/index.ts';
 import { useHeld } from '../common/held.ts';
+import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import type { Doc } from './actions.ts';
 import { PostFxCanvas } from './Canvas.tsx';
 import { offered, timeline, type PostFxDoc } from './doc.ts';
@@ -143,13 +144,13 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         {d.source && t.count > 1 && <Transport t={t} active={active} />}
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
-      <aside className={s.insp} aria-label="Inspector">
+      <InspectorColumn>
         <StackModule doc={doc} d={d} />
         <LayerModule doc={doc} d={d} t={t} />
         <PresetsModule doc={doc} d={d} />
         <LoopModule doc={doc} d={d} t={t} />
         <ExportModule d={d} t={t} error={error} />
-      </aside>
+      </InspectorColumn>
     </div>
   );
 }

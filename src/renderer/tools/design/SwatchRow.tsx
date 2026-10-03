@@ -129,6 +129,12 @@ export function SwatchRow({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView
           action={{ label: 'Generate a palette', icon: 'casino', onClick: startGenerate }}
         />
       )}
+      {!empty && (
+        <div className={s.tools}>
+          {sel.length > 1 && <span className={s.readout}>{sel.length} of {d.swatches.length} selected</span>}
+          <IconButton icon="tune" label="View: the surround and what each chip shows" size="sm" onContent onClick={(e) => openView(e, v)} />
+        </div>
+      )}
       <div
         ref={ref}
         hidden={empty}
@@ -165,12 +171,6 @@ export function SwatchRow({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView
           <GhostChip key={p.id} p={p} full={full} lockable={ghosts.from === 'generate'} onAdd={() => addProposals(doc, [p])} onLock={() => toggleLock(p.id)} />
         ))}
       </div>
-      {!empty && (
-        <span className={s.corner}>
-          {sel.length > 1 && <span className={s.readout}>{sel.length} of {d.swatches.length} selected</span>}
-          <IconButton icon="tune" label="View: the surround and what each chip shows" size="sm" onContent onClick={(e) => openView(e, v)} />
-        </span>
-      )}
       {ghosts && (
         <div className={s.foot}>
           <span className="lbl">Proposed</span>

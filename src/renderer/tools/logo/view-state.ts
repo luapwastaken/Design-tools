@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 import type { Swatch } from '../../../shared/types.ts';
 import { shell } from '../../shell/core/index.ts';
 import { asZoom, type Zoom } from '../../ui/index.ts';
+import { recordOf, type ExportRecord } from '../common/exported.ts';
 import { createStore } from '../common/store.ts';
 import { KINDS, VERSIONS, type LockupKind, type Role, type Version } from './doc.ts';
 
@@ -24,9 +25,10 @@ export type LogoView = {
   inspector: number;
   /** written into exported PNGs */
   dpi: number;
+  last: ExportRecord | null;
 };
 
-export const DEFAULT_VIEW: LogoView = { zoom: 'fit', mode: 'edit', lockup: 'horizontal', version: 'original', surround: 'grey', clearspace: true, guides: false, inspector: 380, dpi: 72 };
+export const DEFAULT_VIEW: LogoView = { zoom: 'fit', mode: 'edit', lockup: 'horizontal', version: 'original', surround: 'grey', clearspace: true, guides: false, inspector: 380, dpi: 72, last: null };
 
 const oneOf = <T extends string>(v: unknown, all: readonly T[], def: T): T => (all.includes(v as T) ? (v as T) : def);
 const bool = (v: unknown, def: boolean) => (typeof v === 'boolean' ? v : def);
@@ -46,6 +48,7 @@ function sanitize(raw: unknown): LogoView {
     guides: bool(r.guides, d.guides),
     inspector: num(r.inspector, d.inspector),
     dpi: num(r.dpi, d.dpi),
+    last: recordOf(r.last),
   };
 }
 

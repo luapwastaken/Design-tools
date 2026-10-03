@@ -1,12 +1,13 @@
 // Pixel size (spec §3): the exact block size in the exported file, 1 to 32 px, and how the image is
 // reduced to one pixel a block. The working size follows from it, so a size of 8 really is 8.
-import { Button, Module, NumberField, Segmented, useDocNumber } from '../../ui/index.ts';
+import { Module, NumberField, Segmented, useDocNumber } from '../../ui/index.ts';
+import { fmtPx } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { fix, LIMIT, scaleOf, workProblem, workSize, type DitherDoc } from './doc.ts';
 import { useView } from './view-state.ts';
 import s from './Inspector.module.css';
 
-const PICKS = [1, 2, 4, 8];
+const PICKS = [1, 2, 4, 8].map((n) => ({ value: `${n}`, label: `${n}`, tip: `Blocks of ${n} px` }));
 const RESAMPLES = [
   { value: 'area' as const, label: 'Area average', tip: 'Each block is the average of the pixels it covers: smooth tones' },
   { value: 'nearest' as const, label: 'Nearest', tip: 'Each block takes the one pixel at its centre: hard edges, fine lines may drop out' },
@@ -19,19 +20,13 @@ export function PixelModule({ doc, d }: { doc: Doc; d: DitherDoc }) {
   // the block the files get: the export's scale can make it bigger, or 1 px
   const { times } = useView();
   const block = scaleOf(d, { times });
-  const size = d.source ? `: ${(w * block).toLocaleString('en')} × ${(h * block).toLocaleString('en')} px` : ', whatever the zoom';
+  const size = d.source ? `: ${fmtPx(w * block, h * block)}` : ', whatever the zoom';
   const setPixel = (n: number) => doc.transact(`Pixel size ${n}`, (x) => ({ ...x, pixel: n }));
   return (
     <Module title="Pixel size" readout={d.source ? `${w.toLocaleString('en')} × ${h.toLocaleString('en')} blocks` : undefined}>
       <div className={s.stack}>
         <div className={s.row}>
-          <div className={s.picks} role="group" aria-label="Pixel sizes">
-            {PICKS.map((n) => (
-              <Button key={n} size="xs" variant={d.pixel === n ? 'secondary' : 'ghost'} onClick={() => setPixel(n)} tooltip={`Blocks of ${n} px`}>
-                {`${n}`}
-              </Button>
-            ))}
-          </div>
+          <Segmented mono fit options={PICKS} value={`${d.pixel}`} onChange={(n) => setPixel(Number(n))} />
           <span className={s.grow} />
           <NumberField label="Size" min={LIMIT.pixel[0]} max={LIMIT.pixel[1]} unit="px" width={112} {...pixel} />
         </div>

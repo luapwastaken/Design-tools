@@ -3,12 +3,11 @@
 // gradient map and the indexed PNG follow; the colours themselves are edited in Design.
 import { useEffect, useState, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { cssColor, toHex } from '../../../shared/color/index.ts';
-import type { LibraryItemRef } from '../../../shared/types.ts';
-import { shell, useShell } from '../../shell/core/index.ts';
-import { itemInfo } from '../../shell/library/item-info.ts';
+import { shell } from '../../shell/core/index.ts';
 import { Button, Icon, IconButton, menu, Module, NumberField, SwatchStrip, Tooltip, type MenuItem } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { plural } from '../common/names.ts';
+import { libraryPalettes, paletteMenu, useReadAhead } from '../common/palettes.ts';
 import { editInDesign, extract, sortByLightness, toggleColour, usePreset, type Doc } from './actions.ts';
 import { LIMIT, moveColour, used, type DitherDoc } from './doc.ts';
 import { PRESETS } from './looks.ts';
@@ -23,27 +22,14 @@ const DENSE = 48;
 
 const openAt = (e: MouseEvent<HTMLButtonElement>, items: MenuItem[]) => menu.open(e.currentTarget.getBoundingClientRect(), items, { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined });
 
-type Group = { name: string; items: LibraryItemRef[] };
-
-/** the Library's palettes by collection */
-const libraryPalettes = (library: ReturnType<typeof shell.getState>['library']): Group[] =>
-  (library?.collections ?? []).map((c) => ({ name: c.name || 'Library root', items: c.items.filter((x) => x.kind === 'palette') })).filter((g) => g.items.length);
-
 /** the retro presets, then the Library's palettes by collection, each with its colours; a Library one arrives as Send to would bring it */
-function sourceMenu(doc: Doc, d: DitherDoc, groups: Group[]): MenuItem[] {
+function sourceMenu(doc: Doc, d: DitherDoc): MenuItem[] {
   const current = d.paletteSource;
   return [
     { header: 'Retro' },
     ...PRESETS.map((p) => ({ label: p.name, strip: p.colours.map(cssColor), hint: `${p.colours.length}`, checked: current.kind === 'preset' && current.id === p.id, onSelect: () => usePreset(doc, p.name, p.id, p.colours) })),
-    ...(groups.length
-      ? groups.flatMap((g) => [
-          { header: g.name },
-          ...g.items.map((ref) => {
-            const colours = itemInfo(ref)?.colors;
-            return { label: ref.name, strip: colours, hint: colours && `${colours.length}`, checked: current.kind === 'library' && current.id === ref.id, onSelect: () => void shell.sendItem(ref, 'dither') };
-          }),
-        ])
-      : [{ header: 'Library' }, { label: 'No palettes in the Library yet', disabled: true }]),
+    ...(libraryPalettes(shell.getState().library).length ? [] : [{ header: 'Library' }]),
+    ...paletteMenu('dither', (ref) => current.kind === 'library' && current.id === ref.id),
   ];
 }
 
@@ -57,10 +43,7 @@ export function PaletteModule({ doc, d, frame }: { doc: Doc; d: DitherDoc; frame
   // the result counts in the colours that are on: the pointer's index is the nth of them
   const usedAt = colours.map((_, n) => (colours[n].on ? colours.slice(0, n).filter((c) => c.on).length : -1));
   const hex = (n: number) => toHex(colours[n].oklch).toUpperCase();
-  const library = useShell((st) => st.library);
-  const groups = libraryPalettes(library);
-  // the Library's palettes are read ahead, so the menu can show their colours
-  useEffect(() => groups.forEach((g) => g.items.forEach((ref) => itemInfo(ref, true))), [library]);
+  useReadAhead();
 
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     const by = { ArrowLeft: -1, ArrowRight: 1, Home: -Infinity, End: Infinity }[e.key];
@@ -99,12 +82,12 @@ export function PaletteModule({ doc, d, frame }: { doc: Doc; d: DitherDoc; frame
       actions={
         <>
           <IconButton icon="sort" label="Sort dark to light" size="sm" onClick={() => sortByLightness(doc)} />
-          <IconButton icon="edit" label="Edit the colours in Design" size="sm" onClick={() => void editInDesign(d)} />
+          <IconButton icon="open_in_new" label="Edit the colours in Design" size="sm" onClick={() => void editInDesign(d)} />
         </>
       }
     >
       <div className={i.stack}>
-        <button type="button" className={s.from} aria-haspopup="menu" aria-label={`Palette: ${d.palette.name}`} onClick={(e) => openAt(e, sourceMenu(doc, d, groups))}>
+        <button type="button" className={s.from} aria-haspopup="menu" aria-label={`Palette: ${d.palette.name}`} onClick={(e) => openAt(e, sourceMenu(doc, d))}>
           <SwatchStrip colors={colours.filter((c) => c.on).map((c) => cssColor(c.oklch))} height={14} className={s.strip} />
           <Tooltip content={d.palette.name} overflowOnly>
             <span className={s.name}>{d.palette.name || 'Untitled'}</span>

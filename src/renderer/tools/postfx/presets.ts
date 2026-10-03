@@ -1,6 +1,7 @@
 // Presets (spec §3): a few built-in starting stacks, and your own, saved in presets/postfx.json
 // (foundation spec §8: never document state, never in history). Every one is read through
 // share.ts's layersFrom, so a preset saved by another version can't break the stack.
+import { ipc } from '../../shell/core/ipc.ts';
 import { toast } from '../../ui/index.ts';
 import { createStore } from '../common/store.ts';
 import type { Layer } from './doc.ts';
@@ -20,7 +21,7 @@ let loading: Promise<void> | null = null;
 export function loadSaved(): Promise<void> {
   return (loading ??= (async () => {
     try {
-      const raw = await window.api.invoke('presets.load', TOOL);
+      const raw = await ipc.invoke('presets.load', TOOL);
       const list: Preset[] = [];
       let broken = 0;
       for (const x of raw) {
@@ -47,7 +48,7 @@ async function write(list: Preset[]): Promise<void> {
   const before = saved.get();
   saved.set({ ...before, list });
   try {
-    await window.api.invoke('presets.save', TOOL, list.map(toFile));
+    await ipc.invoke('presets.save', TOOL, list.map(toFile));
   } catch (e) {
     saved.set(before);
     toast.show({ kind: 'error', message: `Couldn’t save the presets: ${e instanceof Error ? e.message : String(e)}` });

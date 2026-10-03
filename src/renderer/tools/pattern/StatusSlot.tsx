@@ -12,7 +12,7 @@ export function StatusSlot({ doc }: { doc: DocController<PatternDoc> }) {
   const n = tile.items.length;
   return (
     <span>
-      {d.arrangement === 'scatter' ? 'Scatter' : `${d.cols} × ${d.rows}`} · <b>{n}</b> {n === 1 ? 'item' : 'items'} · tile <b>{w === h ? w : `${w} × ${h}`}</b> px
+      {d.arrangement === 'scatter' ? 'Scatter' : `${d.cols} × ${d.rows}`} · <b>{n}</b> {n === 1 ? 'item' : 'items'} · tile <b>{w === h ? w.toLocaleString('en') : `${w.toLocaleString('en')} × ${h.toLocaleString('en')}`}</b> px
     </span>
   );
 }

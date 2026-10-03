@@ -10,8 +10,8 @@ const hex = (list: string): Oklch[] => list.split(' ').map(hexToOklch);
 
 export const PRESETS: Preset[] = [
   { id: '1bit', name: '1-bit', colours: hex('000000 ffffff') },
-  { id: 'gray4', name: 'Grayscale 4', colours: hex('000000 555555 aaaaaa ffffff') },
-  { id: 'gray8', name: 'Grayscale 8', colours: hex('000000 242424 494949 6d6d6d 929292 b6b6b6 dbdbdb ffffff') },
+  { id: 'gray4', name: 'Greyscale 4', colours: hex('000000 555555 aaaaaa ffffff') },
+  { id: 'gray8', name: 'Greyscale 8', colours: hex('000000 242424 494949 6d6d6d 929292 b6b6b6 dbdbdb ffffff') },
   { id: 'gameboy', name: 'Game Boy', colours: hex('0f380f 306230 8bac0f 9bbc0f') },
   { id: 'cga', name: 'CGA', colours: hex('000000 55ffff ff55ff ffffff') },
   { id: 'cga0', name: 'CGA palette 0', colours: hex('000000 55ff55 ff5555 ffff55') },
@@ -48,7 +48,7 @@ export const LOOKS: Look[] = [
   { id: 'newsprint', name: 'Newsprint', preset: 'newsprint', algorithm: 'clustered-dot', tone: { contrast: 0.15 }, about: 'Ink on newsprint, a clustered-dot screen' },
   { id: 'blueprint', name: 'Blueprint', preset: 'blueprint', algorithm: 'line', tone: { map: true, contrast: 0.2 }, about: 'Pale lines on blueprint blue, a 45° line screen' },
   { id: 'riso', name: 'Risograph duo', preset: 'riso', algorithm: 'blue-noise', about: 'Blue and fluorescent pink on cream, grained with blue noise' },
-  { id: 'gray4', name: 'Grayscale 4', preset: 'gray4', algorithm: 'jarvis', about: 'Four greys, Jarvis–Judice–Ninke diffusion' },
+  { id: 'gray4', name: 'Greyscale 4', preset: 'gray4', algorithm: 'jarvis', about: 'Four greys, Jarvis–Judice–Ninke diffusion' },
 ];
 
 export const presetOf = (id: string | undefined): Preset | undefined => PRESETS.find((p) => p.id === id);

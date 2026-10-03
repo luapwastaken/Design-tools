@@ -27,12 +27,3 @@
 .edit { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; }
 .none { padding: 18px 16px; color: var(--ink-2); font-size: var(--fs-base); background: var(--pasteboard); }
 
-.insp {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  min-height: 0;
-  overflow: auto;
-  scrollbar-gutter: stable;
-}
-.insp > * { flex: none; }

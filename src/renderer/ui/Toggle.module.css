@@ -35,6 +35,9 @@
 .tg[aria-checked="true"] .sw { background: var(--signal); box-shadow: none; }
 .tg[aria-checked="true"] .sw::after { transform: translateX(12px); background: var(--signal-ink); }
 
+.tg.quiet[aria-checked="true"] .sw { background: var(--tick-strong); }
+.tg.quiet[aria-checked="true"] .sw::after { background: var(--well); }
+
 .tg:disabled { color: var(--ink-4); }
 .tg:disabled .sw::after { background: var(--ink-4); }
 .tg:disabled[aria-checked="true"] .sw { background: var(--tick); }

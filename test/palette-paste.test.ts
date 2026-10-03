@@ -107,3 +107,14 @@ test('hues are 0..360 and nothing is NaN', () => {
   assert.deepEqual(colours.map((o) => Math.round(o[2])).slice(0, 2), [330, 40]);
   assert.ok(colours.flat().every(Number.isFinite));
 });
+
+test('a run of plain numbers is not a list of hex colours: it is refused whole', () => {
+  for (const text of ['255, 128, 0', '255,128,0', '100, 200', '12 , 34 , 56']) {
+    const r = parseColours(text);
+    assert.deepEqual(r.colours, [], text);
+    assert.deepEqual(r.rejected, [text.trim()], text);
+  }
+  // letters make them hex; one number alone is still a 3-digit hex
+  assert.deepEqual(hexes('fff, 123'), ['#ffffff', '#112233']);
+  assert.deepEqual(hexes('123'), ['#112233']);
+});

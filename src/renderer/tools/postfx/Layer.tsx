@@ -1,12 +1,11 @@
 // The selected layer (plan unit V): its opacity and blend, then the effect's own settings, each a
 // Slider with its NumberField, a Toggle, a choice, or a ColorField. The colour effects take their
 // colours from a Library palette too (Send to: EFFECT COLOURS lands on the selected layer).
-import { useEffect, type MouseEvent } from 'react';
+import type { MouseEvent } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
-import { shell, useShell } from '../../shell/core/index.ts';
-import { itemInfo } from '../../shell/library/item-info.ts';
 import { ColorField, Icon, IconButton, menu, Module, Segmented, Select, Slider, SwatchStrip, Toggle, useDocColour, useDocNumber, type MenuItem } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
+import { paletteMenu, useReadAhead } from '../common/palettes.ts';
 import { labelOf, resetLayer, type Doc } from './actions.ts';
 import { BLENDS, effectOf, GROUPS, type Param } from './effects/index.ts';
 import { perLoop } from './effects/params.ts';
@@ -67,19 +66,6 @@ function ParamRow({ doc, l, p }: { doc: Doc; l: Layer; p: Param }) {
   );
 }
 
-/** the Library's palettes, by collection, each with its colours; picking one colours this layer */
-function paletteMenu(l: Layer, library: ReturnType<typeof shell.getState>['library']): MenuItem[] {
-  const groups = (library?.collections ?? []).map((c) => ({ name: c.name || 'Library root', items: c.items.filter((x) => x.kind === 'palette') })).filter((g) => g.items.length);
-  if (!groups.length) return [{ label: 'No palettes in the Library yet', disabled: true }];
-  return groups.flatMap((g) => [
-    { header: g.name },
-    ...g.items.map((ref) => {
-      const colours = itemInfo(ref)?.colors;
-      return { label: ref.name, strip: colours, hint: colours && `${colours.length}`, onSelect: () => void shell.sendItem(ref, 'postfx') };
-    }),
-  ]);
-}
-
 /** what the rates a second come to in this loop: whole counts, so the loop comes round exactly */
 function loopNote(params: readonly Param[], l: Layer, seconds: number): string {
   const counts = params.flatMap((p) => (p.kind === 'number' && p.unit === '/s' ? [`${p.label} ${perLoop((l.params[p.key] as number | undefined) ?? p.def, seconds)}`] : []));
@@ -88,14 +74,10 @@ function loopNote(params: readonly Param[], l: Layer, seconds: number): string {
 
 export function LayerModule({ doc, d, t }: { doc: Doc; d: PostFxDoc; t: Timeline }) {
   const { selected } = useView();
-  const library = useShell((st) => st.library);
   const l = d.stack.find((x) => x.id === selected) ?? null;
   const fx = l ? effectOf(l.effect) : undefined;
   const colours = fx?.params.some((p) => p.kind === 'colour' && p.tone !== undefined) ?? false;
-  // the Library's palettes are read ahead, so the menu can show their colours
-  useEffect(() => {
-    if (colours) library?.collections.forEach((c) => c.items.forEach((ref) => ref.kind === 'palette' && itemInfo(ref, true)));
-  }, [colours, library]);
+  useReadAhead(colours);
 
   if (!l || !fx)
     return (
@@ -142,7 +124,7 @@ export function LayerModule({ doc, d, t }: { doc: Doc; d: PostFxDoc; t: Timeline
               type="button"
               className={s.from}
               aria-haspopup="menu"
-              onClick={(e: MouseEvent<HTMLButtonElement>) => menu.open(e.currentTarget.getBoundingClientRect(), paletteMenu(l, library), { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined })}
+              onClick={(e: MouseEvent<HTMLButtonElement>) => menu.open(e.currentTarget.getBoundingClientRect(), paletteMenu('postfx'), { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined })}
             >
               <SwatchStrip colors={fx.params.flatMap((p) => (p.kind === 'colour' && p.tone !== undefined ? [cssColor((l.params[p.key] as Oklch | undefined) ?? p.def)] : []))} height={14} className={s.strip} />
               <span className={s.fromName}>Pick from a Library palette…</span>

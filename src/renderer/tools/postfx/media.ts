@@ -3,7 +3,7 @@
 // the middle of its time on screen and proved by requestVideoFrameCallback's mediaTime. Previews
 // play through a callback; exports go through lib/frames' one animated path.
 import { decodeFrames, exportFrames, MAX_FRAMES, type FrameImage } from '../../lib/frames.ts';
-import { fetchBlob } from '../common/take.ts';
+import { fetchBlob, putAsset } from '../common/take.ts';
 import { DEFAULT_FPS, frameOf, gifPlan, isCleanRate, isVideoFile, seekTime, snapFps, timingOf, typicalStep, videoProblem, type MediaKind, type Timing } from './media-time.ts';
 
 export { isVideoFile, type Loop, type MediaKind, type Timing } from './media-time.ts';
@@ -37,7 +37,6 @@ const extOf = (blob: Blob, name: string) => {
   const sub = /^(?:image|video)\/([\w.+-]+)/.exec(blob.type)?.[1];
   return (/\.([a-z0-9]{1,8})$/i.exec(blob instanceof File ? blob.name : name)?.[1] ?? (sub && (TYPE_EXT[sub] ?? sub)) ?? 'png').toLowerCase();
 };
-const put = async (blob: Blob, ext: string) => (await window.api.invoke('workspace.putAsset', ID, await blob.arrayBuffer(), ext)).url;
 const sleep = (ms: number) => new Promise<null>((ok) => setTimeout(() => ok(null), ms));
 
 /**
@@ -49,8 +48,9 @@ export async function sourceOf(blob: Blob, name: string, ext = extOf(blob, name)
   if (isVideoFile(blob.type, blob instanceof File ? blob.name : `${name}.${ext}`)) {
     // the page's CSP lets a <video> read dt:// but not blob:, so the file goes in first; one that
     // doesn't open is left to the workspace's sweep of unused assets
-    const asset = await put(blob, ext);
-    const clip = openClip(asset, name);
+    const asset = await putAsset(ID, blob, ext);
+    // a failure names the file as every tool does, extension and all
+    const clip = openClip(asset, blob instanceof File && blob.name ? blob.name : name);
     try {
       return { asset, name, kind: 'video', delays: null, ...(await clip.measure()) };
     } finally {
@@ -60,7 +60,7 @@ export async function sourceOf(blob: Blob, name: string, ext = extOf(blob, name)
   const f = await decodeFrames(blob);
   const { w, h, count, delays } = f;
   f.close();
-  const asset = await put(blob, ext);
+  const asset = await putAsset(ID, blob, ext);
   if (count < 2 || !delays) return { asset, name, kind: 'image', w, h, fps: null, frames: null, delays: null };
   const { fps } = timingOf('gif', { frames: count, fps: null, delays }, { seconds: 1, fps: 1 });
   return { asset, name, kind: 'gif', w, h, fps, frames: count, delays };

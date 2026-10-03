@@ -1,4 +1,5 @@
 import type { Collection, LibraryItemRef, Theme } from '../../../shared/types.ts';
+import { decodeImage } from '../../lib/load.ts';
 import { toast } from '../../ui/index.ts';
 import { errorText, reportError } from './errors.ts';
 import { ipc } from './ipc.ts';
@@ -86,16 +87,37 @@ export async function importFiles(paths: string[], collection: string): Promise<
   if (failed) toast.show({ kind: 'error', message: failed });
 }
 
+/** the image types createImageBitmap reads, so a file of one is checked before it is filed (TIFF and SVG are left to their own readers) */
+const READABLE = /^image\/(png|jpeg|webp|gif|bmp|avif)$/;
+
 /**
  * OS files a tool declined (drop or paste) go into Scratch (spec §9). Files with a path are
  * imported; a pasted bitmap has none, so its bytes become an image item.
  */
-export async function offerToLibrary(files: File[]): Promise<void> {
+export async function offerToLibrary(all: File[]): Promise<void> {
+  // a picture that can't be read is said so, not filed away to sit in the Library looking like one
+  const files: File[] = [];
+  for (const f of all) {
+    if (!READABLE.test(f.type)) {
+      files.push(f);
+      continue;
+    }
+    try {
+      (await decodeImage(f)).close();
+      files.push(f);
+    } catch (e) {
+      toast.show({ kind: 'error', message: `${errorText(e)} It wasn't added to the Library.` });
+    }
+  }
   const paths = files.map((f) => ipc.pathForFile(f)).filter(Boolean);
   if (paths.length) await importFiles(paths, SCRATCH);
   for (const f of files.filter((f) => !ipc.pathForFile(f))) {
-    const ext = /^image\/(png|jpeg|webp|gif|bmp|avif)$/.exec(f.type)?.[1]?.replace('jpeg', 'jpg');
-    if (!ext) continue;
+    const ext = READABLE.exec(f.type)?.[1]?.replace('jpeg', 'jpg');
+    if (!ext) {
+      // a pasted file of a kind the Library doesn't keep: said, not dropped without a word
+      toast.show({ kind: 'error', message: `Couldn't add ${f.name || 'the pasted file'} to the Library: ${f.type || 'its type'} isn't a kind it keeps. It takes images, SVGs and ASE, ACO or GPL palettes.` });
+      continue;
+    }
     const ref = await attempt("Couldn't add the pasted image", async () => ipc.invoke('library.createImage', SCRATCH, 'Pasted image', ext, await f.arrayBuffer()));
     if (ref) toast.show({ icon: 'download', message: `Added ${ref.name} to ${SCRATCH}.` });
   }

@@ -40,6 +40,7 @@
 .head[data-fit="full"] .slider.wide { width: 208px; }
 .head .number { flex: none; }
 .acts { gap: 2px; }
+.acts > :global(.lbl) { margin-right: 6px; }
 .dim { color: var(--ink-3); }
 
 /* ── the paper ── */

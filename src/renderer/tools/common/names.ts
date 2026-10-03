@@ -64,3 +64,6 @@ export const plural = (n: number, one: string, many = `${one}s`): string => `${n
 export const fmtL = (l: number) => (l * 100).toFixed(1);
 export const fmtC = (c: number) => c.toFixed(3).replace(/^0/, '');
 export const fmtH = (h: number) => Math.round(h) % 360;
+
+/** "1,200 × 800 px": a size in pixels, as every tool reads one */
+export const fmtPx = (w: number, h: number): string => `${w.toLocaleString('en')} × ${h.toLocaleString('en')} px`;

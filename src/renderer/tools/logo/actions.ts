@@ -32,7 +32,7 @@ async function reading<T>(role: Role, run: () => Promise<T>): Promise<T> {
   }
 }
 
-export const svgPart = (svg: string, name: string, role: Role): Promise<Part> => reading(role, () => partFromSvg(svg, name, role));
+export const svgPart = (svg: string, name: string, role: Role, label = name): Promise<Part> => reading(role, () => partFromSvg(svg, name, role, label));
 export const imagePart = (blob: Blob, name: string, role: Role): Promise<Part> => reading(role, () => partFromImage(blob, name, role));
 
 /** after a step that threw something away: its Undo, while that step is still the last */
@@ -94,7 +94,7 @@ export async function takeFiles(doc: Doc, files: File[], role: Role | null = nul
   if (usable[1] && !d[other]) plan.push([usable[1], other]);
   for (const [f, r] of plan) {
     try {
-      const part = isSvg(f) ? await svgPart(await f.text(), baseName(f, r), r) : await imagePart(f, baseName(f, r), r);
+      const part = isSvg(f) ? await svgPart(await f.text(), baseName(f, r), r, f.name) : await imagePart(f, baseName(f, r), r);
       putPart(doc, r, part);
     } catch (e) {
       fail(e);

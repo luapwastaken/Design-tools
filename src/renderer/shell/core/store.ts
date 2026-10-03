@@ -1,5 +1,6 @@
 import { useRef, useSyncExternalStore } from 'react';
 import type { ShellState } from '../shell-api.ts';
+import { remembered } from './session.ts';
 
 // The shell's view state: one immutable object, replaced on every change. Views read it only
 // through useShell(select).
@@ -9,7 +10,7 @@ let state: ShellState = {
   active: 'design',
   tools: [],
   mounted: [],
-  libraryOpen: true,
+  libraryOpen: remembered().library,
   settingsOpen: false,
   settings: null,
   library: null,
@@ -19,7 +20,6 @@ let state: ShellState = {
   crashed: {},
   statusWarning: null,
   busy: 0,
-  isPackaged: true,
 };
 const listeners = new Set<() => void>();
 

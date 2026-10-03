@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties }
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { Icon } from '../../ui/index.ts';
 import { useHeld } from '../common/held.ts';
+import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import type { Doc } from './actions.ts';
 import { AlgorithmModule } from './Algorithm.tsx';
 import { DitherCanvas } from './Canvas.tsx';
@@ -148,14 +149,14 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         {isAnimated(d) && <Transport doc={doc} d={d} frame={frame} playing={head.playing} active={active} />}
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
-      <aside className={s.insp} aria-label="Inspector">
+      <InspectorColumn>
         <LookModule doc={doc} d={d} />
         <PixelModule doc={doc} d={d} />
         <AlgorithmModule doc={doc} d={d} />
         <PaletteModule doc={doc} d={d} frame={frame} />
         <ToneModule doc={doc} d={d} hist={result?.hist ?? null} />
         <ExportModule d={d} v={v} frame={frame} ready={!!result && !error} error={error} />
-      </aside>
+      </InspectorColumn>
     </div>
   );
 }

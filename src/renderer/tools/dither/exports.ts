@@ -5,6 +5,7 @@ import { rgb255 } from '../../../shared/color/index.ts';
 import { exportFrames } from '../../lib/frames.ts';
 import { scaleUp } from '../../lib/gif.ts';
 import { encodeIndexedPng } from '../../lib/png-indexed.ts';
+import { fmtPx } from '../common/names.ts';
 import { workSize, type DitherDoc } from './doc.ts';
 import { dithered, type Result } from './pipeline.ts';
 import { runsSvg } from './svg.ts';
@@ -19,12 +20,10 @@ const INDEXED_MAX = 2 ** 28;
 /** the SVG draws each run of blocks as a path segment: past this many working pixels it outweighs the PNG */
 export const SVG_MAX = 256 * 256;
 
-const px = (w: number, h: number) => `${w.toLocaleString('en')} × ${h.toLocaleString('en')} px`;
-
 export const sizeLimit = (w: number, h: number): string | null =>
-  w * h > MAX_PX ? `${px(w, h)} is more than a full-colour PNG here can hold. Lower the export scale, or take 1 px a block.` : null;
+  w * h > MAX_PX ? `${fmtPx(w, h)} is more than a full-colour PNG here can hold. Lower the export scale, or take 1 px a block.` : null;
 
-export const indexedLimit = (w: number, h: number): string | null => (w * h > INDEXED_MAX ? `${px(w, h)} is more than an indexed file here can hold. Lower the export scale.` : null);
+export const indexedLimit = (w: number, h: number): string | null => (w * h > INDEXED_MAX ? `${fmtPx(w, h)} is more than an indexed file here can hold. Lower the export scale.` : null);
 
 export const svgLimit = (d: DitherDoc): string | null => {
   const { w, h } = workSize(d);

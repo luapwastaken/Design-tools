@@ -54,7 +54,7 @@ export type Grip = { corner: number; a0: Point; cap: number };
 
 const iconAspect = (d: Pick<LogoDoc, 'icon'>) => (d.icon ? d.icon.box.w / d.icon.box.h : 1);
 
-/** where the dragged corner is at the lockup's ratio */
+/** where the dragged corner is at the lockup's ratio (the tests' check that ratioFor inverts it) */
 export function handleAt(d: Pick<LogoDoc, 'icon'>, l: Lockup, g: Grip): Point {
   const o = OUT[g.corner];
   const h = l.ratio * g.cap;

@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import UTIF from 'utif2';
-import { stochastic, writeTiff } from '../src/shared/halftone/index.ts';
+import { stochastic } from '../src/shared/halftone/stochastic.ts';
+import { writeTiff } from '../src/shared/halftone/tiff.ts';
 
 const read = (file: Uint8Array) => {
   const buf = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer;

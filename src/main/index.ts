@@ -8,7 +8,7 @@ import { createExporter } from './export.ts';
 import { renameRetry } from './fsx.ts';
 import { registerIpc } from './ipc.ts';
 import { LibraryService } from './library/service.ts';
-import { errorText, log } from './log.ts';
+import { errorText, log, trimLogs } from './log.ts';
 import { handleDt, registerDtScheme } from './protocol.ts';
 import { createSettings } from './settings.ts';
 import { createWindow, focusWindow, send } from './window.ts';
@@ -71,6 +71,7 @@ function start() {
   }
 
   const userData = app.getPath('userData');
+  trimLogs();
   const settings = createSettings(userData, defaultLibrary);
   // A fresh install gets its default Library. A folder Luap chose that has gone missing stays missing (spec §11).
   if (settings.get().libraryRoot === defaultLibrary) {
@@ -82,11 +83,11 @@ function start() {
   }
   // smoke runs keep their deletions in <smokeDir>/trash, out of Luap's Recycle Bin
   const trashItem = smokeDir ? smokeTrash(join(smokeDir, 'trash')) : (path: string) => shell.trashItem(path);
-  const workspace = createWorkspace(userData);
+  const workspace = createWorkspace(userData, (kept) => send('app.notice', { level: 'error', message: `A tool’s saved work was damaged and couldn’t be read, so it started empty. The broken file is kept in ${kept}.` }));
   const exporter = createExporter(settings, { trashItem, fixedDir: smokeDir && join(smokeDir, 'exports') });
   const library = new LibraryService(
     settings.get().libraryRoot,
-    { trashItem, now: Date.now, log: (message, details) => log('warn', message, details) },
+    { trashItem, now: Date.now, log: (message, details) => log('warn', message, details), notice: (message) => send('app.notice', { level: 'warn', message }) },
     (index) => send('library.changed', index),
   );
   // pure Node, so the first scan can overlap Electron's start-up

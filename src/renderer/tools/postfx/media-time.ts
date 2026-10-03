@@ -1,6 +1,7 @@
 // The arithmetic of Post FX's media (plan unit M), pure so node --test reaches it (media.ts itself
 // needs the page): frame rates, which frame a video time is, one loop's timing, the GIF a loop
 // becomes, and the plain words for a video that won't open.
+import { unreadable } from '../../lib/load.ts';
 
 export type MediaKind = 'image' | 'gif' | 'video';
 /** a still's loop, for effects that move (a clip or a GIF is its own loop) */
@@ -165,6 +166,6 @@ export const isVideoFile = (type: string, name: string): boolean => type.startsW
 export function videoProblem(name: string, error: { code: number; message: string } | null): string {
   const msg = error?.message ?? '';
   if (/COULD_NOT_OPEN|COULD_NOT_PARSE|open context failed/i.test(msg) || (error?.code === 3 && !/codec|decoder/i.test(msg)))
-    return `${name} couldn't be read as a video. The file may be damaged or incomplete.`;
+    return unreadable(name, 'a video', 'The file may be damaged or incomplete.');
   return `${name} can't be decoded here (ProRes, DNxHR, some HEVC). Re-export as H.264 MP4 or VP9 WebM.`;
 }

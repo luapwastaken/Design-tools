@@ -3,6 +3,7 @@
 import type { Tile } from '../../../shared/pattern/types.ts';
 import { IconButton, Module, NumberField, Segmented, Slider, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
+import { fmtPx } from '../common/names.ts';
 import { reseed, type Doc } from './actions.ts';
 import { fix, gapMin, LIMIT, type Arrangement, type PatternDoc } from './doc.ts';
 import s from './Inspector.module.css';
@@ -19,8 +20,6 @@ type Set = (d: PatternDoc, v: number) => PatternDoc;
 
 /** a number in the document; the result always passes fix() */
 const useNum = (doc: Doc, label: string, key: string, get: Get, set: Set) => useDocNumber(doc, { label, key, get, set: (d, v) => fix(set(d, v)) });
-
-const px = (n: number) => `${Math.round(n)}`;
 
 export function ArrangementModule({ doc, d, tile }: { doc: Doc; d: PatternDoc; tile: Tile }) {
   const cols = useNum(doc, 'Change the columns', 'cols', (x) => x.cols, (x, v) => ({ ...x, cols: v }));
@@ -39,7 +38,7 @@ export function ArrangementModule({ doc, d, tile }: { doc: Doc; d: PatternDoc; t
       ? `An odd number of ${doubled}: the tile holds twice as many, so the offset repeats cleanly.`
       : null;
   return (
-    <Module title="Arrangement" readout={`Tile ${px(tile.width)} × ${px(tile.height)} px`}>
+    <Module title="Arrangement" readout={fmtPx(Math.round(tile.width), Math.round(tile.height))}>
       <div className={s.stack}>
         <Segmented options={ARRANGEMENTS} value={d.arrangement} onChange={(arrangement) => doc.transact(`Arrange as ${ARRANGEMENTS.find((x) => x.value === arrangement)!.label.toLowerCase()}`, (x) => ({ ...x, arrangement }))} />
         <p className={s.describe}>{a.describe}</p>
@@ -70,7 +69,7 @@ export function SpacingModule({ doc, d, tile }: { doc: Doc; d: PatternDoc; tile:
   const across = tile.width / (d.cols * (d.arrangement === 'halfdrop' && d.cols % 2 ? 2 : 1));
   const down = tile.height / (d.rows * (d.arrangement === 'brick' && d.rows % 2 ? 2 : 1));
   return (
-    <Module title="Spacing and size" readout={scatter ? undefined : `Pitch ${px(across)} × ${px(down)} px`}>
+    <Module title="Spacing and size" readout={scatter ? undefined : `Pitch ${fmtPx(Math.round(across), Math.round(down))}`}>
       <div className={s.stack}>
         <div className={s.group}>
           {scatter ? (

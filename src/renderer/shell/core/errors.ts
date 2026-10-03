@@ -12,10 +12,14 @@ const BENIGN = /^ResizeObserver loop/;
 const REPEAT_MS = 2000;
 let last = { message: '', at: 0 };
 
-/** a toast (error kind, stays until dismissed) and a log line; the same message twice within 2s shows once */
-export function reportError(what: string, e: unknown): void {
-  const message = `${what}: ${errorText(e)}`;
-  log('error', message, errorDetails(e));
+/**
+ * A toast (error kind, stays until dismissed) and a log line; the same message twice within 2s shows
+ * once. `plain`: the error is already a sentence for Luap (a file that wouldn't open), so the toast
+ * says just that, as the tools' own toasts do; the log keeps what was being done.
+ */
+export function reportError(what: string, e: unknown, plain = false): void {
+  const message = plain ? errorText(e) : `${what}: ${errorText(e)}`;
+  log('error', `${what}: ${errorText(e)}`, errorDetails(e));
   const now = Date.now();
   if (message === last.message && now - last.at < REPEAT_MS) return;
   last = { message, at: now };
@@ -23,11 +27,11 @@ export function reportError(what: string, e: unknown): void {
 }
 
 /** run a tool hook; undefined when it threw (the toast has already said why) */
-export async function guard<T>(what: string, fn: () => T | Promise<T>): Promise<T | undefined> {
+export async function guard<T>(what: string, fn: () => T | Promise<T>, plain = false): Promise<T | undefined> {
   try {
     return await fn();
   } catch (e) {
-    reportError(what, e);
+    reportError(what, e, plain);
     return undefined;
   }
 }

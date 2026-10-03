@@ -1,37 +1,4 @@
-/* each output: its name and what it gives, its button, then its own settings (the other tools'
-   Export); the SVG, the deliverable, sits in a well of its own as on the Instrument board */
-.list { display: flex; flex-direction: column; }
-.item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  column-gap: 14px;
-  row-gap: 9px;
-  padding: 12px 0;
-}
-.item:first-child { padding-top: 0; }
-.item:last-child { padding-bottom: 0; }
-.item + .item { box-shadow: 0 -1px 0 var(--line); }
-.main { align-items: center; margin-bottom: 4px; padding: 10px 10px 10px 12px; border-radius: var(--r-ctl); background: var(--well); }
-.main:first-child { padding-top: 10px; }
-.main + .item { box-shadow: none; }
-.text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.name { font-size: var(--fs-row); font-weight: 600; }
-.desc { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
-.more { display: flex; grid-column: 1 / -1; flex-direction: column; gap: 7px; }
+/* the PNG's width and what it makes, side by side */
 .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 6px; }
 .size { padding-left: 4px; color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; }
 .danger { color: var(--danger); }
-
-.last {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-  padding: 8px 10px 8px 12px;
-  box-shadow: 0 -1px 0 var(--line);
-  font-size: var(--fs-unit);
-  white-space: nowrap;
-}
-.lastName { flex: 1; min-width: 0; overflow: hidden; color: var(--ink-2); font-family: var(--font-mono); text-overflow: ellipsis; }
-.lastAt { color: var(--ink-3); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }

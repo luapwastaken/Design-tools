@@ -6,7 +6,6 @@
 .row { display: flex; align-items: center; gap: 10px; min-height: var(--row); }
 .lab { flex: none; width: var(--label-w, 86px); }
 .grow { flex: 1; min-width: 0; }
-.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
 .trio { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.8fr); gap: 6px; }
 
 .note { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
@@ -16,5 +15,3 @@
 .cap { color: var(--ink-3); font: 400 var(--fs-label)/1.4 var(--font-mono); font-stretch: normal; letter-spacing: .03em; }
 .cap b { font-weight: 400; color: var(--ink-2); }
 
-/* page picks: small keys in a row */
-.picks { display: flex; flex-wrap: wrap; gap: 4px; }

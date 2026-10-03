@@ -70,7 +70,7 @@ export function ItemEntry(p: Props) {
           title={del ? `Delete ${word} “${item.name}”?` : `Move “${item.name}” to ${mode.to}?`}
           detail={
             del
-              ? `${size} Goes to the Recycle Bin when this closes.${ownerNote(owner, true)}`
+              ? `${size} Goes to the Recycle Bin when this closes.${item.locked ? ` ${collectionLabel(item.collection)} is locked, which stops tools editing it, not this.` : ''}${ownerNote(owner, true)}`
               : `From ${collectionLabel(item.collection)}.${mode.toLocked ? ` ${mode.to} is locked.` : ''}${ownerNote(owner, mode.toLocked)}`
           }
           confirmLabel={del ? 'Delete' : 'Move'}

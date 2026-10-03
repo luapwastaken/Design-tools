@@ -4,7 +4,6 @@
 .group { display: flex; flex-direction: column; gap: 4px; }
 .rule { padding-top: 10px; box-shadow: 0 -1px 0 var(--line); }
 .row { display: flex; align-items: center; gap: 10px; min-height: var(--row); }
-.lab { flex: none; width: var(--label-w, 86px); }
 .grow { flex: 1; min-width: 0; }
 .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
 

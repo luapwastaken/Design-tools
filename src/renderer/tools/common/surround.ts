@@ -8,8 +8,11 @@ export type Surround = 'grey' | 'ground' | 'plain';
 /** 18% reflectance: the photographer's neutral grey, the same in both themes, for judging colour */
 export const GREY_18: Oklch = toOklch({ mode: 'lrgb', r: 0.18, g: 0.18, b: 0.18 });
 
+/** the neutral surround, worded the same wherever it is offered (Logo adds what it is for) */
+export const GREY = { value: 'grey', label: '18%', tip: '18% grey surround' } as const;
+
 export const SURROUNDS: { value: Surround; label: string; tip: string }[] = [
-  { value: 'grey', label: '18%', tip: '18% grey surround' },
+  GREY,
   { value: 'ground', label: 'Ground', tip: "The palette's own background" },
   { value: 'plain', label: 'Plain', tip: 'No surround' },
 ];

@@ -5,6 +5,7 @@ import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from 'rea
 import { isTextField } from '../../shell/core/keys.ts';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { Module, Segmented, Select } from '../../ui/index.ts';
+import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import { editedKind, takeMarkup, type Doc } from './actions.ts';
 import { KIND_LABEL, KIND_WHERE, lockupOf, shownLockups, shownVersions, VERSION_LABEL, VERSIONS, type LogoDoc } from './doc.ts';
 import { ExportModule } from './Export.tsx';
@@ -121,7 +122,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         </Module>
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
-      <aside className={s.insp} aria-label="Inspector">
+      <InspectorColumn>
         <Parts doc={doc} d={d} />
         {!empty && (
           <>
@@ -133,7 +134,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
             <ExportModule doc={doc} d={settled} v={v} lockup={kind && lockupOf(settled, kind)} />
           </>
         )}
-      </aside>
+      </InspectorColumn>
     </div>
   );
 }

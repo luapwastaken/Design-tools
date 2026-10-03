@@ -40,7 +40,7 @@ export function paint15(p: Paint): Paint15 {
   return { K, S };
 }
 
-/** paints mixed by amount, as km.ts mixCurves */
+/** paints mixed by amount, as km.ts mixCurves (the tests' oracle for the app's own mixing: paint15, layer15) */
 export function mix15(parts: { paint: Paint15; amount: number }[]): Paint15 {
   const K = new Float64Array(N15);
   let S = 0;
@@ -67,7 +67,7 @@ export function linear15(R: ArrayLike<number>): [number, number, number] {
   return out;
 }
 
-/** a paint's colour at full cover, linear sRGB */
+/** a paint's colour at full cover, linear sRGB (the tests' oracle, as mix15) */
 export const colour15 = (p: Paint15): [number, number, number] => linear15(Array.from(p.K, (k) => rInf(Math.max(0, k) / Math.max(1e-9, p.S))));
 
 function smits([r, g, b]: number[]): Float64Array {

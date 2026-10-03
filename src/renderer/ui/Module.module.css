@@ -1,13 +1,20 @@
 .mod {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  /* clip, not hidden: hidden makes the module its own scroller, so its header could never pin
+     while an inspector column scrolls past it */
+  overflow: clip;
   border-radius: var(--r-mod);
   background: var(--module);
 }
 
 .head {
+  /* pinned while its module is in view: only bodies scroll, headers stay (brief §5) */
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   flex: none;
   align-items: center;

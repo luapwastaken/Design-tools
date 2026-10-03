@@ -7,6 +7,7 @@ import { gradientStops } from '../../../shared/palette/gradient.ts';
 import { harmony } from '../../../shared/palette/harmony.ts';
 import type { LoadedItem } from '../../../shared/types.ts';
 import { useShell } from '../../shell/core/index.ts';
+import { ipc } from '../../shell/core/ipc.ts';
 import type { IconName } from '../../shell/tool.ts';
 import { Button, IconButton, Module, NumberField, Segmented, Select, SwatchStrip, toast } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
@@ -173,7 +174,7 @@ function Logo() {
   const items = library?.collections.flatMap((c) => c.items.filter((i) => i.kind === 'logo' || i.kind === 'svg')) ?? [];
   const pick = async (id: string) => {
     setChosen(id);
-    const item: LoadedItem = await window.api.invoke('library.read', id);
+    const item: LoadedItem = await ipc.invoke('library.read', id);
     if (item.kind === 'logo') takeSvg([item.payload.preview?.svg, item.payload.icon, item.payload.wordmark], item.ref.name);
     else if (item.kind === 'svg') takeSvg([await (await fetch(item.url)).text()], item.ref.name);
   };

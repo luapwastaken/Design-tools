@@ -4,16 +4,10 @@
 .group { display: flex; flex-direction: column; gap: 4px; }
 .rule { padding-top: 10px; box-shadow: 0 -1px 0 var(--line); }
 .row { display: flex; align-items: center; gap: 10px; min-height: var(--row); }
-.lab { flex: none; width: var(--label-w, 86px); }
 .grow { flex: 1; min-width: 0; }
 
 .note { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
 .warn { color: var(--danger); font-size: var(--fs-meta); line-height: 1.4; }
-.cap { color: var(--ink-3); font: 400 var(--fs-label)/1.4 var(--font-mono); font-stretch: normal; letter-spacing: .03em; }
-.cap b { font-weight: 400; color: var(--ink-2); }
-
-/* quick picks: small keys in a row */
-.picks { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 
 /* a specimen drawn in blocks: nearest-neighbour, framed like any content colour */
 .specimen {

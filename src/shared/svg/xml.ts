@@ -16,7 +16,14 @@ export function setAttr(el: El, name: string, value: string): void {
   else el.attrs.push({ name, value });
 }
 
-const UNREADABLE = "The SVG couldn't be read.";
+/** why parseSvg refused: the markup is damaged, or well-formed but not SVG (tools say it with the file's name) */
+export class SvgError extends Error {
+  reason: 'damaged' | 'not-svg';
+  constructor(reason: 'damaged' | 'not-svg') {
+    super(reason === 'damaged' ? "The SVG couldn't be read." : "That isn't an SVG.");
+    this.reason = reason;
+  }
+}
 
 const NAME = /[^\s/>=]+/y;
 const ATTR = /\s*([^\s/>=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/y;
@@ -30,7 +37,7 @@ export function parseSvg(src: string): El {
   const expand = (s: string) => (entities && s.includes('&') ? s.replace(/&([^\s&;#]+);/g, (m, n: string) => entities!.get(n) ?? m) : s);
   const upTo = (end: string, from: number) => {
     const at = src.indexOf(end, from);
-    if (at < 0) throw new Error(UNREADABLE);
+    if (at < 0) throw new SvgError('damaged');
     return at;
   };
 
@@ -41,7 +48,7 @@ export function parseSvg(src: string): El {
     if (lt !== i) {
       const text = src.slice(i, lt < 0 ? undefined : lt);
       if (stack.length > 1) top.children.push({ text: expand(text) });
-      else if (text.trim()) throw new Error(UNREADABLE); // trim() takes a BOM too
+      else if (text.trim()) throw new SvgError('damaged'); // trim() takes a BOM too
       if (lt < 0) break;
       i = lt;
     }
@@ -64,13 +71,13 @@ export function parseSvg(src: string): El {
       i = end + 1;
     } else if (src.startsWith('</', i)) {
       const end = upTo('>', i);
-      if (stack.length < 2 || src.slice(i + 2, end).trim() !== top.name) throw new Error(UNREADABLE);
+      if (stack.length < 2 || src.slice(i + 2, end).trim() !== top.name) throw new SvgError('damaged');
       stack.pop();
       i = end + 1;
     } else {
       NAME.lastIndex = i + 1;
       const name = NAME.exec(src)?.[0];
-      if (!name) throw new Error(UNREADABLE);
+      if (!name) throw new SvgError('damaged');
       const el: El = { name, attrs: [], children: [] };
       let j = NAME.lastIndex;
       for (let m; (ATTR.lastIndex = j), (m = ATTR.exec(src)); j = ATTR.lastIndex) {
@@ -78,16 +85,16 @@ export function parseSvg(src: string): El {
       }
       while (/\s/.test(src[j] ?? '')) j++;
       const selfClosing = src.startsWith('/>', j);
-      if (!selfClosing && src[j] !== '>') throw new Error(UNREADABLE);
-      if (stack.length === 1 && doc.children.length) throw new Error(UNREADABLE); // a second root
+      if (!selfClosing && src[j] !== '>') throw new SvgError('damaged');
+      if (stack.length === 1 && doc.children.length) throw new SvgError('damaged'); // a second root
       top.children.push(el);
       if (!selfClosing) stack.push(el);
       i = j + (selfClosing ? 2 : 1);
     }
   }
   const root = doc.children[0];
-  if (stack.length > 1 || !root || !isEl(root)) throw new Error(UNREADABLE);
-  if (root.name !== 'svg') throw new Error("That isn't an SVG.");
+  if (stack.length > 1 || !root || !isEl(root)) throw new SvgError('damaged');
+  if (root.name !== 'svg') throw new SvgError('not-svg');
   return root;
 }
 

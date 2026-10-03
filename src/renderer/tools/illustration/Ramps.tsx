@@ -4,6 +4,7 @@
 import { useEffect, useState, type CSSProperties, type DragEvent, type MouseEvent } from 'react';
 import type { LibraryItemRef } from '../../../shared/types.ts';
 import { shell, useShell } from '../../shell/core/index.ts';
+import { ipc } from '../../shell/core/ipc.ts';
 import { cx } from '../../ui/cx.ts';
 import { Button, EmptyState, IconButton, menu, toast, type MenuItem } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
@@ -86,6 +87,9 @@ export function Ramps({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illustra
     );
   return (
     <section className={s.ramps} aria-label="Ramps">
+      <div className={s.tools}>
+        <IconButton icon="tune" label="View: what the ramps sit on" size="sm" onContent onClick={openView} />
+      </div>
       <div
         role="listbox"
         aria-label="Ramps"
@@ -144,7 +148,6 @@ export function Ramps({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illustra
           />
         )}
       </div>
-      <IconButton icon="tune" label="View: what the ramps sit on" size="xs" onContent onClick={openView} className={s.viewBtn} />
     </section>
   );
 }
@@ -188,7 +191,7 @@ function Start({ doc }: { doc: Doc }) {
  * source stays as it is for every tool that uses it. One that is already all ramps just opens.
  */
 async function openPalette(doc: Doc, ref: LibraryItemRef): Promise<void> {
-  const item = await window.api.invoke('library.read', ref.id).catch((e: unknown) => {
+  const item = await ipc.invoke('library.read', ref.id).catch((e: unknown) => {
     toast.show({ kind: 'error', message: `${ref.name} couldn't be read: ${e instanceof Error ? e.message : String(e)}` });
     return null;
   });

@@ -36,6 +36,7 @@ export function setActive(id: ToolId): void {
   if (!rtOf(id)) return;
   if (s.active !== id) endGesture(rtOf(s.active)); // spec §8: hiding a tool commits its gesture
   setState({ active: id, settingsOpen: false, mounted: s.mounted.includes(id) ? s.mounted : [...s.mounted, id] });
+  toast.leave(id);
   toast.refresh(); // a Send to toast's Ctrl Z hint follows the tool that took the item
 }
 
@@ -55,13 +56,14 @@ export async function openItem(ref: ItemRef): Promise<void> {
   await deliver(ref, target.tool.id, target.use, false);
 }
 
-export async function sendItem(ref: ItemRef, to: ToolId): Promise<void> {
+/** `switchTo` false: it arrives without taking Luap to the target (a slow render finished after they moved on) */
+export async function sendItem(ref: ItemRef, to: ToolId, switchTo = true): Promise<void> {
   const use = rtOf(to)?.def.accepts[ref.kind];
   if (!use) {
     toast.show({ kind: 'error', message: `${rtOf(to)?.def.label ?? to} doesn't take ${ref.name}.` });
     return;
   }
-  await deliver(ref, to, use, true);
+  await deliver(ref, to, use, true, switchTo);
 }
 
 /** a tool's own Send to (spec §7.4): its item, or for image tools a full-resolution render saved to Scratch */
@@ -84,15 +86,20 @@ export async function sendDoc(from: ToolId, to: ToolId): Promise<void> {
     return sendItem(findRef(getState().library, src.itemId) ?? { id: src.itemId, kind: src.kind, name: src.name }, to);
   }
   const doc = r.doc.get();
+  const was = getState().active;
+  // a full-size render can take seconds: say so where Luap is looking, not only in the status bar
+  const working = toast.show({ icon: 'hourglass_top', message: `Rendering ${r.def.label}'s full-size picture to send it…`, duration: Infinity });
   const ref = await runBusy(async () => {
-    const out = await guard(`${r.def.label} couldn't render`, () => r.def.render!(doc, {}));
+    const out = await guard(`${r.def.label} couldn't render`, () => r.def.render!(doc));
     if (!out) return null;
     return ipc.invoke('library.createImage', SCRATCH, `${out.name} · ${r.def.label}`, out.ext, await out.blob.arrayBuffer()).catch((e) => {
       reportError(`Couldn't save the render to ${SCRATCH}`, e);
       return null;
     });
   });
-  if (ref) await sendItem(ref, to);
+  toast.dismiss(working);
+  // gone to another tool meanwhile: the picture still arrives, but nobody is pulled away from what they are doing
+  if (ref) await sendItem(ref, to, getState().active === was);
 }
 
 /** Send to sends the item file, so the document must be that file: saved, or locked (its edits fork). */
@@ -119,11 +126,11 @@ export function sendKind(from: ToolId): ItemKind | null {
   return r ? sendKindOf(r.def, isEmptyDoc(r, r.doc.get())) : null;
 }
 
-async function deliver(ref: ItemRef, to: ToolId, use: Use, announce: boolean): Promise<void> {
+async function deliver(ref: ItemRef, to: ToolId, use: Use, announce: boolean, switchTo = true): Promise<void> {
   const r = runtime(to);
   // an item of the tool's own kind, opened: it becomes the document, and moves here (spec §7.3)
   const linking = use.mode === 'open' && r.def.itemKind === ref.kind;
-  setActive(to);
+  if (switchTo) setActive(to);
   if (linking && r.doc.source()?.itemId === ref.id && getState().owners[ref.id] === to) return; // already open here
   await idle(r);
   const prev = linking ? getState().owners[ref.id] : undefined;
@@ -151,7 +158,7 @@ async function deliver(ref: ItemRef, to: ToolId, use: Use, announce: boolean): P
     // cancels a drag begun after that.
     for (endGesture(r); r.pending > 0; endGesture(r)) await idle(r);
     const current = r.doc.get();
-    const next = await guard(`${r.def.label} couldn't take ${ref.name}`, () => r.def.receive(item, use, current));
+    const next = await guard(`${r.def.label} couldn't take ${ref.name}`, () => r.def.receive(item, use, current), true); // the tool's own sentence names the file
     if (next === undefined) return;
     const label = receiveLabel(ref.name, use);
     if (linking) {

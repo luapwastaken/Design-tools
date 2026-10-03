@@ -44,26 +44,31 @@ export function Parts({ doc, d }: { doc: Doc; d: LogoDoc }) {
   const count = ROLES.filter((r) => d[r]).length;
   return (
     <Module title="Parts" sub={busy.length ? 'Reading…' : `${count} of 2`}>
-      <div className={s.list}>
-        {ROLES.map((role) => {
-          const part = d[role];
-          if (!part) return <PartSlot key={role} doc={doc} role={role} />;
-          if (armedRole === role)
-            return (
-              <ConfirmInline
-                key={role}
-                icon="delete"
-                title={`Remove the ${role}, ${part.name}?`}
-                detail={`Lockups that need a ${role} stop showing until another arrives. Undo brings it back.`}
-                confirmLabel="Remove"
-                danger
-                onConfirm={() => removePart(doc, role)}
-                onKeep={() => armed.set(null)}
-              />
-            );
-          return <PartRow key={role} doc={doc} d={d} role={role} part={part} />;
-        })}
-      </div>
+      {/* with no part yet the stage's two zones are the ask; saying it again here would be a second pair of cards */}
+      {count === 0 ? (
+        <p className={s.hint}>An icon and a wordmark go in the two zones on the left. Once one is in, it is listed here.</p>
+      ) : (
+        <div className={s.list}>
+          {ROLES.map((role) => {
+            const part = d[role];
+            if (!part) return <PartSlot key={role} doc={doc} role={role} />;
+            if (armedRole === role)
+              return (
+                <ConfirmInline
+                  key={role}
+                  icon="delete"
+                  title={`Remove the ${role}, ${part.name}?`}
+                  detail={`Lockups that need a ${role} stop showing until another arrives. Undo brings it back.`}
+                  confirmLabel="Remove"
+                  danger
+                  onConfirm={() => removePart(doc, role)}
+                  onKeep={() => armed.set(null)}
+                />
+              );
+            return <PartRow key={role} doc={doc} d={d} role={role} part={part} />;
+          })}
+        </div>
+      )}
     </Module>
   );
 }

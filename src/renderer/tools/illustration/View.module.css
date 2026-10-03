@@ -36,12 +36,3 @@
   .lightPane { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(320px, 1fr) auto; height: auto; min-height: 100%; }
 }
 
-.insp {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  min-height: 0;
-  overflow: auto;
-  scrollbar-gutter: stable;
-}
-.insp > * { flex: none; }

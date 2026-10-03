@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import type { Oklch } from '../src/shared/color/index.ts';
 import { layoutTile } from '../src/shared/pattern/layout.ts';
 import type { PatternPayload } from '../src/shared/types.ts';
-import { emptyDoc, fromPayload, mapSlot, paletteColour, PX_PER, toPayload, withPalette, withUnit, type PatternDoc, type ShapeSlot } from '../src/renderer/tools/pattern/doc.ts';
+import { emptyDoc, fromPayload, MAX_COLOURS, mapSlot, paletteColour, PX_PER, toPayload, withPalette, withUnit, type PatternDoc, type ShapeSlot } from '../src/renderer/tools/pattern/doc.ts';
 import type { Swatch } from '../src/shared/types.ts';
 
 const RED: Oklch = [0.6, 0.2, 25];
@@ -63,12 +63,16 @@ test('the export unit only changes how the artboard is shown and written: lookin
 test('a palette sent here colours the shapes that take palette colours; a shape keeping its own colours keeps them', () => {
   const sw = (oklch: typeof RED, role: string | null = null): Swatch => ({ id: String(oklch), name: '', role, oklch, type: 'process' });
   const d: PatternDoc = { ...emptyDoc(), slots: [slot('logo'), slot('star', { recolour: true, colour: GREEN })] };
-  const next = withPalette(d, [sw(RED), sw(BLUE), sw(GREEN, 'Background')]);
+  const next = withPalette(d, [sw(RED), sw(BLUE), sw(GREEN, 'Background')]).doc;
   assert.deepEqual(next.palette, [RED, BLUE]);
   assert.deepEqual(next.background, GREEN);
   assert.equal(next.slots[0], d.slots[0]); // the logo keeps its own colours
   assert.deepEqual([next.slots[1].recolour, next.slots[1].colour], [true, null]); // the star follows the palette again
   // with no shape taking palette colours, none is made to
-  const own = withPalette({ ...d, slots: [slot('logo'), slot('mark')] }, [sw(RED)]);
+  const own = withPalette({ ...d, slots: [slot('logo'), slot('mark')] }, [sw(RED)]).doc;
   assert.ok(own.slots.every((s) => !s.recolour));
+  // a big palette stops at the colour cap, and says how many stayed out
+  const big = withPalette(d, Array.from({ length: 30 }, (_, i) => sw([0.5, 0.1, i * 10] as typeof RED)));
+  assert.equal(big.doc.palette.length, MAX_COLOURS);
+  assert.equal(big.left, 18);
 });

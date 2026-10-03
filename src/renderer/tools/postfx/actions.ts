@@ -3,12 +3,12 @@
 // Library palette as the colours of the colour effects.
 import { toHex, type Oklch } from '../../../shared/color/index.ts';
 import type { DocController } from '../../../shared/doc-api.ts';
-import type { LibraryItemRef, Swatch } from '../../../shared/types.ts';
+import type { Swatch } from '../../../shared/types.ts';
 import { unsupportedImage } from '../../lib/load.ts';
-import { rasterize } from '../../shell/core/rasterize.ts';
 import { shell } from '../../shell/core/index.ts';
 import { toast } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
+import { baseName, claims, isSvg, svgAsPng } from '../common/take.ts';
 import { effectOf, fromPalette, type EffectId } from './effects/index.ts';
 import { duplicateLayer, fix, layerOf, LIMIT, mapLayer, moveLayer, offered, removeLayer, type Layer, type PostFxDoc, type Source } from './doc.ts';
 
@@ -23,22 +23,8 @@ export type Doc = DocController<PostFxDoc>;
 
 const ID = 'postfx';
 
-const baseName = (file: string) => file.replace(/\.[^.]*$/, '') || 'Pasted image';
-
-const isSvg = (f: File) => f.type === 'image/svg+xml' || /\.svg$/i.test(f.name);
-const isImage = (f: File) => isSvg(f) || (f.type.startsWith('image/') && !unsupportedImage(f.type, f.name)) || /\.tiff?$/i.test(f.name);
 /** a file this tool opens, or says plainly why not (a ProRes .mov, a PSD) */
-const opens = (f: File) => isImage(f) || isVideoFile(f.type, f.name) || /\.(psd|heic|heif)$/i.test(f.name);
-
-/** an SVG file drawn as the shell draws a Library SVG "as an image": 4096 px on its long side */
-async function svgAsPng(file: File): Promise<Blob> {
-  const url = URL.createObjectURL(file);
-  try {
-    return await rasterize({ kind: 'svg', url, ref: { name: baseName(file.name) } as LibraryItemRef });
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
+const opens = (f: File) => claims(f) || isVideoFile(f.type, f.name);
 
 /** a new source starts at its first frame (View.tsx brings the playhead back to it) */
 const withSource = (d: PostFxDoc, source: Source): PostFxDoc => fix({ ...d, source });

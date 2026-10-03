@@ -4,7 +4,9 @@
 // another item (a fork, a rename) keeps the painting on screen and saves it there.
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { shell } from '../../shell/core/index.ts';
+import { ipc } from '../../shell/core/ipc.ts';
 import { toast } from '../../ui/index.ts';
+import { putAsset } from '../common/take.ts';
 import type { PaintEngine } from './paint/index.ts';
 
 const TOOL = 'illustration';
@@ -24,7 +26,7 @@ const why = (e: unknown) => (e instanceof Error ? e.message : String(e));
  *  under a minute old, and whatever a quarantined workspace refers to) */
 const collect = (paintings: Record<string, string>) => {
   const keep = Object.values(paintings).flatMap((url) => /[0-9a-f]{64}/.exec(url) ?? []);
-  void window.api.invoke('workspace.gcAssets', TOOL, keep).catch(() => {});
+  void ipc.invoke('workspace.gcAssets', TOOL, keep).catch(() => {});
 };
 
 export function usePainting(engine: PaintEngine | null, itemId: string | null, props: RefObject<Paintings>) {
@@ -39,11 +41,26 @@ export function usePainting(engine: PaintEngine | null, itemId: string | null, p
   const saving = useRef<Promise<void>>(Promise.resolve());
   const [loading, setLoading] = useState(false);
 
+  /**
+   * A painting whose palette is no longer in the Library (trashed, and the app started again since)
+   * goes with it, so its image doesn't stay for good. A Library that is away says nothing about its items.
+   */
+  const prune = (): Record<string, string> => {
+    const { paintings, onPaintings } = props.current;
+    const lib = shell.getState().library;
+    if (!lib?.ok) return paintings;
+    const here = new Set(lib.collections.flatMap((c) => c.items.map((i) => i.id)));
+    const kept = Object.fromEntries(Object.entries(paintings).filter(([id]) => here.has(id) || id === owner.current));
+    if (Object.keys(kept).length === Object.keys(paintings).length) return paintings;
+    onPaintings(kept);
+    return kept;
+  };
+
   const store = async (id: string, png: Promise<Blob | null>) => {
     let url: string | null = null;
     try {
       const blob = await png;
-      if (blob) url = (await window.api.invoke('workspace.putAsset', TOOL, await blob.arrayBuffer(), 'png')).url;
+      if (blob) url = await putAsset(TOOL, blob, 'png');
     } catch (e) {
       if (owner.current === id) unsaved.current = true;
       toast.show({ kind: 'error', message: `The painting couldn't be saved: ${why(e)}` });
@@ -129,7 +146,7 @@ export function usePainting(engine: PaintEngine | null, itemId: string | null, p
   }, [engine]);
 
   useEffect(() => {
-    collect(props.current.paintings);
+    collect(prune());
     // a quit inside the save's delay keeps the last strokes
     const off = shell.beforeClose(() => {
       clearTimeout(timer.current);

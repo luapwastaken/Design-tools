@@ -92,7 +92,7 @@ export function PostFxCanvas({ d, v, busy }: Props) {
 
   const overlay = (t: ViewTransform): ReactNode => {
     // on the image's own corner, as the split's tags are, not the viewport's
-    if (compare !== 'split') return <span className={s.tag} style={{ left: Math.max(0, t.x) + 8, top: Math.max(0, t.y) + 8 }}>{compare === 'before' ? 'Before' : 'After'}</span>;
+    if (compare !== 'split') return <span className={s.tag} style={{ left: Math.max(0, t.x) + 8, top: Math.max(0, t.y) + 8 }}>{compare === 'before' ? 'Original' : 'Result'}</span>;
     const x = columnOf(t, split * W) / t.dpr;
     const top = Math.max(0, t.y);
     const bottom = Math.min(t.height, t.y + H * t.scale);
@@ -139,8 +139,8 @@ export function PostFxCanvas({ d, v, busy }: Props) {
             <Icon name="drag_indicator" size={14} />
           </span>
         </div>
-        {x > 64 && <span className={cx(s.tag, s.before)} style={{ left: x - 8, top: top + 8 }}>Before</span>}
-        {x < t.width - 64 && <span className={s.tag} style={{ left: x + 8, top: top + 8 }}>After</span>}
+        {x > 88 && <span className={cx(s.tag, s.before)} style={{ left: x - 8, top: top + 8 }}>Original</span>}
+        {x < t.width - 80 && <span className={s.tag} style={{ left: x + 8, top: top + 8 }}>Result</span>}
       </>
     );
   };

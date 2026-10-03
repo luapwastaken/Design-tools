@@ -111,9 +111,6 @@ function walk(p: OklabPalette, l: number, a: number, b: number): number {
   return p.byL[at];
 }
 
-/** the palette index nearest a point in the mixing coordinates, matched in OKLab */
-export const nearestMix = (p: OklabPalette, m: number, a: number, b: number): number => nearest(p, lightOf(m), a, b);
-
 /**
  * A linear RGB image (w*h*3) as the dither mixes it, each pixel held inside the palette's box: a
  * colour the palette can't get near (red, on black and white) would otherwise pile up error without end.

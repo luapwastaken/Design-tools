@@ -110,7 +110,7 @@ export function Stage({ doc, d, v, lockup }: { doc: Doc; d: LogoDoc; v: LogoView
       </span>
     ) : (
       <span>
-        PNG <b>{png.w}</b> × <b>{png.h}</b> px
+        PNG <b>{png.w.toLocaleString('en')}</b> × <b>{png.h.toLocaleString('en')}</b> px
       </span>
     );
 

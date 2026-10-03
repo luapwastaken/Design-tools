@@ -1,15 +1,4 @@
-.start {
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 18px;
-  height: 100%;
-  padding: 24px;
-  overflow: auto;
-  background: var(--pasteboard);
-}
 .zones { display: grid; grid-template-columns: repeat(2, minmax(0, 340px)); gap: 12px; width: 100%; justify-content: center; }
-.note { max-width: 62ch; color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.5; text-align: center; }
 @container (max-width: 640px) {
   .zones { grid-template-columns: minmax(0, 340px); }
 }

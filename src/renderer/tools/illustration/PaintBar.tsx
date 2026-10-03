@@ -98,7 +98,7 @@ export function PaintBar(p: PaintBarProps) {
             <Select<BrushKind> label="Brush" options={BRUSHES} value={v.brushes[v.medium]} onChange={(b) => p.onSettings({ brushes: { ...v.brushes, [v.medium]: b } })} className={s.brushSelect} />
           )}
           {/* a smudge carries no paint of its own */}
-          {!smudge && <OnBrush brush={p.brush} hint={hint} named={fit === 'full'} />}
+          {!smudge && <OnBrush brush={p.brush} hint={hint} named={fit === 'full'} wash={v.medium === 'wet'} />}
         </span>
       )}
       <span className={s.grow} />
@@ -107,6 +107,8 @@ export function PaintBar(p: PaintBarProps) {
         {number(smudge ? 'Strength' : 'Load', smudge ? 120 : 92, v.load, LOAD, '%', (load) => p.onSettings({ load }))}
       </span>
       <span className={cx(s.group, s.acts)}>
+        {/* the doc bar has an undo of its own, for the palette: this pair is the paper's */}
+        {fit === 'full' && <span className="lbl">Strokes</span>}
         <IconButton icon="undo" label={`Undo on the canvas: the last strokes, or a Clear${p.painting.depth ? ` (${p.painting.depth} kept)` : ''}`} shortcut="Ctrl+Z" size="sm" disabled={!p.ready || !p.painting.depth} onClick={p.onUndo} />
         <IconButton icon="redo" label="Redo on the canvas" shortcut="Ctrl+Y" size="sm" disabled={!p.ready || !p.painting.redoDepth} onClick={p.onRedo} />
         <IconButton ref={p.clearBtn} icon="delete_sweep" label="Clear the painting" size="sm" disabled={!p.ready || p.painting.blank} onClick={p.onClear} />
@@ -116,10 +118,12 @@ export function PaintBar(p: PaintBarProps) {
 }
 
 /** the loaded paint's chip, and its name while the bar has room (the chip's tooltip has it otherwise) */
-function OnBrush({ brush, hint, named }: { brush: PaintBarProps['brush']; hint: string; named: boolean }) {
+function OnBrush({ brush, hint, named, wash }: { brush: PaintBarProps['brush']; hint: string; named: boolean; wash: boolean }) {
   const chip = brush ? { background: cssColor(brush.oklch) } : undefined;
+  // the chip is the paint as it comes from the tube; a watercolour stroke is a thin wash of it
+  const thin = wash ? ' A watercolour stroke is a thin wash, so it comes out paler than this chip.' : '';
   if (!named) {
-    const says = brush ? `On the brush: ${brush.name}` : hint;
+    const says = brush ? `On the brush: ${brush.name}.${thin}` : hint;
     return (
       <Tooltip content={says}>
         <i className={s.brushChip} role="img" aria-label={says} style={chip} />
@@ -128,7 +132,9 @@ function OnBrush({ brush, hint, named }: { brush: PaintBarProps['brush']; hint: 
   }
   return (
     <span className={s.readout}>
-      <i className={s.brushChip} style={chip} />
+      <Tooltip content={thin.trim()} disabled={!brush || !wash}>
+        <i className={s.brushChip} style={chip} />
+      </Tooltip>
       <Tooltip overflowOnly>
         <span className={cx(s.brushName, !brush && s.dim)}>{brush?.name ?? hint}</span>
       </Tooltip>

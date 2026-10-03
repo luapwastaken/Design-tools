@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { writeAco, writeAse, writeCss, writeGpl, writeJson, writeKpl, writeProcreate, writeSheetSvg, writeTailwind } from '../../../shared/palette/writers.ts';
 import type { Swatch, ToolId } from '../../../shared/types.ts';
-import { saveFile } from '../../lib/export.ts';
+import { exporting, leaf, saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
 import { Button, Popover, Select, TextInput, toast } from '../../ui/index.ts';
 import { plural } from './names.ts';
@@ -85,17 +85,19 @@ function ExportBody({ tool, swatches, named, format, onFormat, name, onName, onD
   const f = FORMATS[format];
   const list = () => named(swatches);
 
-  const save = async () => {
-    const out = await Promise.resolve(f.write(file, list())).catch((e: unknown) => {
-      toast.show({ kind: 'error', message: `Couldn't write the ${f.label} file: ${e instanceof Error ? e.message : String(e)}` });
-      return null;
+  // counted as running work from the first byte made (the quit check), the sheet's drawing included
+  const save = () =>
+    exporting(async () => {
+      const out = await Promise.resolve(f.write(file, list())).catch((e: unknown) => {
+        toast.show({ kind: 'error', message: `Couldn't write the ${f.label} file: ${e instanceof Error ? e.message : String(e)}` });
+        return null;
+      });
+      if (out === null) return;
+      const path = await saveFile({ tool, suggestedName: file, ext: f.ext, filterName: f.filter, data: bytesOf(out) });
+      if (!path) return;
+      toast.show({ icon: 'download', message: `Exported ${leaf(path)}.` });
+      onDone();
     });
-    if (out === null) return;
-    const path = await saveFile({ tool, suggestedName: file, ext: f.ext, filterName: f.filter, data: bytesOf(out) });
-    if (!path) return;
-    toast.show({ icon: 'download', message: `Exported ${path.split(/[\\/]/).pop()}.` });
-    onDone();
-  };
   const copyCss = () =>
     navigator.clipboard.writeText(writeCss(list())).then(
       () => {

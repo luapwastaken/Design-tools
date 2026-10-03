@@ -1,26 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { budget } from './perf.ts';
-import {
-  axes,
-  blueNoise,
-  cells,
-  compensate,
-  dot,
-  dotEstimate,
-  dots,
-  extent,
-  inkedCoverage,
-  pagePx,
-  printed,
-  sdf,
-  splitOf,
-  stochastic,
-  type Cells,
-  type CellShape,
-  type Screen,
-  type Size,
-} from '../src/shared/halftone/index.ts';
+import { axes, cells, compensate, dot, dotEstimate, dots, inkedCoverage, pagePx, printed, splitOf } from '../src/shared/halftone/screen.ts';
+import { extent, sdf } from '../src/shared/halftone/shapes.ts';
+import { blueNoise, stochastic } from '../src/shared/halftone/stochastic.ts';
+import { type Cells, type CellShape, type Screen, type Size } from '../src/shared/halftone/types.ts';
 
 const SHAPES: CellShape[] = ['round', 'ellipse', 'square', 'line', 'diamond', 'cross'];
 const A4: Size = { w: 210, h: 297, unit: 'mm', dpi: 300 };

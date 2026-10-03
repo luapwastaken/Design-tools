@@ -15,6 +15,7 @@ import { onRelink, reconcile, retry, setView } from './persist.ts';
 import { ACTION_LABELS, type ReadoutAction, readoutOf } from './readout.ts';
 import { targetsFor } from './routing.ts';
 import { rtOf } from './runtime.ts';
+import { remember, remembered } from './session.ts';
 import * as send from './send.ts';
 import { setPicker } from './settings.ts';
 import { getState, setState, subscribe } from './store.ts';
@@ -40,10 +41,11 @@ const standIn = (id: ToolId): ToolDefinition<null> => ({
   View: () => null,
 });
 
+// the title bar's readout goes through the Shell's own methods, the one path to each
 const ACTIONS: Record<ReadoutAction, (id: ToolId) => unknown> = {
-  'take-back': send.takeBack,
-  reload: send.reloadFromDisk,
-  'keep-copy': send.keepMineAsCopy,
+  'take-back': (id) => shell.takeBack(id),
+  reload: (id) => shell.reloadFromDisk(id),
+  'keep-copy': (id) => shell.keepMineAsCopy(id),
   retry: (id) => {
     const r = rtOf(id);
     if (r) retry(r);
@@ -68,7 +70,7 @@ export const shell: Shell = {
   setPicker,
   chooseLibraryRoot: library.chooseLibraryRoot,
 
-  targetsFor: (kind) => targetsFor(kind, getState().tools),
+  targetsFor: (kind, from) => targetsFor(kind, getState().tools, from ? rtOf(from)?.def : undefined),
   acceptedLabel: (kind) => rtOf(getState().active)?.def.accepts[kind]?.label ?? null,
   openTarget: send.openTargetFor,
   openItem: send.openItem,
@@ -106,6 +108,7 @@ export const shell: Shell = {
 
 /** Spec §4 start-up: every controller is created and restored before `ready` lets the UI take input. */
 async function start(): Promise<void> {
+  toast.owner = () => getState().active;
   installErrorHandlers();
   installKeymap();
   installInput();
@@ -116,13 +119,21 @@ async function start(): Promise<void> {
   });
   ipc.on('app.notice', (n) => toast.show(n.level === 'error' ? { kind: 'error', message: n.message } : { icon: n.level === 'warn' ? 'warning' : 'info', message: n.message }));
   try {
-    const [info, settings, index] = await Promise.all([ipc.invoke('app.info'), ipc.invoke('settings.get'), ipc.invoke('library.index')]);
+    const [settings, index] = await Promise.all([ipc.invoke('settings.get'), ipc.invoke('library.index')]);
     // an index event may have arrived meanwhile: keep the newest
-    setState({ settings, library: getState().library ?? index, isPackaged: info.isPackaged });
+    setState({ settings, library: getState().library ?? index });
     const tools = await restoreAll(await registeredTools());
     setState({ tools });
-    const active = tools[0]?.id ?? getState().active;
+    // back on the tool it was left on, if that one is still here
+    const was = remembered().tool;
+    const active = tools.find((t) => t.id === was)?.id ?? tools[0]?.id ?? getState().active;
     setState({ ready: true, active, mounted: tools.length ? [active] : [] });
+    let kept = remembered();
+    subscribe(() => {
+      const s = getState();
+      if (s.active === kept.tool && s.libraryOpen === kept.library) return;
+      remember((kept = { tool: s.active, library: s.libraryOpen }));
+    });
   } catch (e) {
     reportError("The app couldn't start", e);
   }

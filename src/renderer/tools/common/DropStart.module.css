@@ -1,4 +1,4 @@
-/* the empty work area: one drop zone on the pasteboard, dashed at rest, lit while a drag is over it (brief §7) */
+/* the empty work area: a drop zone on the pasteboard, dashed at rest, lit while a drag is over it (brief §7) */
 .start {
   display: grid;
   align-content: center;

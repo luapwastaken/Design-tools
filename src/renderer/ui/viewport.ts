@@ -41,8 +41,6 @@ export function snapScale(scale: number, cell: number, dpr: number, dir: -1 | 0 
   return clampScale(Math.max(1, whole) / k);
 }
 
-export const resolveZoom = (z: Zoom, content: Size, box: Size): View => (z === 'fit' ? fitView(content, box) : z);
-
 /** where content (0, 0) sits on screen */
 export const originOf = (v: View, box: Size): Point => ({ x: box.w / 2 - v.x * v.scale, y: box.h / 2 - v.y * v.scale });
 

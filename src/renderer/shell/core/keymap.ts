@@ -78,11 +78,12 @@ function undoRedo(redo: boolean, el: HTMLElement | null): boolean {
 
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
-/** F6 / Shift+F6 cycle the regions views mark with data-region (brief §6) */
+/** F6 / Shift+F6 cycle the regions views mark with data-region (brief §6): a region inside another (the inspector in the work area) counts on its own */
 function cycleRegion(back: boolean, el: HTMLElement | null): boolean {
   const regions = [...document.querySelectorAll<HTMLElement>('[data-region]')].filter((x) => x.getClientRects().length > 0 && !x.closest('[inert]'));
   if (!regions.length) return false;
-  const at = regions.findIndex((x) => x.contains(el));
+  // document order puts a region after the one around it, so the last that holds focus is the innermost
+  const at = regions.map((x) => x.contains(el)).lastIndexOf(true);
   const n = regions.length;
   const next = regions[at < 0 ? (back ? n - 1 : 0) : (at + (back ? n - 1 : 1)) % n];
   const target = [...next.querySelectorAll<HTMLElement>(FOCUSABLE)].find((x) => x.getClientRects().length > 0) ?? next;

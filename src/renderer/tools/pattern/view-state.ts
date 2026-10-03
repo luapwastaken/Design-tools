@@ -2,6 +2,7 @@
 import { useSyncExternalStore } from 'react';
 import { shell } from '../../shell/core/index.ts';
 import { asZoom, type Zoom } from '../../ui/index.ts';
+import { recordOf, type ExportRecord } from '../common/exported.ts';
 import { createStore } from '../common/store.ts';
 
 const ID = 'pattern';
@@ -14,9 +15,10 @@ export type PatternView = {
   inspector: number;
   /** what the PNG export draws */
   png: 'tile' | 'artboard';
+  last: ExportRecord | null;
 };
 
-export const DEFAULT_VIEW: PatternView = { zoom: 'fit', seams: false, inspector: 380, png: 'artboard' };
+export const DEFAULT_VIEW: PatternView = { zoom: 'fit', seams: false, inspector: 380, png: 'artboard', last: null };
 
 /** what a saved workspace holds, field by field; anything odd falls back to the default */
 function sanitize(raw: unknown): PatternView {
@@ -26,6 +28,7 @@ function sanitize(raw: unknown): PatternView {
     seams: typeof r.seams === 'boolean' ? r.seams : DEFAULT_VIEW.seams,
     inspector: typeof r.inspector === 'number' && Number.isFinite(r.inspector) ? r.inspector : DEFAULT_VIEW.inspector,
     png: r.png === 'tile' || r.png === 'artboard' ? r.png : DEFAULT_VIEW.png,
+    last: recordOf(r.last),
   };
 }
 

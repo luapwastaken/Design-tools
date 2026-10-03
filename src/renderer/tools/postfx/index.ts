@@ -2,6 +2,7 @@
 // across a divider, and exported as a full-resolution PNG, a GIF or a PNG sequence that loops exactly.
 // Spec: docs/superpowers/specs/2026-09-29-postfx-tool.md; plan unit V.
 import type { ToolDefinition } from '../../shell/tool.ts';
+import { flipOriginal } from '../common/flip.ts';
 import { fetchBlob } from '../common/take.ts';
 import { duplicate, pickFile, sourceOf, takeFiles, withPalette } from './actions.ts';
 import { emptyDoc, fix, timeline, type PostFxDoc } from './doc.ts';
@@ -11,13 +12,7 @@ import { stepFrame, togglePlay } from './Transport.tsx';
 import { getView, pausedFrame, patchView, playhead } from './view-state.ts';
 import { View } from './View.tsx';
 
-// `\` shows the original, and again goes back to the view it came from
-let beforeWas: 'split' | 'after' = 'split';
-function toggleBefore(): void {
-  const v = getView();
-  if (v.compare !== 'before') beforeWas = v.compare;
-  patchView({ compare: v.compare === 'before' ? beforeWas : 'before' });
-}
+const toggleBefore = flipOriginal(() => getView().compare, (compare) => patchView({ compare }), 'before', 'split');
 
 export const tool: ToolDefinition<PostFxDoc> = {
   id: 'postfx',
@@ -32,9 +27,9 @@ export const tool: ToolDefinition<PostFxDoc> = {
 
   accepts: {
     image: { mode: 'open', label: 'IMAGE' },
-    pattern: { mode: 'open', label: 'AS IMAGE' },
-    logo: { mode: 'open', label: 'AS IMAGE' },
-    svg: { mode: 'open', label: 'AS IMAGE' },
+    pattern: { mode: 'open', label: 'IMAGE' },
+    logo: { mode: 'open', label: 'IMAGE' },
+    svg: { mode: 'open', label: 'IMAGE' },
     palette: { mode: 'apply', label: 'EFFECT COLOURS' },
   },
   async receive(item, _use, current) {
@@ -63,7 +58,7 @@ export const tool: ToolDefinition<PostFxDoc> = {
     const sel = getView().selected;
     return [
       { keys: 'Ctrl+O', label: 'Open an image or a clip', run: () => pickFile(doc) },
-      { keys: '\\', label: 'Switch to the original and back', run: toggleBefore },
+      { keys: '\\', label: 'Switch between the result and the original', run: toggleBefore },
       ...(sel && d.stack.some((l) => l.id === sel) ? [{ keys: 'Ctrl+D', label: 'Duplicate the selected layer', run: () => duplicate(doc, sel) }] : []),
       ...(d.source && t.count > 1
         ? [

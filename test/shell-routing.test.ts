@@ -28,13 +28,13 @@ const tool = (o: Partial<ToolDefinition<any>> & Pick<ToolDefinition<any>, 'id' |
   ...o,
 });
 
-const design = tool({ id: 'design', itemKind: 'palette', shortcut: 1, accepts: { palette: { mode: 'open', label: 'PALETTE' }, image: { mode: 'apply', label: 'EXTRACT' } } });
-const pattern = tool({ id: 'pattern', itemKind: 'pattern', shortcut: 3, accepts: { pattern: { mode: 'open', label: 'PATTERN' }, logo: { mode: 'apply', label: 'AS SHAPE' } } });
+const design = tool({ id: 'design', itemKind: 'palette', shortcut: 1, accepts: { palette: { mode: 'open', label: 'PALETTE' }, image: { mode: 'apply', label: 'COLOURS' } } });
+const pattern = tool({ id: 'pattern', itemKind: 'pattern', shortcut: 3, accepts: { pattern: { mode: 'open', label: 'PATTERN' }, logo: { mode: 'apply', label: 'SHAPE' } } });
 const dither = tool({
   id: 'dither',
   shortcut: 5,
   render: async () => ({ blob: new Blob(), name: 'x', ext: 'png' }),
-  accepts: { image: { mode: 'open', label: 'IMAGE' }, pattern: { mode: 'open', label: 'AS IMAGE' }, palette: { mode: 'apply', label: 'PALETTE' } },
+  accepts: { image: { mode: 'open', label: 'IMAGE' }, pattern: { mode: 'open', label: 'IMAGE' }, palette: { mode: 'apply', label: 'PALETTE' } },
 });
 const tools = [design, pattern, dither];
 
@@ -53,7 +53,7 @@ test('open routing: the active tool if it accepts the kind, else the tool whose 
   assert.equal(openTarget('palette', dither, tools)?.tool.id, 'dither');
   assert.equal(openTarget('palette', dither, tools)?.use.mode, 'apply');
   assert.equal(openTarget('pattern', design, tools)?.tool.id, 'pattern');
-  assert.equal(openTarget('logo', pattern, tools)?.use.label, 'AS SHAPE');
+  assert.equal(openTarget('logo', pattern, tools)?.use.label, 'SHAPE');
   // an image with no accepting active tool can't be opened (spec §6.4)
   assert.equal(openTarget('image', pattern, tools), null);
   assert.equal(openTarget('image', design, tools)?.tool.id, 'design');
@@ -79,8 +79,8 @@ test('what a tool sends', () => {
 test('history labels and the Send to toast', () => {
   assert.equal(receiveLabel('Monolith core', { mode: 'open', label: 'PALETTE' }), 'Open Monolith core');
   assert.equal(receiveLabel('Monolith core', { mode: 'apply', label: 'INKS' }), 'Inks from Monolith core');
-  assert.equal(receiveLabel('Monolith core', { mode: 'apply', label: 'PICK COLOURS' }), 'Pick colours from Monolith core');
-  assert.equal(receiveLabel('Bracket mark', { mode: 'apply', label: 'AS SHAPE' }), 'Bracket mark as shape');
+  assert.equal(receiveLabel('Monolith core', { mode: 'apply', label: 'COLOURS' }), 'Colours from Monolith core');
+  assert.equal(receiveLabel('Bracket mark', { mode: 'apply', label: 'SHAPE' }), 'Shape from Bracket mark');
   // the toast's Undo and Ctrl Z hint say how to go back, so the message doesn't (brief §6)
   assert.equal(sentMessage('Monolith core', { mode: 'open', label: 'PALETTE' }, 'Design'), 'Opened Monolith core in Design.');
   assert.equal(sentMessage('Monolith core', { mode: 'apply', label: 'INKS' }, 'Halftone'), 'Inks from Monolith core in Halftone.');

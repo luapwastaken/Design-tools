@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { bilevel } from '../src/shared/halftone/bilevel.ts';
-import { cells, inkedCoverage, pagePx, splitOf, type CellShape, type Screen, type Size } from '../src/shared/halftone/index.ts';
+import { cells, inkedCoverage, pagePx, splitOf } from '../src/shared/halftone/screen.ts';
+import { type CellShape, type Screen, type Size } from '../src/shared/halftone/types.ts';
 
 const SHAPES: CellShape[] = ['round', 'ellipse', 'square', 'line', 'diamond', 'cross'];
 const size: Size = { w: 30, h: 20, unit: 'mm', dpi: 300 };

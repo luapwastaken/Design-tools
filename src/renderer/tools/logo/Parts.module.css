@@ -1,4 +1,5 @@
 .list { display: flex; flex-direction: column; gap: 6px; }
+.hint { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
 
 /* one part: its artwork on the well, what it is and what was measured, its menu */
 .row {

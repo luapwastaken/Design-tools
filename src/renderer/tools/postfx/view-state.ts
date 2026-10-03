@@ -2,6 +2,7 @@
 import { useSyncExternalStore } from 'react';
 import { shell } from '../../shell/core/index.ts';
 import { asZoom, type Zoom } from '../../ui/index.ts';
+import { recordOf, type ExportRecord } from '../common/exported.ts';
 import { createStore } from '../common/store.ts';
 import { frameAt, startOf, type Timeline } from './doc.ts';
 
@@ -23,18 +24,13 @@ export type PostFxView = {
   time: number;
   /** the layer whose settings show */
   selected: string | null;
-  last: { name: string; path: string; at: number } | null;
+  last: ExportRecord | null;
 };
 
 export const DEFAULT_VIEW: PostFxView = { zoom: 'fit', compare: 'split', split: 0.5, inspector: 380, time: 0, selected: null, last: null };
 
 const oneOf = <T,>(v: unknown, all: readonly T[], def: T): T => (all.includes(v as T) ? (v as T) : def);
 const num = (v: unknown, lo: number, hi: number, def: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def);
-
-function lastOf(v: unknown): PostFxView['last'] {
-  const r = (typeof v === 'object' && v !== null ? v : {}) as Record<string, unknown>;
-  return typeof r.name === 'string' && typeof r.path === 'string' && typeof r.at === 'number' ? { name: r.name, path: r.path, at: r.at } : null;
-}
 
 /** what a saved workspace holds, field by field; anything odd falls back to the default */
 function sanitize(raw: unknown): PostFxView {
@@ -47,7 +43,7 @@ function sanitize(raw: unknown): PostFxView {
     inspector: Math.round(num(r.inspector, 340, 460, d.inspector)),
     time: num(r.time, 0, 1e6, d.time),
     selected: typeof r.selected === 'string' ? r.selected : null,
-    last: lastOf(r.last),
+    last: recordOf(r.last),
   };
 }
 

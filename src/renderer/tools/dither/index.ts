@@ -3,6 +3,7 @@
 // Spec: docs/superpowers/specs/2026-09-29-dither-tool.md; plan unit V.
 import type { ToolDefinition } from '../../shell/tool.ts';
 import { toast } from '../../ui/index.ts';
+import { flipOriginal } from '../common/flip.ts';
 import { fetchBlob } from '../common/take.ts';
 import { pickImage, sourceOf, takeFiles, withPalette } from './actions.ts';
 import { isAnimated, type DitherDoc } from './doc.ts';
@@ -13,6 +14,8 @@ import { stepFrame } from './Transport.tsx';
 import { getView, patchView, playhead } from './view-state.ts';
 import { View } from './View.tsx';
 
+const flip = flipOriginal(() => getView().show, (show) => patchView({ show }), 'original', 'result');
+
 export const tool: ToolDefinition<DitherDoc> = {
   id: 'dither',
   label: 'Dither',
@@ -22,14 +25,15 @@ export const tool: ToolDefinition<DitherDoc> = {
   docVersion: 1,
   createEmptyDoc: emptyDoc,
   isEmpty: (d) => !d.source,
+  opaque: true,
   // the doc bar says the same with no image
   docName: (d) => d.source?.name ?? 'No image',
 
   accepts: {
     image: { mode: 'open', label: 'IMAGE' },
-    pattern: { mode: 'open', label: 'AS IMAGE' },
-    logo: { mode: 'open', label: 'AS IMAGE' },
-    svg: { mode: 'open', label: 'AS IMAGE' },
+    pattern: { mode: 'open', label: 'IMAGE' },
+    logo: { mode: 'open', label: 'IMAGE' },
+    svg: { mode: 'open', label: 'IMAGE' },
     palette: { mode: 'apply', label: 'PALETTE' },
   },
   async receive(item, _use, current) {
@@ -55,7 +59,7 @@ export const tool: ToolDefinition<DitherDoc> = {
 
   shortcuts: (doc) => [
     { keys: 'Ctrl+O', label: 'Open an image', run: () => pickImage(doc) },
-    { keys: '\\', label: 'Switch between the result and the original', run: () => patchView({ show: getView().show === 'original' ? 'result' : 'original' }) },
+    { keys: '\\', label: 'Switch between the result and the original', run: flip },
     ...(isAnimated(doc.get())
       ? [
           { keys: 'ArrowLeft', label: 'Previous frame', run: () => stepFrame(doc.get(), -1) },

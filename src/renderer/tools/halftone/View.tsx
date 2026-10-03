@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties 
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { Icon } from '../../ui/index.ts';
 import { useHeld } from '../common/held.ts';
+import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import type { Doc } from './actions.ts';
 import { HalftoneCanvas } from './Canvas.tsx';
 import { ExportModule } from './Export.tsx';
@@ -115,7 +116,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         )}
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
-      <aside className={s.insp} aria-label="Inspector">
+      <InspectorColumn>
         <OutputModule doc={doc} d={d} />
         <ScreenModule doc={doc} d={d} />
         <InksModule doc={doc} d={d} plateOf={plateOf} />
@@ -124,7 +125,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         <ToneModule doc={doc} d={d} hist={screened?.hist ?? null} />
         <FeelModule doc={doc} d={d} />
         <ExportModule d={d} v={v} screened={screened} error={screenError} />
-      </aside>
+      </InspectorColumn>
     </div>
   );
 }

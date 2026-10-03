@@ -1,19 +1,16 @@
 // The transport for animated input (plan unit V): play and pause (also a quick tap of Space, spec
 // §9), step, scrub to a frame, and the frame rate. Where the playhead is stays out of history.
-import { useEffect, useRef, type RefObject } from 'react';
+import { useRef } from 'react';
 import { decodeFrames } from '../../lib/frames.ts';
-import { isTextField } from '../../shell/core/keys.ts';
 import { IconButton, NumberField, Slider, toast, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
+import { useSpaceTap } from '../common/spaceTap.ts';
 import { fetchBlob } from '../common/take.ts';
 import type { Doc } from './actions.ts';
 import { fix, LIMIT, loopMs, type DitherDoc } from './doc.ts';
 import { made, madeCount } from './pipeline.ts';
 import { playhead } from './view-state.ts';
 import s from './Transport.module.css';
-
-/** a Space press shorter than this, with no drag in it, is a tap: longer, it pans the view */
-const TAP_MS = 250;
 
 export const stepFrame = (d: DitherDoc, by: number): void => {
   const n = d.source?.frames ?? 1;
@@ -22,44 +19,9 @@ export const stepFrame = (d: DitherDoc, by: number): void => {
 
 export const togglePlay = (): void => playhead.set({ ...playhead.get(), playing: !playhead.get().playing });
 
-/**
- * A tap of Space plays and pauses (spec §9: only a text field keeps Space), unless the tap was a pan.
- * The focused button isn't pressed by it; Enter still presses buttons, and an open menu keeps Space.
- */
-function useSpaceTap(el: RefObject<HTMLElement | null>, active: boolean) {
-  useEffect(() => {
-    if (!active) return;
-    let down: number | null = null;
-    const onDown = (e: KeyboardEvent) => {
-      if (e.key !== ' ' || e.ctrlKey || e.altKey || e.metaKey) return;
-      const f = document.activeElement as HTMLElement | null;
-      if ((f && (isTextField(f) || f.closest('[role="menu"], [role="listbox"]'))) || !el.current || !el.current.getClientRects().length || el.current.closest('[inert]')) return;
-      e.preventDefault();
-      if (!e.repeat) down = performance.now();
-    };
-    const onUp = (e: KeyboardEvent) => {
-      if (e.key !== ' ' || down === null) return;
-      e.preventDefault();
-      if (performance.now() - down < TAP_MS) togglePlay();
-      down = null;
-    };
-    const cancel = () => (down = null);
-    addEventListener('keydown', onDown);
-    addEventListener('keyup', onUp);
-    addEventListener('pointerdown', cancel, true);
-    addEventListener('blur', cancel);
-    return () => {
-      removeEventListener('keydown', onDown);
-      removeEventListener('keyup', onUp);
-      removeEventListener('pointerdown', cancel, true);
-      removeEventListener('blur', cancel);
-    };
-  }, [active]);
-}
-
 export function Transport({ doc, d, frame, playing, active }: { doc: Doc; d: DitherDoc; frame: number; playing: boolean; active: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
-  useSpaceTap(ref, active);
+  useSpaceTap(ref, active, togglePlay);
   made.use();
   const src = d.source!;
   const fps = useDocNumber(doc, {

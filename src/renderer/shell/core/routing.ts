@@ -41,10 +41,11 @@ export function cantOpen(kind: ItemKind, takers: string[]): string {
   return `${PLURAL[kind]} open in ${names}. Switch to ${takers.length < 2 ? 'it' : 'one'}, or use Send to.`;
 }
 
-export function targetsFor(kind: ItemKind, tools: Tool[]): { tool: Tool; use: Use }[] {
+/** `from`: a tool sending its render, which is never offered to one that needs transparency if it is flat (Dither's) */
+export function targetsFor(kind: ItemKind, tools: Tool[], from?: Tool): { tool: Tool; use: Use }[] {
   return tools.flatMap((tool) => {
     const use = tool.accepts[kind];
-    return use ? [{ tool, use }] : [];
+    return use && !(from?.opaque && kind === 'image' && tool.needsAlpha) ? [{ tool, use }] : [];
   });
 }
 
@@ -68,12 +69,8 @@ export function sendKindOf(tool: Tool, empty: boolean): ItemKind | null {
 
 const sentence = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** The history step: "Open Monolith core", "Tint from Monolith core", "Bracket mark as shape". */
-export function receiveLabel(name: string, use: Use): string {
-  if (use.mode === 'open') return `Open ${name}`;
-  const what = use.label.toLowerCase();
-  return what.startsWith('as ') ? `${name} ${what}` : `${sentence(what)} from ${name}`;
-}
+/** The history step: "Open Monolith core", "Inks from Monolith core", "Shape from Bracket mark". */
+export const receiveLabel = (name: string, use: Use): string => (use.mode === 'open' ? `Open ${name}` : `${sentence(use.label.toLowerCase())} from ${name}`);
 
 /** The Send to toast (spec §7.4 step 3): what happened. Its Undo button and Ctrl Z hint say the rest (brief §6). */
 export function sentMessage(name: string, use: Use, toolLabel: string): string {

@@ -1,13 +1,13 @@
 // The inspector's lockup and colour modules (spec §2): Lockups, Proportions, Versions, Clearspace.
 // Every value is typable and each change is one history step; fix() keeps the document valid.
-import { useMemo, type MouseEvent } from 'react';
+import { useMemo } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
 import { layoutLockup, spaceUnit } from '../../../shared/logo/layout.ts';
 import { ALIGNS, type Align } from '../../../shared/logo/types.ts';
-import { shell } from '../../shell/core/index.ts';
 import { ColorField, IconButton, menu, Module, Segmented, Slider, Toggle, Tooltip, useDocColour, useDocNumber, type MenuItem } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { displayName } from '../common/names.ts';
+import { paletteMenu, useReadAhead } from '../common/palettes.ts';
 import { copyProportions, resetProportions, select, toggleLockup, type Doc } from './actions.ts';
 import { available, fix, KIND_LABEL, KIND_WHERE, LIMIT, mapLockup, proposed, twoParts, VERSION_LABEL, VERSION_NOTE, VERSIONS, type Lockup, type LockupKind, type LogoDoc, type Part, type Version } from './doc.ts';
 import { palette } from './view-state.ts';
@@ -71,7 +71,7 @@ export function LockupsModule({ doc, d, edited }: { doc: Doc; d: LogoDoc; edited
             <div key={l.kind} className={cx(s.lockup, mine && s.edited, !ok && s.off)}>
               <Diagram d={d} lockup={l} />
               <div className={s.lockText}>
-                <Toggle label={KIND_LABEL[l.kind]} checked={l.on && ok} disabled={!ok} onChange={(v) => toggleLockup(doc, l.kind, v)} className={s.toggle} />
+                <Toggle label={KIND_LABEL[l.kind]} checked={l.on && ok} disabled={!ok} onChange={(v) => toggleLockup(doc, l.kind, v)} className={s.toggle} quiet />
                 <Tooltip content={meta} overflowOnly>
                   <span className={s.meta}>{meta}</span>
                 </Tooltip>
@@ -146,25 +146,19 @@ export function ProportionsModule({ doc, d, lockup }: { doc: Doc; d: LogoDoc; lo
 export function VersionsModule({ doc, d }: { doc: Doc; d: LogoDoc }) {
   const colour = useDocColour(doc, { label: 'Change the colour', key: 'colour', get: (x) => x.colour, set: (x, o) => ({ ...x, colour: o }) });
   const pal = palette.use();
+  useReadAhead();
   const toggle = (v: Version, on: boolean) =>
     doc.transact(`${on ? 'Turn on' : 'Turn off'} ${VERSION_LABEL[v].toLowerCase()}`, (x) => fix({ ...x, versions: on ? [...x.versions, v] : x.versions.filter((y) => y !== v) }));
   const raster = !!(d.icon && !d.icon.svg) || !!(d.wordmark && !d.wordmark.svg);
-  const palettes = (e: MouseEvent<HTMLButtonElement>) => {
-    const groups = (shell.getState().library?.collections ?? []).map((c) => ({ name: c.name || 'Library root', items: c.items.filter((i) => i.kind === 'palette') })).filter((g) => g.items.length);
-    const items: MenuItem[] = groups.length
-      ? groups.flatMap((g) => [{ header: g.name }, ...g.items.map((ref) => ({ label: ref.name, onSelect: () => void shell.sendItem(ref, 'logo') }))])
-      : [{ label: 'No palettes in the Library yet', disabled: true }];
-    menu.open(e.currentTarget.getBoundingClientRect(), items, { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined });
-  };
   return (
-    <Module title="Versions" sub={`${d.versions.length} on`} actions={<IconButton icon="palette" label="The colour from a Library palette" size="sm" onClick={palettes} />}>
+    <Module title="Versions" sub={`${d.versions.length} on`} actions={<IconButton icon="palette" label="The colour from a Library palette" size="sm" onClick={(e) => menu.open(e.currentTarget.getBoundingClientRect(), paletteMenu('logo'), { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined })} />}>
       <div className={s.versions}>
         {VERSIONS.map((v) => {
           const on = d.versions.includes(v);
           const last = on && d.versions.length === 1;
           return (
             <div key={v} className={s.version}>
-              <Toggle label={VERSION_LABEL[v]} checked={on} disabled={last} onChange={(x) => toggle(v, x)} className={s.toggle} />
+              <Toggle label={VERSION_LABEL[v]} checked={on} disabled={last} onChange={(x) => toggle(v, x)} className={s.toggle} quiet />
               <span className={s.meta}>{last ? 'The last one stays on' : VERSION_NOTE[v]}</span>
             </div>
           );
