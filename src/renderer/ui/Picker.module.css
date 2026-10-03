@@ -1,0 +1,174 @@
+/* The picker (plan unit F; styles from the colour UX pass, docs/rewrite/ux-pass/pickers.png). */
+.picker { display: flex; flex-direction: column; min-width: 0; }
+.styles { align-self: flex-start; margin-bottom: 10px; }
+/* the style switch is four icons, tighter than a labelled segment */
+div.icons button { padding: 0 5px; }
+
+/* ── plane ── */
+.planeWrap {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-rows: var(--plane-h, 206px) 16px;
+  column-gap: 6px;
+}
+.yAxis { position: relative; }
+.yAxis span, .xAxis span {
+  position: absolute;
+  color: var(--ink-3);
+  font: 400 var(--fs-label)/1 var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+}
+.yAxis span { right: 0; }
+.yAxis span:first-child { top: 0; }
+.yAxis span:nth-child(2) { top: 50%; transform: translateY(-50%); }
+.yAxis span:last-child { bottom: 0; }
+
+.plane {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--well);
+  cursor: crosshair;
+  touch-action: none;
+}
+.plane[data-lock] { cursor: ew-resize; }
+/* the plane is colour being judged, so its focus ring is neutral and clear of it (brief §4) */
+.plane:focus-visible { outline: 1px solid var(--tick-strong); outline-offset: 2px; }
+.canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.edges path { fill: none; stroke: var(--tick-strong); stroke-width: 1; }
+.edges .p3Edge { stroke-dasharray: 3 3; }
+
+.vline, .hline { position: absolute; left: 0; top: 0; background: var(--cross); opacity: .55; pointer-events: none; }
+.vline { width: 1px; height: 100%; }
+.hline { width: 100%; height: 1px; }
+.ring { position: absolute; left: -10px; top: -10px; width: 20px; height: 20px; overflow: visible; pointer-events: none; }
+.ring circle { fill: none; }
+.halo { stroke: var(--cross-halo); stroke-width: 3; }
+.mark { stroke: var(--cross); stroke-width: 1.5; }
+
+.xAxis { position: relative; grid-column: 2; }
+.xAxis span { top: 5px; transform: translateX(-50%); }
+.xAxis span:first-child { transform: none; }
+.xAxis span:last-child { transform: translateX(-100%); }
+
+.caption { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 0 0 30px; }
+.legend { display: flex; gap: 12px; }
+.legend > span { display: flex; align-items: center; gap: 5px; }
+.legend i { width: 12px; border-top: 1px solid var(--tick-strong); }
+.legend i.dash { border-top-style: dashed; }
+
+/* ── Square and Wheel: the saturation-by-brightness area ── */
+.sb {
+  position: relative;
+  height: 196px;
+  border-radius: 2px;
+  /* two gradients multiplied: white to the hue across, black to white up (HSB exactly) */
+  background-blend-mode: multiply;
+  box-shadow: inset 0 0 0 1px var(--edge);
+  cursor: crosshair;
+  touch-action: none;
+}
+.sb:focus-visible, .hueRing:focus-visible { outline: 1px solid var(--tick-strong); outline-offset: 2px; }
+.dot { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; overflow: visible; pointer-events: none; }
+.dot circle { fill: none; }
+.hueBar { margin-top: 8px; }
+
+.wheel {
+  --wheel: 240px;
+  --ring: 20px;
+  --sb: 128px;
+  position: relative;
+  align-self: center;
+  width: var(--wheel);
+  height: var(--wheel);
+  margin-bottom: 8px;
+}
+.hueRing { position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--edge); cursor: crosshair; touch-action: none; }
+.hole { position: absolute; inset: var(--ring); border-radius: 50%; background: var(--picker-ground, var(--module)); box-shadow: 0 0 0 1px var(--edge); }
+.wheelSb {
+  position: absolute;
+  left: calc((var(--wheel) - var(--sb)) / 2);
+  top: calc((var(--wheel) - var(--sb)) / 2);
+  width: var(--sb);
+  height: var(--sb);
+}
+.hueMark { left: 50%; top: 50%; }
+
+/* the number row under Square and Wheel: the model menu, then its fields */
+.nums { display: grid; grid-template-columns: 76px; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; margin-top: 4px; }
+/* ≈CMYK's four numbers take a row of their own under the menu, so 100% fits at the inspector's 340px */
+.nums[data-n="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-flow: row; }
+.nums[data-n="4"] > :first-child { grid-column: 1 / -1; width: 76px; }
+
+/* ── channels ── */
+.tabs { margin-bottom: 6px; }
+.chans { margin-top: 12px; }
+.tabs + .chans { margin-top: 4px; }
+.chan { display: grid; grid-template-columns: minmax(0, 1fr) 92px; align-items: center; gap: 10px; height: 38px; }
+/* a lock button between track and field (OKLCH's L and H; C keeps the gap) */
+.chan[data-aside] { grid-template-columns: minmax(0, 1fr) var(--ib-xs) 92px; gap: 6px; }
+.trk { position: relative; height: 26px; touch-action: none; }
+.grad {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 2px;
+  height: 12px;
+  border-radius: 2px;
+  background-color: var(--well);
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+.lim { position: absolute; top: 0; width: 1px; height: 16px; background: var(--ink-3); pointer-events: none; }
+.ndl {
+  position: absolute;
+  top: -1px;
+  width: 4px;
+  height: 18px;
+  margin-left: -2px;
+  border-radius: 1px;
+  background: var(--ink);
+  /* clears the needle from the colours under it; the popover sets its own ground */
+  box-shadow: 0 0 0 1.5px var(--picker-ground, var(--module));
+  pointer-events: none;
+}
+.tk { bottom: 2px; }
+.locked .ndl { background: var(--ink-3); }
+
+.note {
+  margin: 2px 0 4px;
+  color: var(--ink-3);
+  font: 400 var(--fs-label)/1.4 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .03em;
+}
+
+.outside {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+}
+.outside > :global(.material-symbols-rounded) { color: var(--ink-3); }
+
+/* ── hex and gamut ── */
+.hexRow { display: flex; align-items: flex-start; gap: 6px; margin-top: 6px; }
+.hex { flex: 1; }
+
+.gam { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.gam > div { display: flex; flex-direction: column; gap: 6px; padding: 8px 9px; border-radius: var(--r-ctl); background: var(--well); }
+.gv {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font: 400 var(--fs-ctl)/1 var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+}
+.gv > :global(.material-symbols-rounded) { color: var(--ink-2); }

@@ -1,0 +1,39 @@
+/* the dot shapes as keys, four across: a glyph of the screen, then its name; the lit one as a Segmented's */
+.keys {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--r-ctl);
+  background: var(--well);
+}
+.key {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 2px;
+  color: var(--ink-3);
+  font: 500 var(--fs-meta)/1 var(--font-sans);
+  font-stretch: var(--sans-stretch);
+  white-space: nowrap;
+}
+.key span { overflow: hidden; text-overflow: ellipsis; }
+.key svg { flex: none; fill: currentColor; }
+.key:hover { color: var(--ink); }
+.key.on { background: var(--raise); color: var(--ink); }
+.key.on::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 12px;
+  height: 2px;
+  margin-left: -6px;
+  border-radius: 1px;
+  background: var(--signal);
+}
+.wide { grid-column: span 2; }

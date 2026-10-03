@@ -1,0 +1,1 @@
+.lines { display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }

@@ -1,0 +1,19 @@
+/* brief §5: work area at least 540px, inspector 340–460 (380); the inspector gives way first */
+.view {
+  display: grid;
+  grid-template-columns: minmax(min(540px, calc(100% - 340px - var(--gap))), 1fr) minmax(340px, var(--insp));
+  gap: var(--gap);
+  min-width: 0;
+  min-height: 0;
+}
+
+/* the document bar, then the Viewport takes the rest */
+.work {
+  position: relative;
+  display: grid;
+  grid-template-rows: var(--docbar) minmax(0, 1fr);
+  gap: var(--gap);
+  min-width: 0;
+  min-height: 0;
+}
+

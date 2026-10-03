@@ -1,0 +1,43 @@
+.screen { position: absolute; inset: 0; display: flex; }
+.mod { flex: 1; }
+.page { display: flex; flex-direction: column; gap: 22px; max-width: 640px; padding: 6px 4px 12px; }
+
+.section { display: flex; flex-direction: column; gap: 6px; }
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: var(--ink-2);
+  font: 600 var(--fs-label)/1 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+.row { display: flex; align-items: center; gap: 10px; min-height: var(--row); }
+.row > :global(.lbl) { flex: none; width: 96px; }
+.indent, .hint { margin-left: 106px; }
+.hint { max-width: 62ch; color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.45; }
+
+.folder { display: flex; flex: 1; align-items: center; gap: 6px; min-width: 0; }
+.path {
+  flex: 1;
+  min-width: 0;
+  height: var(--ctl);
+  padding: 0 8px;
+  overflow: hidden;
+  border-radius: var(--r-ctl);
+  background: var(--well);
+  color: var(--ink);
+  font: 400 var(--fs-unit)/var(--ctl) var(--font-mono);
+  font-stretch: normal;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+  /* clipped from the left, so the folder's own name stays */
+  direction: rtl;
+}
+.value { color: var(--ink); font: 400 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; }

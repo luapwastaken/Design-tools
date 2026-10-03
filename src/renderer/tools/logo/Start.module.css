@@ -1,0 +1,4 @@
+.zones { display: grid; grid-template-columns: repeat(2, minmax(0, 340px)); gap: 12px; width: 100%; justify-content: center; }
+@container (max-width: 640px) {
+  .zones { grid-template-columns: minmax(0, 340px); }
+}

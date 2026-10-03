@@ -1,0 +1,84 @@
+/* Paint: the canvas takes the room; Mix it sits beside it */
+.pane {
+  display: grid;
+  /* a narrow window gives the paper the room first */
+  grid-template-columns: minmax(0, 1fr) clamp(280px, 30%, 340px);
+  gap: var(--gap);
+  height: 100%;
+  min-height: 0;
+}
+.recipes { min-height: 0; }
+/* too narrow to share a row: the canvas fills the pane's height, so its bar, paper and tray stay in
+   one view as the paper shrinks to fit; Mix it sits under it (the pane scrolls to it) */
+@container lower (max-width: 760px) {
+  .pane { grid-template-columns: minmax(0, 1fr); grid-template-rows: max(360px, 100cqh) minmax(260px, auto); height: auto; min-height: 100%; }
+}
+.none { padding: 12px; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
+.opts { --label-w: 104px; display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 10px; }
+
+/* ── recipes ── */
+.rlist { display: flex; flex-direction: column; }
+.recipe {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 56px;
+  padding: 8px 12px;
+  box-shadow: 0 -1px 0 var(--line);
+}
+/* the target and the mix touch, so the difference reads at a glance */
+.pairChips { display: flex; height: 40px; overflow: hidden; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.pairChips i { flex: 1; }
+.parts { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.rname { overflow: hidden; color: var(--ink); font-size: var(--fs-ctl); text-overflow: ellipsis; white-space: nowrap; }
+.part { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--ink); font-size: var(--fs-ctl); white-space: nowrap; }
+.part b { flex: none; width: 12px; color: var(--ink); font: 600 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; text-align: right; }
+.pchip { flex: none; width: 12px; height: 12px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.de { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.deNum { color: var(--ink); font: 500 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.farText { color: var(--ink-2); font-size: var(--fs-base); line-height: 1.4; }
+.fine { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.35; }
+
+/* ── your paints: a popover off Mix it's paints button (ui/Popover draws it) ── */
+.pop {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 360px;
+  max-height: min(560px, calc(100vh - 80px));
+  padding: 10px 12px 12px;
+  overflow: auto;
+}
+.popHead { display: flex; align-items: center; gap: 8px; min-height: var(--btn-xs); }
+.popTitle { color: var(--ink); font: 600 var(--fs-mod-title)/1 var(--font-mono); font-stretch: normal; letter-spacing: .1em; text-transform: uppercase; }
+.popCount { flex: 1; color: var(--ink-3); font: 400 var(--fs-mod-sub)/1 var(--font-mono); font-stretch: normal; letter-spacing: .06em; text-transform: uppercase; }
+.plist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 8px; }
+.prow { display: flex; align-items: center; min-width: 0; }
+.tick {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  height: 26px;
+  padding: 0 6px;
+  margin-left: -6px;
+  border-radius: var(--r-ctl);
+  color: var(--ink-3);
+  font-size: var(--fs-base);
+  text-align: left;
+}
+.tick:hover { background: var(--popover-hot); color: var(--ink-2); }
+.ticked { color: var(--ink); }
+.ticked:hover { color: var(--ink); }
+.tick > :global(.material-symbols-rounded) { color: var(--ink-3); }
+.ticked > :global(.material-symbols-rounded) { color: var(--ink); }
+.pname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the paint on the brush: a mark after its name, the words in its tooltip */
+.onBrush { display: inline-grid; flex: none; place-items: center; margin-left: auto; color: var(--ink-2); }
+.armed { grid-column: 1 / -1; margin: 2px 0; }
+.add { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; box-shadow: 0 -1px 0 var(--line); }
+.addRow { display: flex; gap: 6px; }
+.addColour { flex: 0 0 132px; min-width: 0; }
+.addName { flex: 1; min-width: 0; }

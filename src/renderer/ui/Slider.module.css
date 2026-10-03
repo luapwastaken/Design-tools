@@ -1,0 +1,38 @@
+.row { display: flex; align-items: center; gap: 10px; min-height: var(--row); }
+
+.label {
+  flex: none;
+  width: var(--label-w, 86px);
+  color: var(--ink-3);
+  font: 500 var(--fs-label)/1 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.label:hover, .scrubbing { color: var(--ink); }
+
+.track { position: relative; flex: 1; min-width: 60px; height: 22px; touch-action: none; }
+.bar, .fill { position: absolute; left: 0; top: 6px; height: 4px; border-radius: 2px; }
+.bar { right: 0; background: var(--well); }
+.fill { background: var(--ink-3); }
+.needle {
+  position: absolute;
+  top: 1px;
+  width: 3px;
+  height: 14px;
+  margin-left: -1.5px;
+  border-radius: 1px;
+  background: var(--ink);
+  box-shadow: 0 0 0 1.5px var(--module);
+}
+
+.field { flex: none; }
+
+.off .label, .off .label:hover { color: var(--ink-4); cursor: default; }
+.off .fill { background: var(--tick); }
+.off .needle { background: var(--ink-4); }

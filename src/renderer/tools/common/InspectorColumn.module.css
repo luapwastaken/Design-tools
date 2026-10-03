@@ -1,0 +1,11 @@
+.insp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  /* a field scrolled into view stops below the pinned header, not behind it */
+  scroll-padding-top: var(--row);
+}
+.insp > * { flex: none; }

@@ -1,0 +1,49 @@
+.item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--lib-row);
+  padding: 5px 6px 5px 10px;
+  border-radius: var(--r-ctl);
+}
+.item:hover { background: var(--well-hover); }
+.sel, .sel:hover { background: var(--raise); }
+.anchor { box-shadow: inset 0 0 0 1px var(--tick-strong); }
+/* the dragged source stays in place, outlined */
+.dragging { outline: 1px dashed var(--tick); outline-offset: -1px; }
+
+.led { position: absolute; left: 3px; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 50%; background: var(--signal); }
+
+.thumb { position: relative; display: flex; flex: none; width: 44px; height: 30px; overflow: hidden; border-radius: 2px; }
+.thumb > :global(img) { width: 100%; height: 100%; object-fit: cover; }
+.thumb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--edge); pointer-events: none; }
+
+.text { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+/* the name line holds the actions too; its fixed height lets them overhang it, so showing them never moves the row */
+.top { display: flex; align-items: center; gap: 4px; height: 16px; min-width: 0; }
+.name { flex: 1; min-width: 0; overflow: hidden; color: var(--ink); font-size: var(--fs-row); line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.meta {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-3);
+  font: 400 var(--fs-label)/1 var(--font-mono);
+  font-stretch: normal;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+/* at its natural width, so its parts can be measured (ui/fit.ts); squeezed, the kind alone ends in an ellipsis */
+.line { display: flex; flex: none; width: max-content; }
+.squeeze { flex: 1 1 auto; width: auto; min-width: 0; }
+.kind { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.keep { flex: none; }
+/* the gap a flex line would otherwise swallow: one character, as a space in the mono face */
+.use { margin-left: 1ch; }
+.lit { color: var(--ink-2); }
+.open { margin-left: 10px; color: var(--signal); }
+
+/* in the name line's flow while they show, so the name gives way to them instead of sitting under them */
+.actions { display: none; flex: none; align-items: center; gap: 2px; }
+.item:hover .actions, .item:focus-within .actions, .sel .actions { display: flex; }

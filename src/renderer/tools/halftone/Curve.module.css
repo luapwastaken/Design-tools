@@ -1,0 +1,21 @@
+/* a transfer curve: a small graph on the well, and the five points as fields under it */
+.curve { display: flex; flex-direction: column; gap: 8px; }
+.graph {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 200 / 96;
+  border-radius: var(--r-ctl);
+  background: var(--well);
+  cursor: ns-resize;
+  touch-action: none;
+}
+.grid { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ident { stroke: var(--tick); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.line { fill: none; stroke: var(--ink); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.plain { stroke: var(--ink-3); }
+.point { fill: var(--module); stroke: var(--ink); stroke-width: 1; vector-effect: non-scaling-stroke; }
+
+.fields { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.col { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.col :global(.lbl) { padding-left: 2px; }

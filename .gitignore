@@ -22,6 +22,9 @@ graphify-out/cache/
 .env
 .env.local
 
+# electron-vite output
+out/
+
 # Local-only: AI tooling, planning docs and code graphs (kept on disk, never committed)
 .claude/
 .agents/

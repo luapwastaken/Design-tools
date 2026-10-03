@@ -1,0 +1,64 @@
+/* Reset and base. No transitions here except transform (hard rule 4). */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+html { background: var(--page); }
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 var(--fs-base)/1.35 var(--font-sans);
+  font-stretch: var(--sans-stretch);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  user-select: none;
+}
+
+::selection { background: var(--signal); color: var(--signal-ink); }
+
+button, input, textarea { font: inherit; color: inherit; border: 0; background: none; outline: none; }
+button { cursor: default; }
+input, textarea { min-width: 0; user-select: text; }
+
+:focus { outline: none; }
+:focus-visible { outline: 1px solid var(--signal); outline-offset: -1px; }
+
+/* scrollbars (brief §7) */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--tick); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--tick-strong); }
+::-webkit-scrollbar-button { display: none; }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* icons (brief §3.3) */
+.material-symbols-rounded {
+  font-size: 18px;
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
+  flex: none;
+  user-select: none;
+  color: inherit;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+}
+
+/* shared text voices */
+.lbl {
+  font: 500 var(--fs-label)/1 var(--font-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-stretch: normal;
+}
+.val {
+  font: 400 var(--fs-value)/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  font-stretch: normal;
+}
+.mono { font-family: var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }
+}

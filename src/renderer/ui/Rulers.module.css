@@ -1,0 +1,19 @@
+/* brief §5: optional rulers on a canvas tool, the Instrument Halftone board's scale */
+.corner, .top, .left { position: relative; overflow: hidden; background: var(--module); }
+.corner { grid-area: 1 / 1; box-shadow: inset -1px -1px 0 var(--line); }
+.top { grid-area: 1 / 2; box-shadow: inset 0 -1px 0 var(--line); }
+.left { grid-area: 2 / 1; box-shadow: inset -1px 0 0 var(--line); }
+
+.svg { display: block; width: 100%; height: 100%; }
+.svg path { fill: none; stroke: var(--tick); stroke-width: 1; shape-rendering: crispEdges; }
+.svg text {
+  fill: var(--ink-3);
+  font: 400 var(--fs-label) var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+/* where the pointer is (brief §4: ruler cursor lines carry the signal) */
+.cursor { position: absolute; left: 0; top: 0; background: var(--signal); pointer-events: none; }
+.top .cursor { bottom: 0; width: 1px; }
+.left .cursor { right: 0; height: 1px; }

@@ -1,0 +1,34 @@
+/* a place a part goes: dashed like every drop target at rest, lit in signal while a drag is over it (brief §7) */
+.zone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+  padding: 18px 18px 16px;
+  border-radius: 4px;
+  outline: 1px dashed var(--tick);
+  outline-offset: -1px;
+  background: var(--module);
+}
+.glyph { display: flex; align-items: flex-end; height: 72px; margin-bottom: 8px; color: var(--ink-3); }
+.glyph svg { display: block; }
+.line { color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; min-height: 2.9em; }
+.drop { color: var(--ink-3); font-size: var(--fs-meta); }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+
+.slot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 6px 8px 12px;
+  border-radius: var(--r-ctl);
+  outline: 1px dashed var(--tick);
+  outline-offset: -1px;
+}
+.slotText { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+.slotText b { font-size: var(--fs-row); font-weight: 600; }
+.slotText span { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.35; }
+
+.over { outline-color: transparent; background: var(--signal-soft); box-shadow: inset 0 0 0 1px var(--signal); }

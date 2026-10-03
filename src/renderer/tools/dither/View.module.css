@@ -1,0 +1,49 @@
+/* brief §5: work area at least 540px, inspector 340–460 (380); the inspector gives way first */
+.view {
+  display: grid;
+  grid-template-columns: minmax(min(540px, calc(100% - 340px - var(--gap))), 1fr) minmax(340px, var(--insp));
+  gap: var(--gap);
+  min-width: 0;
+  min-height: 0;
+}
+
+/* the document bar, then the image takes the rest; an animation's transport sits under it */
+.work {
+  position: relative;
+  display: grid;
+  grid-template-rows: var(--docbar) minmax(0, 1fr);
+  gap: var(--gap);
+  min-width: 0;
+  min-height: 0;
+}
+.work[data-animated] { grid-template-rows: var(--docbar) minmax(0, 1fr) auto; }
+.stage { position: relative; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); min-height: 0; }
+/* toasts rise over the image, not across the inspector */
+.stage > :first-child > :first-child { anchor-name: --toasts; }
+
+/* a dither that can't be made: said over the image on a surface of its own, since the image can be any colour */
+.error {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 64ch;
+  padding: 9px 12px 9px 10px;
+  border-radius: var(--r-ctl);
+  background: var(--popover);
+  box-shadow: inset 0 0 0 1px var(--danger), 0 6px 18px var(--shadow);
+  color: var(--ink);
+  font-size: var(--fs-base);
+  line-height: 1.45;
+}
+.error > :first-child { flex: none; margin-top: 1px; color: var(--danger); }
+
+/* the image's size in the doc bar */
+.imageSize { flex: none; white-space: nowrap; }
+@container (max-width: 600px) {
+  .imageSize { display: none; }
+}
+

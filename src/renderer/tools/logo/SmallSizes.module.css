@@ -1,0 +1,16 @@
+.rows { display: flex; flex-direction: column; gap: 2px; }
+.row { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; column-gap: 10px; }
+/* the surround the edit view uses, each size on its own band so the smallest isn't crowded */
+.mat {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 64px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+.px { display: block; flex: none; image-rendering: pixelated; }
+.note { margin-top: 8px; color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }

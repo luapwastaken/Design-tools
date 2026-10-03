@@ -1,0 +1,60 @@
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  height: var(--toast-h);
+  padding: 0 6px 0 12px;
+  border-radius: var(--r-mod);
+  background: var(--popover);
+  box-shadow: 0 4px 14px var(--shadow), 0 1px 3px var(--shadow);
+  color: var(--ink);
+}
+.lead { color: var(--ink-3); }
+.error { color: var(--danger); }
+.msg { min-width: 0; overflow: hidden; font-size: var(--fs-ctl); text-overflow: ellipsis; white-space: nowrap; }
+.msg b { font-weight: 600; }
+.undo { height: 26px; color: var(--ink); font-weight: 600; }
+.undo + kbd { margin-left: -4px; }
+
+/* The host is a zero-height strip on the work column's bottom edge, clipped there, so toasts rise
+   out of the edge by transform alone: nothing fades (hard rule 4). Newer toasts push older ones up.
+   A tool can name its work column with `anchor-name: --toasts`, so they rise there and not across
+   its inspector; without one they take the whole work region. */
+.host {
+  position: absolute;
+  left: anchor(--toasts left, 0px);
+  right: anchor(--toasts right, 0px);
+  bottom: anchor(--toasts bottom, 0px);
+  z-index: 800;
+  height: 0;
+  pointer-events: none;
+  clip-path: inset(-100vh -100vw 0 -100vw);
+}
+.floating {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  max-width: min(640px, calc(100% - 24px));
+  margin: 0 auto;
+  pointer-events: auto;
+  transform: translateY(calc(var(--slot) * (var(--toast-h) + 6px) * -1));
+  transition: transform var(--t-move) var(--ease);
+}
+/* 100% plus the 12px lift: fully below the edge, so no sliver shows on the first or last frame */
+@starting-style {
+  .floating { transform: translateY(calc(100% + 12px)); }
+}
+/* waiting behind three newer ones: out of sight at once, back by sliding down a slot */
+.floating[data-waiting] { visibility: hidden; }
+.floating[data-leaving] {
+  z-index: -1;
+  pointer-events: none;
+  transform: translateY(calc(100% + 12px));
+  transition-duration: var(--t-fast);
+}
+/* over a canvas tool the bottom chrome is the Viewport's bar, which holds the cursor readout and
+   counts: toasts rise from its top edge instead, 12px above it as above the status bar */
+:global([data-region="work"]:has(> :not([inert]) [data-viewport])) > .host { bottom: anchor(--toasts bottom, var(--canvas-bar)); }

@@ -1,0 +1,51 @@
+/* the Instrument Halftone board's Coverage module and probe */
+.list { display: grid; grid-template-columns: 10px fit-content(96px) minmax(0, 1fr) auto; grid-auto-rows: 22px; align-items: center; column-gap: 8px; }
+.row { display: contents; }
+
+.chip { width: 10px; height: 10px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.label {
+  overflow: hidden;
+  color: var(--ink);
+  font: 600 var(--fs-unit)/1 var(--font-mono);
+  font-stretch: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bar { position: relative; height: 8px; overflow: hidden; border-radius: 1px; background: var(--well); }
+.bar i { position: absolute; inset: 0 auto 0 0; }
+.peak { background: var(--tick); }
+.mean { background: var(--ink-3); }
+.value {
+  min-width: 7ch;
+  color: var(--ink);
+  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+/* a hidden ink still has a plate: measured, but set back */
+.hidden .label { color: var(--ink-4); }
+.hidden .value { color: var(--ink-3); }
+.hidden .peak { background: var(--raise); }
+.hidden .mean { background: var(--tick); }
+
+.probe {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 9px;
+  border-radius: var(--r-ctl);
+  background: var(--popover);
+  box-shadow: 0 6px 18px var(--shadow);
+  color: var(--ink);
+  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.key { margin-right: 3px; color: var(--ink-3); }
+.entry { display: flex; align-items: center; }
+.probeChip { width: 8px; height: 8px; margin-right: 5px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }

@@ -1,0 +1,9 @@
+.err {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-top: 5px;
+  color: var(--danger);
+  font-size: var(--fs-meta);
+  line-height: 14px;
+}

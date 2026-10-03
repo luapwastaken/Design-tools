@@ -1,0 +1,3 @@
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.buttons { display: flex; gap: 6px; }
+.danger { color: var(--danger); }

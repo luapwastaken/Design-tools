@@ -1,0 +1,3 @@
+.vp { min-height: 0; }
+.sep { flex: none; width: 1px; height: 16px; margin: 0 4px; background: var(--line); }
+.seams { flex: none; white-space: nowrap; }

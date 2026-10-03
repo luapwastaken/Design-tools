@@ -1,0 +1,4 @@
+/* the PNG's width and what it makes, side by side */
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 6px; }
+.size { padding-left: 4px; color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; }
+.danger { color: var(--danger); }

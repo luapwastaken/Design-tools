@@ -1,0 +1,81 @@
+/* brief §5 canvas tools: the view on the pasteboard, the zoom bar under it */
+.vp {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--r-mod);
+  background: var(--module);
+}
+
+/* the view, or the view under rulers (18px, as on the Instrument Halftone board) */
+.ruled { display: grid; flex: 1 1 0; grid-template: minmax(0, 1fr) / minmax(0, 1fr); min-height: 0; }
+.ruled.on { grid-template: 18px minmax(0, 1fr) / 18px minmax(0, 1fr); }
+
+.view {
+  position: relative;
+  grid-area: -2 / -2 / -1 / -1;
+  min-height: 0;
+  overflow: hidden;
+  contain: layout paint;
+  background: var(--pasteboard);
+  touch-action: none;
+}
+/* a probe follows the pointer: the crosshair marks the point it reads */
+.view[data-probe] { cursor: crosshair; }
+/* Space held: the whole view is a hand, whatever the content's own cursor */
+.view[data-space], .view[data-space] * { cursor: grab !important; }
+:global(html[data-pan]), :global(html[data-pan] *) { cursor: grabbing !important; }
+
+.canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.content { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.content :global(img) { -webkit-user-drag: none; }
+/* the content's edge, so a near-black artwork never melts into the dark pasteboard */
+.frame { position: absolute; box-shadow: 0 0 0 1px var(--edge); pointer-events: none; }
+.overlay { position: absolute; inset: 0; pointer-events: none; }
+
+.bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: var(--canvas-bar);
+  padding: 0 12px 0 6px;
+  overflow: hidden;
+  background: var(--module-head);
+}
+.zoom { flex: none; }
+.grow { flex: 1; }
+
+/* brief §7 overflow: a part that doesn't fit wraps onto a hidden second line, whole, instead of being cut */
+.readout {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  column-gap: 12px;
+  min-width: 0;
+  height: var(--canvas-bar);
+  overflow: hidden;
+  color: var(--ink-3);
+  font: 400 var(--fs-unit)/var(--canvas-bar) var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.readout::before { content: ""; height: var(--canvas-bar); } /* holds the first line open, so even the first part can wrap away */
+.readout b { font-weight: 400; color: var(--ink); }
+/* four digits of room, so the readout doesn't shuffle as the pointer crosses 999 */
+.xy b { display: inline-block; min-width: 4ch; text-align: right; }
+.live b { color: var(--signal); }
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: var(--danger);
+  font-size: var(--fs-meta);
+  white-space: nowrap;
+}

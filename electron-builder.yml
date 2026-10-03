@@ -1,0 +1,29 @@
+# Windows installer. `npm run dist` builds out/ first; CI runs the same steps (.github/workflows/build.yml).
+appId: com.designtools.app # unchanged from v1, so the v2 installer installs over it
+productName: Design Tools
+directories:
+  output: dist-electron
+  buildResources: build
+# The renderer is bundled by Vite and main bundles its one dependency (electron.vite.config.ts),
+# so the package is the build output and nothing else: no node_modules, src, tests or docs.
+files:
+  - out/**
+  - package.json
+  - '!node_modules'
+asar: true
+# the app has no updater, so no latest.yml or app-update.yml
+publish: null
+# no spaces: GitHub renames them to dots on a Release, which would no longer match the file name
+artifactName: DesignTools-Setup-${version}.${ext}
+win:
+  target:
+    - target: nsis
+      arch: x64
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Design Tools

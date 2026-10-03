@@ -1,0 +1,6 @@
+/* the algorithm picker: a Select's field, with the families as headers in its menu */
+.pick { composes: dd from '../../ui/Select.module.css'; }
+.value { composes: value from '../../ui/Select.module.css'; }
+
+/* the ramp specimen: 3 px blocks from black to white, the width of the module */
+.ramp { display: block; margin-top: 2px; }

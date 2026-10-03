@@ -1,0 +1,44 @@
+.tg {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--ctl);
+  padding-right: 2px;
+  border-radius: var(--r-ctl);
+  color: var(--ink-2);
+  font-size: var(--fs-ctl);
+  text-align: left;
+}
+.tg[aria-checked="true"] { color: var(--ink); }
+.tg:not(:disabled):hover { color: var(--ink); }
+
+.sw {
+  position: relative;
+  flex: none;
+  width: 28px;
+  height: 16px;
+  border-radius: var(--r-ctl);
+  background: var(--well);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.sw::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--tick-strong);
+  transition: transform var(--t-move) var(--ease);
+}
+.tg[aria-checked="true"] .sw { background: var(--signal); box-shadow: none; }
+.tg[aria-checked="true"] .sw::after { transform: translateX(12px); background: var(--signal-ink); }
+
+.tg.quiet[aria-checked="true"] .sw { background: var(--tick-strong); }
+.tg.quiet[aria-checked="true"] .sw::after { background: var(--well); }
+
+.tg:disabled { color: var(--ink-4); }
+.tg:disabled .sw::after { background: var(--ink-4); }
+.tg:disabled[aria-checked="true"] .sw { background: var(--tick); }
+.tg:disabled[aria-checked="true"] .sw::after { background: var(--well); }

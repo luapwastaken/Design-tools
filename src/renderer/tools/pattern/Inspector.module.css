@@ -1,0 +1,12 @@
+/* the Pattern inspector's modules (Layout, Colour, Export) */
+.stack { display: flex; flex-direction: column; gap: 10px; }
+/* rows that belong together sit closer than the groups around them */
+.group { display: flex; flex-direction: column; gap: 4px; }
+.rule { padding-top: 10px; box-shadow: 0 -1px 0 var(--line); }
+.row { display: flex; align-items: center; gap: 10px; min-height: var(--row); }
+.grow { flex: 1; min-width: 0; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+
+.describe { color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
+.note { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
+.dim { min-width: 0; overflow: hidden; color: var(--ink-3); font-size: var(--fs-meta); text-overflow: ellipsis; white-space: nowrap; }

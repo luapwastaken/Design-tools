@@ -1,0 +1,36 @@
+/* the view fills the work area: one grid cell that stretches both ways */
+.host {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+}
+.hidden { display: none; }
+/* drag-over target (brief §7): core/input.ts sets data-drop while a drop here would be taken */
+.host[data-drop]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: var(--signal-soft);
+  box-shadow: inset 0 0 0 1px var(--signal);
+  pointer-events: none;
+}
+
+.crashWrap { display: grid; place-items: start center; padding-top: 14vh; }
+.crash { width: min(480px, 100%); }
+.body { display: flex; flex-direction: column; gap: 10px; }
+.lead { display: flex; gap: 8px; font-size: var(--fs-row); line-height: 1.4; }
+.icon { color: var(--danger); }
+.message {
+  padding: 8px 10px;
+  border-radius: var(--r-ctl);
+  background: var(--well);
+  color: var(--ink-2);
+  font: 400 var(--fs-unit)/1.45 var(--font-mono);
+  font-stretch: normal;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.note { color: var(--ink-3); font-size: var(--fs-meta); }
+.actions { display: flex; gap: 6px; margin-top: 4px; }

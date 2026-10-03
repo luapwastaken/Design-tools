@@ -1,0 +1,15 @@
+.box, .checker, .failed { display: flex; flex: 1; min-width: 0; }
+.box { background: var(--well); }
+.box > * { flex: 1; }
+
+/* transparency shows as a neutral mid-grey checker, so dark and light artwork both read on it */
+/* a pattern tile (--art) repeats over it */
+.checker {
+  background-image: var(--art, none), conic-gradient(var(--tick) 25%, var(--tick-strong) 0 50%, var(--tick) 0 75%, var(--tick-strong) 0);
+  background-size: var(--art-size, auto), 8px 8px;
+}
+.failed { align-items: center; justify-content: center; background: var(--well); color: var(--ink-4); }
+
+.cover, .contain { display: block; width: 100%; height: 100%; }
+.cover { object-fit: cover; }
+.contain { padding: 3px; object-fit: contain; }

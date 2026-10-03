@@ -1,0 +1,46 @@
+/* the Post FX inspector's modules, laid out as the other tools' are */
+.stack { display: flex; flex-direction: column; gap: 10px; --label-w: 104px; }
+/* rows that belong together sit closer than the groups around them */
+.group { display: flex; flex-direction: column; gap: 4px; }
+.rule { padding-top: 10px; box-shadow: 0 -1px 0 var(--line); }
+.row { display: flex; align-items: center; gap: 10px; min-height: var(--row); }
+/* every label in a module one width, wide enough for the effects' longer names, so tracks and fields line up down it */
+.lab { flex: none; width: var(--label-w); }
+.grow { flex: 1; min-width: 0; }
+
+.note { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
+.none { color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
+.warn { display: flex; align-items: flex-start; gap: 6px; color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.4; }
+.warn > :first-child { flex: none; margin-top: -1px; color: var(--ink-3); }
+
+/* a clip's own loop, as readouts */
+.facts {
+  display: grid;
+  grid-template-columns: var(--label-w) 1fr;
+  row-gap: 8px;
+  align-items: baseline;
+  color: var(--ink-3);
+  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+}
+.facts b { font-weight: 400; font-size: var(--fs-value); color: var(--ink); }
+
+/* "Colours from": a Library palette, as the other tools' pickers of one */
+.from {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: var(--ctl);
+  padding: 0 6px 0 8px;
+  border-radius: var(--r-ctl);
+  background: var(--well);
+  color: var(--ink);
+  font-size: var(--fs-ctl);
+}
+.from:hover { background: var(--well-hover); }
+.from > :global(.material-symbols-rounded) { flex: none; color: var(--ink-3); }
+.strip { flex: none; width: 48px; }
+.fromName { flex: 1; min-width: 0; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }

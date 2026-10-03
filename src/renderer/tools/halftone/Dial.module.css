@@ -1,0 +1,9 @@
+/* the mockup's dial: a well-coloured face, a dim zero tick, the needle in ink */
+.dial { flex: none; width: 24px; height: 24px; cursor: grab; touch-action: none; }
+.dial:active { cursor: grabbing; }
+.dial circle { fill: var(--well); stroke: var(--tick); stroke-width: 1; }
+.dial line { stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; }
+.dial .back { stroke: var(--tick-strong); stroke-width: 1; }
+.dial .zero { stroke: var(--tick); stroke-width: 1; }
+.off { cursor: default; }
+.off line { stroke: var(--ink-4); }
