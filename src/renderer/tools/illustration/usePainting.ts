@@ -40,6 +40,8 @@ export function usePainting(engine: PaintEngine | null, itemId: string | null, p
   /** saves run one after another, so a quit waits for one already under way and an older one never lands last */
   const saving = useRef<Promise<void>>(Promise.resolve());
   const [loading, setLoading] = useState(false);
+  /** counts the opens: the latest one to finish ends `loading`, whatever the item is by then (a new document gets its item while its blank paper is still loading) */
+  const opens = useRef(0);
 
   /**
    * A painting whose palette is no longer in the Library (trashed, and the app started again since)
@@ -94,6 +96,7 @@ export function usePainting(engine: PaintEngine | null, itemId: string | null, p
     const e = eng.current;
     if (!e) return;
     const url = id ? props.current.paintings[id] : undefined;
+    const mine = ++opens.current;
     setLoading(true);
     try {
       let blob: Blob | null = null;
@@ -109,7 +112,7 @@ export function usePainting(engine: PaintEngine | null, itemId: string | null, p
         await e.load(null).catch(() => {});
       }
     } finally {
-      if (owner.current === id) setLoading(false);
+      if (opens.current === mine) setLoading(false);
     }
   };
 

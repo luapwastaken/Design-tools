@@ -1617,9 +1617,27 @@ async function postfx(dir: string): Promise<void> {
     const [f0, f1, fN, f9] = [at(0), at(0.1), at(1), at(0.9)];
     check('frame N of the loop is frame 0 to the byte: the grain comes round exactly', f0.every((v, i) => v === fN[i]) && f0.some((v, i) => v !== f1[i]), f0.filter((v, i) => v !== fN[i]).length);
     const [first, second, last] = [await frameOf(1), await frameOf(2), await frameOf(10)];
-    // straight-alpha pixels come back from a canvas exactly where alpha is 255
-    const sameAs = (img: Awaited<ReturnType<typeof pixelsOf>> | null, want: Uint8Array) => !!img && img.px.length === want.length && img.px.every((v, i) => want[i - (i % 4) + 3] !== 255 || v === want[i]);
-    check('and the files are those frames: the first is frame 0, the second is frame 1, the last is frame 9', sameAs(first, f0) && sameAs(second, f1) && sameAs(last, f9) && !!first && !!last && first.px.join() !== last.px.join(), [!!first, !!second, !!last]);
+    // Straight-alpha pixels come back from a canvas exactly where alpha is 255. The GPU's float maths is
+    // not the same bit for bit from one draw to the next (two renders of this frame, a moment apart, have
+    // differed in 7 of its 163,840 half-float values, each by one half-float step, and now and then one of
+    // those crosses an 8-bit step), so a file written a moment before a render can differ from it by one
+    // level in a few values. Two frames of the loop differ by hundreds of levels, so that still tells them apart.
+    const offBy = (img: Awaited<ReturnType<typeof pixelsOf>> | null, want: Uint8Array) => {
+      let off = 0;
+      let worst = 0;
+      for (let i = 0; img && i < want.length; i++) {
+        if (want[i - (i % 4) + 3] !== 255) continue;
+        const d = Math.abs(img.px[i] - want[i]);
+        if (d) off++;
+        worst = Math.max(worst, d);
+      }
+      return { off, worst };
+    };
+    const sameAs = (img: Awaited<ReturnType<typeof pixelsOf>> | null, want: Uint8Array) => {
+      const { off, worst } = offBy(img, want);
+      return !!img && img.px.length === want.length && worst <= 1 && off <= want.length / 1000;
+    };
+    check('and the files are those frames: the first is frame 0, the second is frame 1, the last is frame 9', sameAs(first, f0) && sameAs(second, f1) && sameAs(last, f9) && !!first && !!last && first.px.join() !== last.px.join(), [offBy(first, f0), offBy(second, f1), offBy(last, f9)]);
   } finally {
     stack.release();
   }
@@ -1657,6 +1675,20 @@ async function postfx(dir: string): Promise<void> {
   addEffect(pd, 'datamosh');
   host('postfx')?.querySelector<HTMLButtonElement>('button[aria-label="Add an effect"]')?.click();
   const row = await until(() => [...document.querySelectorAll<HTMLElement>('[role="dialog"][aria-label="Add an effect"] [role="option"]')].find((o) => o.textContent?.includes('Datamosh')));
+  // a scroll event is delivered with the next frame, so the picker can hear one for a scroll from before it
+  // opened: that leaves it open (the button is where it was), one that carried the button off closes it
+  const picker = () => document.querySelector('[role="dialog"][aria-label="Add an effect"]');
+  const addButton = host('postfx')?.querySelector<HTMLElement>('button[aria-label="Add an effect"]');
+  const inspector = addButton?.closest('aside');
+  inspector?.dispatchEvent(new Event('scroll'));
+  await sleep(50);
+  const stays = !!picker();
+  // (no transition, or the button would still be where it was when the event comes)
+  if (addButton) Object.assign(addButton.style, { transition: 'none', transform: 'translateY(8px)' });
+  inspector?.dispatchEvent(new Event('scroll'));
+  const closes = !!(await until(() => !picker(), 2000));
+  if (addButton) Object.assign(addButton.style, { transition: '', transform: '' });
+  check('the Add picker stays open for a scroll that left its button where it was, and closes for one that moved it', !!inspector && stays && closes, [!!inspector, stays, closes]);
   press('Escape');
   check('datamosh is unavailable on a still: adding it does nothing and the picker greys it', !offered(stillDoc, 'datamosh') && pd.get() === stillDoc && row?.getAttribute('aria-disabled') === 'true', [pd.get().stack.length, row?.getAttribute('aria-disabled')]);
 

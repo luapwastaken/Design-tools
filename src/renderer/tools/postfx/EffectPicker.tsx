@@ -77,7 +77,14 @@ export function EffectPicker({ anchor, owner, video, onPick, onClose }: Props) {
   useEffect(() => {
     const inside = (t: EventTarget | null) => t instanceof Node && (pop.current?.contains(t) || owner?.contains(t));
     const onDown = (e: PointerEvent) => inside(e.target) || onClose();
-    const onScroll = (e: Event) => inside(e.target) || onClose();
+    // A scroll closes it only if it carried the button away. A scroll event is delivered with the next
+    // frame, so one for a scroll that happened before it opened (the inspector shortened as the stack
+    // emptied, and clamped its scroll position) can arrive after, on a machine that is slow to draw.
+    const onScroll = (e: Event) => {
+      if (inside(e.target)) return;
+      const now = owner?.getBoundingClientRect();
+      if (!now || now.x !== anchor.x || now.y !== anchor.y) onClose();
+    };
     addEventListener('pointerdown', onDown, true);
     addEventListener('scroll', onScroll, true);
     addEventListener('blur', onClose);
