@@ -37,7 +37,7 @@ import { ready, screen, shownDots, svgOver, totals } from './tools/halftone/scre
 import { patchView as patchHalftone, status as halftoneStatus } from './tools/halftone/view-state.ts';
 import { addRamp, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
 import type { PaintEngine } from './tools/illustration/paint/index.ts';
-import { liveEngine } from './tools/illustration/paint/live.ts';
+import { liveEngine, liveSaves } from './tools/illustration/paint/live.ts';
 import { paintEngineChecks } from './tools/illustration/paint/smoke-checks.ts';
 import { washColour } from './tools/illustration/paint/wash.ts';
 import { loadedOf, paintSettings, type PaintSettings } from './tools/illustration/paint-sources.ts';
@@ -1822,7 +1822,7 @@ async function illustration(): Promise<void> {
   if (!check('Paint starts the painting engine', await until(() => liveEngine.get(), 10_000), host('illustration')?.querySelector('[role="alert"]')?.textContent)) return;
   if (!check('Paint shows the canvas', await stroke(0.5))) return;
   check('the stroke is on the canvas', await until(painted), liveEngine.get()?.state);
-  check('and is saved under its palette', await until(() => illustrationView().paintings[id], 6000), illustrationView().paintings);
+  check('and is saved under its palette', (await saved()) && illustrationView().paintings[id], illustrationView().paintings);
   for (const tab of ['light', 'check', 'paint'] as const) {
     patchIllustration({ tab });
     await sleep(50);
@@ -1838,7 +1838,7 @@ async function illustration(): Promise<void> {
   check('an Illustration edit of a palette Design holds forks it into Scratch', fork?.collection === 'Scratch', il.state());
   await sleep(500); // a canvas that lost it would have cleared by now
   check('the painting stays on the canvas through the fork', painted(), liveEngine.get()?.state);
-  check('and is kept under the fork, the original keeping its own', fork && (await until(() => illustrationView().paintings[fork.itemId], 6000)) && illustrationView().paintings[id], illustrationView().paintings);
+  check('and is kept under the fork, the original keeping its own', fork && (await saved()) && illustrationView().paintings[fork.itemId] && illustrationView().paintings[id], illustrationView().paintings);
   if (glossy) await shell.sendItem((await find((i) => i.id === glossy.itemId))!, 'design');
 
   // a new palette's first stroke: the quit, straight after this pass, must save it (the quiet pass looks)
@@ -1855,6 +1855,12 @@ async function illustration(): Promise<void> {
   // not waited for: the save comes a second after the lift
   check('and not saved yet', !illustrationView().paintings[last!.itemId], illustrationView().paintings);
 }
+
+/**
+ * the painting's saves are all written: waits for the save itself, which a disk stall can put seconds
+ * behind the stroke, and gives up only on a hang; whatever is then missing from `paintings` is a real loss
+ */
+const saved = async () => (await liveSaves.get()?.settled(60_000)) === true;
 
 const paperCanvas = () => {
   const c = host('illustration')?.querySelector<HTMLCanvasElement>('canvas[aria-label^="Painting"]');

@@ -4,3 +4,6 @@ import { createStore } from '../../common/store.ts';
 import type { PaintEngine } from './engine.ts';
 
 export const liveEngine = createStore<PaintEngine | null>(null);
+
+/** the open palette's painting saves, registered for the smoke pass: `settled` waits for the write itself */
+export const liveSaves = createStore<{ settled(within: number): Promise<boolean> } | null>(null);

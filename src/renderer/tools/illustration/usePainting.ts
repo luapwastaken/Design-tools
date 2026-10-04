@@ -8,6 +8,8 @@ import { ipc } from '../../shell/core/ipc.ts';
 import { toast } from '../../ui/index.ts';
 import { putAsset } from '../common/take.ts';
 import type { PaintEngine } from './paint/index.ts';
+import { liveSaves } from './paint/live.ts';
+import { settledWithin } from './settled.ts';
 
 const TOOL = 'illustration';
 const SAVE_MS = 1000;
@@ -58,6 +60,13 @@ export function usePainting(engine: PaintEngine | null, itemId: string | null, p
     return kept;
   };
 
+  /** what the last save handed up, until the render that brings it down: a save landing in between builds on it */
+  const handed = useRef<{ over: Record<string, string>; next: Record<string, string> } | null>(null);
+  const latest = () => {
+    const { paintings } = props.current;
+    return handed.current?.over === paintings ? handed.current.next : paintings;
+  };
+
   const store = async (id: string, png: Promise<Blob | null>) => {
     let url: string | null = null;
     try {
@@ -68,11 +77,12 @@ export function usePainting(engine: PaintEngine | null, itemId: string | null, p
       toast.show({ kind: 'error', message: `The painting couldn't be saved: ${why(e)}` });
       return;
     }
-    const { paintings, onPaintings } = props.current;
+    const paintings = latest();
     if (!url && !(id in paintings)) return;
     const { [id]: _, ...rest } = paintings;
     const next = url ? { ...rest, [id]: url } : rest;
-    onPaintings(next);
+    handed.current = { over: props.current.paintings, next };
+    props.current.onPaintings(next);
     collect(next);
   };
 
@@ -147,6 +157,16 @@ export function usePainting(engine: PaintEngine | null, itemId: string | null, p
     const id = owner.current ?? null;
     if (engine && id && props.current.paintings[id]) void open(id);
   }, [engine]);
+
+  // the smoke run waits for the save itself: its write waits on the disk, which stalls for seconds now and then
+  useEffect(() => {
+    if (!window.api.smoke) return;
+    const mine = { settled: (within: number) => settledWithin({ unsaved: () => unsaved.current, saving: () => saving.current }, within) };
+    liveSaves.set(mine);
+    return () => {
+      if (liveSaves.get() === mine) liveSaves.set(null);
+    };
+  }, []);
 
   useEffect(() => {
     collect(prune());
