@@ -1,0 +1,23 @@
+/* The empty state: a dashed artboard on the neutral surround, the way in at its centre. */
+.start { display: grid; place-items: center; height: 100%; min-height: 0; overflow: auto; border-radius: var(--r-mod); background: var(--module); }
+.art { display: flex; flex-direction: column; align-items: center; gap: 14px; width: min(760px, calc(100% - 48px)); padding: 40px 32px 32px; border: 1px dashed var(--tick); border-radius: var(--r-pop); text-align: center; }
+.sample { display: flex; gap: 4px; }
+.sample i { width: 54px; height: 54px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--edge); }
+.title { margin-top: 6px; color: var(--ink); font: 500 22px/1.2 var(--font-sans); }
+.lead { max-width: 52ch; color: var(--ink-2); font-size: var(--fs-row); line-height: 1.5; }
+.row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.hex { width: 240px; }
+.starters { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; color: var(--ink-2); font-size: var(--fs-base); }
+.starter { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px 0 8px; border-radius: var(--r-pill); background: var(--well); color: var(--ink); font: 400 var(--fs-unit)/1 var(--font-mono); }
+.starter:hover { background: var(--well-hover); }
+.starter:focus-visible { outline: 1.5px solid var(--signal); outline-offset: 1px; }
+.starter i { width: 10px; height: 10px; border-radius: 50%; }
+
+.how { display: flex; align-items: center; gap: 8px; color: var(--ink-3); font: 400 var(--fs-value)/1 var(--font-mono); }
+.hbase { width: 44px; height: 44px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--edge); }
+.hpair { display: flex; width: 34px; height: 44px; overflow: hidden; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--edge); }
+.hpair i { flex: 1; }
+.hsteps { display: flex; flex: 1; gap: 3px; min-width: 0; }
+.hsteps i { flex: 1; height: 44px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--edge); }
+.explain { color: var(--ink-2); font-size: var(--fs-base); line-height: 1.5; }
+.explain b { color: var(--ink); font-weight: 600; }

@@ -1,17 +1,21 @@
 // The paint canvas (spec §3.3, engine spec 2026-09-29): a scratch pad where paints mix as paint,
-// watercolour or gouache, on the GPU painting engine (./paint). Layout (UX pass): the tool bar over
-// the paper, the tray under it with the well first.
+// watercolour or gouache, on the GPU painting engine (./paint). Layout (Bone Ember pass): the options
+// bar over a toolbox and the paper, the view strip under it; the well and the tubes are drawn into the
+// inspector (the Mixer) through `mixer`. The engine and its input are untouched.
 // Its painting is a PNG workspace asset per Library item. Its undo is its own (the last strokes and
 // Clear), never the document's. What shows under the brush is final: nothing changes after the lift.
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { cssColor, toHex, toOklch, type Oklch } from '../../../shared/color/index.ts';
 import type { Pigment } from '../../../shared/paint/pigments.ts';
-import { ConfirmInline, Icon, toast } from '../../ui/index.ts';
+import { ConfirmInline, Icon, InspectorGroup, toast, ViewStrip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { brushWidth, toSample, WIDTH, type PaintingState, type PointerSample } from './paint/index.ts';
+import { HEIGHT } from './paint/types.ts';
 import { addToWell, loadHint, SIZE, sourcesOf, WELL_MAX, type PaintSettings, type PaletteSet } from './paint-sources.ts';
 import { PaintBar } from './PaintBar.tsx';
 import { Tray, Well } from './PaintTray.tsx';
+import { Toolbox } from './Toolbox.tsx';
 import { useBrush } from './useBrush.ts';
 import { useCanvasKeys } from './useCanvasKeys.ts';
 import { useEngine } from './useEngine.ts';
@@ -34,6 +38,10 @@ export type PaintCanvasProps = {
   onPaintings(next: Record<string, string>): void;
   /** Pick: the colour under the cursor, for the palette's proposals */
   onPick(oklch: Oklch): void;
+  /** the inspector's Mixer slot: the well and the tubes are drawn there; null until it exists */
+  mixer: HTMLElement | null;
+  /** the palette's selected colour: what the well's distance (dE) is measured to */
+  target: Oklch | null;
 };
 
 const BLANK: PaintingState = { depth: 0, redoDepth: 0, lastIsClear: false, blank: true };
@@ -52,6 +60,7 @@ export function PaintCanvas(p: PaintCanvasProps) {
   const cursor = useRef<HTMLDivElement>(null);
   const ring = useRef<HTMLElement>(null);
   const readout = useRef<HTMLSpanElement>(null);
+  const where = useRef<HTMLSpanElement>(null);
   const wellEl = useRef<HTMLDivElement>(null);
   const clearBtn = useRef<HTMLButtonElement>(null);
   const [painting, setPainting] = useState(BLANK);
@@ -97,6 +106,11 @@ export function PaintCanvas(p: PaintCanvasProps) {
     c.hidden = e.pointerType === 'touch' || v.tool === 'pick';
     const vr = view.current!.getBoundingClientRect();
     c.style.transform = `translate(${e.clientX - vr.left}px, ${e.clientY - vr.top}px)`;
+    const pr = canvas.current!.getBoundingClientRect();
+    if (where.current) {
+      const [px, py] = [Math.round(((e.clientX - pr.left) * WIDTH) / pr.width), Math.round(((e.clientY - pr.top) * HEIGHT) / pr.height)];
+      where.current.textContent = px >= 0 && py >= 0 && px < WIDTH && py < HEIGHT ? `X ${px}  Y ${py}` : '';
+    }
     const l = lift.current;
     if (l && Math.hypot(e.clientX - l.x, e.clientY - l.y) >= RING_SLOP) {
       lift.current = null;
@@ -239,6 +253,7 @@ export function PaintCanvas(p: PaintCanvasProps) {
     else toast.show({ icon: 'palette', message: `The well holds ${WELL_MAX} paints. Take one out to add another.` });
   };
 
+  const tubes = useMemo(() => sources.filter((x) => !x.swatch), [sources]);
   const ready = !!engine && !save.loading;
   return (
     <section className={s.paint} aria-label="Paint canvas">
@@ -256,6 +271,8 @@ export function PaintCanvas(p: PaintCanvasProps) {
         clearBtn={clearBtn}
       />
 
+      <div className={s.body}>
+      <Toolbox tool={v.tool} onTool={(tool) => p.onSettings({ tool })} colour={brush?.oklch ?? null} />
       <div
         ref={view}
         className={cx(s.view, v.tool === 'pick' && s.picking, !ready && s.waiting)}
@@ -269,6 +286,7 @@ export function PaintCanvas(p: PaintCanvasProps) {
         }}
         onPointerLeave={() => {
           cursor.current!.hidden = true;
+          if (where.current) where.current.textContent = '';
         }}
       >
         <canvas
@@ -312,20 +330,43 @@ export function PaintCanvas(p: PaintCanvasProps) {
         )}
       </div>
 
-      <div className={s.trayRow}>
-        <Well
-          ref={wellEl}
-          well={v.well}
-          sources={sources}
-          mix={mix?.oklch ?? null}
-          loaded={brush?.id === 'well'}
-          over={over}
-          onChange={(well) => p.onSettings({ well })}
-          onEmpty={emptyWell}
-          onLoad={() => load('well')}
-        />
-        <Tray sources={sources} current={brush?.id ?? ''} onLoad={load} onAddToWell={intoWell} well={wellEl} onOver={setOver} />
       </div>
+      <ViewStrip
+        overlays={
+          <span className={s.paper}>
+            Fit · Paper <b>{WIDTH} x {HEIGHT} px</b>
+          </span>
+        }
+        readout={
+          <>
+            <span ref={where} className={s.where} />
+            <span className={s.keys}>[ ] size · hold Alt to pick</span>
+          </>
+        }
+      />
+      {p.mixer &&
+        createPortal(
+          <>
+            <InspectorGroup id="illustration.brush" title="Brush paint" meta={brush ? (brush.id === 'well' ? 'well loaded' : 'loaded') : 'empty'}>
+              <Well
+                ref={wellEl}
+                well={v.well}
+                sources={sources}
+                mix={mix?.oklch ?? null}
+                target={p.target}
+                loaded={brush?.id === 'well'}
+                over={over}
+                onChange={(well) => p.onSettings({ well })}
+                onEmpty={emptyWell}
+                onLoad={() => load('well')}
+              />
+            </InspectorGroup>
+            <InspectorGroup id="illustration.paints" title="Paints" meta={`${tubes.length} tubes`} sub="click to load the brush">
+              <Tray sources={tubes} current={brush?.id ?? ''} onLoad={load} onAddToWell={intoWell} well={wellEl} onOver={setOver} />
+            </InspectorGroup>
+          </>,
+          p.mixer,
+        )}
     </section>
   );
 }

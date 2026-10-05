@@ -3,11 +3,24 @@
 import { asSvg, unsupportedImage } from '../../lib/load.ts';
 import type { ToolDefinition } from '../../shell/tool.ts';
 import { baseName, fetchBlob, isSvg } from '../common/take.ts';
-import { arm, duplicate, eyedrop, move, newPalette, select } from './actions.ts';
-import { emptyDoc, fromPayload, toPayload, type IllustrationDoc } from './doc.ts';
+import { addBase, arm, duplicate, eyedrop, move, newPalette, select, selected } from './actions.ts';
+import { emptyDoc, fromPayload, rampOf, setSpec, toPayload, type IllustrationDoc } from './doc.ts';
+import { paintSettings, SIZE, LOAD, type PaintSettings } from './paint-sources.ts';
 import { clearProposals, takeImage, takeSvg } from './proposals.ts';
 import { StatusSlot } from './StatusSlot.tsx';
 import { View } from './View.tsx';
+import { getView, patchView, type IllustrationView } from './view-state.ts';
+
+type Mode = IllustrationView['tab'];
+const inPaint = () => getView().tab === 'paint';
+/** the canvas's settings, written whole */
+const setPaint = (patch: Partial<PaintSettings>) => patchView({ canvas: { ...paintSettings(getView().canvas), ...patch } });
+const bump = (key: 'size' | 'load', by: number, range: { min: number; max: number }) => {
+  const cur = paintSettings(getView().canvas)[key];
+  // the size steps by a fifth (at least 1), as the canvas's own [ and ] do; the load by `by`
+  const next = key === 'load' ? cur + by : by > 0 ? Math.max(cur + 1, Math.round(cur * 1.2)) : Math.min(cur - 1, Math.round(cur / 1.2));
+  setPaint({ [key]: Math.min(range.max, Math.max(range.min, next)) });
+};
 
 export const tool: ToolDefinition<IllustrationDoc> = {
   id: 'illustration',
@@ -64,14 +77,36 @@ export const tool: ToolDefinition<IllustrationDoc> = {
     return files.filter((f) => f !== file);
   },
 
-  shortcuts: (doc) => [
-    { keys: 'Delete', label: 'Delete ramp', run: () => arm(doc) },
-    { keys: 'Ctrl+D', label: 'Duplicate ramp', run: () => duplicate(doc) },
-    { keys: 'Ctrl+N', label: 'New palette', run: () => void newPalette() },
-    { keys: 'ArrowLeft', label: 'Lighter step', run: () => move(doc, -1, 0) },
-    { keys: 'ArrowRight', label: 'Darker step', run: () => move(doc, 1, 0) },
-    { keys: 'I', label: 'Pick from screen', run: () => void eyedrop(doc) },
-  ],
+  shortcuts: (doc) => {
+    // Light and Check have nothing to show with no colour
+    const mode = (m: Mode) => () => doc.get().swatches.length || m === 'ramps' || m === 'paint' ? patchView({ tab: m }) : undefined;
+    const hero = () => {
+      const r = rampOf(doc.get(), selected(doc.get())?.group);
+      if (r) doc.transact(r.hero ? 'End the hero colour' : 'Make the hero colour', (d) => setSpec(d, r.id, { hero: !r.hero }));
+    };
+    return [
+      { keys: 'Alt+1', label: 'Ramps', run: mode('ramps') },
+      { keys: 'Alt+2', label: 'Light', run: mode('light') },
+      { keys: 'Alt+3', label: 'Check', run: mode('check') },
+      { keys: 'Alt+4', label: 'Paint', run: mode('paint') },
+      { keys: 'Shift+A', label: 'Add a base colour', run: () => addBase(doc) },
+      { keys: 'Delete', label: 'Delete ramp', run: () => arm(doc) },
+      { keys: 'Ctrl+D', label: 'Duplicate ramp', run: () => duplicate(doc) },
+      { keys: 'Ctrl+N', label: 'New palette', run: () => void newPalette() },
+      { keys: 'ArrowLeft', label: 'Lighter step', run: () => move(doc, -1, 0) },
+      { keys: 'ArrowRight', label: 'Darker step', run: () => move(doc, 1, 0) },
+      { keys: 'H', label: 'Hero colour', run: hero },
+      { keys: 'G', label: 'Greyscale lens', run: () => (getView().tab === 'ramps' || getView().tab === 'light') && patchView({ proof: getView().proof === 'grey' ? 'off' : 'grey' }) },
+      // I picks: on the paper in Paint, anywhere on screen otherwise
+      { keys: 'I', label: 'Pick', run: () => (inPaint() ? setPaint({ tool: 'pick' }) : void eyedrop(doc)) },
+      { keys: 'B', label: 'Brush', run: () => inPaint() && setPaint({ tool: 'paint' }) },
+      { keys: 'S', label: 'Smudge', run: () => inPaint() && setPaint({ tool: 'smudge' }) },
+      { keys: '[', label: 'Smaller brush', run: () => inPaint() && bump('size', -1, SIZE) },
+      { keys: ']', label: 'Larger brush', run: () => inPaint() && bump('size', 1, SIZE) },
+      { keys: 'Shift+{', label: 'Less load', run: () => inPaint() && bump('load', -5, LOAD) },
+      { keys: 'Shift+}', label: 'More load', run: () => inPaint() && bump('load', 5, LOAD) },
+    ];
+  },
   StatusSlot,
   View,
 };

@@ -1,5 +1,5 @@
-/* The paint canvas: a canvas module, its tool bar, the paper on the pasteboard, then the tray with
-   the mixing well first. */
+/* The paint canvas: its options bar, the toolbox beside the paper on the pasteboard, the view strip
+   under it. The well and the tubes live in the inspector (Mixer.module.css). */
 .paint {
   display: flex;
   flex-direction: column;
@@ -11,18 +11,19 @@
   background: var(--module);
   container: paint / size;
 }
-/* one line, 36px, down to a 700px section (PaintBar measures it); narrower it wraps, between groups only */
+/* the options bar: one line, 36px, down to a 700px section (PaintBar measures it); narrower it wraps, between groups only */
 .head {
   --label-w: auto;
   display: flex;
   flex: none;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 4px 8px;
-  min-height: var(--canvas-bar);
+  gap: 4px 14px;
+  min-height: var(--options-h);
   min-width: 0;
-  padding: 4px 6px 4px 8px;
-  background: var(--module-head);
+  padding: 0 10px 0 14px;
+  overflow: hidden;
+  background: var(--module);
 }
 .head[data-fit="wrap"] { flex-wrap: wrap; }
 .grow { flex: 1; }
@@ -42,6 +43,15 @@
 .acts { gap: 2px; }
 .acts > :global(.lbl) { margin-right: 6px; }
 .dim { color: var(--ink-3); }
+
+/* ── the toolbox and the paper ── */
+.body { display: flex; flex: 1 1 auto; min-height: 0; }
+.paper, .where, .keys { color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); white-space: nowrap; }
+.paper b { color: var(--ink); font-weight: 400; }
+.keys { color: var(--ink-3); }
+.where { min-width: 7ch; }
+.toolbox { display: flex; flex: none; flex-direction: column; align-items: center; gap: 4px; width: 48px; padding: 8px 0 10px; background: var(--module); box-shadow: inset -1px 0 0 var(--line); }
+.current { display: block; width: 28px; height: 28px; border-radius: 6px; background: var(--well); box-shadow: inset 0 0 0 1px var(--edge); }
 
 /* ── the paper ── */
 .view {
@@ -113,103 +123,6 @@
   transform: translateX(-50%);
 }
 
-/* ── the tray: the well, then the paints and the palette's ramps, wrapping ── */
-.trayRow {
-  display: flex;
-  flex: none;
-  align-items: flex-start;
-  gap: 8px 14px;
-  padding: 8px 10px 10px;
-  box-shadow: inset 0 1px 0 var(--line);
-}
-.well {
-  display: flex;
-  flex: none;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 8px;
-  max-width: 50%;
-  padding: 2px 12px 2px 2px;
-  border-radius: var(--r-ctl);
-  box-shadow: inset -1px 0 0 var(--line);
-}
-.wellOver { background: var(--signal-soft); box-shadow: inset 0 0 0 1px var(--signal); }
-.mix {
-  position: relative;
-  flex: none;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px var(--edge);
-}
-.mix.on { box-shadow: inset 0 0 0 1px var(--edge), 0 0 0 2px var(--module), 0 0 0 3px var(--tick-strong); }
-.mixEmpty { background: var(--well); box-shadow: inset 0 0 0 1px var(--tick); }
-.part { display: inline-flex; flex: none; align-items: center; gap: 3px; }
-.partChip { flex: none; width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--edge); }
-
-/* ── the tray ── */
-/* three rows at most, then it scrolls (the wheel works on it), so a palette of many ramps doesn't
-   take the paper's height; the padding keeps the chips' rings and focus bars inside the scroll, and
-   the height is three whole rows (4 + 3 × 22 + 2 × 8 + 8; in the small window 4 + 3 × 16 + 2 × 8 + 8), so no sliver of a fourth shows */
-.tray {
-  display: flex;
-  flex: 1 1 0;
-  flex-wrap: wrap;
-  align-items: center;
-  align-content: flex-start;
-  gap: 8px 4px;
-  min-width: 0;
-  min-height: 38px;
-  max-height: 94px;
-  margin: -4px 0 -8px -4px;
-  padding: 4px 4px 8px;
-  overflow-y: auto;
-}
-.trayLabel { margin-right: 3px; }
-/* one ramp: its name and its steps, kept on one line */
-.set { display: inline-flex; flex: none; align-items: center; gap: 5px; margin-left: 9px; }
-.setLabel { max-width: 88px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hint { color: var(--ink-3); font-size: var(--fs-meta); }
-.chip {
-  position: relative;
-  flex: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  box-shadow: inset 0 0 0 1px var(--edge);
-  touch-action: none;
-}
-.chip:hover { box-shadow: inset 0 0 0 1px var(--edge), 0 0 0 2px var(--module), 0 0 0 3px var(--tick); }
-/* the loaded paint: the neutral ring, clear of the colour (brief §4) */
-.chip.on, .chip.on:hover { box-shadow: inset 0 0 0 1px var(--edge), 0 0 0 2px var(--module), 0 0 0 3px var(--tick-strong); }
-/* focus: the neutral ring clear of the colour, and the signal bar under it (brief §4) */
-.chip:focus-visible, .mix:focus-visible { outline: none; }
-.chip:focus-visible { box-shadow: inset 0 0 0 1px var(--edge), 0 0 0 2px var(--module), 0 0 0 3px var(--tick-strong); }
-.mix:focus-visible { box-shadow: inset 0 0 0 1px var(--edge), 0 0 0 3px var(--module), 0 0 0 4px var(--tick-strong); }
-.chip:focus-visible::after, .mix:focus-visible::after {
-  content: "";
-  position: absolute;
-  right: 2px;
-  bottom: -6px;
-  left: 2px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--signal);
-}
-.mix:focus-visible::after { right: 30%; bottom: -7px; left: 30%; }
-.ghost {
-  position: fixed;
-  left: -11px;
-  top: -11px;
-  z-index: 10;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  box-shadow: inset 0 0 0 1px var(--edge), 0 4px 12px var(--shadow);
-  pointer-events: none;
-}
-.ghost[hidden] { display: none; }
-
 /* ── the brush, in the bar ── */
 .readout { display: flex; flex: 0 1 auto; align-items: center; gap: 7px; min-width: 0; }
 .brushChip { flex: none; width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--edge); }
@@ -234,15 +147,4 @@
   border-radius: 4px;
   background: var(--under, var(--well));
   box-shadow: inset 0 0 0 1px var(--edge);
-}
-
-/* a smaller window: smaller chips, so the tray gives the paper more of the height */
-@container paint (max-width: 600px) {
-  .tray { gap: 8px 4px; max-height: 76px; }
-  .chip { width: 16px; height: 16px; }
-  .set { gap: 4px; margin-left: 6px; }
-  .trayRow { flex-direction: column; }
-  .well { max-width: none; box-shadow: none; }
-  /* stacked, the tray's height is its own: a zero basis would clip its rows */
-  .tray { flex: none; }
 }

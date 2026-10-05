@@ -1,12 +1,12 @@
-// The paint canvas's pigment tray and mixing well, in one row under the paper. Click a paint to load
-// the brush; Shift-click it, drag it into the well or use its menu to add a part; the well's mix, by
-// km.ts, loads the brush.
+// The Mixer's tubes and mixing well (the inspector in Paint mode). Click a tube to load the brush;
+// Shift-click it, drag it into the well or use its menu to add a part; the well's mix, by km.ts,
+// loads the brush. Palette colours load the brush from the Palette panel instead (Shift adds a part).
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type PointerEvent, type RefObject } from 'react';
-import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
+import { cssColor, deltaE, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { Button, IconButton, menu, NumberField, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { PARTS_MAX, type Source, type WellPart } from './paint-sources.ts';
-import s from './PaintCanvas.module.css';
+import s from './Mixer.module.css';
 
 const SLOP = 4;
 const HOW = 'Click to load the brush. Shift-click or drag into the well to add a part.';
@@ -104,15 +104,6 @@ export function Tray(p: {
     e.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]')[i]?.focus();
   };
 
-  const pigments = p.sources.filter((x) => !x.swatch);
-  const colours = p.sources.filter((x) => x.swatch);
-  // the palette's colours a ramp at a time, each under its name, so a colour is found by its ramp
-  const sets = colours.reduce<{ key: string; name: string; list: Source[] }[]>((out, x) => {
-    const last = out.at(-1);
-    if (last && last.key === x.set?.key) last.list.push(x);
-    else out.push({ key: x.set?.key ?? x.id, name: x.set?.name ?? '', list: [x] });
-    return out;
-  }, []);
   const chip = (src: Source, i: number) => (
     <Tooltip key={src.id} content={`${describe(src)}. ${HOW}`}>
       <button
@@ -138,16 +129,7 @@ export function Tray(p: {
   );
   return (
     <div className={s.tray} role="radiogroup" aria-label="Paints for the brush" onKeyDown={onKeyDown}>
-      <span className={cx('lbl', s.trayLabel)}>Paints</span>
-      {pigments.length ? pigments.map((x, i) => chip(x, i)) : <span className={s.hint}>Tick the paints you own to fill the tray.</span>}
-      {sets.map((set) => (
-        <span key={set.key} className={s.set}>
-          <Tooltip content={set.name} overflowOnly>
-            <span className={cx('lbl', s.trayLabel, s.setLabel)}>{set.name}</span>
-          </Tooltip>
-          {set.list.map((x) => chip(x, p.sources.indexOf(x)))}
-        </span>
-      ))}
+      {p.sources.length ? p.sources.map((x, i) => chip(x, i)) : <span className={s.hint}>Tick the paints you own to fill the tray.</span>}
       <span ref={ghost} className={s.ghost} hidden aria-hidden="true" />
     </div>
   );
@@ -157,6 +139,8 @@ export function Well(p: {
   well: WellPart[];
   sources: Source[];
   mix: Oklch | null;
+  /** the colour the Mix it recipes aim at (the palette's selected one): the well's distance to it */
+  target: Oklch | null;
   /** the brush holds the well's mix */
   loaded: boolean;
   /** a paint is being dragged over it */
@@ -169,45 +153,55 @@ export function Well(p: {
 }) {
   const name = (id: string) => p.sources.find((x) => x.id === id)?.name ?? 'A paint no longer in the tray';
   const colour = (id: string) => p.sources.find((x) => x.id === id)?.pigment.oklch;
+  const e = p.mix && p.target ? deltaE(p.mix, p.target) : null;
   return (
     <div ref={p.ref} role="group" className={cx(s.well, p.over && s.wellOver)} aria-label="Mixing well">
-      <Tooltip content={p.mix ? 'Load the brush with this mix' : 'Shift-click paints in the tray, or drag them here, to mix them'}>
-        <button
-          type="button"
-          className={cx(s.mix, !p.mix && s.mixEmpty, p.loaded && s.on)}
-          style={p.mix ? { background: cssColor(p.mix) } : undefined}
-          aria-label={p.mix ? `Well mix ${toHex(p.mix).toUpperCase()}: load the brush` : 'The well is empty'}
-          disabled={!p.mix}
-          onClick={p.onLoad}
-        />
-      </Tooltip>
-      <span className={cx('lbl', s.trayLabel)}>Well</span>
-      {p.well.length ? (
-        p.well.map((w) => (
-          <span key={w.id} className={s.part}>
-            <Tooltip content={name(w.id)}>
-              <i className={s.partChip} style={colour(w.id) ? { background: cssColor(colour(w.id)!) } : undefined} />
-            </Tooltip>
-            <NumberField
-              label={`Parts of ${name(w.id)}`}
-              hideLabel
-              size="sm"
-              width={36}
-              value={w.parts}
-              min={1}
-              max={PARTS_MAX}
-              onChange={(parts) => p.onChange(p.well.map((x) => (x.id === w.id ? { ...x, parts } : x)))}
-            />
-            <IconButton icon="close" label={`Take ${name(w.id)} out`} size="xs" onClick={() => p.onChange(p.well.filter((x) => x.id !== w.id))} />
-          </span>
-        ))
-      ) : (
-        <span className={s.hint}>Mix your own: Shift-click paints or drag them here. Try it on a recipe fills it too.</span>
-      )}
-      <Button size="xs" icon="brush" disabled={!p.mix || p.loaded} onClick={p.onLoad}>
-        {p.loaded ? 'On the brush' : 'Load brush'}
-      </Button>
-      {p.well.length > 0 && <IconButton icon="delete_sweep" label="Empty the well" size="xs" onClick={p.onEmpty} />}
+      <div className={s.wellHead}>
+        <Tooltip content={p.mix ? 'Load the brush with this mix' : 'Shift-click paints, or drag them here, to mix them'}>
+          <button
+            type="button"
+            className={cx(s.mix, !p.mix && s.mixEmpty, p.loaded && s.on)}
+            style={p.mix ? { background: cssColor(p.mix) } : undefined}
+            aria-label={p.mix ? `Well mix ${toHex(p.mix).toUpperCase()}: load the brush` : 'The well is empty'}
+            disabled={!p.mix}
+            onClick={p.onLoad}
+          />
+        </Tooltip>
+        <div className={s.wellText}>
+          <b>The well</b>
+          {p.mix ? <span className={s.hex}>{toHex(p.mix).toUpperCase()}</span> : <span className={s.hint}>Shift-click tubes, or drag them here, to mix your own.</span>}
+          {e !== null && (
+            <span className={cx(s.de, e < 2 ? s.match : e < 5 && s.close)}>
+              dE {e.toFixed(1)} · {e < 2 ? 'match' : e < 5 ? 'close' : 'near'}
+            </span>
+          )}
+        </div>
+      </div>
+      {p.well.map((w) => (
+        <span key={w.id} className={s.part}>
+          <i className={s.partChip} style={colour(w.id) ? { background: cssColor(colour(w.id)!) } : undefined} />
+          <span className={s.partName}>{name(w.id)}</span>
+          <NumberField
+            label={`Parts of ${name(w.id)}`}
+            hideLabel
+            size="sm"
+            width={52}
+            value={w.parts}
+            min={1}
+            max={PARTS_MAX}
+            onChange={(parts) => p.onChange(p.well.map((x) => (x.id === w.id ? { ...x, parts } : x)))}
+          />
+          <IconButton icon="close" label={`Take ${name(w.id)} out`} size="xs" onClick={() => p.onChange(p.well.filter((x) => x.id !== w.id))} />
+        </span>
+      ))}
+      <div className={s.wellActs}>
+        <Button size="xs" icon="delete_sweep" disabled={!p.well.length} onClick={p.onEmpty}>
+          Empty well
+        </Button>
+        <Button size="xs" icon="brush" disabled={!p.mix || p.loaded} onClick={p.onLoad}>
+          {p.loaded ? 'On the brush' : 'Load brush'}
+        </Button>
+      </div>
     </div>
   );
 }
