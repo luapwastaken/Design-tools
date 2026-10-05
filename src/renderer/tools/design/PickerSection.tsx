@@ -1,21 +1,23 @@
 // The Colour picker section: the selected swatch in the app-wide picker style, then name and role,
 // hex, HSB, RGB and print type. Every value typable. Lock and delete sit in the header.
 import type { ReactNode } from 'react';
-import { toHex } from '../../../shared/color/index.ts';
+import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { fromHex } from '../../../shared/color/picker.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { HexField } from '../../ui/HexField.tsx';
-import { IconButton, NumberField, PICKER_STYLE_OPTIONS, pickFromScreen, Segmented, TextInput, useDocColour, usePickerModel, usePickerStyle } from '../../ui/index.ts';
+import { cx } from '../../ui/cx.ts';
+import { IconButton, NumberField, PICKER_STYLE_OPTIONS, pickFromScreen, Segmented, TextInput, Tooltip, useDocColour, usePickerModel, usePickerStyle } from '../../ui/index.ts';
 import { PickerSliders } from '../../ui/PickerNumbers.tsx';
 import { PickerOklch } from '../../ui/PickerOklch.tsx';
 import { usePickerColour, type Channel } from '../../ui/pickerModels.ts';
 import { PickerSquare } from '../../ui/PickerSquare.tsx';
 import { setPickerStyle } from '../../ui/PickerStyles.tsx';
 import { PickerWheel } from '../../ui/PickerWheel.tsx';
-import { NotesModule } from '../common/Notes.tsx';
 import { Section } from '../common/Section.tsx';
-import { armDelete, copyHex, selection, setRole, toggleLocked, type Doc } from './actions.ts';
-import { displayName, mapSwatch, nameIn, recolour, type DesignDoc, type DesignView } from './doc.ts';
+import { fmtL } from '../common/names.ts';
+import { tints } from './adjust.ts';
+import { armDelete, copyHex, select, selection, setRole, toggleLocked, type Doc } from './actions.ts';
+import { displayName, insertAfter, mapSwatch, nameIn, newSwatch, recolour, type DesignDoc, type DesignView } from './doc.ts';
 import { Role } from './Role.tsx';
 import { patchView } from './view-state.ts';
 import s from './Picker.module.css';
@@ -90,6 +92,8 @@ function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Sw
         )}
       </div>
 
+      <Tints doc={doc} w={w} />
+
       <div className={s.ident}>
         <TextInput
           value={w.name}
@@ -118,8 +122,32 @@ function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Sw
         <span className={s.lab}>Print type</span>
         <Segmented options={TYPES} value={w.type} onChange={(type) => edit(`Make ${name} ${type}`, (x) => ({ ...x, type }))} className={s.types} />
       </div>
-      <NotesModule doc={doc} />
     </Section>
+  );
+}
+
+/** the same hue down the lightness scale; a click adds one beside the colour */
+function Tints({ doc, w }: { doc: Doc; w: Swatch }) {
+  const ts = tints(w.oklch);
+  const near = ts.reduce((best, t, i, all) => (Math.abs(t[0] - w.oklch[0]) < Math.abs(all[best][0] - w.oklch[0]) ? i : best), 0);
+  const add = (o: Oklch) => {
+    const t = newSwatch(o);
+    doc.transact('Add tint', (x) => insertAfter(x, w.id, [t]));
+    select([t.id]);
+  };
+  return (
+    <div className={s.tints} role="group" aria-label="Tints: click to add one">
+      <span className={s.lab}>Tints</span>
+      <div className={s.tintRow}>
+        {ts.map((t, i) => (
+          <Tooltip key={i} content={`Add a tint at L ${fmtL(t[0])}`}>
+            <button type="button" aria-label={`Add a tint at L ${fmtL(t[0])}`} className={cx(s.tint, i === near && s.here)} onClick={() => add(t)}>
+              <i style={{ background: cssColor(t) }} />
+            </button>
+          </Tooltip>
+        ))}
+      </div>
+    </div>
   );
 }
 

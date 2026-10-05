@@ -1,6 +1,9 @@
 /* the Palette section: ~300px tall, the swatches filling it; many colours scroll the row sideways */
 .section { position: relative; }
-.body { position: relative; display: flex; flex-direction: row; padding: 12px 14px 14px; overflow: hidden; }
+.body { position: relative; display: flex; flex-direction: row; padding: 0; overflow: hidden; }
+/* the surround the colours are judged on fills the whole body */
+.stage { display: flex; flex: 1; min-width: 0; min-height: 0; padding: 12px 14px 14px; }
+.ctl.ctl { flex: none; width: 160px; }
 .hint { color: var(--ink-3); font: 400 var(--fs-row)/1 var(--font-sans); white-space: nowrap; }
 .sim { color: var(--signal); }
 .from { min-width: 0; overflow: hidden; color: var(--ink-2); font-size: var(--fs-base); text-overflow: ellipsis; white-space: nowrap; }
@@ -32,7 +35,13 @@
 .lock:hover { color: var(--cross); }
 .sw:hover .lock, .sw:focus-within .lock, .sel .lock, .lock.on { display: inline-flex; }
 
-.foot { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; padding: 0 4px; }
+.foot { display: flex; flex: none; flex-direction: column; gap: 3px; min-width: 0; padding: 4px 6px; border-radius: 6px; background: var(--module); }
+.line { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.data { display: flex; flex-wrap: wrap; gap: 0 8px; min-width: 0; color: var(--ink-3); font: 400 11.5px/1.35 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; white-space: nowrap; }
+.data b { color: var(--ink-2); font-weight: 500; }
+/* the hover button that opens the same menu as a right-click */
+.more { position: absolute; right: 8px; bottom: 8px; z-index: 1; display: none; }
+.sw:hover .more, .sw:focus-within .more, .sel .more { display: inline-flex; }
 .name { min-width: 0; overflow: hidden; color: var(--ink); font: 500 14px/1.2 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
 .auto { color: var(--ink-2); }
 .hex { display: inline-flex; flex: none; align-items: center; gap: 4px; color: var(--ink-3); font: 400 12px/1.2 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }

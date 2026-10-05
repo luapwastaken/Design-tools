@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { contrast, cssColor, type Oklch } from '../../../shared/color/index.ts';
 import type { ContrastPair, ValueCollision } from '../../../shared/palette/checks.ts';
 import type { Swatch } from '../../../shared/types.ts';
@@ -74,10 +74,12 @@ type ValueProps = CheckHost & {
   onFlagL(v: number): void;
   /** what the scale compares, when it isn't every swatch */
   sub?: string;
+  /** more controls in the header, before the flag field */
+  extra?: ReactNode;
 };
 
 /** The palette in greyscale by OKLCH lightness on a ruler; the worst run that reads as one grey is flagged. */
-export function Value({ swatches, onFix, pointAt, className, collisions, contrast: pairs = [], flagL, onFlagL, sub }: ValueProps) {
+export function Value({ swatches, onFix, pointAt, className, collisions, contrast: pairs = [], flagL, onFlagL, sub, extra }: ValueProps) {
   const byL = [...swatches].sort((a, b) => a.oklch[0] - b.oklch[0]);
   const hit = new Set(collisions.flatMap((c) => [c.a.id, c.b.id]));
   const { ref: ruler, width } = useWidth<HTMLDivElement>();
@@ -109,7 +111,10 @@ export function Value({ swatches, onFix, pointAt, className, collisions, contras
       sub={sub ? `${sub} · OKLCH lightness` : 'OKLCH lightness'}
       readout={swatches.length > 1 ? (collisions.length ? plural(collisions.length, 'collision') : 'No collisions') : undefined}
       actions={
-        <NumberField label="Flag <" value={flagL} min={1} max={20} step={0.5} precision={1} unit="ΔL" size="sm" width={112} onChange={onFlagL} />
+        <>
+          {extra}
+          <NumberField label="Flag <" value={flagL} min={1} max={20} step={0.5} precision={1} unit="ΔL" size="sm" width={112} onChange={onFlagL} />
+        </>
       }
       scroll
       className={className}

@@ -2,16 +2,18 @@
 // the chip). Click selects, drag reorders, "+ Add colour" last. Proposals sit in the row marked
 // periwinkle with Keep and a cross each; Keep all and Discard all are in the header.
 import { useEffect, useMemo, useState, type DragEvent, type MouseEvent } from 'react';
-import { cssColor, inSrgb, toHex, type Oklch } from '../../../shared/color/index.ts';
+import { cmykEstimate, cssColor, inSrgb, rgb255, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { ROLES } from '../../../shared/palette/roles.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
-import { Button, Icon, IconButton, menu, Tooltip, type MenuAnchor, type MenuItem } from '../../ui/index.ts';
+import { Button, Icon, IconButton, menu, Select, Tooltip, type MenuAnchor, type MenuItem } from '../../ui/index.ts';
+import { fmtC, fmtH, fmtL } from '../common/names.ts';
 import { Section } from '../common/Section.tsx';
+import { SURROUNDS, surroundOf } from '../common/surround.ts';
 import { addProposals, addSwatch, armDelete, clickSelect, copyHex, duplicate, select, selection, setRole, toggleLocked, type Doc } from './actions.ts';
 import { inkOn, simulated } from './artboard.ts';
 import { DeleteConfirm } from './DeleteConfirm.tsx';
-import { displayName, moveIds, namesOf, plural, type DesignDoc, type DesignView, mapSwatch } from './doc.ts';
+import { displayName, moveIds, namesOf, plural, type ChipData, type DesignDoc, type DesignView, mapSwatch } from './doc.ts';
 import { Empty } from './Empty.tsx';
 import type { OpenPop } from './Popovers.tsx';
 import { clearProposals, proposals, toggleLock, type Proposal } from './proposals.ts';
@@ -22,6 +24,13 @@ import s from './Palette.module.css';
 const REORDER_MIME = 'application/x-designtools-reorder';
 
 const SIM_NAME = { normal: 'Normal', protan: 'Protan', deutan: 'Deutan', tritan: 'Tritan', achromat: 'Achromat', greyscale: 'Greyscale value' } as const;
+
+const SURROUND_OPTIONS = SURROUNDS.map((o) => ({ value: o.value, label: o.value === 'grey' ? '18% grey' : o.label }));
+const CHIP_DATA: { value: ChipData; label: string }[] = [
+  { value: 'hex', label: 'Hex only' },
+  { value: 'lch', label: 'Hex + L C H' },
+  { value: 'table', label: 'Table: RGB, ≈CMYK' },
+];
 
 const paint = (shown: Oklch) => ({ '--c': cssColor(shown), '--ink-c': inkOn(shown) }) as React.CSSProperties;
 
@@ -110,7 +119,14 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
       className={s.section}
       bodyClassName={s.body}
       actions={
-        ghosts ? (
+        <>
+          {!empty && (
+            <>
+              <Select label="Surround" options={SURROUND_OPTIONS.map((o) => ({ ...o, swatch: surroundOf(o.value, d.swatches) }))} value={v.surround} onChange={(surround) => patchView({ surround })} className={s.ctl} />
+              <Select label="Show" options={CHIP_DATA} value={v.chipData} onChange={(chipData) => patchView({ chipData })} className={s.ctl} />
+            </>
+          )}
+          {ghosts ? (
           <>
             <span className={s.from}>
               <b>{plural(ghosts.items.length, 'colour')} proposed</b> {ghosts.label}
@@ -131,9 +147,11 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
             )}
             {!empty && <span className={s.hint}>{locked ? `${plural(locked, 'colour')} locked: ` : ''}Locked colours stay when you generate</span>}
           </>
-        )
+        )}
+        </>
       }
     >
+      <div className={s.stage} style={empty ? undefined : { background: surroundOf(v.surround, d.swatches) }}>
       {empty ? (
         <Empty doc={doc} v={v} onPop={onPop} />
       ) : (
@@ -158,6 +176,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
               hot={lit.includes(w.id)}
               locked={v.locked.includes(w.id)}
               dragging={!!drag?.ids.includes(w.id)}
+              data={v.chipData}
               insert={insertOf(i)}
               onSelect={(e) => clickSelect(d, w.id, { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey })}
               onMenu={(at, fromKey) => openMenu(w, at, fromKey)}
@@ -169,7 +188,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
             />
           ))}
           {ghosts?.items.map((p) => (
-            <Ghost key={p.id} p={p} shown={simulated(p.oklch, v.sim)} lockable={ghosts.from === 'generate'} onAdd={() => addProposals(doc, [p])} onDiscard={() => dropOne(p)} onLock={() => toggleLock(p.id)} />
+            <Ghost key={p.id} p={p} data={v.chipData} shown={simulated(p.oklch, v.sim)} lockable={ghosts.from === 'generate'} onAdd={() => addProposals(doc, [p])} onDiscard={() => dropOne(p)} onLock={() => toggleLock(p.id)} />
           ))}
           <Tooltip content="Add a colour at the lightness the palette lacks most">
             <button type="button" className={s.add} aria-label="Add a swatch" onClick={() => addSwatch(doc)}>
@@ -179,6 +198,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
           </Tooltip>
         </div>
       )}
+      </div>
       {isArmed && (
         <div className={s.confirm}>
           <DeleteConfirm doc={doc} d={d} sel={sel} />
@@ -206,6 +226,7 @@ type TileProps = {
   hot: boolean;
   locked: boolean;
   dragging: boolean;
+  data: ChipData;
   insert: 'before' | 'after' | undefined;
   onSelect(e: MouseEvent): void;
   onMenu(at: DOMRect | { x: number; y: number }, fromKey: boolean): void;
@@ -250,6 +271,9 @@ function Tile(p: TileProps) {
       onDragEnd={p.onDragEnd}
     >
       <div className={s.chip}>
+        <span className={s.more} onClick={(e) => e.stopPropagation()}>
+          <IconButton icon="more_horiz" label="More" size="xs" onContent tabIndex={-1} onClick={(e) => p.onMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
+        </span>
         <button
           type="button"
           className={cx(s.tag, !w.role && s.none)}
@@ -277,33 +301,52 @@ function Tile(p: TileProps) {
           </button>
         </Tooltip>
       </div>
-      <Foot name={p.name} oklch={w.oklch} auto={!w.name.trim()} />
+      <Foot name={p.name} oklch={w.oklch} auto={!w.name.trim()} data={p.data} />
     </div>
   );
 }
 
-function Foot({ name, oklch, auto }: { name: string; oklch: Oklch; auto?: boolean }) {
+function Foot({ name, oklch, auto, data }: { name: string; oklch: Oklch; auto?: boolean; data: ChipData }) {
   return (
     <div className={s.foot}>
-      <Tooltip content={name} overflowOnly>
-        <span className={cx(s.name, auto && s.auto)}>{name}</span>
-      </Tooltip>
-      <span className={s.hex}>
-        {!inSrgb(oklch) && (
-          <Tooltip content="Outside sRGB: the hex is the nearest colour a screen shows">
-            <span className={s.gamut}>
-              <Icon name="warning" size={14} />
-            </span>
-          </Tooltip>
-        )}
-        {toHex(oklch).toUpperCase()}
-      </span>
+      <div className={s.line}>
+        <Tooltip content={name} overflowOnly>
+          <span className={cx(s.name, auto && s.auto)}>{name}</span>
+        </Tooltip>
+        <span className={s.hex}>
+          {!inSrgb(oklch) && (
+            <Tooltip content="Outside sRGB: the hex is the nearest colour a screen shows">
+              <span className={s.gamut}>
+                <Icon name="warning" size={14} />
+              </span>
+            </Tooltip>
+          )}
+          {toHex(oklch).toUpperCase()}
+        </span>
+      </div>
+      {data !== 'hex' && (
+        <span className={s.data}>
+          <span>L {fmtL(oklch[0])}</span>
+          <span>C {fmtC(oklch[1])}</span>
+          <span>H {fmtH(oklch[2])}</span>
+        </span>
+      )}
+      {data === 'table' && (
+        <>
+          <span className={s.data}>
+            <b>RGB</b> {rgb255(oklch).join(' ')}
+          </span>
+          <span className={s.data}>
+            <b>≈CMYK</b> {cmykEstimate(oklch).join(' ')}
+          </span>
+        </>
+      )}
     </div>
   );
 }
 
 /** A proposal: a swatch in the machine's marking (periwinkle bar and tag), not in the palette yet. */
-function Ghost({ p, shown, lockable, onAdd, onDiscard, onLock }: { p: Proposal; shown: Oklch; lockable: boolean; onAdd(): void; onDiscard(): void; onLock(): void }) {
+function Ghost({ p, shown, data, lockable, onAdd, onDiscard, onLock }: { p: Proposal; data: ChipData; shown: Oklch; lockable: boolean; onAdd(): void; onDiscard(): void; onLock(): void }) {
   const name = p.name ?? displayName({ name: '', oklch: p.oklch });
   return (
     <div className={cx(s.sw, s.ghost)} style={paint(shown)} data-ghost={p.id}>
@@ -317,7 +360,7 @@ function Ghost({ p, shown, lockable, onAdd, onDiscard, onLock }: { p: Proposal; 
           </Tooltip>
         )}
       </div>
-      <Foot name={name} oklch={p.oklch} auto />
+      <Foot name={name} oklch={p.oklch} auto data={data} />
       <div className={s.keep}>
         <Button size="xs" variant="primary" icon="add" onClick={onAdd} tooltip={`Keep ${name}`}>
           Keep

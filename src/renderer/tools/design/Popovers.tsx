@@ -79,7 +79,7 @@ function GenerateBody({ doc, v }: { doc: Doc; v: DesignView }) {
         <NumberField label="Seed" value={v.seed} min={0} max={99999} step={1} onChange={(seed) => regenerate(doc, { seed })} className={s.grow} />
         <IconButton icon="casino" label="Reroll: a new seed" onClick={() => regenerate(doc, { seed: 1 + Math.floor(Math.random() * 99999) })} />
       </Row>
-      <p className={s.dim}>Generate (Space) always rolls a new seed. Locked colours stay.</p>
+      <p className={s.dim}>Generate (Space) adds new colours as proposals beside the palette. Locked colours stay.</p>
     </>
   );
 }
@@ -251,18 +251,25 @@ function GradientBody({ d, v, ends, onDone }: { d: DesignDoc; v: DesignView; end
   const find = (id?: string) => d.swatches.find((w) => w.id === id);
   const a = find(pick.from) ?? find(sel[0]) ?? d.swatches[0];
   const b = find(pick.to) ?? find(sel[1]) ?? d.swatches.at(-1);
+  const live = proposals.use()?.from === 'gradient';
   if (!a || !b || d.swatches.length < 2) return <p className={s.dim}>Add two swatches to blend between them.</p>;
+  // while its stops are the ones proposed, a changed setting updates them
+  const change = (next: { from?: string; to?: string }, patch: Partial<DesignView> = {}) => {
+    setPick({ ...pick, ...next });
+    if (Object.keys(patch).length) patchView(patch);
+    if (live) runGradient(find(next.from ?? a.id)!, find(next.to ?? b.id)!, { ...v, ...patch });
+  };
   const opts = d.swatches.map((w) => ({ value: w.id, label: displayName(w), swatch: cssColor(w.oklch) }));
   const stops = gradientStops(a.oklch, b.oklch, v.stops, v.space);
   return (
     <>
       <Row>
-        <Select label="From" options={opts} value={a.id} onChange={(from) => setPick({ ...pick, from })} className={s.grow} />
-        <Select label="To" options={opts} value={b.id} onChange={(to) => setPick({ ...pick, to })} className={s.grow} />
+        <Select label="From" options={opts} value={a.id} onChange={(from) => change({ from })} className={s.grow} />
+        <Select label="To" options={opts} value={b.id} onChange={(to) => change({ to })} className={s.grow} />
       </Row>
       <Row>
-        <NumberField label="Stops" value={v.stops} min={1} max={12} step={1} onChange={(n) => patchView({ stops: n })} className={s.grow} />
-        <Segmented mono options={[{ value: 'oklch', label: 'OKLCH' }, { value: 'oklab', label: 'OKLab' }]} value={v.space} onChange={(space) => patchView({ space })} />
+        <NumberField label="Stops" value={v.stops} min={1} max={12} step={1} onChange={(n) => change({}, { stops: n })} className={s.grow} />
+        <Segmented mono options={[{ value: 'oklch', label: 'OKLCH' }, { value: 'oklab', label: 'OKLab' }]} value={v.space} onChange={(space) => change({}, { space })} />
       </Row>
       <SwatchStrip colors={[a.oklch, ...stops, b.oklch].map(cssColor)} height={22} />
       <Button
