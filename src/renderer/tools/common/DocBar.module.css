@@ -36,13 +36,12 @@
   min-width: 48px;
   overflow: hidden;
   font: 600 var(--fs-title)/1 var(--font-sans);
-  font-stretch: var(--sans-stretch);
   letter-spacing: -.005em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 /* the name as a button: nothing to see until the pointer is over it */
-.titleBtn { display: block; max-width: 100%; overflow: hidden; border-radius: var(--r-ctl); color: inherit; font: inherit; font-stretch: inherit; letter-spacing: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: text; }
+.titleBtn { display: block; max-width: 100%; overflow: hidden; border-radius: var(--r-ctl); color: inherit; font: inherit; letter-spacing: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: text; }
 .titleBtn:hover { background: var(--well-hover); }
 .rename { flex: 0 1 280px; min-width: 140px; }
 .grow { flex: 1; }
@@ -58,7 +57,6 @@
   padding: 0 12px;
   color: var(--ink-3);
   font: 400 var(--fs-row)/1 var(--font-sans);
-  font-stretch: var(--sans-stretch);
   white-space: nowrap;
 }
 .iconsOnly .tab { gap: 4px; padding: 0 8px; }
@@ -90,7 +88,6 @@
   border-radius: 8px;
   background: var(--danger);
   color: var(--danger-ink);
-  font: 600 var(--fs-label)/1 var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
+  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
 }

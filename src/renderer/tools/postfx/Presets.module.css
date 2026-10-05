@@ -14,15 +14,15 @@
   min-width: 0;
   height: 30px;
   padding: 0 8px 0 9px;
-  border-radius: 2px;
+  border-radius: 4px;
   color: var(--ink-2);
   text-align: left;
 }
 .key:hover { background: var(--well-hover); color: var(--ink); }
 .key.on { background: var(--raise); color: var(--ink); box-shadow: inset 0 0 0 1px var(--tick-strong); }
-.text { flex: 1; min-width: 0; overflow: hidden; font: 500 var(--fs-meta)/1.1 var(--font-sans); font-stretch: var(--sans-stretch); text-overflow: ellipsis; white-space: nowrap; }
+.text { flex: 1; min-width: 0; overflow: hidden; font: 500 var(--fs-meta)/1.1 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
 /* how many layers it adds */
-.count { flex: none; color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; }
+.count { flex: none; color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
 
 .head { display: flex; align-items: center; gap: 8px; min-height: 22px; }
 

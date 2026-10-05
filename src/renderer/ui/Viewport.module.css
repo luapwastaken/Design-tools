@@ -60,8 +60,7 @@
   overflow: hidden;
   color: var(--ink-3);
   font: 400 var(--fs-unit)/var(--canvas-bar) var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums slashed-zero;
   white-space: nowrap;
 }
 .readout::before { content: ""; height: var(--canvas-bar); } /* holds the first line open, so even the first part can wrap away */

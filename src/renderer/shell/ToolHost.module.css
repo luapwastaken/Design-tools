@@ -28,7 +28,6 @@
   background: var(--well);
   color: var(--ink-2);
   font: 400 var(--fs-unit)/1.45 var(--font-mono);
-  font-stretch: normal;
   overflow-wrap: anywhere;
   user-select: text;
 }

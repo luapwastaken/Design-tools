@@ -9,8 +9,8 @@ import { log } from './log.ts';
 
 /** Brief §3.4: page, ground and ink-2 as hex (Electron takes no oklch). The only colour literals outside tokens.css. */
 export const THEME_HEX = {
-  dark: { page: '#060606', ground: '#131313', ink2: '#bebebe' },
-  light: { page: '#e8e8e8', ground: '#d1d1d1', ink2: '#404040' },
+  dark: { page: '#0b0a09', ground: '#100f0e', ink2: '#aba69b' },
+  light: { page: '#d8d6d0', ground: '#e4e2dd', ink2: '#57524a' },
 } as const;
 
 const CLOSE_WAIT_MS = 3000;

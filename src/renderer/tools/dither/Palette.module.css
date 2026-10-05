@@ -13,7 +13,7 @@
 }
 .from:hover { background: var(--well-hover); }
 .from > :global(.lbl) { flex: none; }
-.from > :global(.material-symbols-rounded) { flex: none; color: var(--ink-3); }
+.from > :global(.ico) { flex: none; color: var(--ink-3); }
 .strip { flex: none; width: 48px; }
 .name { flex: 1; min-width: 0; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -35,8 +35,8 @@
   border-radius: var(--r-ctl);
 }
 .chip:hover { background: var(--well-hover); }
-.colour { display: block; width: 24px; height: 24px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
-.num { color: var(--ink-3); font: 500 10px/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; }
+.colour { display: block; width: 24px; height: 24px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--edge); }
+.num { color: var(--ink-3); font: 500 10px/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
 /* the colour under the pointer in the view: the neutral ring, 4px clear of the colour (brief §4) */
 .lit { box-shadow: inset 0 0 0 1px var(--tick-strong); }
 .lit .num { color: var(--ink); }

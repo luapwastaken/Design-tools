@@ -6,22 +6,22 @@
   gap: 8px;
   height: var(--ctl);
   padding: 0 8px 0 3px;
-  border-radius: var(--r-ctl);
+  border-radius: var(--r-field);
   background: var(--well);
   cursor: text;
 }
 .cf:hover { background: var(--well-hover); }
 /* the signal ring is for typing; the chip is colour, so its own focus stays neutral (brief §4) */
-.cf:has(input:focus) { background: var(--well); box-shadow: inset 0 0 0 1px var(--signal); }
+.cf:has(input:focus) { background: var(--well); box-shadow: inset 0 0 0 1.5px var(--signal); }
 .cf[data-open] { box-shadow: inset 0 0 0 1px var(--tick-strong); }
 .cf[data-error] { background: var(--danger-soft); box-shadow: inset 0 0 0 1px var(--danger); }
 
 /* the hairline sits over the colour, so a near-black swatch still reads */
 .chip {
   flex: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
   box-shadow: inset 0 0 0 1px var(--edge);
 }
 /* 18px to the eye; the button itself reaches the field's full 24px height */
@@ -36,8 +36,7 @@ button.chip:focus-visible { outline: 1px solid var(--tick-strong); outline-offse
   min-width: 7ch;
   height: 100%;
   font: 400 var(--fs-value)/1 var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums slashed-zero;
   text-transform: uppercase;
   color: var(--ink);
 }

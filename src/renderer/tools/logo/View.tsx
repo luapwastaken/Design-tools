@@ -102,7 +102,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
             !empty && (
               <span className={s.switches}>
                 {!sheet && lockup && <Select label="Version" options={versionOptions(d)} value={v.version} onChange={(version) => patchView({ version })} className={s.version} />}
-                <Segmented options={SURROUNDS} value={v.surround} onChange={(surround) => patchView({ surround })} mono fit />
+                <Segmented options={SURROUNDS} value={v.surround} onChange={(surround) => patchView({ surround })} fit />
               </span>
             )
           }

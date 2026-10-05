@@ -52,6 +52,7 @@ export const A = () => <div title="x">→</div>; // expect: 1 6
 export const B = () => <select />; // expect: 6
 export const C = () => <input type="number" />; // expect: 6
 export const D = () => <span className="material-symbols-rounded">add</span>; // expect: 1
+import { Plus } from '@phosphor-icons/react'; // expect: 1
 export const E = () => <i style={{ background: '#000' }} />; // expect: 2
 export const F = () => <i style={{ transition: 'transform 90ms' }} />; // expect: 4
 export const G = (el: HTMLElement) => el.animate([{ opacity: 0 }], 90); // expect: 4

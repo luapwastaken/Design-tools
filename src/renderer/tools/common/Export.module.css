@@ -35,4 +35,4 @@
   white-space: nowrap;
 }
 .lastName { flex: 1; min-width: 0; overflow: hidden; color: var(--ink-2); font-family: var(--font-mono); text-overflow: ellipsis; }
-.lastAt { color: var(--ink-3); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.lastAt { color: var(--ink-3); font-family: var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }

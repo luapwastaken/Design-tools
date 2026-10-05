@@ -15,7 +15,7 @@
   gap: 8px;
   min-width: 0;
   padding: 4px 8px 4px 4px;
-  border-radius: 2px;
+  border-radius: 4px;
   color: var(--ink-3);
   text-align: left;
 }
@@ -36,5 +36,5 @@
 /* 30 × 20 blocks at 2 px: big enough to read the pattern, small enough for ten */
 .thumb { flex: none; width: 60px; }
 .text { position: relative; display: flex; flex: 1; flex-direction: column; gap: 5px; min-width: 0; }
-.name { overflow: hidden; font: 500 var(--fs-meta)/1.1 var(--font-sans); font-stretch: var(--sans-stretch); text-overflow: ellipsis; white-space: nowrap; }
+.name { overflow: hidden; font: 500 var(--fs-meta)/1.1 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
 .strip { width: 100%; }

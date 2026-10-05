@@ -6,12 +6,11 @@
   display: flex;
   gap: 2px;
   height: var(--ctl);
-  padding: 2px;
-  border-radius: var(--r-ctl);
+  padding: 3px;
+  border-radius: var(--r-field);
   background: var(--well);
 }
 .seg button {
-  position: relative;
   display: flex;
   flex: 1 1 0;
   align-items: center;
@@ -19,32 +18,21 @@
   gap: 5px;
   min-width: 0;
   padding: 0 9px;
-  border-radius: 2px;
+  border-radius: var(--r-ctl);
   color: var(--ink-3);
   font: 500 var(--fs-meta)/1 var(--font-sans);
-  font-stretch: var(--sans-stretch);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: transform var(--t-fast) var(--ease);
 }
-.seg button:not(:disabled):hover { color: var(--ink); }
-.seg button.on { background: var(--raise); color: var(--ink); }
-/* the lit segment carries a signal stripe, like a latched key */
-.seg button.on::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 2px;
-  width: 12px;
-  height: 2px;
-  margin-left: -6px;
-  border-radius: 1px;
-  background: var(--signal);
-}
+.seg button:not(:disabled):hover { color: var(--ink-2); background: var(--well-hover); }
+.seg button:not(:disabled):active { transform: scale(.97); }
+/* the lit segment is the raised key: tone, not a stripe */
+.seg button.on, .seg button.on:hover { background: var(--raise-hover); color: var(--ink); }
 .seg button:disabled { color: var(--ink-4); }
-.seg button.on:disabled { color: var(--ink-3); }
-.seg button.on:disabled::after { background: var(--tick); }
+.seg button.on:disabled { background: var(--raise); color: var(--ink-3); }
 
-.mono button { font: 500 var(--fs-label)/1 var(--font-mono); font-stretch: normal; letter-spacing: .07em; text-transform: uppercase; }
+.mono button { font: 500 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
 .fit { align-self: flex-start; }
 .fit button { flex: none; }

@@ -18,9 +18,7 @@
   stroke: var(--cross-halo);
   stroke-width: 3px;
   paint-order: stroke;
-  font: 500 10px/1 var(--font-mono);
-  letter-spacing: .06em;
-  text-transform: uppercase;
+  font: 400 var(--fs-label)/1 var(--font-sans);
 }
 .handle { fill: var(--cross); stroke: var(--cross-halo); stroke-width: 1; }
 .hit { fill: none; stroke: none; }

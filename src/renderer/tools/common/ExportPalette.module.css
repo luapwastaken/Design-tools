@@ -4,13 +4,12 @@
 .export { display: flex; flex-direction: column; gap: 10px; }
 .head {
   color: var(--ink);
-  font: 600 var(--fs-mod-title)/1 var(--font-mono);
-  font-stretch: normal;
-  letter-spacing: .1em;
+  font: 500 var(--fs-caps)/1 var(--font-sans);
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 .desc { min-height: 2.9em; color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.45; }
-.ext { flex: none; color: var(--ink-3); font: 400 var(--fs-ctl)/1 var(--font-mono); font-stretch: normal; }
+.ext { flex: none; color: var(--ink-3); font: 400 var(--fs-ctl)/1 var(--font-mono); }
 .row { display: flex; gap: 6px; }
 .grow { flex: 1; }
 

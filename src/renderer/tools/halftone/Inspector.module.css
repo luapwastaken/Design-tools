@@ -12,6 +12,6 @@
 .warn { color: var(--danger); font-size: var(--fs-meta); line-height: 1.4; }
 /* advice worth reading, set brighter than a note but never red */
 .soft { color: var(--ink-2); }
-.cap { color: var(--ink-3); font: 400 var(--fs-label)/1.4 var(--font-mono); font-stretch: normal; letter-spacing: .03em; }
+.cap { color: var(--ink-3); font: 400 var(--fs-label)/1.4 var(--font-sans); }
 .cap b { font-weight: 400; color: var(--ink-2); }
 

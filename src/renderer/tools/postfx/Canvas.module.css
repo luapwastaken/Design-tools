@@ -49,10 +49,7 @@
   background: var(--module-head);
   box-shadow: 0 0 0 1px var(--edge);
   color: var(--ink-2);
-  font: 500 var(--fs-label)/20px var(--font-mono);
-  font-stretch: normal;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  font: 400 var(--fs-label)/20px var(--font-sans);
   white-space: nowrap;
 }
 .before { translate: -100% 0; }

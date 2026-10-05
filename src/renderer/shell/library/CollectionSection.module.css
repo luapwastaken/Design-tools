@@ -4,21 +4,20 @@
 
 .head { display: flex; align-items: center; gap: 4px; height: var(--row); margin-top: 4px; padding: 0 8px 0 2px; }
 .name { display: flex; align-items: center; gap: 4px; min-width: 0; height: 100%; padding-right: 6px; border-radius: var(--r-ctl); }
-.name > :global(.material-symbols-rounded) { color: var(--ink-3); }
-.name:hover > :global(.material-symbols-rounded) { color: var(--ink); }
+.name > :global(.ico) { color: var(--ink-3); }
+.name:hover > :global(.ico) { color: var(--ink); }
 .title {
   overflow: hidden;
-  color: var(--ink-2);
-  font: 600 var(--fs-label)/1 var(--font-mono);
-  font-stretch: normal;
-  letter-spacing: .1em;
-  text-overflow: ellipsis;
+  color: var(--ink-3);
+  font: 500 var(--fs-caps)/1 var(--font-sans);
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .field { flex: 1; min-width: 0; }
 .grow { flex: 1; }
-.count { min-width: 12px; color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; text-align: right; }
+.count { min-width: 12px; color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; text-align: right; }
 
 /* the lock shows at rest only when it's on; an unlocked collection offers it on hover */
 .lock { visibility: hidden; }
@@ -29,5 +28,5 @@
 .pendingHead { padding: 8px 10px 6px; }
 .file { display: flex; align-items: center; gap: 8px; min-height: var(--row); padding: 0 6px 0 12px; border-radius: var(--r-ctl); color: var(--ink-2); font-size: var(--fs-ctl); }
 .file:hover { background: var(--well-hover); }
-.file > :global(.material-symbols-rounded) { color: var(--ink-4); }
+.file > :global(.ico) { color: var(--ink-4); }
 .fileName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

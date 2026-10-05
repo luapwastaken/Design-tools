@@ -61,11 +61,8 @@
 .meta {
   overflow: hidden;
   color: var(--ink-3);
-  font: 400 var(--fs-label)/1 var(--font-mono);
-  font-stretch: normal;
-  letter-spacing: .06em;
+  font: 400 var(--fs-label)/1 var(--font-sans);
   text-overflow: ellipsis;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 .tag { color: var(--ink-2); font-weight: 500; }

@@ -7,11 +7,8 @@
   padding: 0 12px;
   overflow: hidden;
   color: var(--ink-3);
-  font: 400 var(--fs-label)/1 var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .06em;
-  text-transform: uppercase;
+  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
   white-space: nowrap;
 }
 .bar b { color: var(--ink-2); font-weight: 500; }

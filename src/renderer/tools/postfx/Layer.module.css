@@ -21,8 +21,7 @@
   align-items: baseline;
   color: var(--ink-3);
   font: 400 var(--fs-unit)/1 var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums slashed-zero;
 }
 .facts b { font-weight: 400; font-size: var(--fs-value); color: var(--ink); }
 
@@ -41,6 +40,6 @@
   font-size: var(--fs-ctl);
 }
 .from:hover { background: var(--well-hover); }
-.from > :global(.material-symbols-rounded) { flex: none; color: var(--ink-3); }
+.from > :global(.ico) { flex: none; color: var(--ink-3); }
 .strip { flex: none; width: 48px; }
 .fromName { flex: 1; min-width: 0; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }

@@ -6,11 +6,12 @@
   color: var(--ink-3);
   transition: transform var(--t-fast) var(--ease);
 }
-.ib:hover, .ib[aria-pressed="true"] { background: var(--raise); color: var(--ink); }
-.ib:not(:disabled):active { transform: translateY(1px); }
+.ib:hover { background: var(--well); color: var(--ink); }
+.ib[aria-pressed="true"] { background: var(--raise-hover); color: var(--ink); }
+.ib:not(:disabled):active { transform: scale(.94); }
 .ib:disabled { background: none; color: var(--ink-4); }
 
-.md { width: var(--ib); height: var(--ib); }
+.md { width: var(--ib); height: var(--ib); border-radius: var(--r-field); }
 .sm { width: var(--ib-sm); height: var(--ib-sm); }
 .xs { width: var(--ib-xs); height: var(--ib-xs); }
 

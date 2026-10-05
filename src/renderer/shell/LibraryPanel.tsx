@@ -274,7 +274,7 @@ export function LibraryPanel({ narrow }: { narrow: boolean }) {
                     end={query && <IconButton icon="close" label="Clear search" size="xs" onClick={clearSearch} />}
                   />
                 </div>
-                <Segmented<Filter> options={narrow ? FILTERS_SHORT : FILTERS} value={filter} onChange={setFilter} mono className={s.kinds} />
+                <Segmented<Filter> options={narrow ? FILTERS_SHORT : FILTERS} value={filter} onChange={setFilter} className={s.kinds} />
               </div>
 
               <div

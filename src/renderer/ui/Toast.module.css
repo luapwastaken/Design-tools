@@ -5,10 +5,10 @@
   width: fit-content;
   max-width: 100%;
   height: var(--toast-h);
-  padding: 0 6px 0 12px;
-  border-radius: var(--r-mod);
+  padding: 0 6px 0 16px;
+  border-radius: var(--r-pill);
   background: var(--popover);
-  box-shadow: 0 4px 14px var(--shadow), 0 1px 3px var(--shadow);
+  box-shadow: var(--shadow-popover), inset 0 0 0 1px var(--edge);
   color: var(--ink);
 }
 .lead { color: var(--ink-3); }

@@ -11,7 +11,7 @@
   container-type: inline-size;
 }
 .scrub { flex: 1; min-width: 180px; --label-w: 44px; }
-.of { flex: none; color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.of { flex: none; color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; white-space: nowrap; }
 .sep { flex: none; width: 1px; height: 16px; margin: 0 2px; background: var(--line); }
 
 /* where the playhead is and how long a pass is; lit while it plays, as a live readout (brief §4) */
@@ -22,8 +22,7 @@
   gap: 6px;
   color: var(--ink-3);
   font: 400 var(--fs-unit)/1 var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums slashed-zero;
   white-space: nowrap;
 }
 .readout b { font-weight: 400; color: var(--ink); }

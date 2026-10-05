@@ -136,6 +136,9 @@ export function checkTs(file, text, scope) {
     if (scope.ui && ts.isStringLiteralLike(node) && /material-symbols-(rounded|outlined|sharp)/.test(node.text) && !file.endsWith('ui/Icon.tsx')) {
       add(node, 1, 'icon font class outside ui/Icon.tsx; render icons with <Icon>');
     }
+    if (scope.ui && ts.isImportDeclaration(node) && /^@phosphor-icons\//.test(stringValue(node.moduleSpecifier) ?? '') && !file.endsWith('ui/Icon.tsx')) {
+      add(node, 1, 'Phosphor imported outside ui/Icon.tsx; render icons with <Icon>');
+    }
     ts.forEachChild(node, visit);
   }
   visit(sf);

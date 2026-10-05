@@ -18,7 +18,7 @@
   gap: 2px;
   max-height: 44vh;
   overflow: auto;
-  border-radius: 3px;
+  border-radius: var(--r-ctl);
 }
 .grid[hidden] { display: none; }
 
@@ -33,19 +33,19 @@
   background: var(--on-content-bg);
   color: var(--on-content-ink);
   font: 400 var(--fs-unit)/1 var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums slashed-zero;
   white-space: nowrap;
 }
 
-/* the proposals' own line, on the module so it reads on any surround */
+/* the proposals' own line, on the module so it reads on any surround; "Proposed" is the agent's colour */
+.foot :global(.lbl) { color: var(--agent-ink); }
 .foot {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
   padding: 5px 6px 5px 10px;
-  border-radius: 3px;
+  border-radius: var(--r-ctl);
   background: var(--module);
   color: var(--ink-2);
   font-size: var(--fs-base);

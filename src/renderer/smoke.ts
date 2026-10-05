@@ -115,7 +115,7 @@ function openCheck(id: ToolId): { open: string; bad: string; first: string } | n
   const rows = [...(list?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [])];
   if (!rows.length) return null;
   const label = (r?: HTMLElement) => r?.children[1]?.textContent ?? '';
-  return { open: label(rows.find((r) => r.ariaSelected === 'true')), bad: label(rows.find((r) => r.firstElementChild?.textContent === 'error')), first: label(rows[0]) };
+  return { open: label(rows.find((r) => r.ariaSelected === 'true')), bad: label(rows.find((r) => r.firstElementChild?.getAttribute('data-icon') === 'error')), first: label(rows[0]) };
 }
 /** a textarea's text as typing leaves it (React hears the input event) */
 function type(el: HTMLTextAreaElement, text: string): void {

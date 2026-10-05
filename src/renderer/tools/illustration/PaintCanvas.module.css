@@ -21,7 +21,7 @@
   gap: 4px 8px;
   min-height: var(--canvas-bar);
   min-width: 0;
-  padding: 5px 6px 5px 8px;
+  padding: 4px 6px 4px 8px;
   background: var(--module-head);
 }
 .head[data-fit="wrap"] { flex-wrap: wrap; }
@@ -101,7 +101,7 @@
   font-size: var(--fs-base);
   line-height: 1.4;
 }
-.failed > :global(.material-symbols-rounded) { flex: none; color: var(--danger); }
+.failed > :global(.ico) { flex: none; color: var(--danger); }
 
 .confirm {
   position: absolute;
@@ -145,7 +145,7 @@
 .mix.on { box-shadow: inset 0 0 0 1px var(--edge), 0 0 0 2px var(--module), 0 0 0 3px var(--tick-strong); }
 .mixEmpty { background: var(--well); box-shadow: inset 0 0 0 1px var(--tick); }
 .part { display: inline-flex; flex: none; align-items: center; gap: 3px; }
-.partChip { flex: none; width: 14px; height: 14px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.partChip { flex: none; width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--edge); }
 
 /* ── the tray ── */
 /* three rows at most, then it scrolls (the wheel works on it), so a palette of many ramps doesn't
@@ -175,7 +175,7 @@
   flex: none;
   width: 22px;
   height: 22px;
-  border-radius: 2px;
+  border-radius: 4px;
   box-shadow: inset 0 0 0 1px var(--edge);
   touch-action: none;
 }
@@ -204,7 +204,7 @@
   z-index: 10;
   width: 22px;
   height: 22px;
-  border-radius: 2px;
+  border-radius: 4px;
   box-shadow: inset 0 0 0 1px var(--edge), 0 4px 12px var(--shadow);
   pointer-events: none;
 }
@@ -212,7 +212,7 @@
 
 /* ── the brush, in the bar ── */
 .readout { display: flex; flex: 0 1 auto; align-items: center; gap: 7px; min-width: 0; }
-.brushChip { flex: none; width: 14px; height: 14px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.brushChip { flex: none; width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--edge); }
 .brushName { min-width: 0; max-width: 180px; overflow: hidden; color: var(--ink); font-size: var(--fs-ctl); text-overflow: ellipsis; white-space: nowrap; }
 /* the colour under the cursor: a live readout (its text is written straight to the DOM) */
 .under {
@@ -220,8 +220,7 @@
   overflow: hidden;
   color: var(--signal);
   font: 400 var(--fs-unit)/14px var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums slashed-zero;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -232,7 +231,7 @@
   height: 14px;
   margin-right: 6px;
   vertical-align: top;
-  border-radius: 2px;
+  border-radius: 4px;
   background: var(--under, var(--well));
   box-shadow: inset 0 0 0 1px var(--edge);
 }

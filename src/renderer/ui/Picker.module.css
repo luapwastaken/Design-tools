@@ -15,9 +15,8 @@ div.icons button { padding: 0 5px; }
 .yAxis span, .xAxis span {
   position: absolute;
   color: var(--ink-3);
-  font: 400 var(--fs-label)/1 var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
+  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
 }
 .yAxis span { right: 0; }
 .yAxis span:first-child { top: 0; }
@@ -141,9 +140,8 @@ div.icons button { padding: 0 5px; }
 .note {
   margin: 2px 0 4px;
   color: var(--ink-3);
-  font: 400 var(--fs-label)/1.4 var(--font-mono);
-  font-stretch: normal;
-  letter-spacing: .03em;
+  font: 400 var(--fs-unit)/1.4 var(--font-mono);
+ 
 }
 
 .outside {
@@ -154,7 +152,7 @@ div.icons button { padding: 0 5px; }
   color: var(--ink-2);
   font-size: var(--fs-meta);
 }
-.outside > :global(.material-symbols-rounded) { color: var(--ink-3); }
+.outside > :global(.ico) { color: var(--ink-3); }
 
 /* ── hex and gamut ── */
 .hexRow { display: flex; align-items: flex-start; gap: 6px; margin-top: 6px; }
@@ -168,7 +166,6 @@ div.icons button { padding: 0 5px; }
   gap: 6px;
   color: var(--ink);
   font: 400 var(--fs-ctl)/1 var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums slashed-zero;
 }
-.gv > :global(.material-symbols-rounded) { color: var(--ink-2); }
+.gv > :global(.ico) { color: var(--ink-2); }

@@ -13,7 +13,7 @@
 .specimen {
   display: block;
   width: 100%;
-  border-radius: 2px;
+  border-radius: 4px;
   background: var(--well);
   box-shadow: 0 0 0 1px var(--edge);
   image-rendering: pixelated;

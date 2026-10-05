@@ -1,12 +1,139 @@
-import type { IconName } from '../shell/tool.ts';
+import {
+  AppWindow, ArrowBendDownRight, ArrowBendUpLeft, ArrowBendUpRight, ArrowCounterClockwise, ArrowDown, ArrowSquareOut, ArrowUp, ArrowsClockwise, ArrowsDownUp,
+  ArrowsHorizontal, ArrowsLeftRight, ArrowsVertical, BookmarkSimple, BookmarksSimple, BoundingBox, Browser, Cards, CaretDown, CaretRight, CaretUpDown, ChartLine, Check,
+  CheckSquare, CircleDashed, CircleHalf, ClockCounterClockwise, Clipboard, Copy, Crosshair, DotsNine, DotsSixVertical, DotsThree, DownloadSimple, WarningDiamond, Eye,
+  Eyedropper, FilePlus, FilmSlate, Folder, FolderDashed, FolderOpen, FolderPlus, Gear, Gradient, Grains, Image, ImageBroken, ImageSquare, Images, Info, Intersect, Link,
+  ListChecks, MagicWand, MagnifyingGlass, MagnifyingGlassMinus, MagnifyingGlassPlus, MaskHappy, Moon, PaintBrush, PaintBucket, PaintRoller, Palette, PaperPlaneRight,
+  PencilSimple, Plus, Printer, Prohibit, SidebarSimple, Signature, SignIn, SkipBack, SkipForward, SlidersHorizontal, SortAscending, Sparkle, SquaresFour, Square, Stack,
+  Stamp, Star, Sun, Trash, TrashSimple, UploadSimple, Warning, WarningCircle, Waves, X,
+  CaretUp, CheckCircle, DeviceMobile, DiceFive, EyeSlash, LockSimple, LockSimpleOpen, Monitor, Pause, Play, TextAa,
+  Triangle,
+  type Icon as PhosphorIcon,
+} from '@phosphor-icons/react';
 import { cx } from './cx.ts';
 import s from './Icon.module.css';
 
-/** Material Symbols Rounded (hard rule 1: the only way icons render). 18px unless told otherwise. */
+/** Material Symbols name -> Phosphor glyph. The names stay (callers don't change); Bone Ember draws them in Phosphor. */
+const GLYPHS = {
+  add: Plus,
+  change_history: Triangle,
+  check_box_outline_blank: Square,
+  lock: LockSimple,
+  lock_open: LockSimpleOpen,
+  check_circle: CheckCircle,
+  casino: DiceFive,
+  format_size: TextAa,
+  pause: Pause,
+  play_arrow: Play,
+  visibility_off: EyeSlash,
+  keyboard_arrow_up: CaretUp,
+  crop_portrait: DeviceMobile,
+  crop_landscape: Monitor,
+  add_photo_alternate: ImageSquare,
+  arrow_downward: ArrowDown,
+  arrow_upward: ArrowUp,
+  auto_awesome_motion: Cards,
+  block: Prohibit,
+  blur_on: DotsNine,
+  bookmark_add: BookmarkSimple,
+  branding_watermark: Stamp,
+  broken_image: ImageBroken,
+  brush: PaintBrush,
+  check: Check,
+  check_box: CheckSquare,
+  chevron_right: CaretRight,
+  close: X,
+  collections_bookmark: BookmarksSimple,
+  colorize: Eyedropper,
+  content_copy: Copy,
+  content_paste: Clipboard,
+  contrast: CircleHalf,
+  create_new_folder: FolderPlus,
+  crop_square: Square,
+  dark_mode: Moon,
+  delete: Trash,
+  delete_sweep: TrashSimple,
+  donut_large: CircleDashed,
+  download: DownloadSimple,
+  drag_indicator: DotsSixVertical,
+  drive_file_move: ArrowBendDownRight,
+  edit: PencilSimple,
+  error: WarningCircle,
+  fact_check: ListChecks,
+  folder: Folder,
+  folder_off: FolderDashed,
+  folder_open: FolderOpen,
+  format_color_fill: PaintBucket,
+  format_paint: PaintRoller,
+  gesture: Signature,
+  gradient: Gradient,
+  grain: Grains,
+  height: ArrowsVertical,
+  history: ClockCounterClockwise,
+  image: Image,
+  info: Info,
+  input: SignIn,
+  join: Intersect,
+  keyboard_arrow_down: CaretDown,
+  keyboard_arrow_right: CaretRight,
+  layers: Stack,
+  left_panel_close: SidebarSimple,
+  light_mode: Sun,
+  link: Link,
+  mask: MaskHappy,
+  more_horiz: DotsThree,
+  movie: FilmSlate,
+  my_location: Crosshair,
+  note_add: FilePlus,
+  open_in_new: ArrowSquareOut,
+  palette: Palette,
+  pattern: SquaresFour,
+  photo_library: Images,
+  print: Printer,
+  priority_high: WarningDiamond,
+  redo: ArrowBendUpRight,
+  refresh: ArrowsClockwise,
+  restart_alt: ArrowCounterClockwise,
+  search: MagnifyingGlass,
+  send: PaperPlaneRight,
+  settings: Gear,
+  show_chart: ChartLine,
+  skip_next: SkipForward,
+  skip_previous: SkipBack,
+  sort: SortAscending,
+  star: Star,
+  star_shine: Sparkle,
+  swap_horiz: ArrowsLeftRight,
+  swap_vert: ArrowsDownUp,
+  tonality: CircleHalf,
+  transform: BoundingBox,
+  tune: SlidersHorizontal,
+  undo: ArrowBendUpLeft,
+  unfold_more: CaretUpDown,
+  upload_file: UploadSimple,
+  visibility: Eye,
+  wand_stars: MagicWand,
+  warning: Warning,
+  waves: Waves,
+  wb_sunny: Sun,
+  web: Browser,
+  web_asset: AppWindow,
+  width: ArrowsHorizontal,
+  zoom_in: MagnifyingGlassPlus,
+  zoom_out: MagnifyingGlassMinus,
+} satisfies Record<string, PhosphorIcon>;
+
+export type IconName = keyof typeof GLYPHS;
+
+/**
+ * Phosphor (hard rule 1: the only way icons render). 16px regular for rows and menus, 14px bold inside
+ * controls, `fill` for active states only. An unknown name warns in dev and draws a dashed circle.
+ */
 export function Icon({ name, size, fill, className }: { name: IconName; size?: 14 | 16 | 18 | 20; fill?: boolean; className?: string }) {
-  return (
-    <span aria-hidden="true" className={cx('material-symbols-rounded', size && size !== 18 && s[`s${size}`], fill && s.fill, className)}>
-      {name}
-    </span>
-  );
+  let Glyph: PhosphorIcon | undefined = GLYPHS[name];
+  if (!Glyph) {
+    if (import.meta.env.DEV) console.warn(`Icon: no Phosphor glyph for "${name}"`);
+    Glyph = CircleDashed;
+  }
+  return <Glyph aria-hidden="true" data-icon={name} className={cx('ico', size && size !== 16 && s[`s${size}`], className)} weight={fill ? 'fill' : size === 14 ? 'bold' : 'regular'} />;
 }

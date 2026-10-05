@@ -3,11 +3,8 @@
 .label {
   flex: none;
   width: var(--label-w, 86px);
-  color: var(--ink-3);
-  font: 500 var(--fs-label)/1 var(--font-mono);
-  font-stretch: normal;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  color: var(--ink-2);
+  font: 400 var(--fs-label)/1 var(--font-sans);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -17,18 +14,18 @@
 .label:hover, .scrubbing { color: var(--ink); }
 
 .track { position: relative; flex: 1; min-width: 60px; height: 22px; touch-action: none; }
-.bar, .fill { position: absolute; left: 0; top: 6px; height: 4px; border-radius: 2px; }
-.bar { right: 0; background: var(--well); }
-.fill { background: var(--ink-3); }
+.bar, .fill { position: absolute; left: 0; top: 9.5px; height: 3px; border-radius: var(--r-pill); }
+.bar { right: 0; background: var(--raise-hover); }
+.fill { background: var(--signal); }
 .needle {
   position: absolute;
-  top: 1px;
-  width: 3px;
-  height: 14px;
-  margin-left: -1.5px;
-  border-radius: 1px;
+  top: 5px;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
   background: var(--ink);
-  box-shadow: 0 0 0 1.5px var(--module);
+  box-shadow: 0 1px 3px var(--shadow);
 }
 
 .field { flex: none; }

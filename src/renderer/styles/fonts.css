@@ -1,6 +1,3 @@
-/* Bundled fonts (no CDN). The Archivo family is named "Archivo Variable" by Fontsource. */
-@import "@fontsource-variable/archivo/wdth.css";
-@import "@fontsource/ibm-plex-mono/400.css";
-@import "@fontsource/ibm-plex-mono/500.css";
-@import "@fontsource/ibm-plex-mono/600.css";
-@import "material-symbols/rounded.css";
+/* Bundled fonts (no CDN): Bone Ember's pair. Fontsource names them "Instrument Sans Variable" and "JetBrains Mono Variable". */
+@import "@fontsource-variable/instrument-sans/wght.css";
+@import "@fontsource-variable/jetbrains-mono/wght.css";

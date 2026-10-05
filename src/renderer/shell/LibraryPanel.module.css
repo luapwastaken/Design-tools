@@ -25,7 +25,6 @@
   overflow: hidden;
   color: var(--ink);
   font: 400 var(--fs-unit)/1.45 var(--font-mono);
-  font-stretch: normal;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -39,12 +38,11 @@
   min-width: 0;
   overflow: hidden;
   color: var(--ink-3);
-  font: 400 var(--fs-label)/1.2 var(--font-mono);
-  font-stretch: normal;
+  font: 400 var(--fs-unit)/1.2 var(--font-mono);
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
   direction: rtl;
 }
-.counts { flex: none; color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; letter-spacing: .04em; text-transform: uppercase; }
+.counts { flex: none; color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero;  }
 .hint { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: var(--fs-meta); }

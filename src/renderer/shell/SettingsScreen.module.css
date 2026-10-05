@@ -8,10 +8,9 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
-  color: var(--ink-2);
-  font: 600 var(--fs-label)/1 var(--font-mono);
-  font-stretch: normal;
-  letter-spacing: .1em;
+  color: var(--ink-3);
+  font: 500 var(--fs-caps)/1 var(--font-sans);
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 .title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
@@ -32,7 +31,6 @@
   background: var(--well);
   color: var(--ink);
   font: 400 var(--fs-unit)/var(--ctl) var(--font-mono);
-  font-stretch: normal;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -40,4 +38,4 @@
   /* clipped from the left, so the folder's own name stays */
   direction: rtl;
 }
-.value { color: var(--ink); font: 400 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; }
+.value { color: var(--ink); font: 400 var(--fs-unit)/1 var(--font-mono); }

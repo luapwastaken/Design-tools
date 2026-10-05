@@ -42,7 +42,6 @@
   overflow: hidden;
   color: var(--ink-2);
   font: 500 var(--fs-row)/1.2 var(--font-sans);
-  font-stretch: var(--sans-stretch);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

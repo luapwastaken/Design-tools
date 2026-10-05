@@ -17,7 +17,7 @@
 @container (max-width: 110px) {
   .scaleNums span:not(:first-child):not(:last-child) { display: none; }
 }
-.scaleNums span { position: absolute; bottom: 0; transform: translateX(-50%); color: var(--ink-3); font: 500 var(--fs-label)/1 var(--font-mono); font-stretch: normal; }
+.scaleNums span { position: absolute; bottom: 0; transform: translateX(-50%); color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); }
 .scaleNums span:first-child { transform: none; }
 .scaleNums span:last-child { transform: translateX(-100%); }
 .ctRow { height: 64px; }
@@ -44,23 +44,23 @@
   height: 48px;
   padding: 0 10px;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: 4px;
   box-shadow: inset 0 0 0 1px var(--edge);
 }
-.aa { font: 600 21px/1 var(--font-sans); font-stretch: var(--sans-stretch); }
-.sm { font: 400 11px/1.2 var(--font-sans); font-stretch: var(--sans-stretch); white-space: nowrap; }
+.aa { font: 600 21px/1 var(--font-sans); }
+.sm { font: 400 11px/1.2 var(--font-sans); white-space: nowrap; }
 
 .pair { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .p, .j { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .p { color: var(--ink); font-size: var(--fs-ctl); }
-.j { color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-mono); font-stretch: normal; letter-spacing: .03em; text-transform: uppercase; }
-.ratio { font: 500 17px/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; text-align: right; }
+.j { color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-sans);  }
+.ratio { font: 500 17px/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; text-align: right; }
 .ratio small { color: var(--ink-3); font-size: 10px; font-weight: 400; }
 
 .gauge { position: relative; height: 18px; }
 .gauge i { position: absolute; }
-.bar { left: 0; right: 0; top: 7px; height: 4px; border-radius: 2px; background: var(--well); }
-.fill { left: 0; top: 7px; height: 4px; border-radius: 2px; background: var(--ink-3); }
+.bar { left: 0; right: 0; top: 7px; height: 4px; border-radius: 4px; background: var(--well); }
+.fill { left: 0; top: 7px; height: 4px; border-radius: 4px; background: var(--ink-3); }
 .th { top: 3px; width: 1px; height: 12px; background: var(--tick-strong); }
 /* the threshold this pair must reach */
 .th.target { top: 1px; height: 16px; background: var(--ink-2); }
@@ -72,10 +72,7 @@
   justify-self: end;
   gap: 4px;
   color: var(--ink-2);
-  font: 600 var(--fs-label)/1 var(--font-mono);
-  font-stretch: normal;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  font: 400 var(--fs-label)/1 var(--font-sans);
   white-space: nowrap;
 }
 .grade.bad { color: var(--danger); }
@@ -95,8 +92,8 @@
   line-height: 1.45;
 }
 .note:last-child { margin-bottom: 12px; }
-.note > :global(.material-symbols-rounded) { margin-top: 1px; color: var(--ink-3); }
-.note.bad > :global(.material-symbols-rounded) { color: var(--danger); }
+.note > :global(.ico) { margin-top: 1px; color: var(--ink-3); }
+.note.bad > :global(.ico) { color: var(--danger); }
 
 /* ── print ── */
 .ptable { display: flex; flex-direction: column; padding: 4px 0 8px; }
@@ -110,10 +107,10 @@
 }
 .prow:first-child { min-height: 26px; }
 .prow + .prow:not(:nth-child(2)) { box-shadow: 0 -1px 0 var(--line); }
-.pchip { width: 14px; height: 14px; flex: none; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.pchip { width: 14px; height: 14px; flex: none; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--edge); }
 .pname { overflow: hidden; color: var(--ink); font-size: var(--fs-ctl); text-overflow: ellipsis; white-space: nowrap; }
-.pnum { color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.gam { display: inline-flex; align-items: center; gap: 3px; color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); font-stretch: normal; }
+.pnum { color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; white-space: nowrap; }
+.gam { display: inline-flex; align-items: center; gap: 3px; color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); }
 .gam.bad { color: var(--danger); }
 .ink { display: flex; align-items: center; gap: 6px; min-width: 0; height: 24px; padding: 0 6px; margin: 0 -6px; border-radius: var(--r-ctl); text-align: left; }
 .ink:hover { background: var(--raise); }

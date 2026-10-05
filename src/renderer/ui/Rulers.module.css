@@ -9,8 +9,7 @@
 .svg text {
   fill: var(--ink-3);
   font: 400 var(--fs-label) var(--font-mono);
-  font-stretch: normal;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums slashed-zero;
 }
 
 /* where the pointer is (brief §4: ruler cursor lines carry the signal) */

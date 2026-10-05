@@ -1,5 +1,5 @@
 // The design brief's hard rules (docs/rewrite/design-brief.md §2) as mechanical checks:
-//   1  icons only through <Icon>, non-ASCII in UI strings only from the allowlist, CSS content only ""
+//   1  icons only through <Icon> (Phosphor is imported only in ui/Icon.tsx), non-ASCII in UI strings only from the allowlist, CSS content only ""
 //   2  colour literals only in tokens.css (as oklch), both [data-theme] blocks define the same names,
 //      and the main-process hex table (THEME_HEX) matches the tokens it stands for
 //   4  motion only on transform / translate / scale / rotate / clip-path at 120ms or less, no

@@ -55,7 +55,7 @@ export function Rail({ collapsed }: { collapsed: boolean }) {
 
   const heading = (label: string) => (
     <div className={s.head} key={`h-${label}`}>
-      <span className="lbl">{label}</span>
+      <span className="caps">{label}</span>
     </div>
   );
 

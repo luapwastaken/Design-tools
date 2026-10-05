@@ -1,9 +1,10 @@
 import type { ComponentType } from 'react';
-import type { MaterialSymbol } from 'material-symbols';
+
 import type { DocController } from '../../shared/doc-api.ts';
 import type { DocKind, DocPayload, ItemKind, LoadedItem, ToolId } from '../../shared/types.ts';
 
-export type IconName = MaterialSymbol;
+export type { IconName } from '../ui/Icon.tsx';
+import type { IconName } from '../ui/Icon.tsx';
 
 /** How a tool uses a received item. `label` shows in the Send to submenu (mono caps): 'PALETTE', 'INKS', 'SHAPE'. A noun phrase for what the tool makes of it, the same word for the same job in every tool. */
 export type Use = { mode: 'open' | 'apply'; label: string };

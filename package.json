@@ -19,12 +19,12 @@
     "check:rules": "node scripts/check-rules.mjs"
   },
   "dependencies": {
-    "@fontsource-variable/archivo": "^5.3.0",
-    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource-variable/instrument-sans": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@phosphor-icons/react": "^2.1.10",
     "culori": "^4.0.2",
     "fflate": "^0.8.3",
     "gifenc": "^1.0.3",
-    "material-symbols": "^0.47.5",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "utif2": "^4.1.0"
