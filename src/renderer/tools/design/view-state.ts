@@ -10,11 +10,7 @@ const ID = 'design';
 
 export const DEFAULT_VIEW: DesignView = {
   selected: [],
-  surround: 'grey',
-  chipData: 'short',
-  stage: 'swatches',
-  // closed to its summary chips until opened; the choice is kept
-  dock: false,
+  tab: 'contrast',
   cvd: 'deutan',
   sim: 'normal',
   locked: [],
@@ -23,7 +19,6 @@ export const DEFAULT_VIEW: DesignView = {
   lockH: false,
   flagL: 6,
   flagE: 10,
-  inspector: 380,
   format: 'ase',
   preset: PRESETS[0]?.id ?? '',
   count: 6,
@@ -34,23 +29,17 @@ export const DEFAULT_VIEW: DesignView = {
 };
 
 const ENUMS: Partial<Record<keyof DesignView, readonly string[]>> = {
-  surround: ['grey', 'ground', 'plain'],
-  chipData: ['short', 'full'],
-  stage: ['swatches', 'inuse'],
+  tab: ['contrast', 'check', 'preview', 'tints'],
   cvd: ['protan', 'deutan', 'tritan', 'achromat'],
   sim: ['normal', 'protan', 'deutan', 'tritan', 'achromat', 'greyscale'],
   format: EXPORT_FORMATS,
   space: ['oklch', 'oklab'],
 };
 
-/** before the Bone Ember pass the work area's switch was `tab` (Preview is In use now), and before the UX pass `lower` */
-const IN_USE = new Set(['preview', 'context']);
-
 /** what a saved workspace holds, field by field; anything odd falls back to the default (a dropped field, like `picker`, is left behind) */
 function sanitize(raw: unknown): DesignView {
   const r = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
-  const was = typeof r.tab === 'string' ? r.tab : typeof r.lower === 'string' ? r.lower : '';
-  const out: Record<string, unknown> = { ...DEFAULT_VIEW, ...(IN_USE.has(was) && { stage: 'inuse' }) };
+  const out: Record<string, unknown> = { ...DEFAULT_VIEW };
   for (const [key, def] of Object.entries(DEFAULT_VIEW) as [keyof DesignView, unknown][]) {
     const v = r[key];
     const ok = Array.isArray(def)

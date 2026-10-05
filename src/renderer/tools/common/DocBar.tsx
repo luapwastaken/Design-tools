@@ -1,9 +1,10 @@
-import { useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode, type Ref } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode, type Ref } from 'react';
 import type { DocController } from '../../../shared/doc-api.ts';
-import type { ToolId } from '../../../shared/types.ts';
+import type { ItemKind, LibraryItemRef, ToolId } from '../../../shared/types.ts';
 import { shell, useShell } from '../../shell/core/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { Button, menu, TextInput, Tooltip, UndoRedo, type MenuItem } from '../../ui/index.ts';
+import { Button, IconButton, menu, TextInput, Tooltip, UndoRedo, type MenuItem } from '../../ui/index.ts';
+import { itemInfo } from '../../shell/library/item-info.ts';
 import { useWidth } from './useWidth.ts';
 import s from './DocBar.module.css';
 
@@ -28,18 +29,24 @@ export type DocBarProps = {
   send?: { noun?: string; empty: string; tip?: string } | false;
   /** the primary Export: an ExportButton (or ExportPalette). The slot is kept when absent, so Send to never shifts. */
   exportButton?: ReactNode;
+  /**
+   * Opt-in document switcher: a caret after the title opens the 8 most recently modified Library
+   * items of this kind (the current one marked), then "Open Library…". Only for a tool whose title is
+   * its Library item's name (no `title` prop).
+   */
+  switcher?: { kind: ItemKind };
 };
 
 /**
  * A tool's document bar, the same slots in all seven tools:
  * title + meta + actions | modes (centred) | Undo, Redo | Send to | Export (last).
  */
-export function DocBar({ tool, doc, title, meta, actions, modes, send, exportButton }: DocBarProps) {
+export function DocBar({ tool, doc, title, meta, actions, modes, send, exportButton, switcher }: DocBarProps) {
   const { ref, width } = useWidth<HTMLDivElement>();
   return (
     <div ref={ref} className={s.docbar}>
       <div className={s.left}>
-        {title === undefined ? <DocHead tool={tool} doc={doc} /> : <DocTitle>{title}</DocTitle>}
+        {title === undefined ? <DocHead tool={tool} doc={doc} switcher={switcher} /> : <DocTitle>{title}</DocTitle>}
         <DocStatus tool={tool} />
         {meta !== undefined && meta !== null && meta !== false && <span className={s.meta}>{meta}</span>}
         {actions}
@@ -97,7 +104,7 @@ export const DocTitle = ({ children, onRename }: { children: string; onRename?: 
   );
 
 /** The head of a bar for a tool whose document is a Library item: its name, then the collection it sits in. */
-export function DocHead({ tool, doc }: { tool: ToolId; doc: DocController<unknown> }) {
+export function DocHead({ tool, doc, switcher }: { tool: ToolId; doc: DocController<unknown>; switcher?: { kind: ItemKind } }) {
   const name = useShell((st) => st.docNames[tool]) ?? 'Untitled';
   const source = useSyncExternalStore(doc.subscribe, () => doc.source());
   // the Library's rename, from the bar: the item the document is, once it has one
@@ -121,8 +128,38 @@ export function DocHead({ tool, doc }: { tool: ToolId; doc: DocController<unknow
       ) : (
         <DocTitle onRename={ref ? () => setRenaming(true) : undefined}>{name}</DocTitle>
       )}
+      {switcher && !renaming && <DocSwitcher kind={switcher.kind} current={source?.itemId} />}
     </>
   );
+}
+
+const RECENT = 8;
+
+/** the caret after the title: the recent items of this kind, opened as the Library opens them */
+function DocSwitcher({ kind, current }: { kind: ItemKind; current: string | undefined }) {
+  const library = useShell((st) => st.library);
+  const recent = useMemo(
+    () =>
+      (library?.collections.flatMap((c) => c.items) ?? [])
+        .filter((i) => i.kind === kind)
+        .sort((a, b) => b.mtimeMs - a.mtimeMs)
+        .slice(0, RECENT),
+    [library, kind],
+  );
+  // start reading their previews now, so the menu has its swatch strips when it opens
+  useEffect(() => void recent.forEach((i) => itemInfo(i, true)), [recent]);
+  const at = useRef<HTMLButtonElement>(null);
+  const open = (e: MouseEvent<HTMLButtonElement>) => {
+    const items: MenuItem[] = [
+      ...(recent.length
+        ? recent.map((i: LibraryItemRef) => ({ label: i.name, strip: itemInfo(i)?.colors, checked: i.id === current, onSelect: () => void shell.openItem(i) }))
+        : [{ label: `No ${kind}s in the Library yet`, disabled: true } as const]),
+      'separator',
+      { label: 'Open Library…', icon: 'collections_bookmark', onSelect: () => shell.toggleLibrary(true) },
+    ];
+    menu.open(e.currentTarget.getBoundingClientRect(), items, { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined });
+  };
+  return <IconButton ref={at} icon="keyboard_arrow_down" label={`Switch ${kind}: the most recent in the Library`} size="sm" onClick={open} />;
 }
 
 /** Where the document stands, quiet sentence case after the title ("Scratch · saved 03:46"); trouble gets its actions. */

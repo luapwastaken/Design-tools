@@ -1,0 +1,50 @@
+/* the Palette section: ~300px tall, the swatches filling it; many colours scroll the row sideways */
+.section { position: relative; }
+.body { position: relative; display: flex; flex-direction: row; padding: 12px 14px 14px; overflow: hidden; }
+.hint { color: var(--ink-3); font: 400 var(--fs-row)/1 var(--font-sans); white-space: nowrap; }
+.sim { color: var(--signal); }
+.from { min-width: 0; overflow: hidden; color: var(--ink-2); font-size: var(--fs-base); text-overflow: ellipsis; white-space: nowrap; }
+.from b { color: var(--agent-ink); font-weight: 500; }
+
+.row { display: flex; flex: 1; gap: 10px; min-width: 0; min-height: 0; overflow-x: auto; overflow-y: hidden; }
+
+/* a swatch: the chip fills the height, name and hex under it; --c is its colour, --ink-c the ink that reads on it */
+.sw { position: relative; display: flex; flex: 1 1 0; flex-direction: column; gap: 8px; min-width: 130px; padding: 6px; border-radius: 10px; outline: none; cursor: pointer; }
+/* the selection is a neutral ring: the colour is being judged, never ember */
+.sel { box-shadow: inset 0 0 0 1.5px var(--ink-2); }
+.anchor { box-shadow: inset 0 0 0 2px var(--ink), 0 0 0 1px var(--cross-halo); }
+.sw:focus-visible { box-shadow: inset 0 0 0 2px var(--ink); }
+/* pointed at by a check row */
+.hot { outline: 1px dashed var(--ink-2); outline-offset: -2px; }
+.dragging { opacity: 0.55; }
+.sw[data-insert]::before { content: ""; position: absolute; top: 0; bottom: 0; z-index: 3; width: 3px; border-radius: 2px; background: var(--ink); box-shadow: 0 0 0 1px var(--cross-halo); }
+.sw[data-insert="before"]::before { left: -6px; }
+.sw[data-insert="after"]::before { right: -6px; }
+
+.chip { position: relative; display: flex; flex: 1; align-items: flex-start; justify-content: space-between; gap: 6px; min-height: 0; padding: 8px; border-radius: 6px; background: var(--c); box-shadow: inset 0 0 0 1px var(--edge); }
+.tag, .proposed { max-width: calc(100% - 32px); height: 22px; padding: 0 7px; overflow: hidden; border-radius: var(--r-badge); background: var(--on-content-bg); color: var(--on-content-ink); font: 500 11px/22px var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
+.tag:hover { color: var(--cross); }
+/* an empty role is a hint, shown when the swatch is pointed at */
+.none { opacity: 0; }
+.sw:hover .none, .sw:focus-within .none, .sel .none { opacity: 1; }
+.proposed { color: var(--agent-ink); }
+.lock { display: none; width: 22px; height: 22px; flex: none; align-items: center; justify-content: center; border-radius: 6px; background: var(--on-content-bg); color: var(--on-content-ink); cursor: pointer; }
+.lock:hover { color: var(--cross); }
+.sw:hover .lock, .sw:focus-within .lock, .sel .lock, .lock.on { display: inline-flex; }
+
+.foot { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; padding: 0 4px; }
+.name { min-width: 0; overflow: hidden; color: var(--ink); font: 500 14px/1.2 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
+.auto { color: var(--ink-2); }
+.hex { display: inline-flex; flex: none; align-items: center; gap: 4px; color: var(--ink-3); font: 400 12px/1.2 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
+.gamut { display: inline-flex; color: var(--ink-2); }
+
+/* a proposal: the machine's mark, a periwinkle bar over the chip */
+.ghost { background: var(--agent-soft); box-shadow: inset 0 0 0 1px var(--agent-line); cursor: default; }
+.ghost .chip { box-shadow: inset 0 4px 0 var(--agent), inset 0 0 0 1px var(--edge); }
+.keep { display: flex; align-items: center; gap: 6px; padding: 0 2px 2px; }
+
+.add { display: flex; flex: none; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 110px; border: 1.5px dashed var(--tick); border-radius: 10px; background: none; color: var(--ink-3); font-size: var(--fs-row); cursor: pointer; }
+.add:hover { background: var(--well-hover); color: var(--ink); }
+.add :global(.ico) { color: var(--ink-2); }
+
+.confirm { position: absolute; bottom: 14px; left: 50%; z-index: 6; width: min(440px, calc(100% - 32px)); transform: translateX(-50%); border-radius: var(--r-field); background: var(--popover); box-shadow: var(--shadow-popover); }

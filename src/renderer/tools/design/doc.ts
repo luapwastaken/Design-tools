@@ -2,7 +2,6 @@
 import type { Cvd, Oklch } from '../../../shared/color/index.ts';
 import type { PalettePayload, RampSpec, Swatch } from '../../../shared/types.ts';
 import type { ExportFormat } from '../common/ExportPalette.tsx';
-import type { Surround } from '../common/surround.ts';
 
 import { displayName, named } from '../common/names.ts';
 
@@ -12,8 +11,8 @@ export { displayName, listNames, named, plural } from '../common/names.ts';
 export type DesignDoc = { swatches: Swatch[]; notes: string; ramps?: RampSpec[] };
 
 export type BuildMethod = 'harmony' | 'generate' | 'image' | 'logo' | 'gradient' | 'paste';
-/** what the stage shows (the doc bar's switch): the palette as an artboard, or the palette in use on a page */
-export type DesignStage = 'swatches' | 'inuse';
+/** the tabs under the palette and picker; the active one is saved in the view */
+export type DesignTab = 'contrast' | 'check' | 'preview' | 'tints';
 /** the view filter over the artboard and the In use page; never written to the document */
 export type Simulate = 'normal' | Cvd | 'greyscale';
 export type CheckId = 'contrast' | 'value' | 'vision' | 'print';
@@ -22,19 +21,14 @@ export type CheckId = 'contrast' | 'value' | 'vision' | 'print';
 export type DesignView = {
   /** swatch ids; the first is the active one (inspector) */
   selected: string[];
-  surround: Surround;
-  /** short = Hex + L C H; full adds RGB and ≈CMYK rows */
-  chipData: 'short' | 'full';
-  stage: DesignStage;
-  /** the Checks dock under the artboard is open */
-  dock: boolean;
+  tab: DesignTab;
   /** the Colour vision card's chosen simulation */
   cvd: Cvd;
-  /** the view filter on the stage */
+  /** the view filter on the palette row and the Preview tab */
   sim: Simulate;
   /** swatch ids pinned with L: a re-roll keeps them, Delete leaves them */
   locked: string[];
-  /** the Inks table of the Print card takes the whole dock */
+  /** the Check palette tab's Print list shows the reference-inks table */
   inks: boolean;
   /** Value and Hue lock: the OKLCH picker's drags keep L or H; typed values still change them (spec §5) */
   lockL: boolean;
@@ -43,7 +37,6 @@ export type DesignView = {
   flagL: number;
   /** Colour vision check: flag pairs closer than this ΔE */
   flagE: number;
-  inspector: number;
   format: ExportFormat;
   preset: string;
   count: number;

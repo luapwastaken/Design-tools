@@ -10,7 +10,6 @@ import { clearProposals } from './proposals.ts';
 import { takeImage, takeSvg } from './sources.ts';
 import { StatusSlot } from './StatusSlot.tsx';
 import { View } from './View.tsx';
-import { getView, patchView } from './view-state.ts';
 
 export const tool: ToolDefinition<DesignDoc> = {
   id: 'design',
@@ -81,8 +80,6 @@ export const tool: ToolDefinition<DesignDoc> = {
     { keys: 'C', label: 'Copy the hex', run: () => copySelected(doc) },
     { keys: 'A', label: 'Keep all proposals', run: () => keepAll(doc) },
     { keys: 'Escape', label: 'Discard proposals, then clear the selection', run: () => escape() },
-    { keys: 'V', label: 'Swatches or In use', run: () => patchView({ stage: getView().stage === 'inuse' ? 'swatches' : 'inuse' }) },
-    { keys: 'Ctrl+J', label: 'Show or hide the checks', run: () => patchView({ dock: !getView().dock }) },
     ...ROLES.map((role, i) => ({ keys: String(i + 1), label: `Role: ${role}`, run: () => roleSelected(doc, role) })),
     { keys: '0', label: 'Clear the role', run: () => roleSelected(doc, null) },
   ],

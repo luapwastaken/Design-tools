@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { gradientStops } from '../../../shared/palette/gradient.ts';
+import { PRESETS } from '../../../shared/palette/generate.ts';
 import { harmony } from '../../../shared/palette/harmony.ts';
 import { parseColours } from '../../../shared/palette/paste.ts';
 import type { LoadedItem } from '../../../shared/types.ts';
@@ -11,15 +12,17 @@ import { useShell } from '../../shell/core/index.ts';
 import { ipc } from '../../shell/core/ipc.ts';
 import { cx } from '../../ui/cx.ts';
 import { HexField } from '../../ui/HexField.tsx';
-import { Button, NumberField, Popover, Segmented, Select, SwatchStrip, toast } from '../../ui/index.ts';
-import type { PopKind } from './Artboard.tsx';
+import { Button, IconButton, InfoTip, NumberField, Popover, Segmented, Select, SwatchStrip, toast } from '../../ui/index.ts';
 import { HARMONIES, runGradient, runHarmony } from './build.ts';
 import { displayName, type DesignDoc, type DesignView } from './doc.ts';
 import { proposals } from './proposals.ts';
 import { extract, picture, takeImage, takeSvg, takeText } from './sources.ts';
-import { activeSwatch, selection } from './actions.ts';
+import { activeSwatch, regenerate, selection, type Doc } from './actions.ts';
 import { patchView } from './view-state.ts';
 import s from './Popovers.module.css';
+
+export type PopKind = 'image' | 'logo' | 'paste' | 'colour' | 'gradient' | 'generate';
+export type OpenPop = (kind: PopKind, anchor: HTMLElement, ends?: { from: string; to: string }) => void;
 
 export type PopState = { kind: PopKind; anchor: HTMLElement; ends?: { from: string; to: string } };
 
@@ -27,8 +30,9 @@ const TITLES: Record<PopKind, string> = {
   image: 'From image',
   logo: 'From logo',
   paste: 'Paste codes',
-  colour: 'Start from one colour',
-  gradient: 'Insert gradient',
+  colour: 'Harmony from a colour',
+  gradient: 'Gradient between two',
+  generate: 'Generate settings',
 };
 
 const failed = (what: string) => (e: unknown) => toast.show({ kind: 'error', message: `${what}: ${e instanceof Error ? e.message : String(e)}` });
@@ -39,11 +43,12 @@ async function takeFile(file: File): Promise<void> {
   else await takeImage(file, name);
 }
 
-export function DesignPopover({ pop, d, v, onClose }: { pop: PopState; d: DesignDoc; v: DesignView; onClose(refocus: boolean): void }) {
+export function DesignPopover({ doc, pop, d, v, onClose }: { doc: Doc; pop: PopState; d: DesignDoc; v: DesignView; onClose(refocus: boolean): void }) {
   return (
     <Popover anchor={pop.anchor} label={TITLES[pop.kind]} onClose={onClose} className={s.pop}>
       <div className={s.body}>
         <span className={s.head}>{TITLES[pop.kind]}</span>
+        {pop.kind === 'generate' && <GenerateBody doc={doc} v={v} />}
         {pop.kind === 'image' && <ImageBody v={v} />}
         {pop.kind === 'logo' && <LogoBody onDone={() => onClose(true)} />}
         {pop.kind === 'paste' && <PasteBody onDone={() => onClose(true)} />}
@@ -56,6 +61,27 @@ export function DesignPopover({ pop, d, v, onClose }: { pop: PopState; d: Design
 
 function Row({ children }: { children: ReactNode }) {
   return <div className={s.row}>{children}</div>;
+}
+
+/** Style, Colours and Seed: a change redoes what Generate last made, in place (regenerate) */
+function GenerateBody({ doc, v }: { doc: Doc; v: DesignView }) {
+  const preset = PRESETS.find((p) => p.id === v.preset);
+  return (
+    <>
+      <Row>
+        <Select label="Style" options={PRESETS.map((p) => ({ value: p.id, label: p.label }))} value={v.preset} onChange={(p) => regenerate(doc, { preset: p })} className={s.grow} />
+        {preset && <InfoTip text={preset.describe} />}
+      </Row>
+      <Row>
+        <NumberField label="Colours" value={v.count} min={2} max={12} step={1} onChange={(count) => regenerate(doc, { count })} className={s.grow} />
+      </Row>
+      <Row>
+        <NumberField label="Seed" value={v.seed} min={0} max={99999} step={1} onChange={(seed) => regenerate(doc, { seed })} className={s.grow} />
+        <IconButton icon="casino" label="Reroll: a new seed" onClick={() => regenerate(doc, { seed: 1 + Math.floor(Math.random() * 99999) })} />
+      </Row>
+      <p className={s.dim}>Generate (Space) always rolls a new seed. Locked colours stay.</p>
+    </>
+  );
 }
 
 function ImageBody({ v }: { v: DesignView }) {
