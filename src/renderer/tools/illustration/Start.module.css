@@ -8,7 +8,7 @@
 .row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
 .hex { width: 240px; }
 .starters { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; color: var(--ink-2); font-size: var(--fs-base); }
-.starter { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px 0 8px; border-radius: var(--r-pill); background: var(--well); color: var(--ink); font: 400 var(--fs-unit)/1 var(--font-mono); }
+.starter { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px 0 8px; border-radius: var(--r-pill); background: var(--well); color: var(--ink); font: 400 var(--fs-base)/1 var(--font-sans); }
 .starter:hover { background: var(--well-hover); }
 .starter:focus-visible { outline: 1.5px solid var(--signal); outline-offset: 1px; }
 .starter i { width: 10px; height: 10px; border-radius: 50%; }

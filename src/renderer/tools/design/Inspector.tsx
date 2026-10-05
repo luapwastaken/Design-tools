@@ -6,7 +6,7 @@ import { contrast, cssColor, type Oklch } from '../../../shared/color/index.ts';
 import { contrastTarget } from '../../../shared/palette/checks.ts';
 import { ROLES } from '../../../shared/palette/roles.ts';
 import type { Swatch } from '../../../shared/types.ts';
-import { IconButton, InspectorGroup, InspectorRow, Picker, PickerStyles, Segmented, Select, SwatchStrip, TextInput, Tooltip, useDocColour } from '../../ui/index.ts';
+import { IconButton, InspectorGroup, Module, InspectorRow, Picker, PickerStyles, Segmented, Select, SwatchStrip, TextInput, Tooltip, useDocColour } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { fmtL } from '../common/names.ts';
 import { armDelete, copyHex, select, selection, setRole, type Doc } from './actions.ts';
@@ -19,6 +19,7 @@ import { patchView } from './view-state.ts';
 import s from './Inspector.module.css';
 
 const OTHER = 'other';
+const IDLE = ['Colour', 'Tints', 'Harmonies', 'Contrast', 'Type', 'Roles'];
 const ROLE_OPTIONS = [{ value: '', label: 'No role' }, ...ROLES.map((r) => ({ value: r as string, label: r as string })), { value: OTHER, label: 'Other…' }];
 const TYPES: { value: Swatch['type']; label: string; tip: string }[] = [
   { value: 'process', label: 'Process', tip: 'Process colour' },
@@ -31,9 +32,15 @@ export function Inspector({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView
   const w = d.swatches.find((x) => x.id === sel[0]);
   if (!w) {
     return (
-      <InspectorGroup id="design.swatch" title="Swatch">
-        <p className={s.hint}>Generate or add colours, then select one here to edit it.</p>
-      </InspectorGroup>
+      <>
+        <InspectorGroup id="design.swatch" title="Swatch">
+          <p className={s.hint}>Select a colour on the artboard to edit it here.</p>
+        </InspectorGroup>
+        {/* the groups a selection fills, there but idle: the inspector keeps its shape */}
+        {IDLE.map((title) => (
+          <Module key={title} title={title} readout="select a swatch" className={s.idle} />
+        ))}
+      </>
     );
   }
   return <Editor key={w.id} doc={doc} d={d} w={w} v={v} count={sel.length} name={nameIn(d, w)} />;

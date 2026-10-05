@@ -1,5 +1,5 @@
 // The paint canvas's options bar (the tool itself is the toolbox's): medium, brush, the loaded paint,
-// size and load, undo, redo and clear. One line down to a 724 px section: below 1000 px the paint's
+// size and load, and Clear. The paper's stroke undo and redo sit in the view strip under it. One line down to a 724 px section: below 1000 px the paint's
 // name goes (the chip keeps it in its tooltip), below 880 px the slider tracks go (the fields and
 // their scrubbing labels stay), and below 700 px it may wrap, between groups only.
 import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
@@ -32,10 +32,8 @@ export type PaintBarProps = {
   /** Pick's live readout, written straight to the DOM */
   readout: RefObject<HTMLSpanElement | null>;
   painting: PaintingState;
-  /** the engine is up: undo, redo and clear can act */
+  /** the engine is up: Clear can act */
   ready: boolean;
-  onUndo(): void;
-  onRedo(): void;
   onClear(): void;
   clearBtn: RefObject<HTMLButtonElement | null>;
 };
@@ -106,10 +104,6 @@ export function PaintBar(p: PaintBarProps) {
         {number(smudge ? 'Strength' : 'Load', smudge ? 120 : 92, v.load, LOAD, '%', (load) => p.onSettings({ load }))}
       </span>
       <span className={cx(s.group, s.acts)}>
-        {/* the doc bar has an undo of its own, for the palette: this pair is the paper's */}
-        {fit === 'full' && <span className="lbl">Strokes</span>}
-        <IconButton icon="undo" label={`Undo on the canvas: the last strokes, or a Clear${p.painting.depth ? ` (${p.painting.depth} kept)` : ''}`} shortcut="Ctrl+Z" size="sm" disabled={!p.ready || !p.painting.depth} onClick={p.onUndo} />
-        <IconButton icon="redo" label="Redo on the canvas" shortcut="Ctrl+Y" size="sm" disabled={!p.ready || !p.painting.redoDepth} onClick={p.onRedo} />
         <IconButton ref={p.clearBtn} icon="delete_sweep" label="Clear the painting" size="sm" disabled={!p.ready || p.painting.blank} onClick={p.onClear} />
       </span>
     </header>

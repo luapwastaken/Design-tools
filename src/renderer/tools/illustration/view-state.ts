@@ -18,8 +18,6 @@ export type IllustrationView = {
   show: 'hex' | 'name' | 'off';
   /** Ramps and Light: the lens the swatches are seen through (G toggles greyscale) */
   proof: 'off' | Cvd | 'grey';
-  /** the open check's id; null opens the first failing one */
-  check: string | null;
   surround: Surround;
   inspector: number;
   format: ExportFormat;
@@ -48,7 +46,6 @@ export const DEFAULT_VIEW: IllustrationView = {
   tab: 'ramps',
   show: 'hex',
   proof: 'off',
-  check: null,
   surround: 'grey',
   inspector: 380,
   format: 'ase',
@@ -99,7 +96,7 @@ function sanitize(raw: unknown): IllustrationView {
   for (const [key, def] of Object.entries(DEFAULT_VIEW) as [keyof IllustrationView, unknown][]) {
     const v = r[key];
     const ok =
-      key === 'selected' || key === 'check'
+      key === 'selected'
         ? v === null || typeof v === 'string'
         : Array.isArray(def)
           ? Array.isArray(v) && v.every((x) => typeof x === 'string')

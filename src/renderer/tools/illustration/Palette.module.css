@@ -17,7 +17,7 @@
   height: var(--docbar);
   padding: 0 8px 0 14px;
 }
-.title { font: 600 var(--fs-mod-title)/1 var(--font-sans); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--ink); }
+.title { font: 500 var(--fs-row)/1 var(--font-sans); color: var(--ink); }
 .count { color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); }
 .grow { flex: 1; min-width: 0; }
 
@@ -80,7 +80,7 @@
 
 /* proposals: periwinkle, since a machine offered them and nothing is in the palette until added */
 .ghosts { display: flex; flex: none; flex-direction: column; gap: 8px; margin-top: 12px; padding: 10px; border-radius: var(--r-ctl); background: var(--agent-soft); box-shadow: inset 0 0 0 1px var(--agent-ring); }
-.ghostHead { display: flex; align-items: center; gap: 6px; color: var(--agent-ink); font: 600 var(--fs-mod-title)/1.2 var(--font-sans); letter-spacing: var(--tracking-caps); text-transform: uppercase; }
+.ghostHead { display: flex; align-items: center; gap: 6px; color: var(--agent-ink); font: 500 var(--fs-meta)/1.2 var(--font-sans); }
 .ghostChips { display: flex; flex-wrap: wrap; gap: 6px; }
 .ghost { position: relative; width: 30px; height: 30px; padding: 0; border-radius: 6px; outline: 1px dashed var(--agent-line); outline-offset: 2px; }
 .ghost i { display: block; width: 100%; height: 100%; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--edge); }

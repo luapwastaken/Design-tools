@@ -1,21 +1,20 @@
-// Check (UX pass): Design's Value and Colour vision checks as a list, problems first, the open one's
-// detail beside it. Value compares the ramps' bases: steps of different ramps share values by
+// Check (UX pass): the data behind Check mode. The boards show it; the pane under them lists what
+// to fix (Problems). Value compares the ramps' bases: steps of different ramps share values by
 // design, and the order inside a ramp is the row's own value strip and its "Value breaks" mark.
 import { useMemo } from 'react';
-import type { Oklch } from '../../../shared/color/index.ts';
+import type { Cvd, Oklch } from '../../../shared/color/index.ts';
 import { cvdClosest, valueCollisions, type CvdClosest, type ValueCollision } from '../../../shared/palette/checks.ts';
 import type { Swatch } from '../../../shared/types.ts';
-import { ListDetail, type ListItem } from '../common/ListDetail.tsx';
+import { Button, Icon } from '../../ui/index.ts';
+import { cx } from '../../ui/cx.ts';
+import { cvdFix, valueFix } from '../common/adjust.ts';
 import { displayName, plural } from '../common/names.ts';
 import { useSettled } from '../common/settled.ts';
-import { Value } from '../common/Value.tsx';
-import { mergingCvd, Vision, VISIONS, type Kind } from '../common/Vision.tsx';
+import { VISIONS, type Kind } from '../common/Vision.tsx';
 import type { Doc } from './actions.ts';
-import { named, rampName, rampOf, recolour, stepsOf, type IllustrationDoc } from './doc.ts';
-import { patchView, pointAt, type IllustrationView } from './view-state.ts';
-
-/** past this many swatches their names over the colour-vision strips can't be read */
-const NAMED = 12;
+import { named, recolour, type IllustrationDoc } from './doc.ts';
+import { pointAt, type IllustrationView } from './view-state.ts';
+import s from './Check.module.css';
 
 export type Checks = {
   settled: IllustrationDoc;
@@ -45,60 +44,83 @@ export function useChecks(doc: Doc, v: IllustrationView): Checks {
   }, [settled, v.flagL, v.flagE]);
 }
 
-/** the two checks as list rows (verdict and detail); a ListDetail puts the problems first */
-export function checkItems(doc: Doc, v: IllustrationView, checks: Checks): ListItem[] {
-  const { settled, shown, bases, collisions, vision, merged } = checks;
-  // a ramp step by its place in the ramp ("Skin 4/5"): readable where a pair has one short line
-  const short = (w: Swatch) => {
-    const r = rampOf(settled, w.group);
-    if (!r || w.step === 0) return w.name;
-    const steps = stepsOf(settled, r.id);
-    return `${rampName(settled, r)} ${steps.findIndex((x) => x.id === w.id) + 1}/${steps.length}`;
-  };
-  const host = {
-    swatches: shown,
-    pointAt,
-    onFix: (label: string, changes: Record<string, Oklch>) => doc.transact(label, (x) => Object.entries(changes).reduce((y, [id, o]) => recolour(y, id, o), x)),
-  };
-  // as in Design: a simulation chosen in Colour vision stays; otherwise it shows one that merges, and
-  // the list's line names the pair that simulation shows
-  const cvd = v.check === 'vision' ? v.cvd : mergingCvd(vision, v.cvd);
-  const says = vision[cvd]?.flag ? cvd : VISIONS.find((k) => k !== 'typical' && vision[k]?.flag);
-  return [
-    {
-      id: 'value',
-      label: 'Value',
-      icon: 'contrast',
-      // nothing to compare yet: neither a pass nor a problem
-      ok: bases.length < 2 ? undefined : !collisions.length,
-      verdict:
-        bases.length < 2
-          ? 'Two or more bases compare here'
-          : collisions.length
-            ? `${displayName(collisions[0].a)} and ${displayName(collisions[0].b)} read as one grey${collisions.length > 1 ? `, and ${plural(collisions.length - 1, 'more pair')}` : ''}`
-            : 'The bases stand apart in value',
-      detail: <Value {...host} swatches={bases} sub={settled.ramps.length ? 'Ramp bases' : undefined} collisions={collisions} flagL={v.flagL} onFlagL={(flagL) => patchView({ flagL })} />,
-    },
-    {
-      id: 'vision',
-      label: 'Colour vision',
-      icon: 'visibility',
-      ok: shown.length < 2 ? undefined : !merged.length,
-      verdict:
-        shown.length < 2
-          ? 'Two or more colours compare here'
-          : says
-            ? `${displayName(vision[says]!.a)} and ${displayName(vision[says]!.b)} merge in ${says} vision${merged.length > 1 ? `, and ${plural(merged.length - 1, 'more pair')}` : ''}`
-            : 'Every colour stays apart in all four simulations',
-      detail: <Vision {...host} short={short} vision={vision} names={shown.length <= NAMED} flagE={v.flagE} onFlagE={(flagE) => patchView({ flagE })} cvd={cvd} onCvd={(k) => patchView({ check: 'vision', cvd: k })} />,
-    },
-  ];
-}
+const CVDS = VISIONS.filter((k): k is Cvd => k !== 'typical');
+const samePair = (x: CvdClosest | null, y: CvdClosest) => !!x && ((x.a.id === y.a.id && x.b.id === y.b.id) || (x.a.id === y.b.id && x.b.id === y.a.id));
 
-/** choosing a check (a vision one keeps the simulation it showed) */
-export const chooseCheck = (v: IllustrationView, checks: Checks) => (check: string) =>
-  patchView(check === 'vision' ? { check, cvd: v.check === 'vision' ? v.cvd : mergingCvd(checks.vision, v.cvd) } : { check });
+/**
+ * The pane under Check's boards: what is wrong, one row per problem, each with its one-click fix
+ * (one history step). Nothing wrong: a line per check saying so.
+ */
+export function Problems({ doc, v, checks }: { doc: Doc; v: IllustrationView; checks: Checks }) {
+  const { shown, bases, collisions, vision, merged } = checks;
+  const fixTo = (label: string, changes: Record<string, Oklch>) => doc.transact(label, (x) => Object.entries(changes).reduce((y, [id, o]) => recolour(y, id, o), x));
+  const rows: { key: string; ids: string[]; text: React.ReactNode; fix?: { label: string; tip: string; run(): void } }[] = [];
 
-export function CheckPane({ doc, v, checks }: { doc: Doc; v: IllustrationView; checks: Checks }) {
-  return <ListDetail items={checkItems(doc, v, checks)} value={v.check} onChange={chooseCheck(v, checks)} />;
+  for (const c of collisions) {
+    const others = bases.filter((w) => w.id !== c.a.id && w.id !== c.b.id).map((w) => w.oklch[0]);
+    const [a, b] = valueFix([c.a.oklch, c.b.oklch], v.flagL / 100, others);
+    rows.push({
+      key: `v:${c.a.id}:${c.b.id}`,
+      ids: [c.a.id, c.b.id],
+      text: (
+        <>
+          <b>{displayName(c.a)}</b> and <b>{displayName(c.b)}</b> read as one grey, {(c.deltaL * 100).toFixed(1)} apart in lightness.
+        </>
+      ),
+      fix: { label: 'Spread apart', tip: 'Space them just past the flag gap in lightness, hues kept', run: () => fixTo(`Spread ${displayName(c.a)} and ${displayName(c.b)} in lightness`, { [c.a.id]: a, [c.b.id]: b }) },
+    });
+  }
+  for (const p of merged) {
+    const kinds = CVDS.filter((k) => vision[k]?.flag && samePair(vision[k], p));
+    const others = shown.filter((w) => w.id !== p.a.id && w.id !== p.b.id).map((w) => w.oklch[0]);
+    let a = p.a.oklch;
+    let b = p.b.oklch;
+    for (const k of kinds) [a, b] = cvdFix(a, b, k, v.flagE, others) ?? [a, b];
+    const parted = a !== p.a.oklch || b !== p.b.oklch;
+    rows.push({
+      key: `c:${p.a.id}:${p.b.id}`,
+      ids: [p.a.id, p.b.id],
+      text: (
+        <>
+          <b>{displayName(p.a)}</b> and <b>{displayName(p.b)}</b> merge in {kinds.length === 4 ? 'every kind of' : kinds.join(', ')} vision.
+          {!parted && ' No lightness spread parts them: change one of their hues.'}
+        </>
+      ),
+      fix: parted ? { label: 'Part them', tip: `Spread them in lightness until ΔE reaches ${v.flagE.toFixed(1)}`, run: () => fixTo(`Part ${displayName(p.a)} and ${displayName(p.b)}`, { [p.a.id]: a, [p.b.id]: b }) } : undefined,
+    });
+  }
+
+  return (
+    <section className={s.problems} aria-label="Problems">
+      <header className={s.phead}>
+        <h3 className={s.ptitle}>Problems</h3>
+        <span className={s.pcount}>{checks.problems ? plural(checks.problems, 'problem') : 'All clear'}</span>
+      </header>
+      <div className={s.plist}>
+        {rows.map((r) => (
+          <div key={r.key} className={cx(s.prow, s.pbad)} {...pointAt(r.ids)}>
+            <Icon name="error" size={16} className={s.picon} />
+            <span className={s.ptext}>{r.text}</span>
+            {r.fix && (
+              <Button size="xs" onClick={r.fix.run} tooltip={r.fix.tip}>
+                {r.fix.label}
+              </Button>
+            )}
+          </div>
+        ))}
+        {rows.length === 0 && (
+          <>
+            <div className={s.prow}>
+              <Icon name="check" size={16} className={s.pok} />
+              <span className={s.ptext}>{bases.length < 2 ? 'Value: two or more bases compare here.' : 'Value: the bases stand apart.'}</span>
+            </div>
+            <div className={s.prow}>
+              <Icon name="check" size={16} className={s.pok} />
+              <span className={s.ptext}>{shown.length < 2 ? 'Colour vision: two or more colours compare here.' : 'Colour vision: every colour stays apart in all four simulations.'}</span>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
 }

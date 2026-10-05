@@ -27,7 +27,9 @@ export async function run({ page, ev, shot, clickText, drop, rail, photo, four, 
   await clickText('~Start from one colour', 'body', '[role=menuitem]'); await sleep(600); await shot('01-design-add-popover');
   await clickText('~Triad', 'body', '[role=dialog] [role=listitem]'); await settle(); await shot('01-design-proposals');
   await click('Keep all', 'design'); await sleep(800);
-  // the Checks dock: Print's Inks across the whole dock, then back
+  // the Checks dock starts folded to its chips; open it, then Print's Inks across the whole dock, and back
+  await shot('01-design-checks-collapsed');
+  await click('Open the checks', 'design'); await sleep(700);
   await shot('01-design-checks-dock');
   await click('Inks', 'design'); await settle(); await shot('01-design-checks-inks');
   await click('Back to the checks', 'design'); await sleep(500);
@@ -106,7 +108,7 @@ export async function run({ page, ev, shot, clickText, drop, rail, photo, four, 
 /** 02 Colour: Illustration: the empty state, then each mode with five ramps, and a stroke on the paper */
 export async function illustrationShots({ page, ev, shot, clickText, rail, key, sleep }) {
   const click = (t, extra = '') => clickText(t, T('illustration'), 'button,[role=tab],[role=radio],[role=checkbox],[role=option]' + extra);
-  const mode = async (name) => { await clickText(name, T('illustration'), '[role=tab]'); await sleep(1200); };
+  const mode = async (name) => { await clickText('~' + name, T('illustration'), '[role=radio]'); await sleep(1200); };
   await rail(2); await shot('02-illustration-empty');
   await click('Skin'); await sleep(500);
   for (let i = 0; i < 4; i++) { await click('~Add base'); await sleep(400); }

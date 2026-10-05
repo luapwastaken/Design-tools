@@ -5,18 +5,18 @@
 import { useEffect, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import type { IconName } from '../../shell/tool.ts';
-import { IconButton, toast } from '../../ui/index.ts';
-import { DocBar, DocTabs, type DocTab } from '../common/DocBar.tsx';
+import { IconButton, Segmented, toast } from '../../ui/index.ts';
+import { DocBar } from '../common/DocBar.tsx';
 import { ExportPalette } from '../common/ExportPalette.tsx';
 import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import { plural } from '../common/names.ts';
 import { NotesModule } from '../common/Notes.tsx';
 import { newPalette, type Doc } from './actions.ts';
-import { CheckMode, ChecksGroup } from './Check.tsx';
+import { CheckMode } from './Check.tsx';
 import { useChecks } from './CheckPane.tsx';
 import { named } from './doc.ts';
 import { Groups } from './Inspector.tsx';
-import { LightMode } from './Light.tsx';
+import { LightMode, LightViewGroup } from './Light.tsx';
 import { Palette } from './Palette.tsx';
 import { PaintPane } from './PaintPane.tsx';
 import { takeImage } from './proposals.ts';
@@ -26,11 +26,11 @@ import { hot, patchView, useView, type IllustrationView } from './view-state.ts'
 import s from './View.module.css';
 
 type Mode = IllustrationView['tab'];
-const MODES: { value: Mode; label: string; icon: IconName }[] = [
-  { value: 'ramps', label: 'Ramps', icon: 'layers' },
-  { value: 'light', label: 'Light', icon: 'wb_sunny' },
-  { value: 'check', label: 'Check', icon: 'fact_check' },
-  { value: 'paint', label: 'Paint', icon: 'brush' },
+const MODES: { value: Mode; label: string; icon: IconName; tip: string }[] = [
+  { value: 'ramps', label: 'Ramps', icon: 'layers', tip: 'The ramps and their curves (Alt+1)' },
+  { value: 'light', label: 'Light', icon: 'wb_sunny', tip: 'The ramps lit by one sun (Alt+2)' },
+  { value: 'check', label: 'Check', icon: 'fact_check', tip: 'Value and colour vision (Alt+3)' },
+  { value: 'paint', label: 'Paint', icon: 'brush', tip: 'Mix paint and try the colours on paper (Alt+4)' },
 ];
 const INSPECTOR = { min: 340, max: 460, reset: 380 };
 
@@ -42,15 +42,13 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const [mixer, setMixer] = useState<HTMLElement | null>(null);
   // a fix can remove the row under the pointer, which then never reports leaving
   useEffect(() => void (hot.get().length && hot.set([])), [d.swatches]);
-  // as in Design: each palette (and a relaunch) opens its checks on its own first problem
   const source = useSyncExternalStore(doc.subscribe, () => doc.source()?.itemId ?? null);
-  useEffect(() => patchView({ check: null }), [source]);
   const empty = d.swatches.length === 0;
   // Light and Check have nothing to show without a colour; Paint doesn't need the palette (the tubes work alone)
   const mode: Mode = empty && (v.tab === 'light' || v.tab === 'check') ? 'ramps' : v.tab;
-  const tabs: DocTab<Mode>[] = MODES.map((m) => ({
+  const modes = MODES.map((m) => ({
     ...m,
-    ...(empty && (m.value === 'light' || m.value === 'check') ? { off: 'Add a base colour first' } : {}),
+    ...(empty && (m.value === 'light' || m.value === 'check') ? { disabled: true, tip: 'Add a base colour first' } : {}),
     ...(m.value === 'check' && checks.problems && !empty ? { badge: checks.problems } : {}),
   }));
   return (
@@ -61,7 +59,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
           doc={doc}
           meta={plural(d.ramps.length, 'ramp')}
           actions={<IconButton icon="note_add" label="New palette" shortcut="Ctrl+N" size="sm" onClick={() => void newPalette()} />}
-          modes={<DocTabs options={tabs} value={mode} onChange={(tab: Mode) => patchView({ tab })} />}
+          modes={<Segmented fit options={modes} value={mode} onChange={(tab: Mode) => patchView({ tab })} />}
           send={{ empty: 'Add a base colour first: an empty palette has nothing to send' }}
           exportButton={<ExportPalette tool="illustration" swatches={d.swatches} named={() => named(doc.get())} format={v.format} onFormat={(format) => patchView({ format })} />}
         />
@@ -85,7 +83,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         {empty && mode !== 'paint' && <HowItWorks />}
         {/* Paint's Mixer: the well, the tubes and Mix it are drawn into this slot */}
         <div ref={setMixer} className={s.mixer} hidden={mode !== 'paint'} />
-        {!empty && <Groups doc={doc} d={d} v={{ ...v, tab: mode }} lead={mode === 'check' ? <ChecksGroup doc={doc} v={v} checks={checks} /> : null} />}
+        {!empty && <Groups doc={doc} d={d} v={{ ...v, tab: mode }} lead={mode === 'light' ? <LightViewGroup v={v} /> : null} />}
         <NotesModule doc={doc} />
       </InspectorColumn>
       {/* the empty state's "Pick from an image" */}

@@ -45,48 +45,6 @@
 @container docbar (max-width: 760px) {
   .meta { display: none; }
 }
-/* the tabs drop their labels: icons stay, named by their tooltips */
-@container docbar (max-width: 640px) {
-  .tabLabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}
 
 /* a label the bar has no room for: still the button's name, just not drawn */
 .hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-
-/* DocTabs: icon and label, a signal underline on the open one */
-.tabs { display: flex; flex: none; align-self: stretch; gap: 2px; }
-.tab {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 12px;
-  color: var(--ink-3);
-  font: 400 var(--fs-row)/1 var(--font-sans);
-  white-space: nowrap;
-}
-.tab:disabled { color: var(--ink-4); cursor: default; }
-.tab:not(:disabled):hover { color: var(--ink-2); }
-.tab.on { color: var(--ink); font-weight: 500; }
-.tab.on::after {
-  content: "";
-  position: absolute;
-  right: 8px;
-  bottom: 0;
-  left: 8px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--signal);
-}
-.badge {
-  display: inline-grid;
-  place-items: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 5px;
-  border-radius: 8px;
-  background: var(--danger);
-  color: var(--danger-ink);
-  font: 400 var(--fs-unit)/1 var(--font-mono);
-  font-variant-numeric: tabular-nums slashed-zero;
-}

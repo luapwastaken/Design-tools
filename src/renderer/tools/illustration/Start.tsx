@@ -3,7 +3,7 @@
 // (HowItWorks): base + light + shadow = the steps.
 import { useRef } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
-import { Button, Icon, InspectorGroup, TextInput } from '../../ui/index.ts';
+import { Button, InspectorGroup, TextInput } from '../../ui/index.ts';
 import { addBase, type Doc } from './actions.ts';
 import { baseFromHex, CAN_PICK, fromPaletteMenu, pickImage, STARTERS, addStarter } from './starts.ts';
 import { eyedrop } from './actions.ts';
@@ -99,10 +99,7 @@ export function HowItWorks() {
         </span>
       </div>
       <p className={s.explain}>
-        <b>Base</b> is your colour. A ramp adds lighter steps that lean toward a light colour and darker ones that lean toward a shadow colour, like a painter does. Edit any step by hand and it stays put.
-      </p>
-      <p className={s.explain}>
-        <Icon name="wb_sunny" size={14} /> Then light it on a sphere, check the values, and mix real paints for it.
+        <b>Base</b> + <b>light</b> and <b>shadow</b> colours = the steps. Edit any step by hand and it stays put.
       </p>
     </InspectorGroup>
   );

@@ -61,18 +61,18 @@
 }
 .end:hover { background: var(--well-hover); color: var(--ink); }
 
-/* keep / discard: over the foot of the board, so nothing under it moves */
+/* keep / discard: in the pasteboard strip above the board, clear of every column's tag and lock */
 .keepBar {
   position: absolute;
-  top: -20px;
+  top: -30px;
   left: 50%;
   z-index: 5;
   display: flex;
   align-items: center;
   gap: 8px;
   max-width: calc(100% - 32px);
-  height: 34px;
-  padding: 0 5px 0 16px;
+  height: 28px;
+  padding: 0 4px 0 14px;
   transform: translateX(-50%);
   border-radius: var(--r-field);
   background: var(--popover);

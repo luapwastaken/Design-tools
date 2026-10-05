@@ -1,17 +1,17 @@
 // Check mode (spec §4): the real ramps, seen the way a check sees them. Left, the ramps in greyscale
 // with their lightness and the steps that sit too close; right, four simulated copies (the
-// colour-vision kinds and greyscale) with colliding pairs outlined. Under the boards, the same two
-// checks as ever (Value, Colour vision) with their thresholds and one-click fixes.
+// colour-vision kinds and greyscale) with colliding pairs outlined. Under the boards, the problems
+// as a list, each with its one-click fix.
 import { useSyncExternalStore, type CSSProperties } from 'react';
 import { cssColor, simulateCvd, type Cvd } from '../../../shared/color/index.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
-import { Icon, InspectorGroup, NumberField, Tooltip } from '../../ui/index.ts';
+import { Icon, NumberField, Tooltip } from '../../ui/index.ts';
 import { OptionsBar, OptionsField } from '../common/OptionsBar.tsx';
 import { surroundOf } from '../common/surround.ts';
 import { fmtL, plural } from '../common/names.ts';
 import type { Doc } from './actions.ts';
-import { CheckPane, checkItems, chooseCheck, type Checks } from './CheckPane.tsx';
+import { Problems, type Checks } from './CheckPane.tsx';
 import { nameOf, rampName, stepsOf, type IllustrationDoc } from './doc.ts';
 import { hot, patchView, pointAt, type IllustrationView } from './view-state.ts';
 import s from './Check.module.css';
@@ -101,27 +101,8 @@ export function CheckMode({ doc, d, v, checks }: { doc: Doc; d: IllustrationDoc;
         </section>
       </div>
       <div className={s.dock}>
-        <CheckPane doc={doc} v={v} checks={checks} />
+        <Problems doc={doc} v={v} checks={checks} />
       </div>
     </div>
-  );
-}
-
-/** the inspector's list of what to look at, each row one problem (or a pass) that opens its check under the boards */
-export function ChecksGroup({ doc, v, checks }: { doc: Doc; v: IllustrationView; checks: Checks }) {
-  const items = checkItems(doc, v, checks);
-  const choose = chooseCheck(v, checks);
-  return (
-    <InspectorGroup title="Checks" meta={checks.problems ? plural(checks.problems, 'problem') : 'All clear'} defaultOpen>
-      {items.map((it) => (
-        <button key={it.id} type="button" className={s.line} onClick={() => choose(it.id)}>
-          <Icon name={it.ok === undefined ? (it.icon ?? 'info') : it.ok ? 'check' : 'error'} size={16} className={cx(s.lineIcon, it.ok === false && s.bad)} />
-          <span className={s.lineText}>
-            <b>{it.label}</b>
-            <span>{it.verdict}</span>
-          </span>
-        </button>
-      ))}
-    </InspectorGroup>
   );
 }
