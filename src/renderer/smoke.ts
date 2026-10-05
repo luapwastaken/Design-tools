@@ -2405,7 +2405,9 @@ const grey = (el: Element | null | undefined) => {
   const lch = /^ok?lch\(\S+ ([\d.e-]+)/.exec(c);
   if (lch) return +lch[1] <= 0.003;
   const n = (/\(([^)]+)\)/.exec(c)?.[1] ?? '').split(/[ ,/]+/).slice(0, 3).map(Number);
-  return n.length === 3 && n.every(Number.isFinite) && Math.max(...n) - Math.min(...n) <= (c.startsWith('color(') ? 0.005 : 1);
+  // a computed color() string carries 0-1 channels, rgb() 0-255
+  const unit = c.slice(0, c.indexOf('(')) === 'color';
+  return n.length === 3 && n.every(Number.isFinite) && Math.max(...n) - Math.min(...n) <= (unit ? 0.005 : 1);
 };
 
 /**
