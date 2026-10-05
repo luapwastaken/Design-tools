@@ -1,0 +1,16 @@
+.section { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--module); border: 1px solid var(--line); border-radius: var(--r-mod); overflow: hidden; }
+.head { flex: none; height: 46px; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px solid var(--line); min-width: 0; }
+.title { margin: 0; font: 500 var(--fs-title)/1 var(--font-sans); letter-spacing: -0.01em; color: var(--ink); white-space: nowrap; }
+.sub { color: var(--ink-3); font: 400 var(--fs-row)/1 var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.actions { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: none; }
+.body { flex: 1; min-height: 0; min-width: 0; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+.tabsHead { padding: 0 10px; align-items: stretch; }
+.tabs { display: flex; align-items: stretch; gap: 4px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.tab { position: relative; display: flex; align-items: center; gap: 8px; padding: 0 14px; border: 0; background: none; color: var(--ink-2); font: 400 13.5px/1 var(--font-sans); white-space: nowrap; cursor: pointer; }
+.tab:hover:not(:disabled) { color: var(--ink); }
+.tab.on { color: var(--ink); font-weight: 500; }
+.tab.on::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--signal); }
+.tab:disabled { color: var(--ink-4); cursor: default; }
+.tab:focus-visible { outline: 1px solid var(--signal); outline-offset: -4px; border-radius: 6px; }
+.badge { min-width: 18px; height: 17px; padding: 0 6px; border-radius: var(--r-pill); background: var(--danger-soft); color: var(--danger); font: 500 var(--fs-unit)/17px var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; text-align: center; }
