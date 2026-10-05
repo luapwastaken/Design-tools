@@ -18,6 +18,8 @@ export type InspectorGroupProps = {
   children?: ReactNode;
   className?: string;
   footer?: ReactNode;
+  /** the body has no padding: a list that runs edge to edge (Post FX layers) */
+  flush?: boolean;
 };
 
 const KEY = 'dt.group.';
@@ -36,7 +38,7 @@ const read = (id: string | undefined, fallback: boolean) => {
  * The body keeps its rows in a --label-w (96px) column. A closed group's body stays mounted (hidden),
  * so what is in it keeps its state.
  */
-export function InspectorGroup({ title, meta, actions, sub, defaultOpen = true, id, children, className, footer }: InspectorGroupProps) {
+export function InspectorGroup({ title, meta, actions, sub, defaultOpen = true, id, children, className, footer, flush }: InspectorGroupProps) {
   const [open, setOpen] = useState(() => read(id, defaultOpen));
   const toggle = () => {
     setOpen(!open);
@@ -45,7 +47,7 @@ export function InspectorGroup({ title, meta, actions, sub, defaultOpen = true, 
     } catch {}
   };
   return (
-    <Module title={title} sub={sub} readout={meta} actions={actions} collapse={{ open, onToggle: toggle }} className={className} footer={footer}>
+    <Module title={title} sub={sub} readout={meta} actions={actions} collapse={{ open, onToggle: toggle }} className={className} footer={footer} flush={flush}>
       <div className={s.rows}>{children}</div>
     </Module>
   );

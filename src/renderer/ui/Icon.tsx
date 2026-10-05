@@ -7,7 +7,7 @@ import {
   PencilSimple, Plus, Printer, Prohibit, SidebarSimple, Signature, SignIn, SkipBack, SkipForward, SlidersHorizontal, SortAscending, Sparkle, SquaresFour, Square, Stack,
   Stamp, Star, Sun, Trash, TrashSimple, UploadSimple, Warning, WarningCircle, Waves, X,
   CaretUp, CheckCircle, DeviceMobile, DiceFive, EyeSlash, LockSimple, LockSimpleOpen, Monitor, Pause, Play, TextAa,
-  Triangle,
+  Triangle, Wall, Columns,
   type Icon as PhosphorIcon,
 } from '@phosphor-icons/react';
 import { cx } from './cx.ts';
@@ -16,6 +16,8 @@ import s from './Icon.module.css';
 /** Material Symbols name -> Phosphor glyph. The names stay (callers don't change); Bone Ember draws them in Phosphor. */
 const GLYPHS = {
   add: Plus,
+  wall: Wall,
+  view_column: Columns,
   change_history: Triangle,
   check_box_outline_blank: Square,
   lock: LockSimple,

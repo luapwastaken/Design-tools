@@ -9,7 +9,7 @@ import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import { addShapes, type Doc } from './actions.ts';
 import { PatternCanvas } from './Canvas.tsx';
 import { ColourModule } from './Colour.tsx';
-import { ExportModule } from './Export.tsx';
+import { ExportModule, usePatternExport } from './Export.tsx';
 import { ArrangementModule, RotationModule, SpacingModule } from './Layout.tsx';
 import { PatternBar } from './PatternBar.tsx';
 import { Shapes } from './Shapes.tsx';
@@ -39,6 +39,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const v = useView();
   usePaste(doc, active);
   const tile = useMemo(() => layoutTile(d), [d]);
+  const out = usePatternExport(doc, d, tile, v);
   const preview = useMemo(() => previewSvg(d, tile), [d.slots, d.background, tile]);
   const counts = useMemo(() => {
     const m = new Map<string, number>();
@@ -49,7 +50,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   return (
     <div className={s.view} style={{ '--insp': `${v.inspector}px` } as CSSProperties}>
       <div className={s.work}>
-        <PatternBar doc={doc} d={d} />
+        <PatternBar doc={doc} d={d} out={out} />
         <PatternCanvas d={d} tile={tile} preview={preview} v={v} active={active} />
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
@@ -59,7 +60,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         <SpacingModule doc={doc} d={d} tile={tile} />
         <RotationModule doc={doc} d={d} />
         <ColourModule doc={doc} d={d} />
-        <ExportModule doc={doc} d={d} tile={tile} v={v} />
+        <ExportModule doc={doc} d={d} tile={tile} v={v} out={out} />
       </InspectorColumn>
     </div>
   );

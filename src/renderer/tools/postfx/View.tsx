@@ -1,6 +1,6 @@
-// The Post FX tool's screen (spec §2): the source in the Viewport with the Original | Result divider, a
-// transport for clips, GIFs and loops, and the inspector (Stack, the selected layer, Presets, Loop,
-// Export) on the right. The preview and every export run the same stack on the same frame.
+// The Post FX tool's screen (spec §2): the source in the Viewport with the Original | Result divider, the
+// transport for clips, GIFs and loops in the view strip under it, and the inspector (Effects with the
+// selected layer open under its row, Presets, Share code, Loop, Export) on the right. The preview and every export run the same stack on the same frame.
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { Icon } from '../../ui/index.ts';
@@ -9,15 +9,14 @@ import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import type { Doc } from './actions.ts';
 import { PostFxCanvas } from './Canvas.tsx';
 import { offered, timeline, type PostFxDoc } from './doc.ts';
-import { ExportModule } from './Export.tsx';
-import { LayerModule } from './Layer.tsx';
+import { ExportModule, usePostFxExport } from './Export.tsx';
 import { LoopModule } from './Loop.tsx';
 import { PostFxBar } from './PostFxBar.tsx';
-import { PresetsModule } from './Presets.tsx';
+import { PresetsModule, ShareModule } from './Presets.tsx';
 import { Preview, shown } from './preview.ts';
 import { StackModule } from './Stack.tsx';
 import { Start } from './Start.tsx';
-import { holdFrame, Transport } from './Transport.tsx';
+import { holdFrame } from './Transport.tsx';
 import { getView, pausedFrame, patchView, playhead, status, useView } from './view-state.ts';
 import s from './View.module.css';
 
@@ -106,6 +105,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const { t, busy, error } = usePreview(d, v.time, active);
   const slow = useHeld(busy);
   const last = shown.use();
+  const out = usePostFxExport(d, t, error);
 
   // a new source opens at Fit, and a selection that went with the old stack goes (the restored one keeps its view)
   const opened = useRef(d.source?.asset);
@@ -126,11 +126,11 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
 
   return (
     <div className={s.view} style={{ '--insp': `${v.inspector}px` } as CSSProperties}>
-      <div className={s.work} data-animated={d.source && t.count > 1 ? '' : undefined}>
-        <PostFxBar doc={doc} d={d} v={v} t={t} />
+      <div className={s.work}>
+        <PostFxBar doc={doc} d={d} v={v} t={t} out={out} />
         {d.source ? (
           <div className={s.stage}>
-            <PostFxCanvas d={d} v={v} busy={slow} />
+            <PostFxCanvas d={d} v={v} busy={slow} t={t} active={active} />
             {error && (
               <p className={s.error} role="alert">
                 <Icon name="error" size={16} />
@@ -141,15 +141,14 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         ) : (
           <Start doc={doc} />
         )}
-        {d.source && t.count > 1 && <Transport t={t} active={active} />}
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
       <InspectorColumn>
-        <StackModule doc={doc} d={d} />
-        <LayerModule doc={doc} d={d} t={t} />
+        <StackModule doc={doc} d={d} t={t} />
         <PresetsModule doc={doc} d={d} />
+        <ShareModule doc={doc} d={d} />
         <LoopModule doc={doc} d={d} t={t} />
-        <ExportModule d={d} t={t} error={error} />
+        <ExportModule d={d} t={t} out={out} />
       </InspectorColumn>
     </div>
   );

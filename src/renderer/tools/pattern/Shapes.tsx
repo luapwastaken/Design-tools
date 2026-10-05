@@ -5,7 +5,7 @@ import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { BUILTIN_SHAPES } from '../../../shared/pattern/builtins.ts';
 import { recolour, toDataUrl } from '../../../shared/svg/index.ts';
 import { shell } from '../../shell/core/index.ts';
-import { ColorField, ConfirmInline, IconButton, menu, Module, NumberField, Toggle, Tooltip, useDocColour, useDocNumber, type MenuItem } from '../../ui/index.ts';
+import { ColorField, ConfirmInline, IconButton, InfoTip, InspectorGroup, menu, NumberField, Toggle, Tooltip, useDocColour, useDocNumber, type MenuItem } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { displayName, plural } from '../common/names.ts';
 import { addBuiltin, removeSlot, replaceFromClipboard, takeFiles, type Doc } from './actions.ts';
@@ -61,7 +61,7 @@ export function Shapes({ doc, d, counts }: { doc: Doc; d: PatternDoc; counts: Ma
   const only = d.slots.length === 1;
 
   return (
-    <Module
+    <InspectorGroup id="pattern.shapes"
       title="Shapes"
       sub={busy ? 'Reading…' : `${d.slots.length} of ${MAX_SLOTS}`}
       actions={
@@ -99,6 +99,7 @@ export function Shapes({ doc, d, counts }: { doc: Doc; d: PatternDoc; counts: Ma
       </div>
       <div className={s.builtins}>
         <span className="lbl">Built in</span>
+        <InfoTip text="Drop or paste SVG files anywhere in the tool to add them." />
         <div className={s.strip} role="toolbar" aria-label="Add a built-in shape" onKeyDown={roam}>
           {BUILTIN_SHAPES.map((b, n) => (
             <Tooltip key={b.id} content={full ? `${b.name}: remove a shape first` : `Add ${b.name}`}>
@@ -109,7 +110,6 @@ export function Shapes({ doc, d, counts }: { doc: Doc; d: PatternDoc; counts: Ma
           ))}
         </div>
       </div>
-      <p className={s.hint}>Drop or paste SVG files anywhere in the tool to add them.</p>
       <input
         ref={file}
         type="file"
@@ -122,7 +122,7 @@ export function Shapes({ doc, d, counts }: { doc: Doc; d: PatternDoc; counts: Ma
           void takeFiles(doc, files, target.current);
         }}
       />
-    </Module>
+    </InspectorGroup>
   );
 }
 

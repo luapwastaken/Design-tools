@@ -53,3 +53,5 @@
   white-space: nowrap;
 }
 .before { translate: -100% 0; }
+
+.sep { flex: none; width: 1px; height: 16px; background: var(--line); }

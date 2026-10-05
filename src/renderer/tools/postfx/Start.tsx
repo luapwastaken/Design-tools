@@ -26,8 +26,8 @@ export const Start = ({ doc }: { doc: Doc }) => (
     tool="postfx"
     glyph={<Glyph />}
     title="Drop an image, a GIF or a video"
-    line="A render, a photo, a pattern or a logo at full resolution with its transparency, an animated GIF, or an MP4 or WebM clip. Ctrl V pastes an image."
-    note="Effects stack like adjustment layers, applied top to bottom. Nothing moves until you press play, and a loop ends where it began."
+    line="Or paste one with Ctrl V."
+    note=""
     choose={{ label: 'Choose a file', onClick: () => pickFile(doc) }}
   />
 );

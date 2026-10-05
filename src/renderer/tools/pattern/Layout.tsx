@@ -1,18 +1,20 @@
-// The layout modules (spec §3): Arrangement, Spacing and size, Rotation and jitter. Every value is
-// typable and each change is one history step; fix() keeps the tile from collapsing.
+// The layout groups (spec §3): Arrangement, Spacing and size, Rotation and jitter. Every value is
+// typable and each change is one history step; fix() keeps the tile from collapsing. The arrangement
+// choice itself sits in the options bar (PatternBar), drawn as pictograms.
 import type { Tile } from '../../../shared/pattern/types.ts';
-import { IconButton, Module, NumberField, Segmented, Slider, useDocNumber } from '../../ui/index.ts';
-import { cx } from '../../ui/cx.ts';
+import type { IconName } from '../../shell/tool.ts';
+import { IconButton, InspectorGroup, InspectorRow, NumberField, Segmented, Slider, useDocNumber } from '../../ui/index.ts';
 import { fmtPx } from '../common/names.ts';
 import { reseed, type Doc } from './actions.ts';
 import { fix, gapMin, LIMIT, type Arrangement, type PatternDoc } from './doc.ts';
 import s from './Inspector.module.css';
 
-const ARRANGEMENTS: { value: Arrangement; label: string; describe: string }[] = [
-  { value: 'grid', label: 'Grid', describe: 'Rows and columns, every cell in line.' },
-  { value: 'halfdrop', label: 'Half-drop', describe: 'Every other column drops by half a cell.' },
-  { value: 'brick', label: 'Brick', describe: 'Every other row shifts by half a cell.' },
-  { value: 'scatter', label: 'Scatter', describe: 'Spread evenly at random, never overlapping, seamless across the edges.' },
+/** the arrangements as pictograms; `tip` is the one-line description */
+export const ARRANGEMENTS: { value: Arrangement; label: string; icon: IconName; tip: string }[] = [
+  { value: 'grid', label: 'Grid', icon: 'pattern', tip: 'Rows and columns, every cell in line.' },
+  { value: 'halfdrop', label: 'Half-drop', icon: 'view_column', tip: 'Every other column drops by half a cell.' },
+  { value: 'brick', label: 'Brick', icon: 'wall', tip: 'Every other row shifts by half a cell.' },
+  { value: 'scatter', label: 'Scatter', icon: 'grain', tip: 'Spread evenly at random, never overlapping, seamless across the edges.' },
 ];
 
 type Get = (d: PatternDoc) => number;
@@ -25,34 +27,29 @@ export function ArrangementModule({ doc, d, tile }: { doc: Doc; d: PatternDoc; t
   const cols = useNum(doc, 'Change the columns', 'cols', (x) => x.cols, (x, v) => ({ ...x, cols: v }));
   const rows = useNum(doc, 'Change the rows', 'rows', (x) => x.rows, (x, v) => ({ ...x, rows: v }));
   const seed = useNum(doc, 'Change the seed', 'seed', (x) => x.seed, (x, v) => ({ ...x, seed: v }));
-  const a = ARRANGEMENTS.find((x) => x.value === d.arrangement)!;
   const spots = d.cols * d.rows;
   const scatter = d.arrangement === 'scatter';
   // an odd count can't alternate across the seam, so layout doubles the tile that way
   const doubled = d.arrangement === 'halfdrop' && d.cols % 2 ? 'columns' : d.arrangement === 'brick' && d.rows % 2 ? 'rows' : null;
   const note = scatter
     ? tile.items.length < spots
-      ? `${tile.items.length} of ${spots} spots found room; the rest stay empty so nothing overlaps. Reseed for another draw.`
-      : `${spots} spots spread over a ${d.cols} × ${d.rows} cell tile.`
+      ? `${tile.items.length} of ${spots} spots found room; the rest stay empty.`
+      : null
     : doubled
-      ? `An odd number of ${doubled}: the tile holds twice as many, so the offset repeats cleanly.`
+      ? `Odd ${doubled}: the tile holds twice as many, so the offset repeats.`
       : null;
   return (
-    <Module title="Arrangement" readout={fmtPx(Math.round(tile.width), Math.round(tile.height))}>
-      <div className={s.stack}>
-        <Segmented options={ARRANGEMENTS} value={d.arrangement} onChange={(arrangement) => doc.transact(`Arrange as ${ARRANGEMENTS.find((x) => x.value === arrangement)!.label.toLowerCase()}`, (x) => ({ ...x, arrangement }))} />
-        <p className={s.describe}>{a.describe}</p>
-        <div className={s.pair}>
-          <NumberField label={scatter ? 'Across' : 'Columns'} min={LIMIT.count[0]} max={LIMIT.count[1]} {...cols} />
-          <NumberField label={scatter ? 'Down' : 'Rows'} min={LIMIT.count[0]} max={LIMIT.count[1]} {...rows} />
-        </div>
-        {note && <p className={s.note}>{note}</p>}
-        <div className={s.row}>
-          <NumberField label="Seed" min={LIMIT.seed[0]} max={LIMIT.seed[1]} className={s.grow} {...seed} />
-          <IconButton icon="casino" label="Reseed: a new draw of shapes, sizes and turns" shortcut="R" onClick={() => reseed(doc)} />
-        </div>
-      </div>
-    </Module>
+    <InspectorGroup id="pattern.arrangement" title="Arrangement" meta={fmtPx(Math.round(tile.width), Math.round(tile.height))}>
+      <InspectorRow label={scatter ? 'Spots' : 'Cells'} pair info={scatter ? 'How many spots the scatter tries to fill, across and down.' : 'How many cells the tile holds, columns and rows.'}>
+        <NumberField label={scatter ? 'Across' : 'Columns'} min={LIMIT.count[0]} max={LIMIT.count[1]} {...cols} />
+        <NumberField label={scatter ? 'Down' : 'Rows'} min={LIMIT.count[0]} max={LIMIT.count[1]} {...rows} />
+      </InspectorRow>
+      {note && <p className={s.note}>{note}</p>}
+      <InspectorRow label="Seed" info="The same seed always draws the same shapes, sizes and turns. R draws a new one.">
+        <NumberField label="Seed" hideLabel min={LIMIT.seed[0]} max={LIMIT.seed[1]} className={s.grow} {...seed} />
+        <IconButton icon="casino" label="Reseed: a new draw of shapes, sizes and turns" shortcut="R" onClick={() => reseed(doc)} />
+      </InspectorRow>
+    </InspectorGroup>
   );
 }
 
@@ -69,28 +66,20 @@ export function SpacingModule({ doc, d, tile }: { doc: Doc; d: PatternDoc; tile:
   const across = tile.width / (d.cols * (d.arrangement === 'halfdrop' && d.cols % 2 ? 2 : 1));
   const down = tile.height / (d.rows * (d.arrangement === 'brick' && d.rows % 2 ? 2 : 1));
   return (
-    <Module title="Spacing and size" readout={scatter ? undefined : `Pitch ${fmtPx(Math.round(across), Math.round(down))}`}>
-      <div className={s.stack}>
-        <div className={s.group}>
-          {scatter ? (
-            <Slider label="Gap" min={0} max={LIMIT.gapMax} unit="px" {...gap} />
-          ) : (
-            <>
-              <Slider label="Gap across" min={gapMin(d)} max={LIMIT.gapMax} origin={0} unit="px" {...gapX} />
-              <Slider label="Gap down" min={gapMin(d)} max={LIMIT.gapMax} origin={0} unit="px" {...gapY} />
-            </>
-          )}
-          <p className={s.note}>
-            {scatter ? 'The least room between the circles round any two shapes, so no two touch at any turn.' : 'The same gap runs across the tile edge, so the repeat keeps its rhythm. Below 0 the shapes overlap.'}
-          </p>
-        </div>
-        <div className={s.group}>
-          <Slider label="Size from" min={LIMIT.size[0]} max={LIMIT.size[1]} unit="px" {...min} />
-          <Slider label="Size to" min={LIMIT.size[0]} max={LIMIT.size[1]} unit="px" {...max} />
-          <p className={s.note}>Each shape’s longest side, measured on its artwork. Each item draws its own size in this range.</p>
-        </div>
-      </div>
-    </Module>
+    <InspectorGroup id="pattern.spacing" title="Spacing and size" meta={scatter ? undefined : `Pitch ${fmtPx(Math.round(across), Math.round(down))}`}>
+      {scatter ? (
+        <Slider label="Gap" info="The least room between the circles round any two shapes, so no two touch at any turn." min={0} max={LIMIT.gapMax} unit="px" {...gap} />
+      ) : (
+        <InspectorRow label="Gap" pair info="The same gap runs across the tile edge, so the repeat keeps its rhythm. Below 0 the shapes overlap.">
+          <NumberField label="Across" min={gapMin(d)} max={LIMIT.gapMax} unit="px" {...gapX} />
+          <NumberField label="Down" min={gapMin(d)} max={LIMIT.gapMax} unit="px" {...gapY} />
+        </InspectorRow>
+      )}
+      <InspectorRow label="Size" pair info="Each shape’s longest side, measured on its artwork. Each item draws its own size in this range.">
+        <NumberField label="From" min={LIMIT.size[0]} max={LIMIT.size[1]} unit="px" {...min} />
+        <NumberField label="To" min={LIMIT.size[0]} max={LIMIT.size[1]} unit="px" {...max} />
+      </InspectorRow>
+    </InspectorGroup>
   );
 }
 
@@ -107,22 +96,25 @@ export function RotationModule({ doc, d }: { doc: Doc; d: PatternDoc }) {
   const jitter = useNum(doc, 'Change the jitter', 'jitter', (x) => x.jitter, (x, v) => ({ ...x, jitter: v }));
   const scatter = d.arrangement === 'scatter';
   return (
-    <Module title="Rotation and jitter">
-      <div className={s.stack}>
-        <Segmented label="Rotation" options={TURNS} value={r.mode} onChange={(mode) => doc.transact(mode === 'fixed' ? 'Turn every shape alike' : 'Turn each shape at random', (x) => ({ ...x, rotation: { ...x.rotation, mode } }))} />
-        {r.mode === 'fixed' ? (
-          <Slider label="Angle" min={LIMIT.angle[0]} max={LIMIT.angle[1]} origin={0} unit="°" {...angle} />
-        ) : (
-          <div className={s.group}>
-            <Slider label="Turn from" min={LIMIT.angle[0]} max={LIMIT.angle[1]} origin={0} unit="°" {...from} />
-            <Slider label="Turn to" min={LIMIT.angle[0]} max={LIMIT.angle[1]} origin={0} unit="°" {...to} />
-          </div>
-        )}
-        <div className={cx(s.group, s.rule)}>
-          <Slider label="Jitter" min={LIMIT.jitter[0]} max={LIMIT.jitter[1]} unit="px" disabled={scatter} {...jitter} />
-          <p className={s.note}>{scatter ? 'Scatter already places each shape at random, so jitter waits for the other arrangements.' : 'Nudges each shape off its place, up to this far each way.'}</p>
-        </div>
-      </div>
-    </Module>
+    <InspectorGroup id="pattern.rotation" title="Rotation and jitter">
+      <Segmented label="Rotation" options={TURNS} value={r.mode} onChange={(mode) => doc.transact(mode === 'fixed' ? 'Turn every shape alike' : 'Turn each shape at random', (x) => ({ ...x, rotation: { ...x.rotation, mode } }))} />
+      {r.mode === 'fixed' ? (
+        <Slider label="Angle" min={LIMIT.angle[0]} max={LIMIT.angle[1]} origin={0} unit="°" {...angle} />
+      ) : (
+        <InspectorRow label="Turn" pair>
+          <NumberField label="From" min={LIMIT.angle[0]} max={LIMIT.angle[1]} unit="°" {...from} />
+          <NumberField label="To" min={LIMIT.angle[0]} max={LIMIT.angle[1]} unit="°" {...to} />
+        </InspectorRow>
+      )}
+      <Slider
+        label="Jitter"
+        info={scatter ? 'Scatter already places each shape at random, so jitter waits for the other arrangements.' : 'Nudges each shape off its place, up to this far each way.'}
+        min={LIMIT.jitter[0]}
+        max={LIMIT.jitter[1]}
+        unit="px"
+        disabled={scatter}
+        {...jitter}
+      />
+    </InspectorGroup>
   );
 }
