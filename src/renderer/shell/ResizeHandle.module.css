@@ -1,4 +1,6 @@
-.handle {
+/* right / left: the strip right of its positioned parent (an inspector's handle sits on the panel before it);
+   top / bottom: the strip below its positioned parent */
+.right, .left {
   position: absolute;
   top: 0;
   right: calc(var(--gap) * -1);
@@ -8,7 +10,19 @@
   cursor: col-resize;
   touch-action: none;
 }
-.handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; margin-left: -.5px; }
-.handle:hover::after, .handle:active::after { background: var(--tick-strong); }
-.handle:focus-visible { outline: none; }
-.handle:focus-visible::after { background: var(--signal); }
+.top, .bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--gap) * -1);
+  z-index: 2;
+  height: var(--gap);
+  cursor: row-resize;
+  touch-action: none;
+}
+.right::after, .left::after { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; margin-left: -.5px; }
+.top::after, .bottom::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; margin-top: -.5px; }
+.right:hover::after, .right:active::after, .left:hover::after, .left:active::after,
+.top:hover::after, .top:active::after, .bottom:hover::after, .bottom:active::after { background: var(--tick-strong); }
+.right:focus-visible, .left:focus-visible, .top:focus-visible, .bottom:focus-visible { outline: none; }
+.right:focus-visible::after, .left:focus-visible::after, .top:focus-visible::after, .bottom:focus-visible::after { background: var(--signal); }
