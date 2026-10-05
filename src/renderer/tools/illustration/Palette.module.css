@@ -1,0 +1,95 @@
+/* The Palette panel: ramps as chip strips. The selected chip's ring is neutral (ink), clear of the
+   colour; periwinkle (--agent) marks what a machine proposed. Nothing animates. */
+.palette {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--r-mod);
+  background: var(--module);
+}
+.head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: var(--docbar);
+  padding: 0 8px 0 14px;
+}
+.title { font: 600 var(--fs-mod-title)/1 var(--font-sans); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--ink); }
+.count { color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); }
+.grow { flex: 1; min-width: 0; }
+
+.list { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-height: 0; padding: 0 8px 8px; overflow: auto; scrollbar-gutter: stable; }
+.hint { padding: 6px 6px 10px; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
+
+.item { position: relative; display: flex; flex: none; flex-direction: column; gap: 6px; padding: 8px 8px 10px 10px; border-radius: var(--r-ctl); }
+.item:hover { background: var(--well-hover); }
+.item.on { background: var(--raise); }
+.dragging { outline: 1px dashed var(--tick); outline-offset: -1px; }
+.item[data-insert]::before { content: ""; position: absolute; right: 6px; left: 6px; z-index: 2; height: 2px; border-radius: 1px; background: var(--signal); }
+.item[data-insert="before"]::before { top: -2px; }
+.item[data-insert="after"]::before { bottom: -2px; }
+
+.top { display: flex; align-items: center; gap: 6px; min-width: 0; cursor: grab; }
+.name { min-width: 0; max-width: 100%; overflow: hidden; border-radius: 3px; color: var(--ink); font: 500 var(--fs-row)/1.2 var(--font-sans); text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.name:focus-visible { outline: 1.5px solid var(--signal); outline-offset: 2px; }
+.meta { flex: none; color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-sans); }
+.broken { display: inline-flex; flex: none; align-items: center; gap: 3px; color: var(--danger); font: 400 var(--fs-label)/1 var(--font-sans); }
+.confirm { min-width: 0; }
+
+.chips { display: flex; gap: 4px; min-width: 0; }
+.chip {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 16px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+.tall .chip { height: 30px; }
+.chip:hover { box-shadow: inset 0 0 0 1px var(--edge), 0 0 0 1.5px var(--tick-strong); }
+.chip.hot { outline: 1px dashed var(--tick-strong); outline-offset: 2px; }
+/* the selected step: ink ring with a module-coloured gap, so it reads on any colour */
+.chip.sel, .chip.sel:hover { box-shadow: inset 0 0 0 1px var(--edge), 0 0 0 2px var(--raise), 0 0 0 3.5px var(--ink); }
+.chip:focus-visible { outline: none; }
+.chip:focus-visible::after { content: ""; position: absolute; right: 2px; bottom: -7px; left: 2px; height: 2px; border-radius: 1px; background: var(--signal); }
+.base::before { content: ""; position: absolute; bottom: 3px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--on-content-ink); box-shadow: 0 0 0 1px var(--on-content-bg); }
+.edited::after { content: ""; position: absolute; top: 3px; right: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--on-content-ink); box-shadow: 0 0 0 1.5px var(--on-content-bg); }
+.chip.broken { box-shadow: inset 0 0 0 1.5px var(--danger); }
+.loose .name { color: var(--ink-2); cursor: default; }
+
+.add {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  margin-top: 6px;
+  padding: 0 10px;
+  border: 1px dashed var(--tick);
+  border-radius: var(--r-ctl);
+  color: var(--ink-2);
+  font: 400 var(--fs-base)/1 var(--font-sans);
+}
+.add:hover { background: var(--well-hover); color: var(--ink); }
+.add:focus-visible { outline: 1.5px solid var(--signal); outline-offset: 1px; }
+.add span { flex: 1; text-align: left; }
+.add kbd { padding: 2px 5px; border-radius: 4px; background: var(--well); color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); }
+
+/* proposals: periwinkle, since a machine offered them and nothing is in the palette until added */
+.ghosts { display: flex; flex: none; flex-direction: column; gap: 8px; margin-top: 12px; padding: 10px; border-radius: var(--r-ctl); background: var(--agent-soft); box-shadow: inset 0 0 0 1px var(--agent-ring); }
+.ghostHead { display: flex; align-items: center; gap: 6px; color: var(--agent-ink); font: 600 var(--fs-mod-title)/1.2 var(--font-sans); letter-spacing: var(--tracking-caps); text-transform: uppercase; }
+.ghostChips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ghost { position: relative; width: 30px; height: 30px; padding: 0; border-radius: 6px; outline: 1px dashed var(--agent-line); outline-offset: 2px; }
+.ghost i { display: block; width: 100%; height: 100%; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--edge); }
+.ghost:hover { outline: 1.5px solid var(--agent); }
+.ghost:focus-visible { outline: 1.5px solid var(--signal); }
+.fine { color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.4; }
+.ghostFoot { display: flex; align-items: center; gap: 6px; }
+
+.foot { flex: none; padding: 8px; box-shadow: inset 0 1px 0 var(--line); }
+.drop { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px; border-radius: var(--r-ctl); color: var(--ink-3); font: 400 var(--fs-meta)/1.35 var(--font-sans); text-align: left; }
+.drop:hover { background: var(--well-hover); color: var(--ink-2); }
+.drop :global(.ico) { flex: none; }

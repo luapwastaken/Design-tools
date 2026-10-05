@@ -1,20 +1,6 @@
-/* Paint: the canvas takes the room; Mix it sits beside it */
-.pane {
-  display: grid;
-  /* a narrow window gives the paper the room first */
-  grid-template-columns: minmax(0, 1fr) clamp(280px, 30%, 340px);
-  gap: var(--gap);
-  height: 100%;
-  min-height: 0;
-}
-.recipes { min-height: 0; }
-/* too narrow to share a row: the canvas fills the pane's height, so its bar, paper and tray stay in
-   one view as the paper shrinks to fit; Mix it sits under it (the pane scrolls to it) */
-@container lower (max-width: 760px) {
-  .pane { grid-template-columns: minmax(0, 1fr); grid-template-rows: max(360px, 100cqh) minmax(260px, auto); height: auto; min-height: 100%; }
-}
-.none { padding: 12px; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
-.opts { --label-w: 104px; display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 10px; }
+/* Mix it (the Mixer's third group) and the paint box popover */
+.none { padding: 6px 0; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
+.opts { display: flex; flex-direction: column; gap: 6px; padding-bottom: 6px; }
 
 /* ── recipes ── */
 .rlist { display: flex; flex-direction: column; }
@@ -24,7 +10,7 @@
   gap: 10px;
   align-items: center;
   min-height: 56px;
-  padding: 8px 12px;
+  padding: 8px 0;
   box-shadow: 0 -1px 0 var(--line);
 }
 /* the target and the mix touch, so the difference reads at a glance */

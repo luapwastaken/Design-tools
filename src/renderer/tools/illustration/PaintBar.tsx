@@ -1,5 +1,5 @@
-// The paint canvas's tool bar: tool, medium, brush, the loaded paint, size and load, undo, redo and
-// clear. One line down to a 724 px section (1920 with the Library open): below 1000 px the paint's
+// The paint canvas's options bar (the tool itself is the toolbox's): medium, brush, the loaded paint,
+// size and load, undo, redo and clear. One line down to a 724 px section: below 1000 px the paint's
 // name goes (the chip keeps it in its tooltip), below 880 px the slider tracks go (the fields and
 // their scrubbing labels stay), and below 700 px it may wrap, between groups only.
 import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
@@ -8,15 +8,11 @@ import { IconButton, NumberField, Segmented, Select, Slider, Tooltip } from '../
 import { cx } from '../../ui/cx.ts';
 import type { BrushKind, PaintingState } from './paint/index.ts';
 import { washColour } from './paint/wash.ts';
-import { BRUSHES, chipTip, LOAD, loadHint, SIZE, type PaintSettings, type PaintTool } from './paint-sources.ts';
+import { OptionsField } from '../common/OptionsBar.tsx';
+import { BRUSHES, chipTip, LOAD, loadHint, SIZE, type PaintSettings } from './paint-sources.ts';
 import type { Brush } from './useBrush.ts';
 import s from './PaintCanvas.module.css';
 
-const TOOLS: { value: PaintTool; label: string; icon: 'brush' | 'gesture' | 'colorize'; tip: string }[] = [
-  { value: 'paint', label: '', icon: 'brush', tip: 'Paint with the loaded brush' },
-  { value: 'smudge', label: '', icon: 'gesture', tip: 'Smudge: push the paint around' },
-  { value: 'pick', label: '', icon: 'colorize', tip: 'Pick: the colour under the cursor goes to the proposals. Alt-click picks while painting.' },
-];
 const MEDIA: { value: PaintSettings['medium']; label: string; tip: string }[] = [
   { value: 'wet', label: 'Watercolour', tip: 'Watercolour: transparent washes that glaze over what’s there, darker where a wash ends.' },
   { value: 'dry', label: 'Gouache', tip: 'Gouache: opaque; covers, and mixes with the paint under it.' },
@@ -68,8 +64,7 @@ export function PaintBar(p: PaintBarProps) {
 
   return (
     <header ref={head} className={s.head} data-fit={fit}>
-      <span className={s.group}>
-        <Segmented options={TOOLS} value={v.tool} onChange={(tool) => p.onSettings({ tool })} fit className={s.tools} />
+      <OptionsField label="Medium">
         {smudge ? (
           <Tooltip content={SMUDGE_MEDIUM}>
             <span className={s.mediaOff}>
@@ -79,7 +74,7 @@ export function PaintBar(p: PaintBarProps) {
         ) : (
           <Segmented options={MEDIA} value={v.medium} onChange={(medium) => p.onSettings({ medium })} fit />
         )}
-      </span>
+      </OptionsField>
       {/* Pick holds no brush: the colour under the cursor takes the brush's place */}
       {v.tool === 'pick' ? (
         <span className={cx(s.group, s.brushGroup, s.readout)}>
@@ -90,15 +85,17 @@ export function PaintBar(p: PaintBarProps) {
         </span>
       ) : (
         <span className={cx(s.group, s.brushGroup)}>
-          {smudge ? (
-            <Tooltip content={SMUDGE_BRUSH}>
-              <span className={s.mediaOff}>
-                <Select<BrushKind> label="Brush" options={BRUSHES} value={v.brushes[v.medium]} onChange={() => {}} className={s.brushSelect} disabled />
-              </span>
-            </Tooltip>
-          ) : (
-            <Select<BrushKind> label="Brush" options={BRUSHES} value={v.brushes[v.medium]} onChange={(b) => p.onSettings({ brushes: { ...v.brushes, [v.medium]: b } })} className={s.brushSelect} />
-          )}
+          <OptionsField label="Brush">
+            {smudge ? (
+              <Tooltip content={SMUDGE_BRUSH}>
+                <span className={s.mediaOff}>
+                  <Select<BrushKind> options={BRUSHES} value={v.brushes[v.medium]} onChange={() => {}} className={s.brushSelect} disabled />
+                </span>
+              </Tooltip>
+            ) : (
+              <Select<BrushKind> options={BRUSHES} value={v.brushes[v.medium]} onChange={(b) => p.onSettings({ brushes: { ...v.brushes, [v.medium]: b } })} className={s.brushSelect} />
+            )}
+          </OptionsField>
           {/* a smudge carries no paint of its own */}
           {!smudge && <OnBrush brush={p.brush} hint={hint} named={fit === 'full'} medium={v.medium} kind={v.brushes[v.medium]} load={v.load} size={v.size} />}
         </span>

@@ -45,7 +45,8 @@ export function useChecks(doc: Doc, v: IllustrationView): Checks {
   }, [settled, v.flagL, v.flagE]);
 }
 
-export function CheckPane({ doc, v, checks }: { doc: Doc; v: IllustrationView; checks: Checks }) {
+/** the two checks as list rows (verdict and detail); a ListDetail puts the problems first */
+export function checkItems(doc: Doc, v: IllustrationView, checks: Checks): ListItem[] {
   const { settled, shown, bases, collisions, vision, merged } = checks;
   // a ramp step by its place in the ramp ("Skin 4/5"): readable where a pair has one short line
   const short = (w: Swatch) => {
@@ -63,7 +64,7 @@ export function CheckPane({ doc, v, checks }: { doc: Doc; v: IllustrationView; c
   // the list's line names the pair that simulation shows
   const cvd = v.check === 'vision' ? v.cvd : mergingCvd(vision, v.cvd);
   const says = vision[cvd]?.flag ? cvd : VISIONS.find((k) => k !== 'typical' && vision[k]?.flag);
-  const items: ListItem[] = [
+  return [
     {
       id: 'value',
       label: 'Value',
@@ -76,9 +77,7 @@ export function CheckPane({ doc, v, checks }: { doc: Doc; v: IllustrationView; c
           : collisions.length
             ? `${displayName(collisions[0].a)} and ${displayName(collisions[0].b)} read as one grey${collisions.length > 1 ? `, and ${plural(collisions.length - 1, 'more pair')}` : ''}`
             : 'The bases stand apart in value',
-      detail: (
-        <Value {...host} swatches={bases} sub={settled.ramps.length ? 'Ramp bases' : undefined} collisions={collisions} flagL={v.flagL} onFlagL={(flagL) => patchView({ flagL })} />
-      ),
+      detail: <Value {...host} swatches={bases} sub={settled.ramps.length ? 'Ramp bases' : undefined} collisions={collisions} flagL={v.flagL} onFlagL={(flagL) => patchView({ flagL })} />,
     },
     {
       id: 'vision',
@@ -91,11 +90,15 @@ export function CheckPane({ doc, v, checks }: { doc: Doc; v: IllustrationView; c
           : says
             ? `${displayName(vision[says]!.a)} and ${displayName(vision[says]!.b)} merge in ${says} vision${merged.length > 1 ? `, and ${plural(merged.length - 1, 'more pair')}` : ''}`
             : 'Every colour stays apart in all four simulations',
-      detail: (
-        <Vision {...host} short={short} vision={vision} names={shown.length <= NAMED} flagE={v.flagE} onFlagE={(flagE) => patchView({ flagE })} cvd={cvd} onCvd={(k) => patchView({ check: 'vision', cvd: k })} />
-      ),
+      detail: <Vision {...host} short={short} vision={vision} names={shown.length <= NAMED} flagE={v.flagE} onFlagE={(flagE) => patchView({ flagE })} cvd={cvd} onCvd={(k) => patchView({ check: 'vision', cvd: k })} />,
     },
   ];
-  const open = (check: string) => patchView(check === 'vision' ? { check, cvd } : { check });
-  return <ListDetail items={items} value={v.check} onChange={open} />;
+}
+
+/** choosing a check (a vision one keeps the simulation it showed) */
+export const chooseCheck = (v: IllustrationView, checks: Checks) => (check: string) =>
+  patchView(check === 'vision' ? { check, cvd: v.check === 'vision' ? v.cvd : mergingCvd(checks.vision, v.cvd) } : { check });
+
+export function CheckPane({ doc, v, checks }: { doc: Doc; v: IllustrationView; checks: Checks }) {
+  return <ListDetail items={checkItems(doc, v, checks)} value={v.check} onChange={chooseCheck(v, checks)} />;
 }

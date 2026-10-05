@@ -1823,11 +1823,12 @@ async function illustration(): Promise<void> {
   if (!check('Paint shows the canvas', await stroke(0.5))) return;
   check('the stroke is on the canvas', await until(painted), liveEngine.get()?.state);
   check('and is saved under its palette', (await saved()) && illustrationView().paintings[id], illustrationView().paintings);
-  for (const tab of ['light', 'check', 'paint'] as const) {
+  for (const tab of ['ramps', 'light', 'check', 'paint'] as const) {
     patchIllustration({ tab });
     await sleep(50);
   }
-  check('a tab switch keeps the painting: Paint, Light, Check, Paint', painted(), liveEngine.get()?.state);
+  check('a mode switch keeps the painting: Paint, Ramps, Light, Check, Paint', painted(), liveEngine.get()?.state);
+  await modesUi();
   await paintUi(id);
 
   // an edit while Design holds the palette forks it: the painting stays on screen and goes with the fork
@@ -1845,6 +1846,7 @@ async function illustration(): Promise<void> {
   shell.setActive('illustration');
   patchIllustration({ check: 'vision' });
   await shell.newDoc('illustration');
+  await emptyUi();
   il.transact('Add base colours', (d) => addRamp(d, [0.62, 0.12, 40]).doc);
   const last = await until(() => (il.state().t === 'saved' ? il.source() : null));
   if (!check('a new Illustration palette for the last painting', last && last.itemId !== id && last.itemId !== fork?.itemId, il.state())) return;
@@ -1912,6 +1914,119 @@ async function v1Painting(): Promise<Blob> {
   ctx.fillStyle = cssColor([0.6, 0.2, 29]);
   ctx.fillRect(100, 100, 200, 200);
   return c.convertToBlob({ type: 'image/png' });
+}
+
+/** the empty palette: its start artboard, Light and Check held back, and a starter chip that makes the first ramp */
+async function emptyUi(): Promise<void> {
+  const il = illustrationDoc();
+  patchIllustration({ tab: 'ramps' });
+  const start = await until(() => host('illustration')?.querySelector('section[aria-label="Start"]'), 3000);
+  check('an empty palette shows the start artboard in Ramps', shows(start), start?.textContent?.slice(0, 40));
+  const off = (label: string) => [...(host('illustration')?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? [])].find((t) => t.textContent?.includes(label))?.disabled;
+  check('and holds Light and Check back until there is a colour, but not Paint', off('Light') === true && off('Check') === true && off('Paint') === false, [off('Light'), off('Check'), off('Paint')]);
+  patchIllustration({ tab: 'light' });
+  await sleep(100);
+  check('a saved Light mode on an empty palette still shows the start, not an empty lit pane', shows(host('illustration')?.querySelector('section[aria-label="Start"]')));
+  const skin = await until(() => button('illustration', 'Skin'), 2000);
+  skin?.click();
+  const made = await until(() => (il.get().ramps.length === 1 ? il.get().ramps[0] : null));
+  check('a starter chip makes the first ramp with its material and light', made?.material === 'skin' && il.get().swatches.length === 5, made);
+  check('and the start artboard is gone', await until(() => !host('illustration')?.querySelector('section[aria-label="Start"]'), 2000));
+  il.undo();
+  check('the starter is one undo step', il.get().ramps.length === 0, il.get().ramps.length);
+  patchIllustration({ tab: 'paint' });
+}
+
+/**
+ * The workspace's own UI: the modes by their keys, a selection that carries across them, Shift+A,
+ * the curves (a dragged point is the picker's edit), the sun on its ring, and the hero checkbox.
+ */
+async function modesUi(): Promise<void> {
+  const il = illustrationDoc();
+  const tab = () => illustrationView().tab;
+  const chord = (n: string) => press(n, { code: `Digit${n}`, altKey: true });
+  const seen: string[] = [];
+  for (const [n, want] of [['2', 'light'], ['3', 'check'], ['1', 'ramps'], ['4', 'paint']] as const) {
+    chord(n);
+    await until(() => tab() === want, 1000);
+    seen.push(tab());
+  }
+  check('Alt+1 to Alt+4 switch Ramps, Light, Check and Paint', seen.join() === 'light,check,ramps,paint', seen);
+
+  // the selected step carries across the modes
+  chord('1');
+  await until(() => tab() === 'ramps' && host('illustration')?.querySelector('[role="listbox"][aria-label="Swatch board"]'), 1000);
+  const ramp = il.get().ramps[0].id;
+  const step = stepsOf(il.get(), ramp)[1];
+  host('illustration')?.querySelector<HTMLButtonElement>(`[data-step="${step.id}"]`)?.click();
+  await until(() => illustrationView().selected === step.id);
+  const kept: string[] = [];
+  for (const n of ['2', '3', '4', '1']) {
+    chord(n);
+    await sleep(80);
+    const chip = host('illustration')?.querySelector(`[data-step="${step.id}"]`);
+    kept.push(`${tab()}:${illustrationView().selected === step.id}:${chip?.getAttribute('aria-selected')}`);
+  }
+  check('the selected step stays selected through every mode', kept.every((k) => k.endsWith(':true:true')), kept);
+
+  // Shift+A adds a base colour, as one undo step
+  const n = il.get().ramps.length;
+  press('A', { code: 'KeyA', shiftKey: true });
+  check('Shift+A adds a base colour', await until(() => il.get().ramps.length === n + 1), il.get().ramps.length);
+  il.undo();
+  check('and it is one undo step', il.get().ramps.length === n, il.get().ramps.length);
+  host('illustration')?.querySelector<HTMLButtonElement>(`[data-step="${step.id}"]`)?.click();
+  await until(() => illustrationView().selected === step.id);
+
+  // the curves: dragging a point up lifts that step's lightness, in one undoable step; the others stay
+  const dot = await until(() => host('illustration')?.querySelector<SVGCircleElement>(`[data-curve-point="${step.id}:L"]`), 2000);
+  const L = (d: IllustrationDoc) => d.swatches.find((w) => w.id === step.id)!.oklch[0];
+  const [L0, depth0] = [L(il.get()), il.depth()];
+  if (check('the curves show a draggable point per step', !!dot) && dot) {
+    const r = dot.getBoundingClientRect();
+    const fire = (type: string, y: number) =>
+      dot.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerup' ? 0 : 1, clientX: r.left + r.width / 2, clientY: y }));
+    const y0 = r.top + r.height / 2;
+    fire('pointerdown', y0);
+    fire('pointermove', y0 - 12);
+    fire('pointermove', y0 - 24);
+    fire('pointerup', y0 - 24);
+    const moved = await until(() => il.depth() > depth0);
+    const edited = il.get().swatches.find((w) => w.id === step.id);
+    check('dragging a curve point up lifts the step and marks it edited, as one step', moved && L(il.get()) > L0 + 0.01 && edited?.edited === true && il.depth() === depth0 + 1, [L0, L(il.get()), il.depth() - depth0]);
+    il.undo();
+    check('and Undo puts it back', L(il.get()) === L0 && il.depth() === depth0, [L0, L(il.get())]);
+  }
+
+  // the hero checkbox, in the Ramp group
+  const hero = () => [...(host('illustration')?.querySelectorAll<HTMLButtonElement>('button[role="checkbox"]') ?? [])].find((b) => b.textContent?.includes('Quieten the other ramps'));
+  hero()?.click();
+  check('the Hero checkbox makes the selected ramp the hero', await until(() => il.get().ramps[0].hero === true), il.get().ramps.map((r) => r.hero));
+  hero()?.click();
+  check('and unticking ends it', await until(() => il.get().ramps[0].hero === false), il.get().ramps.map((r) => r.hero));
+
+  // the sun: dragged on its ring to the left of the object, then nudged with an arrow
+  const depth1 = il.depth();
+  chord('2');
+  const sun = await until(() => host('illustration')?.querySelector<HTMLElement>('[role="slider"][aria-label="Light direction"]'), 2000);
+  const ring = sun?.parentElement;
+  if (check('Light shows the sun on its ring', !!ring && shows(ring)) && ring && sun) {
+    const r = ring.getBoundingClientRect();
+    const [x, y] = [r.left + r.width * 0.25, r.top + r.height / 2];
+    const fire = (type: string) => ring.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerup' ? 0 : 1, clientX: x, clientY: y }));
+    fire('pointerdown');
+    fire('pointermove');
+    fire('pointerup');
+    const light = () => illustrationView().preview as { azimuth?: number; elevation?: number };
+    const dragged = await until(() => (light().azimuth === 270 ? light() : null));
+    check('dragging the sun sets azimuth and elevation from where it was dropped', dragged && dragged.elevation === 60, light());
+    sun.focus();
+    press('ArrowRight');
+    check('an arrow key nudges the sun by one degree', await until(() => light().azimuth === 271), light());
+    check('and moving the light leaves the palette alone', il.depth() === depth1 && illustrationView().selected === step.id, il.depth() - depth1);
+  }
+  chord('4');
+  await until(() => tab() === 'paint', 1000);
 }
 
 /**
@@ -2023,7 +2138,7 @@ async function paintUi(id: string): Promise<void> {
   check("the chip's tooltip names the wash and keeps the paint's own colour", tip === `Ultramarine Blue · a wash at Load 100 looks like this. Paint colour ${toHex(ultra.oklch).toUpperCase()}.`, tip);
   setPaint({ medium, load, size, brushes });
 
-  // the tool bar: one line at 1000px with the paint's name, and still one line at 724px
+  // the options bar: one line at 1000px with the paint's name, and still one line at 724px
   const head = section.querySelector('header')!;
   const oneLine = () => {
     const r = head.getBoundingClientRect();
@@ -2033,7 +2148,7 @@ async function paintUi(id: string): Promise<void> {
   for (const w of [1000, 724]) {
     section.style.width = `${w}px`;
     const fits = await until(() => head.dataset.fit === (w >= 1000 ? 'full' : 'compact') && oneLine(), 5000);
-    check(`the tool bar is one line at ${w}px`, fits && (w < 1000 || head.textContent?.includes('Ultramarine Blue')), [head.dataset.fit, head.getBoundingClientRect().height, head.scrollWidth, head.clientWidth]);
+    check(`the options bar is one line at ${w}px`, fits && (w < 1000 || head.textContent?.includes('Ultramarine Blue')), [head.dataset.fit, head.getBoundingClientRect().height, head.scrollWidth, head.clientWidth]);
   }
   section.style.width = '';
 

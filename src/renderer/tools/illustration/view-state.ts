@@ -12,8 +12,12 @@ const ID = 'illustration';
 export type IllustrationView = {
   /** the selected step or loose swatch (swatch id); null: the first ramp's base */
   selected: string | null;
-  /** the job under the ramps (UX pass: Light, Check, Paint in working order) */
-  tab: 'light' | 'check' | 'paint';
+  /** the mode (doc bar, Alt+1-4): one workspace, four views of the palette */
+  tab: 'ramps' | 'light' | 'check' | 'paint';
+  /** Ramps: what the board prints under each swatch */
+  show: 'hex' | 'name' | 'off';
+  /** Ramps and Light: the lens the swatches are seen through (G toggles greyscale) */
+  proof: 'off' | Cvd | 'grey';
   /** the open check's id; null opens the first failing one */
   check: string | null;
   surround: Surround;
@@ -41,7 +45,9 @@ export type IllustrationView = {
 
 export const DEFAULT_VIEW: IllustrationView = {
   selected: null,
-  tab: 'light',
+  tab: 'ramps',
+  show: 'hex',
+  proof: 'off',
   check: null,
   surround: 'grey',
   inspector: 380,
@@ -61,7 +67,9 @@ export const DEFAULT_VIEW: IllustrationView = {
 };
 
 const ENUMS: Partial<Record<keyof IllustrationView, readonly unknown[]>> = {
-  tab: ['light', 'check', 'paint'],
+  tab: ['ramps', 'light', 'check', 'paint'],
+  show: ['hex', 'name', 'off'],
+  proof: ['off', 'grey', 'protan', 'deutan', 'tritan', 'achromat'],
   surround: ['grey', 'ground', 'plain'],
   format: EXPORT_FORMATS,
   cvd: ['protan', 'deutan', 'tritan', 'achromat'],

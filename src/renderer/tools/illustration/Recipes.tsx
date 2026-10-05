@@ -5,7 +5,7 @@ import { useDeferredValue, useMemo } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import type { Pigment } from '../../../shared/paint/pigments.ts';
 import { recipes, type Recipe } from '../../../shared/paint/recipe.ts';
-import { Button, Module, Segmented, Tooltip } from '../../ui/index.ts';
+import { Button, InspectorGroup, Segmented, Tooltip } from '../../ui/index.ts';
 import { baseOf, nameOf, rampName, type IllustrationDoc } from './doc.ts';
 import { PaintsButton } from './Paints.tsx';
 import { patchView, type IllustrationView } from './view-state.ts';
@@ -50,12 +50,11 @@ export function Recipes({ d, v, sel, owned, hidden, onTry, className }: Props) {
     [deferred],
   );
   return (
-    <Module
+    <InspectorGroup
+      id="illustration.mix"
       title="Mix it"
-      sub={v.recipesFor === 'bases' ? 'Every base' : sel ? sel.name : undefined}
+      sub={v.recipesFor === 'bases' ? 'a recipe for every base' : sel ? `a recipe for ${sel.name}` : undefined}
       actions={<PaintsButton v={v} />}
-      scroll
-      flush
       className={className}
       footer={<span className={s.fine}>Parts by volume, tinting strength included. Tube colours vary: mix, then adjust by eye. Try it in gouache for the mix at full strength; one watercolour pass is a first wash.</span>}
     >
@@ -79,7 +78,7 @@ export function Recipes({ d, v, sel, owned, hidden, onTry, className }: Props) {
           {found.every((f) => !f.list.length) && <p className={s.none}>No mix of your paints comes near. Tick more paints, or allow more per mix.</p>}
         </div>
       )}
-    </Module>
+    </InspectorGroup>
   );
 }
 

@@ -37,18 +37,7 @@ export async function run({ page, ev, shot, clickText, drop, rail, photo, four, 
   await tab('Build', 'design');
   await drop('design', photo); await settle(); await shot('01-design-build-after-image-drop');
 
-  // 02 Colour: Illustration
-  await rail(2); await shot('02-illustration-light-empty');
-  await click('Add a base colour', 'illustration'); await settle(); await shot('02-illustration-light-base');
-  await click('All ramps', 'illustration'); await settle(); await shot('02-illustration-light-all-ramps'); await click('Shapes', 'illustration');
-  await tab('Check', 'illustration'); await settle(); await shot('02-illustration-check');
-  await tab('Paint', 'illustration'); await settle(); await shot('02-illustration-paint');
-  const r = await ev(() => document.querySelector('[data-tool="illustration"] canvas[aria-label^="Painting"]')?.getBoundingClientRect().toJSON());
-  if (r) {
-    await page.mouse.move(r.x + r.width * 0.2, r.y + r.height * 0.4); await page.mouse.down();
-    for (let i = 0; i <= 30; i++) await page.mouse.move(r.x + r.width * (0.2 + i * 0.02), r.y + r.height * (0.4 + Math.sin(i / 4) * 0.1));
-    await page.mouse.up(); await sleep(1200); await shot('02-illustration-paint-stroked');
-  }
+  await illustrationShots({ page, ev, shot, clickText, rail, key, sleep });
 
   // 03 Pattern
   await rail(3); await shot('03-pattern-default');
@@ -96,4 +85,25 @@ export async function run({ page, ev, shot, clickText, drop, rail, photo, four, 
   await clickText('Design', NAV, NAVSEL); await sleep(600);
   await clickText('Library', NAV, NAVSEL); await settle(); await shot('09-library-open'); // closed on first run
   await clickText('Library', NAV, NAVSEL); await settle(); await shot('09-library-closed');
+}
+
+/** 02 Colour: Illustration: the empty state, then each mode with five ramps, and a stroke on the paper */
+export async function illustrationShots({ page, ev, shot, clickText, rail, key, sleep }) {
+  const click = (t, extra = '') => clickText(t, T('illustration'), 'button,[role=tab],[role=radio],[role=checkbox],[role=option]' + extra);
+  const mode = async (name) => { await clickText(name, T('illustration'), '[role=tab]'); await sleep(1200); };
+  await rail(2); await shot('02-illustration-empty');
+  await click('Skin'); await sleep(500);
+  for (let i = 0; i < 4; i++) { await click('~Add base'); await sleep(400); }
+  await shot('02-illustration-ramps');
+  await mode('Light'); await shot('02-illustration-light');
+  await click('All ramps'); await sleep(900); await shot('02-illustration-light-all-ramps'); await click('This ramp'); await click('Cube'); await sleep(600); await shot('02-illustration-light-cube'); await click('Sphere');
+  await mode('Check'); await shot('02-illustration-check');
+  await mode('Paint'); await sleep(1500); await shot('02-illustration-paint');
+  const r = await ev(() => document.querySelector('[data-tool="illustration"] canvas[aria-label^="Painting"]')?.getBoundingClientRect().toJSON());
+  if (r) {
+    await page.mouse.move(r.x + r.width * 0.2, r.y + r.height * 0.4); await page.mouse.down();
+    for (let i = 0; i <= 30; i++) await page.mouse.move(r.x + r.width * (0.2 + i * 0.02), r.y + r.height * (0.4 + Math.sin(i / 4) * 0.1));
+    await page.mouse.up(); await sleep(1200); await shot('02-illustration-paint-stroked');
+  }
+  await mode('Ramps');
 }
