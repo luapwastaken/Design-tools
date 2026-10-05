@@ -3,10 +3,11 @@ import { shell, useShell } from './core/index.ts';
 import { Boundary } from './ToolHost.tsx';
 import s from './StatusBar.module.css';
 
-/** Facts, tasks and warnings only (spec §4): the active tool's facts on the left, running tasks and warnings on the right. Undo's depth lives in the Undo tooltip. */
+/** Facts, tasks and warnings only (spec §4): the active tool's facts on the left (none on Settings, which is no tool's), running tasks and warnings on the right. Undo's depth lives in the Undo tooltip. */
 export function StatusBar() {
   const active = useShell((st) => st.active);
   const shown = useShell((st) => st.mounted.includes(st.active) && !st.crashed[st.active]);
+  const settings = useShell((st) => st.settingsOpen);
   const warning = useShell((st) => st.statusWarning);
   const busy = useShell((st) => st.busy);
   const Slot = shell.tool(active).StatusSlot;
@@ -14,7 +15,7 @@ export function StatusBar() {
 
   return (
     <footer className={s.bar}>
-      {Slot && shown && (
+      {Slot && shown && !settings && (
         <Boundary key={active} onError={(e) => shell.reportCrash(active, e)}>
           <Slot doc={doc} />
         </Boundary>

@@ -5,8 +5,8 @@ import { boardLayout, CAP, CELL, columns, GAP, place } from '../src/renderer/too
 import { corners } from '../src/renderer/tools/logo/geometry.ts';
 import { doc } from './logo-fixtures.ts';
 
-test('artboards go three to a row, or two for two and four, one for one', () => {
-  assert.deepEqual([1, 2, 3, 4, 5, 6].map(columns), [1, 2, 3, 2, 3, 3]);
+test('artboards go two to a row, one for one', () => {
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map(columns), [1, 2, 2, 2, 2, 2]);
 });
 
 test('the board holds one artboard per lockup that is on, in the document order, in a grid', () => {

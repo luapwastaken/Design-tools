@@ -1,5 +1,4 @@
-// Export (spec §3, §5): a checklist of assets and one primary button, which the doc bar's Export
-// repeats. The SVG and PNG rows write the lockup in view, that lockup in every version that's on,
+// Export (spec §3, §5): a checklist of assets and their options; the doc bar's Export makes them. The SVG and PNG rows write the lockup in view, that lockup in every version that's on,
 // or every lockup in every version, as the scope says; the favicon bundle and the brand sheet
 // come with them. One file goes through the save dialog, several into one folder. All through the
 // shared export path (lib/export saveFile, saveToFolder); every failure is a toast.
@@ -10,7 +9,7 @@ import { leaf, saveFile, saveToFolder } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
 import { InspectorGroup, InspectorRow, NumberField, Segmented, Toggle, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { CopyButton, ExportButton, LastExport, useExport } from '../common/Export.tsx';
+import { CopyButton, LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx, plural } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { fix, KIND_LABEL, LIMIT, shownLockups, shownVersions, VERSION_LABEL, type Lockup, type LogoDoc } from './doc.ts';
@@ -27,8 +26,7 @@ const SCOPES: { value: Scope; label: string; tip: string }[] = [
 ];
 
 /**
- * What Export would make now, and the one function that makes it: the group's primary button and the
- * doc bar's Export both call `go`. `why` is the reason it can't, or null.
+ * What Export would make now, and the one function that makes it: the doc bar's Export calls `go`. `why` is the reason it can't, or null.
  */
 export function useLogoExport(doc: Doc, d: LogoDoc, v: LogoView, lockup: Lockup | null) {
   const name = useShell((st) => st.docNames.logo) ?? 'Logo';
@@ -97,7 +95,7 @@ function Asset({ label, checked, onChange, sub, right }: { label: string; checke
 }
 
 export function ExportGroup({ doc, d, v, lockup, out }: { doc: Doc; d: LogoDoc; v: LogoView; lockup: Lockup | null; out: LogoExport }) {
-  const { ex, go, why, count, pairs, lockups, versions } = out;
+  const { ex, count, pairs, lockups, versions } = out;
   const height = useDocNumber(doc, { label: 'Change the PNG height', key: 'pngHeight', get: (x) => x.pngHeight, set: (x, h) => fix({ ...x, pngHeight: h }) });
   const tick = (k: keyof Assets) => (on: boolean) => patchView({ assets: { ...v.assets, [k]: on } });
   const sized = lockup && pngSize(d, layoutLockup(d, lockup), v.version);
@@ -132,13 +130,8 @@ export function ExportGroup({ doc, d, v, lockup, out }: { doc: Doc; d: LogoDoc; 
         <NumberField label="Height" min={LIMIT.pngHeight[0]} max={LIMIT.pngHeight[1]} unit="px" {...height} />
         <NumberField label="DPI" min={LIMIT.dpi[0]} max={LIMIT.dpi[1]} value={v.dpi} onChange={(dpi) => patchView({ dpi })} />
       </InspectorRow>
-      <div className={s.go} data-export="go">
-        <ExportButton ex={ex} what="assets" lead folder={count !== 1 || pairs.length !== 1} why={why} onClick={go}>
-          {count === 1 && pairs.length === 1 ? 'Export…' : `Export ${plural(count, 'asset')}…`}
-        </ExportButton>
-        <div data-row="SVG" className={s.copy}>
-          <CopyButton ex={ex} what="SVG" why={lockup ? null : 'Every lockup is off'} onClick={() => void ex.copySvg('SVG', async () => markup())} />
-        </div>
+      <div data-row="SVG" className={s.copy}>
+        <CopyButton ex={ex} what="SVG" why={lockup ? null : 'Every lockup is off'} onClick={() => void ex.copySvg('SVG', async () => markup())} />
       </div>
       <LastExport last={v.last} />
     </InspectorGroup>

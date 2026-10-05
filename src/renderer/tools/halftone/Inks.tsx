@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { INKS } from '../../../shared/palette/inks.ts';
-import { ColorField, ConfirmInline, FieldError, Icon, IconButton, InspectorGroup, menu, NumberField, Segmented, SwatchStrip, TextInput, Toggle, useDocColour, useDocNumber, type MenuItem } from '../../ui/index.ts';
+import { ColorField, ConfirmInline, FieldError, Icon, IconButton, InfoTip, InspectorGroup, menu, NumberField, Segmented, SwatchStrip, TextInput, Toggle, useDocColour, useDocNumber, type MenuItem } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { plural } from '../common/names.ts';
 import { paletteMenu, useReadAhead } from '../common/palettes.ts';
@@ -152,10 +152,10 @@ function InkEditor({ doc, d, ink }: { doc: Doc; d: HalftoneDoc; ink: Ink }) {
       <div className={i.row}>
         <ColorField {...colour} name={ink.name} className={i.grow} />
         <IconButton icon="format_paint" label="Use an ink from Riso, RAL, HKS or NCS" size="sm" onClick={(e) => openAt(e, inkMenu(d.inksFrom, swap))} />
+        {ink.process && <InfoTip text="Its colour changes only the view and the PNG; the separation stays CMYK." />}
       </div>
       {!ink.process && <TextInput label="Name" value={ink.name} validate={(v) => (v.trim() ? null : 'An ink needs a name: it names its layer and plate.')} onCommit={(v) => doc.transact(`Rename ${ink.name}`, (x) => mapInk(x, ink.id, (k) => ({ ...k, name: v.trim() })))} />}
       {!ink.process && <OpaqueSwitch doc={doc} d={d} ink={ink} />}
-      {ink.process && <p className={i.note}>Its colour changes only the view and the PNG; the separation stays CMYK.</p>}
       <div className={i.group}>
         <div className={s.curveHead}>
           <span className="lbl">Transfer curve</span>
@@ -183,11 +183,9 @@ function OpaqueSwitch({ doc, d, ink }: { doc: Doc; d: HalftoneDoc; ink: Ink }) {
   const knockout = overlapOf(d) === 'knockout';
   const on = opaqueOf(ink);
   return (
-    <div className={i.group}>
+    <div className={i.row}>
       <Toggle label="Opaque" checked={knockout || on} disabled={knockout} onChange={(opaque) => doc.transact(opaque ? `Make ${ink.name} opaque` : `Make ${ink.name} transparent`, (x) => mapInk(x, ink.id, (k) => ({ ...k, opaque })))} />
-      <p className={i.note}>
-        {knockout ? 'Knocked out, every ink covers what is under it.' : on ? 'It covers what is under it, as white or screen-print ink does.' : 'It multiplies with what is under it, as transparent ink does.'}
-      </p>
+      <InfoTip text={knockout ? 'Knocked out, every ink covers what is under it.' : on ? 'It covers what is under it, as white or screen-print ink does.' : 'It multiplies with what is under it, as transparent ink does.'} />
     </div>
   );
 }
@@ -251,14 +249,18 @@ export function InksModule({ doc, d, plateOf }: { doc: Doc; d: HalftoneDoc; plat
         </div>
         {shared && (
           <p className={i.warn} role="status">
-            {shared[0].name} and {shared[1].name} are on the same screen, so their dots print on top of each other. Turn one of them by 15° or 30°.
+            {shared[0].name} and {shared[1].name} share a screen angle, so their dots print on top of each other. Turn one by 15° or 30°.
           </p>
         )}
         <div className={cx(i.group, i.rule)}>
-          <Segmented label="Overlap" options={OVERLAPS} value={overlap} disabled={!spot} onChange={(o) => doc.transact(o === 'knockout' ? 'Knock out under each ink' : 'Overprint the inks', (x) => ({ ...x, overlap: o }))} />
-          <p className={i.note}>
-            {!spot ? 'CMYK always overprints: it builds its colours that way.' : overlap === 'overprint' ? `Where inks meet they multiply, as transparent ink does.${d.inks.some((k) => k.visible && opaqueOf(k)) ? ' An opaque ink covers what is under it.' : ''}` : 'Each ink clears the ones before it, and its plate is cut to match.'}
-          </p>
+          <Segmented
+            label="Overlap"
+            info={!spot ? 'CMYK always overprints: it builds its colours that way.' : overlap === 'overprint' ? `Where inks meet they multiply, as transparent ink does.${d.inks.some((k) => k.visible && opaqueOf(k)) ? ' An opaque ink covers what is under it.' : ''}` : 'Each ink clears the ones before it, and its plate is cut to match.'}
+            options={OVERLAPS}
+            value={overlap}
+            disabled={!spot}
+            onChange={(o) => doc.transact(o === 'knockout' ? 'Knock out under each ink' : 'Overprint the inks', (x) => ({ ...x, overlap: o }))}
+          />
         </div>
       </div>
     </InspectorGroup>

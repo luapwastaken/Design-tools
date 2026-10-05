@@ -44,20 +44,3 @@
 .here { overflow: hidden; min-width: 0; color: var(--ink); font-weight: 500; text-overflow: ellipsis; }
 /* hover reaches it only outside the drag region, for the full name when it's cut off */
 .crumbs .here { -webkit-app-region: no-drag; }
-
-.readout {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
-.text {
-  color: var(--ink-2);
-  font: 400 var(--fs-unit)/1 var(--font-mono);
-  font-variant-numeric: tabular-nums slashed-zero;
-  white-space: nowrap;
-}
-.readout[data-tone="live"] .text { color: var(--signal); }
-.readout[data-tone="warn"] .text { color: var(--ink); font-weight: 600; }
-.readout[data-tone="danger"] .text { color: var(--danger); font-weight: 600; }

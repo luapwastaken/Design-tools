@@ -17,8 +17,11 @@ export const CAP = 96;
 /** how much of an artboard its logo with clearspace may fill */
 const FILL = 0.9;
 
-/** artboards per row: three, or two for two and four, one for one (Fit makes up the rest) */
-export const columns = (n: number): number => (n <= 1 ? 1 : n === 2 || n === 4 ? 2 : 3);
+/**
+ * artboards per row: one for one, two otherwise. Two columns keep the board near the stage's own
+ * shape (about 3:2), so Fit fills the view instead of leaving bands above and below three across.
+ */
+export const columns = (n: number): number => (n <= 1 ? 1 : 2);
 
 /** layout units are icon heights, so a lockup's size on screen follows its ratio: the icon alone and the wordmark alone borrow the main pair's */
 export function unitRatio(d: LogoDoc, l: Lockup): number {

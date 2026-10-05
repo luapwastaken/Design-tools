@@ -6,7 +6,7 @@
 import { Fragment, useMemo, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { capBand } from '../../../shared/logo/layout.ts';
 import { sideBySide } from '../../../shared/logo/types.ts';
-import { Segmented, Toggle, Viewport, type ViewTransform } from '../../ui/index.ts';
+import { Button, menu, Toggle, Viewport, type ViewTransform } from '../../ui/index.ts';
 import { clampScale } from '../../ui/viewport.ts';
 import { cx } from '../../ui/cx.ts';
 import { select, type Doc } from './actions.ts';
@@ -25,12 +25,23 @@ const HANDLE = 9;
 /** what a handle catches: more than it shows, so a small icon's corner is easy to take */
 const HIT = 17;
 
-/** the canvas background, in the view strip: what the artboards are judged on */
+/** the canvas background, in the view strip: what the artboards are judged on, as one compact menu button */
 export const Canvas = ({ v }: { v: LogoView }) => (
-  <>
-    <span className={s.canvasLabel}>Canvas</span>
-    <Segmented options={SURROUNDS} value={v.surround} onChange={(surround) => patchView({ surround })} fit />
-  </>
+  <Button
+    size="xs"
+    variant="ghost"
+    icon="contrast"
+    onClick={(e) =>
+      menu.open(
+        e.currentTarget.getBoundingClientRect(),
+        SURROUNDS.map((o) => ({ label: o.label, checked: o.value === v.surround, onSelect: () => patchView({ surround: o.value }) })),
+        { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined },
+      )
+    }
+    tooltip="The canvas the artboards sit on"
+  >
+    Canvas: {SURROUNDS.find((o) => o.value === v.surround)?.label}
+  </Button>
 );
 
 export function Board({ doc, d, v, selected }: { doc: Doc; d: LogoDoc; v: LogoView; selected: Cell['l']['kind'] }) {

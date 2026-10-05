@@ -37,10 +37,13 @@
 .titleBtn:hover { background: var(--well-hover); }
 .rename { flex: 0 1 280px; min-width: 140px; }
 .meta { color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; white-space: nowrap; }
-.where { color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-sans); white-space: nowrap; }
-/* short of room the collection goes first, then the meta: the title bar and the status bar name them too */
+.status { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-sans); white-space: nowrap; }
+.status[data-tone="live"] { color: var(--signal); }
+.status[data-tone="warn"] { color: var(--ink); font-weight: 600; }
+.status[data-tone="danger"] { color: var(--danger); font-weight: 600; }
+/* short of room the collection goes first, then the meta: the status bar names them too */
 @container docbar (max-width: 880px) {
-  .where { display: none; }
+  .status[data-tone="normal"] { display: none; }
 }
 @container docbar (max-width: 760px) {
   .meta { display: none; }

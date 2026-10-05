@@ -1,9 +1,9 @@
-// What the Export modules of Pattern, Logo, Dither, Halftone and Post FX share, so they read the same:
-// a row (what it makes, its button and, for an SVG or a PNG, a Copy beside it), the runner, and the
-// Last export line. The runner makes one export, or one copy to the clipboard, count as running work
+// What the Export groups of Pattern, Logo, Dither, Halftone and Post FX share, so they read the same:
+// the runner (the doc bar's Export calls it; the inspector group only holds the settings), the
+// progress with its Cancel, and the Last export line. The runner makes one export, or one copy to the clipboard, count as running work
 // from its first render to its last write (the quit check, the status bar), keeps the window at full
 // speed, and records the file and says so.
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useState } from 'react';
 import { copyToClipboard, exporting, leaf } from '../../lib/export.ts';
 import { ipc } from '../../shell/core/ipc.ts';
 import { cx } from '../../ui/cx.ts';
@@ -30,12 +30,6 @@ export type Exporter = ReturnType<typeof useExport>;
 /** `record` keeps the last file in the tool's view */
 export function useExport(record: (last: ExportRecord) => void) {
   const [busy, setBusy] = useState<Busy | null>(null);
-  const liveRef = useRef<HTMLDivElement>(null);
-  // its progress comes into view when it first shows: it sits under the row that was pressed
-  const showing = busy !== null && busy.done !== null;
-  useEffect(() => {
-    if (showing) liveRef.current?.scrollIntoView({ block: 'nearest' });
-  }, [showing, busy?.what]);
 
   /**
    * One piece of work from its first render to its last write, a file or the clipboard: running work
@@ -85,83 +79,20 @@ export function useExport(record: (last: ExportRecord) => void) {
     copySvg: (what: string, make: (report: Report) => Promise<string>) => copy(what, 'SVG', async (report) => ({ kind: 'svg', data: await make(report) })),
     /** a PNG's bytes to the clipboard */
     copyPng: (what: string, make: (report: Report) => Promise<ArrayBuffer>) => copy(what, 'PNG', async (report) => ({ kind: 'png', data: await make(report) })),
-    /** a row's progress, while its own export or copy runs: spread into its ExportRow */
-    live: (what: string): { live?: ReactNode; liveRef?: RefObject<HTMLDivElement | null> } =>
-      busy?.what === what && busy.done !== null
-        ? { live: <Progress label={`${busy.verb === 'copy' ? 'Copying' : 'Making'} the ${what}`} value={busy.done} detail={busy.detail} onCancel={busy.stop && (() => busy.stop!.abort())} />, liveRef }
-        : {},
   };
 }
 
-export const ExportList = ({ children }: { children: ReactNode }) => <div className={s.list}>{children}</div>;
-
-type RowProps = {
-  name: string;
-  desc: ReactNode;
-  action: ReactNode;
-  /** a CopyButton, beside the action */
-  copy?: ReactNode;
-  /** the lead row, in a well, with the module's one primary button */
-  main?: boolean;
-  /** its own settings, under the name and the button */
-  children?: ReactNode;
-  live?: ReactNode;
-  liveRef?: RefObject<HTMLDivElement | null>;
-};
-
-export function ExportRow({ name, desc, action, copy, main, children, live, liveRef }: RowProps) {
+/**
+ * The running export's progress and Cancel: pinned at the top of the inspector, outside its groups, so
+ * it stays in view whether or not the Export group is open.
+ */
+export function ExportProgress({ ex }: { ex: Exporter }) {
+  const b = ex.busy;
+  if (!b) return null;
   return (
-    <div className={cx(s.item, main && s.main)} data-row={name}>
-      <div className={s.text}>
-        <b className={s.name}>{name}</b>
-        <p className={s.desc}>{desc}</p>
-      </div>
-      {copy ? (
-        <div className={s.actions}>
-          {copy}
-          {action}
-        </div>
-      ) : (
-        action
-      )}
-      {children && <div className={s.more}>{children}</div>}
-      {live && (
-        <div ref={liveRef} className={s.live}>
-          {live}
-        </div>
-      )}
+    <div className={s.progress} data-export-progress={b.what}>
+      <Progress label={`${b.verb === 'copy' ? 'Copying' : 'Making'} the ${b.what}`} value={b.done} detail={b.detail} onCancel={b.stop && (() => b.stop!.abort())} />
     </div>
-  );
-}
-
-type ButtonProps = {
-  ex: Exporter;
-  /** the `what` its run() was given: while it runs the button reads Exporting… */
-  what: string;
-  /** the lead row's: primary and large */
-  lead?: boolean;
-  /** it writes a folder */
-  folder?: boolean;
-  /** why it can't go, as its tooltip; any text disables it */
-  why?: string | null;
-  disabled?: boolean;
-  onClick(): void;
-  /** the idle label */
-  children?: ReactNode;
-};
-
-export function ExportButton({ ex, what, lead, folder, why, disabled, onClick, children = folder ? 'Export…' : 'Export' }: ButtonProps) {
-  return (
-    <Button
-      variant={lead ? 'primary' : 'secondary'}
-      size={lead ? 'lg' : 'md'}
-      icon={folder ? 'folder_open' : 'download'}
-      disabled={disabled || !!why || ex.busy !== null}
-      tooltip={why ?? undefined}
-      onClick={onClick}
-    >
-      {ex.busy?.what === what && ex.busy.verb === 'export' ? 'Exporting…' : children}
-    </Button>
   );
 }
 
@@ -169,18 +100,16 @@ type CopyProps = {
   ex: Exporter;
   /** the `what` its copySvg or copyPng was given: while it runs the button reads Copying… */
   what: string;
-  /** beside the lead row's Export: large */
-  lead?: boolean;
   /** why it can't go, as its tooltip; any text disables it */
   why?: string | null;
   disabled?: boolean;
   onClick(): void;
 };
 
-/** Copy, beside an Export that makes the same SVG or PNG: it goes on the clipboard instead of a file */
-export function CopyButton({ ex, what, lead, why, disabled, onClick }: CopyProps) {
+/** Copy: the SVG or PNG goes on the clipboard instead of a file (a secondary button) */
+export function CopyButton({ ex, what, why, disabled, onClick }: CopyProps) {
   return (
-    <Button size={lead ? 'lg' : 'md'} icon="content_copy" disabled={disabled || !!why || ex.busy !== null} tooltip={why ?? 'Copy to the clipboard'} onClick={onClick}>
+    <Button icon="content_copy" disabled={disabled || !!why || ex.busy !== null} tooltip={why ?? 'Copy to the clipboard'} onClick={onClick}>
       {ex.busy?.what === what && ex.busy.verb === 'copy' ? 'Copying…' : 'Copy'}
     </Button>
   );

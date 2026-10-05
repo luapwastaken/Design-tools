@@ -7,7 +7,7 @@ export type MenuAction = {
   label: string;
   icon?: IconName;
   shortcut?: string;
-  /** mono caps on the right: a Send to target's use label (PALETTE, INKS) */
+  /** on the right: a Send to target's use label (PALETTE, INKS) */
   hint?: string;
   danger?: boolean;
   disabled?: boolean;

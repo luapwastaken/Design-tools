@@ -567,17 +567,30 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   clearProposals();
 }
 
-/** a tool's Export button in the row named `row`, then the file it wrote, read back through the Library (import copies it in) */
-async function toolExport(dir: string, tool: ToolId, collection: string): Promise<(row: string) => Promise<Response | null>> {
+/** the doc bar's Export button of a tool (its one primary: the inspector's Export group has no button) */
+const barExport = (tool: ToolId) => [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim() === 'Export' && shows(b));
+/** a row of the Export menu that shows, by the start of its text */
+const exportItem = (label: string) => [...document.querySelectorAll<HTMLElement>('[role="menu"] [role="menuitem"]')].find((r) => r.textContent?.trim().startsWith(label) && shows(r));
+/** open the tool's Export menu and take the row `label`; the row (null if it never showed or is off) is clicked */
+async function chooseExport(tool: ToolId, label: string): Promise<boolean> {
+  const bar = await until(() => (barExport(tool) && !(barExport(tool) as HTMLButtonElement).disabled ? barExport(tool) : null));
+  if (!bar) return false;
+  bar.click();
+  const row = await until(() => exportItem(label));
+  if (!row || row.getAttribute('aria-disabled') === 'true') return false;
+  row.click();
+  return true;
+}
+
+/** a tool's Export menu row `label`, then the file it wrote, read back through the Library (import copies it in) */
+async function toolExport(dir: string, tool: ToolId, collection: string): Promise<(label: string) => Promise<Response | null>> {
   await shell.createCollection(collection);
-  return async (row) => {
-    const button = await until(() => [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export') && !b.disabled && rowOf(b) === row));
-    if (!button) return null;
+  return async (label) => {
     const shown = toastStore.get().length;
     const idle = shell.getState().busy;
-    button.click();
+    if (!(await chooseExport(tool, label))) return null;
     // from the click, before anything is rendered: the quit check and the status bar count it
-    check(`${tool}'s ${row} export counts as running work from the moment it starts`, shell.getState().busy > idle, shell.getState().busy);
+    check(`${tool}'s ${label} export counts as running work from the moment it starts`, shell.getState().busy > idle, shell.getState().busy);
     const done = await until(() => toastStore.get().slice(shown).find((t) => t.icon === 'download'));
     const file = /^Exported (.+)\.$/.exec(String(done?.message ?? ''))?.[1];
     if (!file) return null;
@@ -593,14 +606,18 @@ async function toolExport(dir: string, tool: ToolId, collection: string): Promis
  * run never writes the system one) and what the toast said. Counts as running work like an export.
  */
 async function toolCopy(tool: ToolId, row: string): Promise<{ held: Record<string, ArrayBuffer>; said: string } | null> {
-  const button = await until(() => [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Copy') && !b.disabled && rowOf(b) === row));
-  if (!button) return null;
+  // a Copy menu row in the doc bar's Export (Logo's is a button in its Export group)
+  const button = row.startsWith('Copy')
+    ? null
+    : await until(() => [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Copy') && !b.disabled && rowOf(b) === row));
+  if (!button && !row.startsWith('Copy')) return null;
   // the same plain notice isn't shown twice while it still shows (and a test window is never focused, so none times out)
   for (const t of toastStore.get()) if (t.icon === 'content_copy') toast.dismiss(t.id);
   await sleep(LEAVE_MS + 60);
   const shown = toastStore.get().length;
   const idle = shell.getState().busy;
-  button.click();
+  if (button) button.click();
+  else if (!(await chooseExport(tool, row))) return null;
   check(`${tool}'s ${row} copy counts as running work from the moment it starts`, shell.getState().busy > idle, shell.getState().busy);
   const done = await until(() => toastStore.get().slice(shown).find((t) => t.icon === 'content_copy'), 20_000);
   return done ? { held: await api.invoke('clipboard.peek'), said: String(done.message) } : null;
@@ -691,17 +708,17 @@ async function pattern(dir: string, palette: LibraryItemRef, dt: DocController<D
 
   // the Illustrator swatch, read back from its file: every shape over an edge is on the far side too
   const exported = await toolExport(dir, 'pattern', 'Pattern out');
-  const swatch = await exported('Illustrator swatch');
+  const swatch = await exported('Illustrator swatch (SVG)');
   const swatchText = swatch && (await swatch.text());
   const svg = swatchText ? new DOMParser().parseFromString(swatchText, 'image/svg+xml').documentElement : null;
   if (!check('Export writes the Illustrator swatch', svg?.nodeName === 'svg')) return;
-  const copied = await toolCopy('pattern', 'Illustrator swatch');
+  const copied = await toolCopy('pattern', 'Copy the swatch SVG');
   check(
     'Copy puts the swatch SVG on the clipboard as text and as image/svg+xml: the file’s own markup, and it parses',
     copied && copied.said === 'Copied the SVG.' && formats(copied.held) === JSON.stringify(['text/plain', SVG_FORMAT].sort()) && utf8(copied.held['text/plain']) === swatchText && utf8(copied.held[SVG_FORMAT]) === swatchText && svgRoot(utf8(copied.held['text/plain']))?.nodeName === 'svg',
     copied && [copied.said, Object.keys(copied.held)],
   );
-  const artboardCopy = await toolCopy('pattern', 'Artboard SVG');
+  const artboardCopy = await toolCopy('pattern', 'Copy the artboard SVG');
   check('Copy on the artboard puts its SVG on the clipboard, shapes and all', artboardCopy && svgRoot(utf8(artboardCopy.held['text/plain']))?.querySelectorAll('use, path, circle, rect, g').length, artboardCopy && Object.keys(artboardCopy.held));
   const d = pd.get();
   const tile = layoutTile(d);
@@ -735,7 +752,7 @@ async function pattern(dir: string, palette: LibraryItemRef, dt: DocController<D
   pd.transact('Export in mm', (x) => withUnit(x, 'mm'));
   pd.transact('Change the artboard', (x) => ({ ...x, artboard: { w: 210 * PX_PER.mm, h: 297 * PX_PER.mm } }));
   await until(() => host('pattern')?.querySelector('input[value="210.0"]'));
-  const board = await exported('Artboard SVG');
+  const board = await exported('Artboard (SVG)');
   const boardSvg = board && new DOMParser().parseFromString(await board.text(), 'image/svg+xml').documentElement;
   check('the artboard SVG is written in mm, clipped once at its edge', boardSvg?.getAttribute('width') === '210mm' && boardSvg.getAttribute('height') === '297mm' && boardSvg.querySelectorAll('clipPath').length === 1, boardSvg?.getAttribute('width'));
 
@@ -934,13 +951,14 @@ async function logo(dir: string): Promise<void> {
   // the exports, read back from the files they wrote
   patchLogo({ mode: 'edit', lockup: 'horizontal', version: 'black', dpi: 300, scope: 'view' });
   if (!check('Logo shows its Export group', await until(() => host('logo')?.querySelector('[data-asset="SVG"]') && host('logo')?.querySelector('[data-asset="Favicon bundle"]')))) return;
-  // Export is one list of ticked assets and one primary button: each row is exported on its own here
+  // Export is one list of ticked assets and the doc bar's primary button: each row is exported on its own here
   await shell.createCollection('Logo out');
   const only = (row: string) => patchLogo({ assets: { svg: row === 'SVG', png: row === 'PNG', favicon: row === 'Favicon bundle', sheet: false } });
-  const goButton = () => host('logo')?.querySelector<HTMLButtonElement>('[data-export="go"] button');
+  // the one primary Export is the doc bar's: it makes whatever the group has ticked
+  const goButton = () => barExport('logo') as HTMLButtonElement | undefined;
   const exported = async (row: string): Promise<Response | null> => {
     only(row);
-    const button = await until(() => (goButton() && !goButton()!.disabled && /^Export/.test(goButton()!.textContent?.trim() ?? '') ? goButton() : null));
+    const button = await until(() => (goButton() && !goButton()!.disabled ? goButton() : null));
     if (!button) return null;
     const shown = toastStore.get().length;
     const idle = shell.getState().busy;
@@ -1147,7 +1165,7 @@ async function halftone(dir: string, dt: DocController<DitherDoc>): Promise<void
   // Copy PNG on clear paper (the paper left out): a PNG with alpha, clear between the dots and solid in them
   patchHalftone({ pngWidth: 360 });
   hd.transact('Paper left out', (x) => ({ ...x, paper: { ...x.paper, include: false } }));
-  const copiedDots = await toolCopy('halftone', 'PNG for screen');
+  const copiedDots = await toolCopy('halftone', 'Copy the PNG');
   const dots = await pngAlpha(copiedDots?.held['image/png']);
   check(
     'Copy puts the screen PNG on the clipboard as the PNG format and as image/png, the same bytes: RGBA, 360 px wide, clear paper and solid dots',
@@ -1157,10 +1175,9 @@ async function halftone(dir: string, dt: DocController<DitherDoc>): Promise<void
   hd.undo();
   patchHalftone({ pngWidth: 2048 });
 
-  // the separations, through the module's button; smoke runs write them into exports/halftone
-  const plates = [...(host('halftone')?.querySelectorAll('button') ?? [])].find((b) => rowOf(b) === 'Separations');
+  // the separations, through the doc bar's Export menu; smoke runs write them into exports/halftone
   const before = toastStore.get().length;
-  plates?.click();
+  await chooseExport('halftone', 'Separations');
   const done = await until(() => toastStore.get().slice(before).find((t) => t.icon === 'download'), 20_000);
   check('Separations writes a plate per visible ink into one folder', /^Exported 3 plates into /.test(String(done?.message)), done?.message);
   const plateNames = ['C Cyan', 'M Magenta', 'K Black'];
@@ -1412,7 +1429,7 @@ async function dither(dir: string): Promise<void> {
   const img = png && (await pixelsOf(await png.blob()));
   const off = img ? offBlocks(img, r!, 8) : null;
   check('pixel size 8 exports 8 px blocks: 96 × 64 px, every pixel its block’s colour in the view', off === 0, [img?.w, img?.h, off]);
-  const copiedDither = await toolCopy('dither', 'PNG');
+  const copiedDither = await toolCopy('dither', 'Copy the PNG');
   const copiedPixels = await pngAlpha(copiedDither?.held['image/png']);
   check(
     'Copy puts the PNG on the clipboard as the PNG format and as image/png: RGBA, the file’s 96 × 64 px, every pixel its block’s colour in the view',
@@ -1475,7 +1492,7 @@ async function dither(dir: string): Promise<void> {
     check('each GIF frame is that frame’s dither pixel for pixel, and no two are the same', offs.length === 6 && offs.every((o) => o === 0) && seen.size === 6, offs);
   }
   const shown0 = toastStore.get().length;
-  [...(host('dither')?.querySelectorAll('button') ?? [])].find((b) => rowOf(b) === 'PNG frames')?.click();
+  await chooseExport('dither', 'PNG frames');
   const done = await until(() => toastStore.get().slice(shown0).find((t) => t.icon === 'download'), 20_000);
   check('PNG frames writes all six into one folder', /^Exported 6 frames into /.test(String(done?.message)), done?.message);
   await shell.importFiles([1, 6].map((n) => `${dir}\\exports\\dither\\Smoke anim dither 000${n}.png`), 'Dither out');
@@ -1535,8 +1552,6 @@ async function dither(dir: string): Promise<void> {
 }
 
 const postfxDoc = () => shell.doc('postfx') as DocController<PostFxDoc>;
-/** the button of a tool's export row (the row's name is its bold text) */
-const exportRow = (tool: ToolId, row: string) => [...(host(tool)?.querySelectorAll('button') ?? [])].find((b) => !b.disabled && rowOf(b) === row && !b.textContent?.trim().endsWith('Copy'));
 
 /** an input's text as typing leaves it (React hears the input event) */
 function typeInto(el: HTMLInputElement, text: string): void {
@@ -1681,7 +1696,7 @@ async function postfx(dir: string): Promise<void> {
     big && [big.w, big.h, alphaAt(10, 10), alphaAt(900, BH - 10), alphaAt(900, 500)],
   );
 
-  const copiedFx = await toolCopy('postfx', 'PNG');
+  const copiedFx = await toolCopy('postfx', 'Copy the PNG');
   const fx = await pngAlpha(copiedFx?.held['image/png']);
   check(
     'Copy puts the Post FX PNG on the clipboard as the PNG format and as image/png: RGBA, the full 1800 × 1000 px, its alpha kept (clear, half clear, solid)',
@@ -1713,7 +1728,7 @@ async function postfx(dir: string): Promise<void> {
     gifInfo && [gifInfo.frames.map((f) => f.delay), gifInfo.loop],
   );
   const asked = toastStore.get().length;
-  exportRow('postfx', 'PNG sequence')?.click();
+  await chooseExport('postfx', 'PNG sequence');
   const wrote = await until(() => toastStore.get().slice(asked).find((t) => t.icon === 'download'), 20_000);
   check('PNG sequence writes all 10 frames into one folder', /^Exported 10 frames into /.test(String(wrote?.message)), wrote?.message);
   const numbered = (name: string, n: number) => `${name} ${String(n).padStart(4, '0')}`;
@@ -1850,7 +1865,7 @@ async function postfx(dir: string): Promise<void> {
   check('the doc bar’s Export lists the GIF, the PNG and the PNG sequence for a clip', !!clipFormats && ['GIF', 'PNG sequence'].every((n) => clipFormats.some((l) => l.includes(n))), clipFormats);
   press('Escape');
   const before = toastStore.get().length;
-  exportRow('postfx', 'PNG sequence')?.click();
+  await chooseExport('postfx', 'PNG sequence');
   const clipDone = await until(() => toastStore.get().slice(before).find((t) => t.icon === 'download'), 60_000);
   check(`its PNG sequence has one file for each of its ${N} frames`, new RegExp(`^Exported ${N} frames into `).test(String(clipDone?.message)), clipDone?.message);
   const names = Array.from({ length: N }, (_, i) => numbered('smoke clip fx', i + 1));

@@ -4,7 +4,7 @@
 import { useEffect, useState, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { cssColor, toHex } from '../../../shared/color/index.ts';
 import { shell } from '../../shell/core/index.ts';
-import { Button, Icon, IconButton, InfoTip, InspectorGroup, menu, NumberField, SwatchStrip, Tooltip, type MenuItem } from '../../ui/index.ts';
+import { Button, Icon, IconButton, InfoTip, InspectorGroup, InspectorRow, menu, NumberField, SwatchStrip, Tooltip, type MenuItem } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { plural } from '../common/names.ts';
 import { libraryPalettes, paletteMenu, useReadAhead } from '../common/palettes.ts';
@@ -127,12 +127,12 @@ export function PaletteModule({ doc, d, frame }: { doc: Doc; d: DitherDoc; frame
             })}
           </div>
         </div>
-        <div className={cx(i.row, i.rule)}>
-          <NumberField label="Colours" min={LIMIT.extract[0]} max={LIMIT.extract[1]} width={120} value={v.extract} onChange={(extract) => patchView({ extract })} disabled={!d.source} />
+        <InspectorRow label="Colours" info={d.source ? `The ${v.extract} colours that best cover ${d.source.name}, dark to light.` : 'Open an image to take its colours.'}>
+          <NumberField label="Colours" hideLabel min={LIMIT.extract[0]} max={LIMIT.extract[1]} width={80} value={v.extract} onChange={(extract) => patchView({ extract })} disabled={!d.source} />
           <Button icon="colorize" disabled={!d.source} onClick={() => void extract(doc, frame, v.extract)} tooltip={d.source ? `The ${v.extract} colours that best cover ${d.source.name}, dark to light` : 'Open an image first'}>
             Take from the image
           </Button>
-        </div>
+        </InspectorRow>
       </div>
     </InspectorGroup>
   );

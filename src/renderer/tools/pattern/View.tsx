@@ -5,6 +5,7 @@ import { layoutTile } from '../../../shared/pattern/layout.ts';
 import { previewSvg } from '../../../shared/pattern/svg.ts';
 import { isTextField } from '../../shell/core/keys.ts';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
+import { ExportProgress } from '../common/Export.tsx';
 import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import { addShapes, type Doc } from './actions.ts';
 import { PatternCanvas } from './Canvas.tsx';
@@ -55,6 +56,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
       <InspectorColumn>
+        <ExportProgress ex={out.ex} />
         <Shapes doc={doc} d={d} counts={counts} />
         <ArrangementModule doc={doc} d={d} tile={tile} />
         <SpacingModule doc={doc} d={d} tile={tile} />

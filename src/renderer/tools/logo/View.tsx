@@ -4,7 +4,8 @@
 import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from 'react';
 import { isTextField } from '../../shell/core/keys.ts';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
-import { InspectorGroup, Toggle, ViewStrip } from '../../ui/index.ts';
+import { Toggle, ViewStrip } from '../../ui/index.ts';
+import { ExportProgress } from '../common/Export.tsx';
 import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import { editedKind, takeMarkup, type Doc } from './actions.ts';
 import { Board, Canvas } from './Board.tsx';
@@ -97,10 +98,8 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
       <InspectorColumn>
-        {empty ? (
-          // nothing to set yet: the groups are there, shut, so the shape of the tool shows
-          ['Parts', 'Lockups', 'Proportions', 'Versions', 'Clearspace', 'Small sizes', 'Export'].map((title) => <InspectorGroup key={title} title={title} defaultOpen={false} />)
-        ) : (
+        <ExportProgress ex={out.ex} />
+        {empty ? null : (
           <>
             <Parts doc={doc} d={d} />
             <LockupsGroup doc={doc} d={d} edited={kind} />

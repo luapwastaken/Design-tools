@@ -4,8 +4,6 @@
 .main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sub { overflow: hidden; padding-left: 24px; color: var(--ink-3); font-size: var(--fs-meta); text-overflow: ellipsis; white-space: nowrap; }
 .right { flex: none; color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; white-space: nowrap; }
-.go { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
-.go > :first-child { width: 100%; }
-.copy { display: flex; }
+.copy { display: flex; margin-top: 6px; }
 .copy > * { flex: 1; }
 .danger { color: var(--danger); }

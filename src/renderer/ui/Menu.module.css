@@ -46,7 +46,7 @@
 .hint {
   padding-left: 12px;
   color: var(--ink-3);
-  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font: 400 var(--fs-label)/1 var(--font-sans);
 }
 .row kbd {
   padding-left: 12px;

@@ -1,6 +1,6 @@
 // Paper (spec §3): the sheet the inks print on, and whether the exports carry it or leave it clear.
 import { toHex } from '../../../shared/color/index.ts';
-import { ColorField, InspectorGroup, Toggle, useDocColour } from '../../ui/index.ts';
+import { ColorField, InfoTip, InspectorGroup, Toggle, useDocColour } from '../../ui/index.ts';
 import { displayName } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { BONE, opaqueOf, overlapOf, type HalftoneDoc } from './doc.ts';
@@ -20,12 +20,13 @@ export function PaperModule({ doc, d }: { doc: Doc; d: HalftoneDoc }) {
         <ColorField {...paper} name={name} />
         {dark && (
           <p className={s.note} role="status">
-            Transparent inks only darken the sheet, so on paper this dark the print comes out nearly black.{d.mode === 'spot' ? ' An opaque ink covers it: turn on Opaque in a light ink’s settings (white inks have it on already).' : ''}
+            On paper this dark, transparent inks print nearly black.
+            <InfoTip text={`Transparent inks only darken the sheet.${d.mode === 'spot' ? ' An opaque ink covers it: turn on Opaque in a light ink’s settings (white inks have it on already).' : ''}`} />
           </p>
         )}
-        <div className={s.group}>
+        <div className={s.row}>
           <Toggle label="In the exports" checked={d.paper.include} onChange={(include) => doc.transact(include ? 'Put the paper in the exports' : 'Leave the paper out of the exports', (x) => ({ ...x, paper: { ...x.paper, include } }))} />
-          <p className={s.note}>{d.paper.include ? 'Under the SVG (a preview-only layer) and the PNG; never on the plates.' : 'The SVG and PNG are clear round the dots; the view still shows the paper.'}</p>
+          <InfoTip text={d.paper.include ? 'Under the SVG (a preview-only layer) and the PNG; never on the plates.' : 'The SVG and PNG are clear round the dots; the view still shows the paper.'} />
         </div>
       </div>
     </InspectorGroup>

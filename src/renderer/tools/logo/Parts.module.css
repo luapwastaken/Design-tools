@@ -21,4 +21,4 @@
 .guide { fill: none; stroke: var(--cross); stroke-width: 1; stroke-dasharray: 3 2; }
 .ident { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .role { font: 500 var(--fs-base)/1.1 var(--font-sans); }
-.name { overflow: hidden; color: var(--ink-3); font: 400 var(--fs-unit)/1.1 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.name { overflow: hidden; color: var(--ink-3); font: 400 var(--fs-label)/1.1 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }

@@ -6,13 +6,14 @@ import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties }
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { Icon } from '../../ui/index.ts';
 import { useHeld } from '../common/held.ts';
+import { ExportProgress } from '../common/Export.tsx';
 import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import type { Doc } from './actions.ts';
 import { AlgorithmModule } from './Algorithm.tsx';
 import { DitherCanvas } from './Canvas.tsx';
 import { DitherBar } from './DitherBar.tsx';
 import { frameMs, isAnimated, used, workSize, type DitherDoc } from './doc.ts';
-import { ExportModule } from './Export.tsx';
+import { ExportModule, useDitherExport } from './Export.tsx';
 import { LookModule } from './Look.tsx';
 import { PaletteModule } from './Palette.tsx';
 import { dithered, fillFrom, ready, releaseDither, Superseded, type Result } from './pipeline.ts';
@@ -113,6 +114,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const { result, busy, error } = useDither(d, frame, active);
   const slow = useHeld(busy);
   usePlayback(d, active);
+  const out = useDitherExport(d, v, frame, !!result && !error, error);
 
   // a new source starts paused on its first frame, and at Fit: the last image's centre means nothing
   // on it (the restored one keeps its view)
@@ -132,7 +134,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   return (
     <div className={s.view} style={{ '--insp': `${v.inspector}px` } as CSSProperties}>
       <div className={s.work} data-animated={isAnimated(d) ? '' : undefined}>
-        <DitherBar doc={doc} d={d} v={v} />
+        <DitherBar doc={doc} d={d} v={v} out={out} />
         {d.source ? (
           <div className={s.stage}>
             <DitherCanvas d={d} v={v} frame={frame} result={result} busy={slow} />
@@ -150,12 +152,13 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
       <InspectorColumn>
+        <ExportProgress ex={out.ex} />
         <LookModule doc={doc} d={d} />
         <PixelModule doc={doc} d={d} />
         <AlgorithmModule doc={doc} d={d} />
         <PaletteModule doc={doc} d={d} frame={frame} />
         <ToneModule doc={doc} d={d} hist={result?.hist ?? null} />
-        <ExportModule d={d} v={v} frame={frame} ready={!!result && !error} error={error} />
+        <ExportModule d={d} v={v} frame={frame} out={out} />
       </InspectorColumn>
     </div>
   );

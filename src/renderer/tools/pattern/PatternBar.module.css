@@ -1,0 +1,3 @@
+/* Surprise me's result until it is kept: periwinkle marks what the machine proposed */
+.proposal { display: inline-flex; align-items: center; gap: 6px; padding: 0 4px 0 8px; height: 26px; border-radius: var(--r-ctl); background: var(--agent-soft); box-shadow: inset 0 0 0 1px var(--agent-line); }
+.mark { display: inline-flex; align-items: center; gap: 5px; color: var(--agent-ink); font: 500 var(--fs-label)/1 var(--font-sans); }

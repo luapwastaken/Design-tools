@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent, type ReactNode, type Ref } from 'react';
+import { useRef, useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent, type ReactNode, type Ref } from 'react';
 import type { DocController } from '../../../shared/doc-api.ts';
 import type { ToolId } from '../../../shared/types.ts';
 import { shell, useShell } from '../../shell/core/index.ts';
@@ -41,6 +41,7 @@ export function DocBar({ tool, doc, title, meta, actions, modes, send, exportBut
     <div ref={ref} className={s.docbar}>
       <div className={s.left}>
         {title === undefined ? <DocHead tool={tool} doc={doc} /> : <DocTitle>{title}</DocTitle>}
+        <DocStatus tool={tool} />
         {meta !== undefined && meta !== null && meta !== false && <span className={s.meta}>{meta}</span>}
         {actions}
       </div>
@@ -61,6 +62,20 @@ export function ExportButton({ onClick, disabled, tooltip, ref }: { onClick?(e: 
       Export
     </Button>
   );
+}
+
+/**
+ * The doc bar's one Export for a tool with several formats: the primary button, opening a menu of them.
+ * The formats' sizes and options live in the inspector's Export group; the menu only chooses.
+ * `items` is read when it opens, so a disabled row says why from the state at that moment.
+ */
+export function ExportMenu({ items, disabled, tooltip }: { items(): MenuItem[]; disabled?: boolean; tooltip?: string }) {
+  const at = useRef<HTMLButtonElement>(null);
+  const open = (e: MouseEvent<HTMLButtonElement>) => {
+    const b = at.current;
+    if (b) menu.open(b.getBoundingClientRect(), items(), { owner: b, initial: e.detail === 0 ? 0 : undefined });
+  };
+  return <ExportButton ref={at} disabled={disabled} tooltip={tooltip} onClick={open} />;
 }
 
 /** `off`: why the tab can't open yet (its tooltip) */
@@ -137,7 +152,6 @@ export const DocTitle = ({ children, onRename }: { children: string; onRename?: 
 export function DocHead({ tool, doc }: { tool: ToolId; doc: DocController<unknown> }) {
   const name = useShell((st) => st.docNames[tool]) ?? 'Untitled';
   const source = useSyncExternalStore(doc.subscribe, () => doc.source());
-  const collection = source ? source.collection : null;
   // the Library's rename, from the bar: the item the document is, once it has one
   const ref = useShell((st) => (source ? st.library?.collections.flatMap((c) => c.items).find((x) => x.id === source.itemId) : undefined));
   const [renaming, setRenaming] = useState(false);
@@ -159,8 +173,25 @@ export function DocHead({ tool, doc }: { tool: ToolId; doc: DocController<unknow
       ) : (
         <DocTitle onRename={ref ? () => setRenaming(true) : undefined}>{name}</DocTitle>
       )}
-      {collection !== null && <span className={s.where}>{collection || 'Library'} ·</span>}
     </>
+  );
+}
+
+/** Where the document stands, quiet sentence case after the title ("Scratch · saved 03:46"); trouble gets its actions. */
+export function DocStatus({ tool }: { tool: ToolId }) {
+  useShell((st) => st.docStates[tool]);
+  useShell((st) => st.owners);
+  const r = shell.readout(tool);
+  if (!r.text) return null;
+  return (
+    <span className={s.status} data-tone={r.tone} role="status">
+      <span className={s.statusText}>{r.text}</span>
+      {r.actions.map((a) => (
+        <Button key={a.label} size="xs" onClick={a.run}>
+          {a.label}
+        </Button>
+      ))}
+    </span>
   );
 }
 

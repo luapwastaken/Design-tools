@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSPro
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { Icon } from '../../ui/index.ts';
 import { useHeld } from '../common/held.ts';
+import { ExportProgress } from '../common/Export.tsx';
 import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import type { Doc } from './actions.ts';
 import { PostFxCanvas } from './Canvas.tsx';
@@ -144,6 +145,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
       <InspectorColumn>
+        <ExportProgress ex={out.ex} />
         <StackModule doc={doc} d={d} t={t} />
         <PresetsModule doc={doc} d={d} />
         <ShareModule doc={doc} d={d} />

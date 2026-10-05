@@ -1,13 +1,15 @@
 // Export (spec §3): the PNG at full resolution with its transparency, and for a clip, a GIF or a
 // loop, a GIF and a folder of numbered PNGs through the shared animated path. Every file is the
 // stack run at full resolution on the frame it names, as the preview runs it. The doc bar's Export opens
-// a menu of them; the inspector's Export group holds the same rows with their sizes and, while one is
-// made, its progress under its own row, in view, with its Cancel.
+// a menu of them; the inspector's Export group says what each makes, and the running one's progress
+// and Cancel are pinned over the inspector (ExportProgress).
 import { MAX_FRAMES } from '../../lib/frames.ts';
 import { saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
-import { InspectorGroup } from '../../ui/index.ts';
-import { CopyButton, ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
+import { cx } from '../../ui/cx.ts';
+import { InspectorGroup, InspectorRow } from '../../ui/index.ts';
+import s from './Export.module.css';
+import { LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx, plural } from '../common/names.ts';
 import { isStateful, RUN_IN, type PostFxDoc, type Timeline } from './doc.ts';
 import { framesTo, pngBlob, sizeLimit } from './exports.ts';
@@ -21,7 +23,7 @@ const GIF_LIMIT = 1.5e9;
 const size = (bytes: number) => (bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${Math.max(1, Math.round(bytes / 1e6))} MB`);
 
 /**
- * The exports, made once so the doc bar's menu and the inspector's rows share one runner and one progress.
+ * The exports, made once: the doc bar's menu runs them, the inspector shows their progress.
  * `error`: why the preview can't be made, which every export waits on.
  */
 export function usePostFxExport(d: PostFxDoc, t: Timeline, error: string | null) {
@@ -69,46 +71,38 @@ export const exportWhy = (out: PostFxExport): string | null => out.big ?? out.no
 
 export function ExportModule({ d, t, out }: { d: PostFxDoc; t: Timeline; out: PostFxExport }) {
   const v = useView();
-  const { ex, anim, none, big, gifWhy, gifBytes, png, frames, copyPng } = out;
+  const { anim, big, gifWhy, gifBytes } = out;
   const src = d.source;
-  const pass = `${plural(t.count, 'frame')} looping every ${t.seconds.toFixed(2)} s`;
   const dim = src ? fmtPx(src.w, src.h) : '';
+  const problem = big ?? gifWhy;
 
   return (
     <InspectorGroup id="postfx.export" title="Export" meta={src ? dim : undefined}>
-      <ExportList>
-        {anim && (
-          <ExportRow
-            main
-            name="GIF"
-            desc={
-              gifWhy ??
-              big ??
-              `${pass}, timed so the loop is exact. 256 colours a frame; transparency is on or off. Up to about ${size(gifBytes)}${gifBytes > GIF_LIMIT ? `, which is more than a GIF can hold here: export a PNG sequence` : ''}.`
-            }
-            action={<ExportButton ex={ex} what="GIF" lead why={gifWhy ?? big ?? none} onClick={() => void frames('gif')} />}
-            {...ex.live('GIF')}
-          />
-        )}
-
-        <ExportRow
-          main={!anim}
-          name="PNG"
-          desc={big ?? (src ? `${anim ? 'The frame on screen, at' : 'At'} full resolution, ${dim}, with its transparency${isStateful(d) ? `, drawn after the ${RUN_IN} frames before it` : ''}.` : 'Open an image, a GIF or a clip to export it.')}
-          action={<ExportButton ex={ex} what="PNG" lead={!anim} why={big ?? none} onClick={() => void png()} />}
-          copy={<CopyButton ex={ex} what="PNG" lead={!anim} why={big ?? none} onClick={() => void copyPng()} />}
-          {...ex.live('PNG')}
-        />
-
-        {anim && (
-          <ExportRow
-            name="PNG sequence"
-            desc={big ?? `${plural(t.count, 'numbered PNG')} into one folder, full resolution with transparency, for After Effects.`}
-            action={<ExportButton ex={ex} what="frames" folder why={big ?? none} onClick={() => void frames('folder')} />}
-            {...ex.live('frames')}
-          />
-        )}
-      </ExportList>
+      {!src ? (
+        <span className="lbl">Open an image, a GIF or a clip to export it.</span>
+      ) : (
+        <>
+          <InspectorRow label="PNG" info={`${anim ? 'The frame on screen, at' : 'At'} full resolution with its transparency${isStateful(d) ? `, drawn after the ${RUN_IN} frames before it` : ''}.`}>
+            <span className={cx('val', s.val)}>{dim}</span>
+          </InspectorRow>
+          {anim && (
+            <>
+              <InspectorRow
+                label="GIF"
+                info={`The loop timed so it is exact: 256 colours a frame, transparency on or off. Up to about ${size(gifBytes)}${gifBytes > GIF_LIMIT ? ', which is more than a GIF can hold here: export a PNG sequence' : ''}.`}
+              >
+                <span className={cx('val', s.val)}>
+                  {plural(t.count, 'frame')} · {t.seconds.toFixed(2)} s loop
+                </span>
+              </InspectorRow>
+              <InspectorRow label="PNG sequence" info="Numbered PNGs into one folder, full resolution with transparency, for After Effects.">
+                <span className={cx('val', s.val)}>{plural(t.count, 'file')}</span>
+              </InspectorRow>
+            </>
+          )}
+          {problem && <span className={cx('lbl', s.danger)}>{problem}</span>}
+        </>
+      )}
       <LastExport last={v.last} />
     </InspectorGroup>
   );

@@ -4,9 +4,9 @@ import { artboardProblem, artboardSvg, tileSvg } from '../../../shared/pattern/s
 import type { Tile } from '../../../shared/pattern/types.ts';
 import { saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
-import { InfoTip, InspectorGroup, NumberField, Segmented, useDocNumber } from '../../ui/index.ts';
+import { InspectorGroup, InspectorRow, NumberField, Segmented, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { CopyButton, ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
+import { LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { LIMIT, PX_PER, sideRange, UNIT_STEP, withUnit, type PatternDoc, type Unit } from './doc.ts';
@@ -68,7 +68,7 @@ export function usePatternExport(doc: Doc, d: PatternDoc, tile: Tile, v: Pattern
 export type PatternExport = ReturnType<typeof usePatternExport>;
 
 export function ExportModule({ doc, d, tile, v, out }: { doc: Doc; d: PatternDoc; tile: Tile; v: PatternView; out: PatternExport }) {
-  const { ex, pngPx, boardProblem, pngProblem, swatch, artboard, png, copySwatch, copyArtboard } = out;
+  const { pngPx, boardProblem, pngProblem } = out;
   const unit = d.exportUnit;
   const [lo, hi] = sideRange(unit);
   // the artboard is px in the document; its fields are in the export unit
@@ -77,49 +77,30 @@ export function ExportModule({ doc, d, tile, v, out }: { doc: Doc; d: PatternDoc
   const dpi = useDocNumber(doc, { label: 'Change the DPI', key: 'dpi', get: (x) => x.dpi, set: (x, n) => ({ ...x, dpi: n }) });
 
   return (
-    <InspectorGroup id="pattern.export" title="Export" actions={<Segmented mono fit options={UNITS} value={unit} onChange={(u) => doc.transact(`Export in ${u}`, (x) => withUnit(x, u))} className={s.units} />}>
-      <ExportList>
-        <ExportRow
-          main
-          name="Illustrator swatch"
-          desc="One tile with its offsets baked in. Drag it into the Swatches panel and it repeats exactly."
-          action={<ExportButton ex={ex} what="swatch" lead onClick={() => void swatch()} />}
-          copy={<CopyButton ex={ex} what="swatch" lead onClick={() => void copySwatch()} />}
-        >
-          <span className="lbl">
-            Tile {inUnit(tile.width, unit)} × {inUnit(tile.height, unit)} {unit}
-            {unit === 'px' && <InfoTip text="Illustrator counts 72 px to the inch, this tool 96: a px file keeps its pixel size there, while mm and in keep their size on paper." />}
-          </span>
-        </ExportRow>
-
-        <ExportRow
-          name="Artboard SVG"
-          desc="A finished artboard of real vector shapes, clipped at its edge. The view shows it."
-          action={<ExportButton ex={ex} what="artboard" why={boardProblem} onClick={() => void artboard()} />}
-          copy={<CopyButton ex={ex} what="artboard" why={boardProblem} onClick={() => void copyArtboard()} />}
-        >
-          <div className={i.pair}>
-            <NumberField label="W" min={lo} max={hi} step={UNIT_STEP[unit]} unit={unit} {...aw} />
-            <NumberField label="H" min={lo} max={hi} step={UNIT_STEP[unit]} unit={unit} {...ah} />
-          </div>
-          {boardProblem && <span className={cx('lbl', s.danger)}>Too many shapes for one file</span>}
-        </ExportRow>
-
-        <ExportRow
-          name="PNG"
-          desc="Pixels at the DPI, with the DPI written into the file so it opens at its size."
-          action={<ExportButton ex={ex} what="PNG" why={pngProblem} onClick={() => void png()} />}
-        >
-          <div className={i.pair}>
-            <Segmented options={PNGS} value={v.png} onChange={(png) => patchView({ png })} />
-            <NumberField label="DPI" min={LIMIT.dpi[0]} max={LIMIT.dpi[1]} {...dpi} />
-          </div>
-          <span className={cx('lbl', pngProblem && s.danger)}>
-            {fmtPx(pngPx.w, pngPx.h)}
-            {pngProblem ? ' · too big' : ''}
-          </span>
-        </ExportRow>
-      </ExportList>
+    <InspectorGroup id="pattern.export" title="Export" meta={`${inUnit(tile.width, unit)} × ${inUnit(tile.height, unit)} ${unit}`} actions={<Segmented mono fit options={UNITS} value={unit} onChange={(u) => doc.transact(`Export in ${u}`, (x) => withUnit(x, u))} className={s.units} />}>
+      <InspectorRow
+        label="Swatch"
+        info={`One tile with its offsets baked in: drag it into Illustrator's Swatches panel and it repeats exactly.${unit === 'px' ? ' Illustrator counts 72 px to the inch, this tool 96: a px file keeps its pixel size there, while mm and in keep their size on paper.' : ''}`}
+      >
+        <span className={cx('val', i.dim)}>
+          {inUnit(tile.width, unit)} × {inUnit(tile.height, unit)} {unit}
+        </span>
+      </InspectorRow>
+      <InspectorRow label="Artboard" info="The artboard SVG is real vector shapes, clipped at its edge, as the view shows it." pair>
+        <NumberField label="Width" hideLabel min={lo} max={hi} step={UNIT_STEP[unit]} unit={unit} {...aw} />
+        <NumberField label="Height" hideLabel min={lo} max={hi} step={UNIT_STEP[unit]} unit={unit} {...ah} />
+      </InspectorRow>
+      {boardProblem && <span className={cx('lbl', s.danger)}>Too many shapes for one artboard file</span>}
+      <InspectorRow label="PNG of" info="The PNG is written at the DPI, with the DPI in the file so it opens at its size.">
+        <Segmented fit options={PNGS} value={v.png} onChange={(png) => patchView({ png })} />
+      </InspectorRow>
+      <InspectorRow label="Resolution" pair>
+        <NumberField label="DPI" hideLabel min={LIMIT.dpi[0]} max={LIMIT.dpi[1]} unit="dpi" {...dpi} />
+        <span className={cx('val', i.dim, pngProblem && s.danger)}>
+          {fmtPx(pngPx.w, pngPx.h)}
+          {pngProblem ? ' · too big' : ''}
+        </span>
+      </InspectorRow>
       <LastExport last={v.last} />
     </InspectorGroup>
   );

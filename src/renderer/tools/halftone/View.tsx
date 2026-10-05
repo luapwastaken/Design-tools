@@ -5,10 +5,11 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties 
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { Icon } from '../../ui/index.ts';
 import { useHeld } from '../common/held.ts';
+import { ExportProgress } from '../common/Export.tsx';
 import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import type { Doc } from './actions.ts';
 import { HalftoneCanvas } from './Canvas.tsx';
-import { ExportModule } from './Export.tsx';
+import { ExportModule, useHalftoneExport } from './Export.tsx';
 import { FeelModule } from './Feel.tsx';
 import { HalftoneBar } from './HalftoneBar.tsx';
 import { InksModule, type PlateOf } from './Inks.tsx';
@@ -84,6 +85,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const shownKey = d.inks.map((i) => `${i.id}:${i.visible}`).join();
   const sum = useMemo(() => (screened ? totals(screened, d) : null), [screened, shownKey]);
   const fm = d.screen.shape === 'stochastic';
+  const out = useHalftoneExport(d, v, screened, screenError);
 
   useEffect(() => {
     status.set(d.source ? { dots: sum?.dots ?? 0, about: !!screened && !screened.held, fm: fm ? d.size.dpi : null, ms: screened?.ms ?? 0, busy: !error && (busy || !screened), error: !!error } : null);
@@ -100,7 +102,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   return (
     <div className={s.view} style={{ '--insp': `${v.inspector}px` } as CSSProperties}>
       <div className={s.work}>
-        <HalftoneBar doc={doc} d={d} v={v} />
+        <HalftoneBar doc={doc} d={d} v={v} out={out} />
         {d.source ? (
           <div className={s.stage}>
             <HalftoneCanvas d={d} v={v} screened={screened} dots={sum?.dots ?? 0} stats={sum?.stats ?? null} busy={slow} active={active} onDrawError={setDrawError} />
@@ -117,6 +119,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
       <InspectorColumn>
+        <ExportProgress ex={out.ex} />
         <OutputModule doc={doc} d={d} />
         <ScreenModule doc={doc} d={d} />
         <InksModule doc={doc} d={d} plateOf={plateOf} />
@@ -124,7 +127,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         <PaperModule doc={doc} d={d} />
         <ToneModule doc={doc} d={d} hist={screened?.hist ?? null} />
         <FeelModule doc={doc} d={d} />
-        <ExportModule d={d} v={v} screened={screened} error={screenError} />
+        <ExportModule d={d} v={v} screened={screened} out={out} />
       </InspectorColumn>
     </div>
   );

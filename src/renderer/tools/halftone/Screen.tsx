@@ -90,7 +90,7 @@ export function ScreenModule({ doc, d }: { doc: Doc; d: HalftoneDoc }) {
               </>
             )}
           </p>
-          {!fm && cellPx < 4 && <p className={i.warn}>Under 4 printer pixels a cell: at {d.size.dpi} dpi the plates can't draw {d.screen.lpi} lpi dots cleanly. Raise the DPI or lower the frequency.</p>}
+          {!fm && cellPx < 4 && <p className={i.warn}>Cells under 4 printer pixels draw rough dots: raise the DPI or lower the frequency.</p>}
         </div>
         <div className={i.group}>
           <Slider label="Min dot" info="The smallest dot a press holds; FM dots are all the smallest size, so this is for cell shapes." min={0} max={LIMIT.minDot[1] * 100} step={0.5} unit="%" disabled={fm} {...minDot} />

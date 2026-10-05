@@ -3,7 +3,7 @@
 // through the same engine the image goes through.
 import { useMemo, useRef, useState, type MouseEvent } from 'react';
 import { ALGORITHMS, type Algorithm } from '../../../shared/dither/algorithms.ts';
-import { Icon, IconButton, InspectorGroup, menu, NumberField, Slider, Toggle, useDocNumber, type MenuItem } from '../../ui/index.ts';
+import { Icon, IconButton, InspectorGroup, InspectorRow, menu, NumberField, Slider, Toggle, useDocNumber, type MenuItem } from '../../ui/index.ts';
 import { useWidth } from '../common/useWidth.ts';
 import type { Doc } from './actions.ts';
 import { fix, LIMIT, NEUTRAL_TONE, used, type DitherDoc } from './doc.ts';
@@ -84,36 +84,37 @@ export function AlgorithmModule({ doc, d }: { doc: Doc; d: DitherDoc }) {
     <InspectorGroup id="dither.algorithm" title="Algorithm" meta={FAMILY[a.group]}>
       <div className={i.stack}>
         <div className={i.group}>
-          <button
-            ref={button}
-            type="button"
-            className={s.pick}
-            data-state={isOpen ? 'open' : undefined}
-            aria-haspopup="listbox"
-            aria-expanded={isOpen}
-            aria-label={`Algorithm: ${a.label}`}
-            onClick={open}
-            onKeyDown={(e) => {
-              if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
-              e.preventDefault();
-              button.current?.click();
-            }}
-          >
-            <span className="lbl">Algorithm</span>
-            <span className={s.value}>{a.label}</span>
-            <Icon name="unfold_more" size={16} />
-          </button>
+          <InspectorRow label="Algorithm" info={ABOUT[a.id]}>
+            <button
+              ref={button}
+              type="button"
+              className={s.pick}
+              data-state={isOpen ? 'open' : undefined}
+              aria-haspopup="listbox"
+              aria-expanded={isOpen}
+              aria-label={`Algorithm: ${a.label}`}
+              onClick={open}
+              onKeyDown={(e) => {
+                if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+                e.preventDefault();
+                button.current?.click();
+              }}
+            >
+              <span className={s.value}>{a.label}</span>
+              <Icon name="unfold_more" size={16} />
+            </button>
+          </InspectorRow>
           <RampSpecimen d={d} />
-          <p className={i.note}>{ABOUT[a.id] ?? ''}</p>
         </div>
         <div className={i.group}>
           <Slider label="Strength" min={0} max={100} step={1} unit="%" disabled={!a.strength} {...strength} />
-          <div className={i.row}>
+          <InspectorRow label="Rows" info="Serpentine: every other row is scanned right to left, so the error doesn't drag one way.">
             <Toggle label="Serpentine" checked={d.serpentine && a.serpentine} disabled={!a.serpentine} onChange={(on) => doc.transact(on ? 'Serpentine rows' : 'Rows left to right', (x) => ({ ...x, serpentine: on }))} />
-            <span className={i.grow} />
-            <NumberField label="Seed" min={LIMIT.seed[0]} max={LIMIT.seed[1]} width={112} disabled={!a.seed} {...seed} />
+          </InspectorRow>
+          <InspectorRow label="Seed">
+            <NumberField label="Seed" hideLabel min={LIMIT.seed[0]} max={LIMIT.seed[1]} disabled={!a.seed} {...seed} />
             <IconButton icon="casino" label="New seed" size="sm" disabled={!a.seed} onClick={reseed} />
-          </div>
+          </InspectorRow>
         </div>
       </div>
     </InspectorGroup>

@@ -40,9 +40,9 @@ export function ArrangementModule({ doc, d, tile }: { doc: Doc; d: PatternDoc; t
       : null;
   return (
     <InspectorGroup id="pattern.arrangement" title="Arrangement" meta={fmtPx(Math.round(tile.width), Math.round(tile.height))}>
-      <InspectorRow label={scatter ? 'Spots' : 'Cells'} pair info={scatter ? 'How many spots the scatter tries to fill, across and down.' : 'How many cells the tile holds, columns and rows.'}>
-        <NumberField label={scatter ? 'Across' : 'Columns'} min={LIMIT.count[0]} max={LIMIT.count[1]} {...cols} />
-        <NumberField label={scatter ? 'Down' : 'Rows'} min={LIMIT.count[0]} max={LIMIT.count[1]} {...rows} />
+      <InspectorRow label={scatter ? 'Spots' : 'Cells'} pair info={scatter ? 'How many spots the scatter tries to fill, in columns and rows.' : 'How many cells the tile holds, columns and rows.'}>
+        <NumberField label="Columns" min={LIMIT.count[0]} max={LIMIT.count[1]} {...cols} />
+        <NumberField label="Rows" min={LIMIT.count[0]} max={LIMIT.count[1]} {...rows} />
       </InspectorRow>
       {note && <p className={s.note}>{note}</p>}
       <InspectorRow label="Seed" info="The same seed always draws the same shapes, sizes and turns. R draws a new one.">

@@ -5,7 +5,6 @@ import { shell } from '../../shell/core/index.ts';
 import { fetchBlob } from '../common/take.ts';
 import { imagePart, newLogo, nextRole, step, svgPart, takeFiles, takePalette } from './actions.ts';
 import { emptyDoc, fromPayload, isEmpty, toPayload, withPart, type LogoDoc } from './doc.ts';
-import { StatusSlot } from './StatusSlot.tsx';
 import { getView, patchView } from './view-state.ts';
 import { View } from './View.tsx';
 
@@ -75,6 +74,5 @@ export const tool: ToolDefinition<LogoDoc> = {
     { keys: 'C', label: 'Show clearspace', run: () => patchView({ clearspace: !getView().clearspace }) },
     { keys: 'G', label: 'Show guides', run: () => patchView({ guides: !getView().guides }) },
   ],
-  StatusSlot,
   View,
 };
