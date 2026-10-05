@@ -92,9 +92,17 @@ export async function run({ page, ev, shot, clickText, drop, rail, photo, four, 
   await click('~VHS tape', 'postfx'); await sleep(1500); await click('Presets', 'postfx'); await sleep(500); await shot('07-postfx-preset-vhs');
   await click('Loop', 'postfx'); await sleep(500); await shot('07-postfx-loop-open'); await click('Loop', 'postfx');
   await click('Export', 'postfx'); await sleep(500); await shot('07-postfx-export-menu'); await key('Escape'); await sleep(300);
-  await click('Split', 'postfx'); await sleep(1200); await shot('07-postfx-split');
-  await click('Original', 'postfx'); await sleep(800); await shot('07-postfx-original');
-  await click('Result', 'postfx');
+  // Original is a toggle: Y (and the strip's button) shows it, again shows the result; Y is ignored in a text field
+  const orig = () => ev(() => document.querySelector('[data-tool="postfx"] button[aria-label="Show the original"]')?.getAttribute('aria-pressed'));
+  const expect = async (want, what) => { const got = await orig(); if (got !== want) throw new Error(`Post FX ${what}: aria-pressed ${got}, wanted ${want}`); };
+  await expect('false', 'starts on the result');
+  await key('y'); await sleep(600); await expect('true', 'Y shows the original'); await shot('07-postfx-original');
+  await key('y'); await sleep(600); await expect('false', 'Y again shows the result');
+  await click('Show the original', 'postfx'); await sleep(600); await expect('true', 'the button shows the original');
+  await click('Show the original', 'postfx'); await sleep(600); await expect('false', 'the button again shows the result');
+  const field = await ev(() => { const f = document.querySelector('[data-tool="postfx"] input[type=text],[data-tool="postfx"] input:not([type])'); f?.focus(); return !!f && document.activeElement === f; });
+  if (field) { await key('y'); await sleep(400); await expect('false', 'Y ignored in a text field'); } else console.log('Post FX: no text field to test Y against');
+  await ev(() => document.activeElement?.blur());
 
   // Settings and Library
   await clickText('Settings', NAV, NAVSEL); await settle(); await shot('08-settings');

@@ -8,14 +8,10 @@ import { frameAt, startOf, type Timeline } from './doc.ts';
 
 const ID = 'postfx';
 
-/** what the image shows: the result, the original, or both either side of the divider */
-export type Compare = 'split' | 'after' | 'before';
-
 export type PostFxView = {
   zoom: Zoom;
-  compare: Compare;
-  /** where the divider sits, 0 to 1 across the image (image space, so it lines up at any zoom) */
-  split: number;
+  /** the original on screen instead of the result (Y); never saved: a relaunch shows the result */
+  original: boolean;
   inspector: number;
   /**
    * where the paused frame sits, seconds into the timeline: what shows, what exports and what a relaunch
@@ -27,9 +23,8 @@ export type PostFxView = {
   last: ExportRecord | null;
 };
 
-export const DEFAULT_VIEW: PostFxView = { zoom: 'fit', compare: 'split', split: 0.5, inspector: 380, time: 0, selected: null, last: null };
+export const DEFAULT_VIEW: PostFxView = { zoom: 'fit', original: false, inspector: 380, time: 0, selected: null, last: null };
 
-const oneOf = <T,>(v: unknown, all: readonly T[], def: T): T => (all.includes(v as T) ? (v as T) : def);
 const num = (v: unknown, lo: number, hi: number, def: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def);
 
 /** what a saved workspace holds, field by field; anything odd falls back to the default */
@@ -38,8 +33,7 @@ function sanitize(raw: unknown): PostFxView {
   const d = DEFAULT_VIEW;
   return {
     zoom: asZoom(r.zoom),
-    compare: oneOf(r.compare, ['split', 'after', 'before'] as const, d.compare),
-    split: num(r.split, 0, 1, d.split),
+    original: false, // an old saved `compare` or `split` is ignored here
     inspector: Math.round(num(r.inspector, 340, 460, d.inspector)),
     time: num(r.time, 0, 1e6, d.time),
     selected: typeof r.selected === 'string' ? r.selected : null,
@@ -79,3 +73,5 @@ export const playhead = createStore<{ frame: number; playing: boolean }>({ frame
 
 /** the status bar's readout, from the view */
 export const status = createStore<{ layers: number; on: number; ms: number; busy: boolean; error: boolean } | null>(null);
+
+export const toggleOriginal = () => patchView({ original: !getView().original });
