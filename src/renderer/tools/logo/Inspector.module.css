@@ -1,38 +1,52 @@
-/* the Logo inspector's modules */
-.stack { display: flex; flex-direction: column; gap: 10px; }
-/* rows that belong together sit closer than the groups around them */
-.group { display: flex; flex-direction: column; gap: 6px; }
-.rule { margin-top: 10px; padding-top: 10px; box-shadow: 0 -1px 0 var(--line); }
-.note { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
-.toggle { flex: none; white-space: nowrap; }
-.meta { min-width: 0; overflow: hidden; color: var(--ink-3); font-size: var(--fs-meta); text-overflow: ellipsis; white-space: nowrap; }
+/* the Logo inspector's groups */
+.note { display: flex; align-items: center; gap: 4px; color: var(--ink-3); font-size: var(--fs-meta); }
 
-/* lockups: the arrangement drawn from its own geometry, its switch and numbers, the tag, edit */
-.lockups { display: flex; flex-direction: column; margin: -4px -6px; }
+/* lockups: a row each, the whole row picks it; the eye turns it on or off */
+.lockups { display: flex; flex-direction: column; margin: -2px -4px; }
 .lockup {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  column-gap: 10px;
-  padding: 5px 6px;
+  column-gap: 6px;
+  min-height: var(--row);
+  padding: 2px 4px;
   border-radius: var(--r-ctl);
 }
 .lockup:hover { background: var(--well-hover); }
-.edited, .edited:hover { background: var(--raise); }
-.lockText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.lockText .meta { padding-left: 36px; }
-.diagram { display: block; color: var(--ink-3); fill: currentColor; }
+.edited, .edited:hover { background: var(--raise); box-shadow: inset 0 0 0 1px var(--signal); }
+.pick { display: flex; align-items: center; gap: 8px; min-width: 0; height: 26px; text-align: left; border-radius: var(--r-ctl); }
+.pick:disabled { cursor: default; }
+.lockName { overflow: hidden; font-size: var(--fs-base); text-overflow: ellipsis; white-space: nowrap; }
+.where { color: var(--ink-3); font-size: var(--fs-meta); white-space: nowrap; }
+.diagram { flex: none; display: block; color: var(--ink-3); fill: currentColor; }
 .diagram .word { fill-opacity: .5; }
 .edited .diagram { color: var(--ink); }
+.off .lockName, .off .where { color: var(--ink-3); }
 .off .diagram { color: var(--ink-4); }
-/* --tick, so the ring still shows on the selected row's --raise */
-.tag { padding: 3px 5px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--tick); }
 
-/* versions: a switch each and what it paints, then the colour they share */
-.versions { display: flex; flex-direction: column; gap: 3px; }
-.version { display: grid; grid-template-columns: 132px minmax(0, 1fr); align-items: center; column-gap: 10px; min-height: var(--ctl); }
+/* versions: five chips, a pressed one exports; the swatch is what it paints */
+.chipsGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.vchip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  height: var(--ctl);
+  padding: 0 8px;
+  border-radius: var(--r-ctl);
+  background: var(--well);
+  color: var(--ink-3);
+  font-size: var(--fs-base);
+  white-space: nowrap;
+}
+.vchip:hover:not(:disabled) { background: var(--well-hover); }
+.vchip.pressed { color: var(--ink); box-shadow: inset 0 0 0 1px var(--tick-strong); }
+.swatch { flex: none; width: 14px; height: 14px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--edge); }
+.original { background: linear-gradient(135deg, var(--ink-3) 50%, var(--ink-4) 50%); }
+.knock { position: relative; }
+.knock::after { content: ""; position: absolute; inset: 4px; border-radius: 1px; background: var(--ink); }
 .chips { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin-left: -4px; }
-.from { flex: none; max-width: 110px; margin: 0 6px 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.from { flex: none; max-width: 110px; margin: 0 6px 0 4px; overflow: hidden; color: var(--ink-3); font-size: var(--fs-meta); text-overflow: ellipsis; white-space: nowrap; }
 .chip { width: 30px; height: 26px; padding: 4px; border-radius: var(--r-ctl); }
 .chip i { display: block; width: 100%; height: 100%; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--edge); }
 .chip:hover { background: var(--well-hover); }

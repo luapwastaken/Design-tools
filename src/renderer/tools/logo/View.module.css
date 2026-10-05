@@ -16,14 +16,20 @@
   min-width: 0;
   min-height: 0;
 }
-/* toasts rise in the work column (Toast.module.css), over the Viewport's bar in the edit view (Stage.module.css) */
-.stage { container: stage / inline-size; anchor-name: --toasts; }
-.stage > :nth-child(2) { display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
-.switches { display: flex; align-items: center; gap: 6px; }
-.switches > * { height: 22px; }
-.version { width: 164px; }
+/* the pasteboard, or the sheet, or the empty drop; toasts rise over it (Toast.module.css) */
+.stage {
+  container: stage / inline-size;
+  anchor-name: --toasts;
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  min-height: 0;
+  border-radius: var(--r-mod);
+  overflow: hidden;
+  background: var(--pasteboard);
+}
+.stage > * { min-height: 0; }
+.none { padding: 18px 16px; color: var(--ink-2); font-size: var(--fs-base); }
 
-/* the lockup large, its zoom bar, then the other lockups */
-.edit { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; }
-.none { padding: 18px 16px; color: var(--ink-2); font-size: var(--fs-base); background: var(--pasteboard); }
-
+/* the sheet fills the stage above its view strip */
+.sheetStage { display: flex; flex-direction: column; min-height: 0; background: var(--module); }
+.sheetStage > :first-child { flex: 1 1 0; min-height: 0; }

@@ -1,30 +1,25 @@
-// The Logo tool's screen (spec §2): the lockup being edited large on its surround with the other
-// lockups under it, or the sheet of every lockup × version; the inspector (Parts, Lockups,
-// Proportions, Versions, Clearspace, Small sizes, Export) on the right.
+// The Logo tool's screen (spec §5): the pasteboard of artboards, one per lockup that's on (or the
+// sheet of every lockup x version), the Version switch and Export in the doc bar, and the inspector
+// (Parts, Lockups, Proportions, Versions, Clearspace, Small sizes, Export) on the right.
 import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from 'react';
 import { isTextField } from '../../shell/core/keys.ts';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
-import { Module, Segmented, Select } from '../../ui/index.ts';
+import { InspectorGroup, Toggle, ViewStrip } from '../../ui/index.ts';
 import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import { editedKind, takeMarkup, type Doc } from './actions.ts';
-import { KIND_LABEL, KIND_WHERE, lockupOf, shownLockups, shownVersions, VERSION_LABEL, VERSIONS, type LogoDoc } from './doc.ts';
-import { ExportModule } from './Export.tsx';
-import { ClearspaceModule, LockupsModule, ProportionsModule, VersionsModule } from './Inspector.tsx';
+import { Board, Canvas } from './Board.tsx';
+import { lockupOf, shownLockups, type LogoDoc } from './doc.ts';
+import { ExportGroup, useLogoExport } from './Export.tsx';
+import { ClearspaceGroup, LockupsGroup, ProportionsGroup, VersionsGroup } from './Inspector.tsx';
 import { LogoBar } from './LogoBar.tsx';
 import { Parts } from './Parts.tsx';
 import { Sheet } from './Sheet.tsx';
 import { SmallSizes } from './SmallSizes.tsx';
-import { Stage } from './Stage.tsx';
 import { Start } from './Start.tsx';
-import { Strip } from './Strip.tsx';
-import { SURROUNDS } from './surround.ts';
 import { patchView, useView } from './view-state.ts';
 import s from './View.module.css';
 
 const INSPECTOR = { min: 340, max: 460, reset: 380 };
-
-/** every version can be looked at; the ones the sheet and Export all leave out say so */
-const versionOptions = (d: LogoDoc) => VERSIONS.map((value) => ({ value, label: d.versions.includes(value) ? VERSION_LABEL[value] : `${VERSION_LABEL[value]} (off)` }));
 
 /** Ctrl+V of SVG markup with no text field focused: the first empty part (SVG and PNG files arrive through onFiles) */
 function usePaste(doc: Doc, active: boolean) {
@@ -79,59 +74,41 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const kind = editedKind(d, v.lockup);
   const lockup = kind ? lockupOf(d, kind) : null;
   const sheet = v.mode === 'sheet' && !empty;
-
-  const title = empty ? 'Parts' : sheet ? 'Sheet' : lockup ? KIND_LABEL[lockup.kind] : 'Lockups';
-  const sub = empty
-    ? 'An icon and a wordmark'
-    : sheet
-      ? `${shownLockups(d).length} lockups × ${shownVersions(d).length} versions`
-      : lockup
-        ? KIND_WHERE[lockup.kind]
-        : 'All off';
+  const out = useLogoExport(doc, settled, v, kind && lockupOf(settled, kind));
 
   return (
     <div className={s.view} style={{ '--insp': `${v.inspector}px` } as CSSProperties}>
       <div className={s.work}>
-        <LogoBar doc={doc} d={d} v={v} />
-        <Module
-          title={title}
-          sub={sub}
-          flush
-          className={s.stage}
-          actions={
-            !empty && (
-              <span className={s.switches}>
-                {!sheet && lockup && <Select label="Version" options={versionOptions(d)} value={v.version} onChange={(version) => patchView({ version })} className={s.version} />}
-                <Segmented options={SURROUNDS} value={v.surround} onChange={(surround) => patchView({ surround })} fit />
-              </span>
-            )
-          }
-        >
+        <LogoBar doc={doc} d={d} v={v} out={out} />
+        <div className={s.stage}>
           {empty ? (
             <Start doc={doc} />
           ) : sheet ? (
-            <Sheet d={d} v={v} />
-          ) : lockup ? (
-            <div className={s.edit}>
-              <Stage doc={doc} d={d} v={v} lockup={lockup} />
-              <Strip doc={doc} d={settled} v={v} edited={lockup.kind} />
+            <div className={s.sheetStage}>
+              <Sheet d={d} v={v} />
+              <ViewStrip overlays={<Toggle label="Sheet" checked onChange={() => patchView({ mode: 'edit' })} />} background={<Canvas v={v} />} readout={<span>{shownLockups(d).length} lockups</span>} />
             </div>
+          ) : kind ? (
+            <Board doc={doc} d={d} v={v} selected={kind} />
           ) : (
             <p className={s.none}>Every lockup is off. Turn one on in Lockups.</p>
           )}
-        </Module>
+        </div>
         <ResizeHandle value={v.inspector} min={INSPECTOR.min} max={INSPECTOR.max} reset={INSPECTOR.reset} label="Inspector width" edge="left" onChange={(w) => patchView({ inspector: w })} />
       </div>
       <InspectorColumn>
-        <Parts doc={doc} d={d} />
-        {!empty && (
+        {empty ? (
+          // nothing to set yet: the groups are there, shut, so the shape of the tool shows
+          ['Parts', 'Lockups', 'Proportions', 'Versions', 'Clearspace', 'Small sizes', 'Export'].map((title) => <InspectorGroup key={title} title={title} defaultOpen={false} />)
+        ) : (
           <>
-            <LockupsModule doc={doc} d={d} edited={kind} />
-            <ProportionsModule doc={doc} d={d} lockup={lockup} />
-            <VersionsModule doc={doc} d={d} />
-            <ClearspaceModule doc={doc} d={d} />
+            <Parts doc={doc} d={d} />
+            <LockupsGroup doc={doc} d={d} edited={kind} />
+            <ProportionsGroup doc={doc} d={d} lockup={lockup} />
+            <VersionsGroup doc={doc} d={d} />
+            <ClearspaceGroup doc={doc} d={d} />
             <SmallSizes d={settled} v={v} lockup={kind && lockupOf(settled, kind)} />
-            <ExportModule doc={doc} d={settled} v={v} lockup={kind && lockupOf(settled, kind)} />
+            <ExportGroup doc={doc} d={settled} v={v} lockup={kind && lockupOf(settled, kind)} out={out} />
           </>
         )}
       </InspectorColumn>

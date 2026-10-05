@@ -2,7 +2,7 @@
 // one from the Library, or paste SVG markup. The empty stage has two; an empty slot in Parts one.
 import { useRef, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react';
 import { shell } from '../../shell/core/index.ts';
-import { Button, IconButton, ITEM_MIME, menu, toast, type MenuItem } from '../../ui/index.ts';
+import { Button, IconButton, InfoTip, ITEM_MIME, menu, toast, type MenuItem } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { pasteInto, sendInto, takeFiles, type Doc } from './actions.ts';
 import type { Role } from './doc.ts';
@@ -96,9 +96,11 @@ export function PartZone({ doc, role, glyph }: { doc: Doc; role: Role; glyph: Re
       <div className={s.glyph} aria-hidden>
         {glyph}
       </div>
-      <span className="lbl">{WORD[role].title}</span>
-      <p className={s.line}>{busy ? 'Reading and measuring…' : WORD[role].line}</p>
-      <p className={s.drop}>Drop an SVG or PNG here</p>
+      <span className={s.title}>
+        {WORD[role].title}
+        <InfoTip text={WORD[role].line} />
+        {busy && <span className={s.reading}>Reading…</span>}
+      </span>
       <div className={s.actions}>
         <Button icon="upload_file" onClick={pick} disabled={busy}>
           Choose file
@@ -113,7 +115,7 @@ export function PartZone({ doc, role, glyph }: { doc: Doc; role: Role; glyph: Re
   );
 }
 
-/** an empty slot as a row (the Parts module, the lockup strip): drop here, or choose */
+/** an empty slot as a row (the Parts group): drop here, or choose */
 export function PartSlot({ doc, role, className }: { doc: Doc; role: Role; className?: string }) {
   const { over, handlers } = usePartDrop(doc, role);
   const { pick, input } = useFilePick(doc, role);
@@ -122,7 +124,6 @@ export function PartSlot({ doc, role, className }: { doc: Doc; role: Role; class
     <div className={cx(s.slot, over && s.over, className)} {...handlers}>
       <div className={s.slotText}>
         <b>{busy ? 'Reading…' : role === 'icon' ? 'Add an icon' : 'Add a wordmark'}</b>
-        <span>{role === 'wordmark' ? 'Drop one here for the side-by-side and stacked lockups' : 'Drop one here for the lockups with a mark'}</span>
       </div>
       <IconButton icon="upload_file" label={`Choose the ${role} file`} size="sm" onClick={pick} disabled={busy} />
       <IconButton icon="photo_library" label={`Pick the ${role} from the Library`} size="sm" onClick={(e) => openMenu(e, libraryParts(role))} disabled={busy} />

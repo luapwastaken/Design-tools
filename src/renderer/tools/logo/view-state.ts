@@ -25,14 +25,29 @@ export type LogoView = {
   inspector: number;
   /** written into exported PNGs */
   dpi: number;
+  /** which assets the Export group's checklist has ticked */
+  assets: Assets;
+  /** what the SVG and PNG rows write: the lockup in view, that lockup in every version that's on, or every lockup in every version */
+  scope: Scope;
+  /** the brand sheet's format */
+  sheet: 'svg' | 'png';
   last: ExportRecord | null;
 };
 
-export const DEFAULT_VIEW: LogoView = { zoom: 'fit', mode: 'edit', lockup: 'horizontal', version: 'original', surround: 'grey', clearspace: true, guides: false, inspector: 380, dpi: 72, last: null };
+export type Assets = { svg: boolean; png: boolean; favicon: boolean; sheet: boolean };
+export type Scope = 'view' | 'lockup' | 'all';
+export const SCOPES: readonly Scope[] = ['view', 'lockup', 'all'];
+
+export const DEFAULT_VIEW: LogoView = { zoom: 'fit', mode: 'edit', lockup: 'horizontal', version: 'original', surround: 'grey', clearspace: true, guides: false, inspector: 380, dpi: 72, assets: { svg: true, png: true, favicon: false, sheet: false }, scope: 'lockup', sheet: 'svg', last: null };
 
 const oneOf = <T extends string>(v: unknown, all: readonly T[], def: T): T => (all.includes(v as T) ? (v as T) : def);
 const bool = (v: unknown, def: boolean) => (typeof v === 'boolean' ? v : def);
 const num = (v: unknown, def: number) => (typeof v === 'number' && Number.isFinite(v) ? v : def);
+
+const assetsOf = (v: unknown, def: Assets): Assets => {
+  const r = (typeof v === 'object' && v !== null ? v : {}) as Record<string, unknown>;
+  return { svg: bool(r.svg, def.svg), png: bool(r.png, def.png), favicon: bool(r.favicon, def.favicon), sheet: bool(r.sheet, def.sheet) };
+};
 
 /** what a saved workspace holds, field by field; anything odd falls back to the default */
 function sanitize(raw: unknown): LogoView {
@@ -48,6 +63,9 @@ function sanitize(raw: unknown): LogoView {
     guides: bool(r.guides, d.guides),
     inspector: num(r.inspector, d.inspector),
     dpi: num(r.dpi, d.dpi),
+    assets: assetsOf(r.assets, d.assets),
+    scope: oneOf(r.scope, SCOPES, d.scope),
+    sheet: oneOf(r.sheet, ['svg', 'png'], d.sheet),
     last: recordOf(r.last),
   };
 }

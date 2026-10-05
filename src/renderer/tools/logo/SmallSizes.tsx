@@ -1,11 +1,11 @@
-// Small sizes (spec §3): the lockup being edited drawn at exactly 16, 24, 32 and 48 device pixels
+// Small sizes (spec §3, §5): the lockup being edited drawn at exactly 16, 24, 32 and 48 device pixels
 // tall, shown pixel for pixel, to judge whether it holds up in a tab or an app bar. v1 squeezed its
 // whole padded canvas into a square instead.
 import { useEffect, useMemo, useRef } from 'react';
 import { layoutLockup } from '../../../shared/logo/layout.ts';
 import { lockupSvg, padOf } from '../../../shared/logo/svg.ts';
 import { parseSize } from '../../../shared/svg/index.ts';
-import { Module } from '../../ui/index.ts';
+import { InfoTip, InspectorGroup } from '../../ui/index.ts';
 import { KIND_LABEL, VERSION_LABEL, type Lockup, type LogoDoc } from './doc.ts';
 import { drawSvg } from './raster.ts';
 import { surroundOf } from './surround.ts';
@@ -18,7 +18,13 @@ export function SmallSizes({ d, v, lockup }: { d: LogoDoc; v: LogoView; lockup: 
   if (!lockup) return null;
   const ground = surroundOf(v.surround, d);
   return (
-    <Module title="Small sizes" sub={`${KIND_LABEL[lockup.kind]} · ${VERSION_LABEL[v.version]}`}>
+    <InspectorGroup
+      id="logo.small"
+      title="Small sizes"
+      meta={`${KIND_LABEL[lockup.kind]} · ${VERSION_LABEL[v.version]}`}
+      defaultOpen={false}
+      actions={<InfoTip text="Each logo is drawn at exactly that many pixels tall and shown pixel for pixel, as a browser tab or an app bar would show it. A wide one scrolls." />}
+    >
       <div className={s.rows}>
         {SIZES.map((px) => (
           <div key={px} className={s.row}>
@@ -29,8 +35,7 @@ export function SmallSizes({ d, v, lockup }: { d: LogoDoc; v: LogoView; lockup: 
           </div>
         ))}
       </div>
-      <p className={s.note}>Each logo is drawn at exactly that many pixels tall and shown pixel for pixel, as a browser tab or an app bar would show it. A wide one scrolls.</p>
-    </Module>
+    </InspectorGroup>
   );
 }
 

@@ -1,10 +1,11 @@
-// The Parts module (spec §2): the icon and the wordmark, each as its artwork alone (the file's own
-// box trimmed away), what was measured, and replace or remove. An empty part is a place to drop one.
+// The Parts group (spec §5): the icon and the wordmark, each as its artwork alone (the file's own
+// box trimmed away), what was measured in a tooltip, and Replace (a menu: replace, swap, remove).
+// An empty part is a place to drop one.
 import { useMemo } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
 import { holdsPicture } from '../../../shared/logo/svg.ts';
 import { framed, parseSize } from '../../../shared/svg/index.ts';
-import { ConfirmInline, IconButton, Module, Tooltip, type MenuItem } from '../../ui/index.ts';
+import { Button, ConfirmInline, InspectorGroup, Tooltip, type MenuItem } from '../../ui/index.ts';
 import { GREY_18 } from '../common/surround.ts';
 import { pasteInto, removePart, swapParts, type Doc } from './actions.ts';
 import type { LogoDoc, Part, Role } from './doc.ts';
@@ -43,12 +44,8 @@ export function Parts({ doc, d }: { doc: Doc; d: LogoDoc }) {
   const armedRole = armed.use();
   const count = ROLES.filter((r) => d[r]).length;
   return (
-    <Module title="Parts" sub={busy.length ? 'Reading…' : `${count} of 2`}>
-      {/* with no part yet the stage's two zones are the ask; saying it again here would be a second pair of cards */}
-      {count === 0 ? (
-        <p className={s.hint}>An icon and a wordmark go in the two zones on the left. Once one is in, it is listed here.</p>
-      ) : (
-        <div className={s.list}>
+    <InspectorGroup id="logo.parts" title="Parts" meta={busy.length ? 'Reading…' : count}>
+      <div className={s.list}>
           {ROLES.map((role) => {
             const part = d[role];
             if (!part) return <PartSlot key={role} doc={doc} role={role} />;
@@ -67,9 +64,8 @@ export function Parts({ doc, d }: { doc: Doc; d: LogoDoc }) {
               );
             return <PartRow key={role} doc={doc} d={d} role={role} part={part} />;
           })}
-        </div>
-      )}
-    </Module>
+      </div>
+    </InspectorGroup>
   );
 }
 
@@ -85,21 +81,21 @@ function PartRow({ doc, d, role, part }: { doc: Doc; d: LogoDoc; role: Role; par
     'separator',
     { label: 'Remove', icon: 'delete', danger: true, onSelect: () => armed.set(role) },
   ];
+  const brief = role === 'wordmark' ? (part.type ? 'caps found' : 'no caps found') : `${n(part.box.w)} × ${n(part.box.h)}`;
   return (
-    <div className={s.row}>
+    <div className={s.row} data-part={role}>
       <Thumb part={part} role={role} />
       <div className={s.ident}>
         <span className={s.role}>{TITLE[role]}</span>
-        <Tooltip content={part.name} overflowOnly>
-          <span className={s.name}>{part.name}</span>
+        <Tooltip content={[part.name, ...lines].join(' · ')}>
+          <span className={s.name}>
+            {part.name} · {brief}
+          </span>
         </Tooltip>
-        {lines.map((line) => (
-          <Tooltip key={line} content={line} overflowOnly>
-            <span className="lbl">{line}</span>
-          </Tooltip>
-        ))}
       </div>
-      <IconButton icon="more_horiz" label={`${TITLE[role]}: replace, swap or remove`} size="sm" onClick={(e) => openMenu(e, items)} className={s.more} />
+      <Button size="xs" variant="ghost" onClick={(e) => openMenu(e, items)} tooltip={`${TITLE[role]}: replace, swap or remove`}>
+        Replace
+      </Button>
       {input}
     </div>
   );

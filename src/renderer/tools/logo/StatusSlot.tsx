@@ -1,16 +1,22 @@
 import { useSyncExternalStore } from 'react';
 import type { DocController } from '../../../shared/doc-api.ts';
-import { shownLockups, type LogoDoc } from './doc.ts';
+import { layoutLockup } from '../../../shared/logo/layout.ts';
+import { editedKind } from './actions.ts';
+import { KIND_LABEL, lockupOf, VERSION_LABEL, type LogoDoc } from './doc.ts';
+import { pngSize } from './geometry.ts';
+import { useView } from './view-state.ts';
 
-/** `4 LOCKUPS · 3 VERSIONS` (plan unit V): what the sheet and Export all hold */
+/** `Horizontal · Original · 786 × 512 px` (spec §5): the lockup selected, the version in view, what its PNG is */
 export function StatusSlot({ doc }: { doc: DocController<LogoDoc> }) {
   const d = useSyncExternalStore(doc.subscribe, doc.get);
+  const v = useView();
   if (!d.icon && !d.wordmark) return <span>No parts yet</span>;
-  const n = shownLockups(d).length;
-  const v = d.versions.length;
+  const kind = editedKind(d, v.lockup);
+  if (!kind) return <span>Every lockup is off</span>;
+  const size = pngSize(d, layoutLockup(d, lockupOf(d, kind)), v.version);
   return (
     <span>
-      <b>{n}</b> {n === 1 ? 'lockup' : 'lockups'} · <b>{v}</b> {v === 1 ? 'version' : 'versions'}
+      <b>{KIND_LABEL[kind]}</b> · {VERSION_LABEL[v.version]} · {size.w.toLocaleString('en')} × {size.h.toLocaleString('en')} px
     </span>
   );
 }

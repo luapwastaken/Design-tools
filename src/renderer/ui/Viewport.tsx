@@ -54,6 +54,8 @@ export type ViewportProps = {
   /** a screen-space layer that follows the pointer (an ink readout beside it), with the crosshair
    *  cursor; only it re-renders as the pointer moves. `at` is null off the view */
   probe?(at: { screen: Point; content: Point } | null, t: ViewTransform): ReactNode;
+  /** the 1px edge round the content (default on); off when the content is a pasteboard of its own artboards */
+  frame?: boolean;
   className?: string;
 };
 
@@ -67,7 +69,7 @@ const SETTLE_MS = 250;
  * It takes its keys only while it is on screen, so a hidden tool's viewport never moves.
  */
 export function Viewport(p: ViewportProps) {
-  const { contentWidth, contentHeight, children, render, overlay, cursor = cursorXY, overlays, background, rulers, probe, className, cell } = p;
+  const { contentWidth, contentHeight, children, render, overlay, cursor = cursorXY, overlays, background, rulers, probe, className, cell, frame = true } = p;
   const content: Size = { w: contentWidth, h: contentHeight };
   const viewEl = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -286,7 +288,7 @@ export function Viewport(p: ViewportProps) {
               {children}
             </div>
           )}
-          <div className={s.frame} style={{ left: t.x, top: t.y, width: contentWidth * t.scale, height: contentHeight * t.scale }} />
+          {frame && <div className={s.frame} style={{ left: t.x, top: t.y, width: contentWidth * t.scale, height: contentHeight * t.scale }} />}
           {overlay && <div className={s.overlay}>{overlay(t)}</div>}
           {probe && <Probe hover={hover} t={t} probe={probe} />}
         </>

@@ -61,8 +61,12 @@ export async function run({ page, ev, shot, clickText, drop, rail, photo, four, 
   await rail(4); await shot('04-logo-empty');
   await drop('logo', svgA); await settle(); await shot('04-logo-edit-one-part');
   await drop('logo', svgB); await settle(); await shot('04-logo-edit-two-parts');
+  await ev(() => document.querySelector('[data-tool="logo"] [data-artboard="stacked"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))); await sleep(700); await shot('04-logo-selected-stacked');
+  await click('Black', 'logo'); await sleep(900); await shot('04-logo-black');
+  await click('Original', 'logo'); await sleep(500);
+  await ev(() => document.querySelector('[data-tool="logo"] [data-artboard="horizontal"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))); await sleep(500);
   await click('Sheet', 'logo'); await settle(); await shot('04-logo-sheet');
-  await click('Edit', 'logo'); await sleep(500);
+  await click('Sheet', 'logo'); await sleep(500);
 
   // 05 Dither
   await rail(5); await shot('05-dither-empty');

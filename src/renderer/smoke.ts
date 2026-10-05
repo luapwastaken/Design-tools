@@ -46,7 +46,7 @@ import { faviconBundle, sheetSvg } from './tools/logo/files.ts';
 import { partFromImage, partFromSvg } from './tools/logo/intake.ts';
 import { pngSize } from './tools/logo/geometry.ts';
 import { drawSvg } from './tools/logo/raster.ts';
-import { patchView as patchLogo } from './tools/logo/view-state.ts';
+import { getView as logoView, patchView as patchLogo } from './tools/logo/view-state.ts';
 import { clearProposals as clearBases, proposals as bases } from './tools/illustration/proposals.ts';
 import { getView as illustrationView, patchView as patchIllustration } from './tools/illustration/view-state.ts';
 import { PX_PER, toPayload, withUnit, type PatternDoc } from './tools/pattern/doc.ts';
@@ -778,6 +778,31 @@ async function logo(dir: string): Promise<void> {
   const on = shownLockups(d).map((l) => l.kind);
   check('the pair proposes horizontal and stacked, the horizontal aligned on the capitals', on.includes('horizontal') && on.includes('stacked') && lockupOf(d, 'horizontal').align === 'cap', on);
 
+  // the pasteboard: every lockup that's on is a named artboard, a click selects, the eye turns one off,
+  // the doc bar's Version switch and the Sheet toggle in the view strip are views of the same document
+  patchLogo({ mode: 'edit', lockup: 'horizontal', version: 'original' });
+  const boards = () => [...(host('logo')?.querySelectorAll<SVGElement>('[data-artboard]') ?? [])];
+  const kinds = async () => (await until(() => (boards().length === on.length ? boards().map((b) => b.dataset.artboard) : null))) ?? boards().map((b) => b.dataset.artboard);
+  check('every lockup that is on is an artboard on the pasteboard, in the document order', JSON.stringify(await kinds()) === JSON.stringify(on), [await kinds(), on]);
+  const board = (k: string) => boards().find((b) => b.dataset.artboard === k);
+  board('stacked')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  check('clicking an artboard selects it', await until(() => logoView().lockup === 'stacked' && board('stacked')?.getAttribute('aria-checked') === 'true'), logoView().lockup);
+  const eye = () => host('logo')?.querySelector<HTMLButtonElement>('[data-lockup="stacked"] button[aria-label^="Hide"]');
+  eye()?.click();
+  check('the eye in Lockups turns a lockup off, and it leaves the pasteboard', await until(() => !lockupOf(ld.get(), 'stacked').on && !board('stacked')), lockupOf(ld.get(), 'stacked'));
+  ld.undo();
+  check('and Undo brings it back', await until(() => lockupOf(ld.get(), 'stacked').on && !!board('stacked')), lockupOf(ld.get(), 'stacked'));
+  const docbar = () => host('logo')?.querySelector<HTMLElement>('[data-docbar]') ?? host('logo');
+  const version = (name: string) => [...(docbar()?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [])].find((b) => b.textContent?.trim() === name);
+  version('Black')?.click();
+  check('the doc bar switch chooses the version every artboard shows', await until(() => logoView().version === 'black'), logoView().version);
+  version('Original')?.click();
+  const sheetToggle = () => [...(host('logo')?.querySelectorAll<HTMLButtonElement>('[role="checkbox"]') ?? [])].find((b) => b.textContent?.trim() === 'Sheet');
+  sheetToggle()?.click();
+  check('Sheet in the view strip shows every lockup in every version', await until(() => logoView().mode === 'sheet' && host('logo')?.querySelector('[aria-label="Every lockup in every version"]')), logoView().mode);
+  sheetToggle()?.click();
+  check('and turning it off is the pasteboard again', await until(() => logoView().mode === 'edit' && boards().length === on.length), logoView().mode);
+
   // the padded artboard and its tight twin: the same artwork (to the measure's resolution, a tenth
   // of a percent), the same layout, the same drawing to within antialiasing
   const tight = await partFromSvg(RING, 'Ring', 'icon');
@@ -836,10 +861,28 @@ async function logo(dir: string): Promise<void> {
   check('the brand sheet puts a white-named logo’s original on the dark tile, judged by its edge', tile === PAPER.dark, tile);
 
   // the exports, read back from the files they wrote
-  patchLogo({ mode: 'edit', lockup: 'horizontal', version: 'black', dpi: 300 });
-  const row = (name: string) => [...(host('logo')?.querySelectorAll('b') ?? [])].find((b) => b.textContent === name);
-  if (!check('Logo shows its Export module', await until(() => row('SVG') && row('Favicon bundle')))) return;
-  const exported = await toolExport(dir, 'logo', 'Logo out');
+  patchLogo({ mode: 'edit', lockup: 'horizontal', version: 'black', dpi: 300, scope: 'view' });
+  if (!check('Logo shows its Export group', await until(() => host('logo')?.querySelector('[data-asset="SVG"]') && host('logo')?.querySelector('[data-asset="Favicon bundle"]')))) return;
+  // Export is one list of ticked assets and one primary button: each row is exported on its own here
+  await shell.createCollection('Logo out');
+  const only = (row: string) => patchLogo({ assets: { svg: row === 'SVG', png: row === 'PNG', favicon: row === 'Favicon bundle', sheet: false } });
+  const goButton = () => host('logo')?.querySelector<HTMLButtonElement>('[data-export="go"] button');
+  const exported = async (row: string): Promise<Response | null> => {
+    only(row);
+    const button = await until(() => (goButton() && !goButton()!.disabled && /^Export/.test(goButton()!.textContent?.trim() ?? '') ? goButton() : null));
+    if (!button) return null;
+    const shown = toastStore.get().length;
+    const idle = shell.getState().busy;
+    button.click();
+    check(`logo's ${row} export counts as running work from the moment it starts`, shell.getState().busy > idle, shell.getState().busy);
+    const done = await until(() => toastStore.get().slice(shown).find((t) => t.icon === 'download'));
+    const file = /^Exported (.+)\.$/.exec(String(done?.message ?? ''))?.[1];
+    if (!file) return null;
+    await shell.importFiles([`${dir}\\exports\\${file}`], 'Logo out');
+    const ref = await until(() => find((i) => i.collection === 'Logo out' && `${i.name}.${i.ext}` === file));
+    const item = ref && (await api.invoke('library.read', ref.id));
+    return item && 'url' in item ? fetch(item.url) : null;
+  };
   const vector = await (await exported('SVG'))?.text();
   check(
     'the exported lockup SVG is its parts as paths in black fills: no filter, no <image>, no colour left over',
@@ -862,7 +905,8 @@ async function logo(dir: string): Promise<void> {
   const entries = ico instanceof ArrayBuffer ? await icoEntries(new Uint8Array(ico)) : null;
   check('the favicon ICO parses: 16, 32 and 48 px PNGs, each its stated size', JSON.stringify(entries) === '[[16,16,16],[32,32,32],[48,48,48]]', entries);
   const shown = toastStore.get().length;
-  [...(host('logo')?.querySelectorAll('button') ?? [])].find((b) => rowOf(b) === 'Favicon bundle')?.click();
+  only('Favicon bundle');
+  (await until(() => (goButton() && !goButton()!.disabled ? goButton() : null)))?.click();
   const done = await until(() => toastStore.get().slice(shown).find((x) => x.icon === 'download'));
   check('Favicon bundle writes its nine files into one folder', /^Exported 9 files into /.test(String(done?.message)), done?.message);
 

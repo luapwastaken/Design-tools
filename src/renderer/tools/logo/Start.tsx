@@ -1,6 +1,6 @@
-// The empty state (plan unit V): two places to drop, the icon and the wordmark. Each drawing says
-// what the tool will do with that part: the icon gets handles, the wordmark is read for its cap
-// height and baseline.
+// The empty state (spec §5): two dashed artboards to drop on, the icon and the wordmark, and one
+// sentence under them. Each drawing says what the tool will do with that part: the icon gets
+// handles, the wordmark is read for its cap height and baseline.
 import { StartFrame } from '../common/DropStart.tsx';
 import type { Doc } from './actions.ts';
 import { PartZone } from './PartDrop.tsx';
@@ -25,7 +25,7 @@ const WordmarkGlyph = () => (
 
 export function Start({ doc }: { doc: Doc }) {
   return (
-    <StartFrame note="SVG keeps every lockup editable in Illustrator; a PNG works too, with a flat tint for the colour versions. Padding in the file never counts: parts are measured by their artwork. Ctrl V pastes SVG markup into the icon first, then the wordmark.">
+    <StartFrame note="Drop SVG or PNG files, or paste SVG markup with Ctrl V.">
       <div className={s.zones}>
         <PartZone doc={doc} role="icon" glyph={<IconGlyph />} />
         <PartZone doc={doc} role="wordmark" glyph={<WordmarkGlyph />} />

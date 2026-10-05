@@ -1,114 +1,146 @@
-// Export (spec §3): the lockup being edited as an editable SVG or a PNG at a set height, every lockup ×
-// version into one folder, the favicon bundle and the brand sheet. All through the shared export
-// path (lib/export saveFile, saveToFolder); every failure is a toast.
+// Export (spec §3, §5): a checklist of assets and one primary button, which the doc bar's Export
+// repeats. The SVG and PNG rows write the lockup in view, that lockup in every version that's on,
+// or every lockup in every version, as the scope says; the favicon bundle and the brand sheet
+// come with them. One file goes through the save dialog, several into one folder. All through the
+// shared export path (lib/export saveFile, saveToFolder); every failure is a toast.
+import type { ReactNode } from 'react';
 import { layoutLockup } from '../../../shared/logo/layout.ts';
 import { lockupSvg } from '../../../shared/logo/svg.ts';
 import { leaf, saveFile, saveToFolder } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
-import { Module, NumberField, useDocNumber } from '../../ui/index.ts';
+import { InspectorGroup, InspectorRow, NumberField, Segmented, Toggle, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { CopyButton, ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
+import { CopyButton, ExportButton, LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx, plural } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { fix, KIND_LABEL, LIMIT, shownLockups, shownVersions, VERSION_LABEL, type Lockup, type LogoDoc } from './doc.ts';
-import { buffer, everyFile, faviconBundle, fileName, lockupPng, sheetPng, sheetSvg, type OutFile } from './files.ts';
+import { buffer, faviconBundle, fileName, lockupPng, sheetPng, sheetSvg, type OutFile } from './files.ts';
 import { pngSize } from './geometry.ts';
 import { tooBig } from './raster.ts';
-import { patchView, type LogoView } from './view-state.ts';
+import { patchView, type Assets, type LogoView, type Scope } from './view-state.ts';
 import s from './Export.module.css';
 
-export function ExportModule({ doc, d, v, lockup }: { doc: Doc; d: LogoDoc; v: LogoView; lockup: Lockup | null }) {
+const SCOPES: { value: Scope; label: string; tip: string }[] = [
+  { value: 'view', label: 'View', tip: 'The lockup you are looking at, in the version you are looking at' },
+  { value: 'lockup', label: 'Lockup', tip: 'The lockup you are looking at, in every version that is on' },
+  { value: 'all', label: 'All', tip: 'Every lockup that is on, in every version that is on' },
+];
+
+/**
+ * What Export would make now, and the one function that makes it: the group's primary button and the
+ * doc bar's Export both call `go`. `why` is the reason it can't, or null.
+ */
+export function useLogoExport(doc: Doc, d: LogoDoc, v: LogoView, lockup: Lockup | null) {
   const name = useShell((st) => st.docNames.logo) ?? 'Logo';
   const ex = useExport((last) => patchView({ last }));
-  const height = useDocNumber(doc, { label: 'Change the PNG height', key: 'pngHeight', get: (x) => x.pngHeight, set: (x, h) => fix({ ...x, pngHeight: h }) });
-  const lockups = shownLockups(d);
-  const versions = shownVersions(d);
+  const lockups = v.scope === 'all' ? shownLockups(d) : lockup ? [lockup] : [];
+  const versions = v.scope === 'view' ? [v.version] : shownVersions(d);
+  const pairs = lockups.flatMap((l) => versions.map((x) => [l, x] as const));
+  const asked = (Object.keys(v.assets) as (keyof Assets)[]).filter((k) => v.assets[k]);
+  const vector = v.assets.svg || v.assets.png;
+  const png = v.assets.png ? (pairs.map(([l, x]) => pngSize(d, layoutLockup(d, l), x)).map((p) => tooBig(p.w, p.h)).find(Boolean) ?? null) : null;
+  const why =
+    !asked.length
+      ? 'Tick at least one asset'
+      : vector && !pairs.length
+        ? 'Every lockup is off. Turn one on in Lockups.'
+        : v.assets.favicon && !d.icon
+          ? 'The favicon is made from the icon. Add an icon first.'
+          : v.assets.sheet && !shownLockups(d).length
+            ? 'The brand sheet shows the lockups that are on. Turn one on first.'
+            : png;
 
-  const one = (what: string, ext: string, filterName: string, suggestedName: string, data: () => Promise<ArrayBuffer | string>) =>
-    ex.file(what, async () => saveFile({ tool: 'logo', suggestedName, ext, filterName, data: await data() }));
-  const many = (what: string, files: () => Promise<OutFile[]>) =>
-    ex.run(what, async () => {
-      const r = await saveToFolder({ tool: 'logo', files: await files() });
-      return r && { path: r.folder, label: `${plural(r.written.length, 'file')} into ${leaf(r.folder)}` };
+  /** every file the ticked assets make */
+  const files = async (): Promise<OutFile[]> => {
+    const out: OutFile[] = [];
+    for (const [l, x] of pairs) {
+      if (v.assets.svg) out.push({ name: `${fileName(name, l, x)}.svg`, data: lockupSvg(d, l, x, { padding: d.exportPadding }) });
+      if (v.assets.png) out.push({ name: `${fileName(name, l, x)}.png`, data: await buffer(await lockupPng(d, l, x, v.dpi)) });
+    }
+    if (v.assets.favicon) out.push(...(await faviconBundle(d, v.version, name)));
+    if (v.assets.sheet) out.push(v.sheet === 'png' ? { name: `${name} brand sheet.png`, data: await sheetPng(d, name) } : { name: `${name} brand sheet.svg`, data: await sheetSvg(d, name) });
+    return out;
+  };
+
+  const go = () => {
+    if (why || ex.busy) return;
+    const what = 'assets';
+    void ex.run(what, async () => {
+      const made = await files();
+      if (made.length === 1) {
+        const [f] = made;
+        const dot = f.name.lastIndexOf('.');
+        const ext = f.name.slice(dot + 1);
+        const path = await saveFile({ tool: 'logo', suggestedName: f.name.slice(0, dot), ext, filterName: ext === 'png' ? 'PNG image' : 'SVG', data: f.data });
+        return path ? { path, label: leaf(path) } : null;
+      }
+      const r = await saveToFolder({ tool: 'logo', files: made });
+      return r ? { path: r.folder, label: `${plural(r.written.length, 'file')} into ${leaf(r.folder)}` } : null;
     });
+  };
 
-  const markup = () => lockupSvg(d, lockup!, v.version, { padding: d.exportPadding });
+  return { ex, go, why, count: asked.length, pairs, lockups, versions };
+}
+
+export type LogoExport = ReturnType<typeof useLogoExport>;
+
+function Asset({ label, checked, onChange, sub, right }: { label: string; checked: boolean; onChange(on: boolean): void; sub: string; right?: ReactNode }) {
+  return (
+    <div className={s.asset} data-asset={label}>
+      <div className={s.main}>
+        <Toggle label={label} checked={checked} onChange={onChange} />
+        <span className={s.sub}>{sub}</span>
+      </div>
+      {right && <span className={s.right}>{right}</span>}
+    </div>
+  );
+}
+
+export function ExportGroup({ doc, d, v, lockup, out }: { doc: Doc; d: LogoDoc; v: LogoView; lockup: Lockup | null; out: LogoExport }) {
+  const { ex, go, why, count, pairs, lockups, versions } = out;
+  const height = useDocNumber(doc, { label: 'Change the PNG height', key: 'pngHeight', get: (x) => x.pngHeight, set: (x, h) => fix({ ...x, pngHeight: h }) });
+  const tick = (k: keyof Assets) => (on: boolean) => patchView({ assets: { ...v.assets, [k]: on } });
   const sized = lockup && pngSize(d, layoutLockup(d, lockup), v.version);
-  const pngProblem = sized && tooBig(sized.w, sized.h);
-  // Export all makes every PNG: the widest one on decides
-  const allProblem = lockups.flatMap((l) => versions.map((x) => pngSize(d, layoutLockup(d, l), x))).map((p) => tooBig(p.w, p.h)).find(Boolean) ?? null;
-  const noIcon = !d.icon ? 'The favicon is made from the icon. Add an icon first.' : null;
+  const tooBigNow = sized && tooBig(sized.w, sized.h);
+  const reach = v.scope === 'view' ? `${lockup ? KIND_LABEL[lockup.kind] : 'No lockup'}, ${VERSION_LABEL[v.version]}` : v.scope === 'lockup' ? `${lockup ? KIND_LABEL[lockup.kind] : 'No lockup'}, ${plural(versions.length, 'version')}` : `${plural(lockups.length, 'lockup')}, ${plural(versions.length, 'version')}`;
+  const markup = () => lockupSvg(d, lockup!, v.version, { padding: d.exportPadding });
 
   return (
-    <Module title="Export" sub={lockup ? `${KIND_LABEL[lockup.kind]} · ${VERSION_LABEL[v.version]}` : undefined}>
-      <ExportList>
-        {lockup && (
-          <>
-            <ExportRow
-              main
-              name="SVG"
-              desc="The lockup in its version as real paths with their own fills, each part one group: editable in Illustrator."
-              action={<ExportButton ex={ex} what="SVG" lead onClick={() => void one('SVG', 'svg', 'SVG', fileName(name, lockup, v.version), async () => markup())} />}
-              copy={<CopyButton ex={ex} what="SVG" lead onClick={() => void ex.copySvg('SVG', async () => markup())} />}
-            />
-            <ExportRow
-              name="PNG"
-              desc={v.version === 'knockout' ? 'The same at a set height on its colour field, the DPI written in.' : 'The same at a set height, transparent round the logo, the DPI written in.'}
-              action={
-                <ExportButton ex={ex} what="PNG" why={pngProblem} onClick={() => void one('PNG', 'png', 'PNG image', fileName(name, lockup, v.version), async () => buffer(await lockupPng(d, lockup, v.version, v.dpi)))} />
-              }
-            >
-              <div className={s.pair}>
-                <NumberField label="Height" min={LIMIT.pngHeight[0]} max={LIMIT.pngHeight[1]} unit="px" {...height} />
-                <NumberField label="DPI" min={LIMIT.dpi[0]} max={LIMIT.dpi[1]} value={v.dpi} onChange={(dpi) => patchView({ dpi })} />
-              </div>
-              {sized && (
-                <span className={cx('lbl', pngProblem && s.danger)}>
-                  {fmtPx(sized.w, sized.h)}
-                  {pngProblem ? ' · too big' : ''}
-                </span>
-              )}
-            </ExportRow>
-          </>
-        )}
-
-        <ExportRow
-          main={!lockup}
-          name="Export all"
-          desc="Every lockup that’s on in every version that’s on, as SVG and PNG, into one folder."
-          action={
-            <ExportButton ex={ex} what="files" folder lead={!lockup} disabled={!lockups.length || !versions.length} why={allProblem} onClick={() => void many('files', () => everyFile(d, name, v.dpi))}>
-              Export all…
-            </ExportButton>
-          }
-        >
-          <span className="lbl">
-            {plural(lockups.length, 'lockup')} × {plural(versions.length, 'version')} · {lockups.length * versions.length * 2} files
-          </span>
-        </ExportRow>
-
-        <ExportRow
-          name="Favicon bundle"
-          desc={`From the icon in ${VERSION_LABEL[v.version].toLowerCase()}: favicon.ico, PNGs from 16 to 512 px, an Apple touch icon, icon.svg and a web manifest, into one folder.`}
-          action={<ExportButton ex={ex} what="favicon bundle" folder why={noIcon} onClick={() => void many('favicon bundle', () => faviconBundle(d, v.version, name))} />}
+    <InspectorGroup id="logo.export" title="Export" meta={`${count} selected`}>
+      <InspectorRow label="Scope" info="What the SVG and PNG rows write: the lockup in view, that lockup in every version that is on, or every lockup in every version.">
+        <Segmented fit options={SCOPES} value={v.scope} onChange={(scope) => patchView({ scope })} />
+      </InspectorRow>
+      <div className={s.list}>
+        <Asset label="SVG" checked={v.assets.svg} onChange={tick('svg')} sub={reach} right={v.assets.svg && pairs.length > 1 ? plural(pairs.length, 'file') : 'editable'} />
+        <Asset
+          label="PNG"
+          checked={v.assets.png}
+          onChange={tick('png')}
+          sub={`${d.pngHeight} px high · ${v.dpi} dpi`}
+          right={<span className={cx(tooBigNow && s.danger)}>{sized ? fmtPx(sized.w, sized.h) : ''}</span>}
         />
-
-        <ExportRow
-          name="Brand sheet"
-          desc="One page with every lockup and version, the clearspace, the small sizes and the colours, to drop into a guidelines document."
-          action={
-            <div className={s.buttons}>
-              <ExportButton ex={ex} what="brand sheet" disabled={!lockups.length} onClick={() => void one('brand sheet', 'svg', 'SVG', `${name} brand sheet`, () => sheetSvg(d, name))}>
-                SVG
-              </ExportButton>
-              <ExportButton ex={ex} what="brand sheet PNG" disabled={!lockups.length} onClick={() => void one('brand sheet PNG', 'png', 'PNG image', `${name} brand sheet`, () => sheetPng(d, name))}>
-                PNG
-              </ExportButton>
-            </div>
-          }
+        <Asset label="Favicon bundle" checked={v.assets.favicon} onChange={tick('favicon')} sub={`ico, 16 to 512, touch icon, manifest · ${VERSION_LABEL[v.version].toLowerCase()}`} />
+        <Asset
+          label="Brand sheet"
+          checked={v.assets.sheet}
+          onChange={tick('sheet')}
+          sub="one page, every lockup and version"
+          right={<Segmented mono fit options={[{ value: 'svg', label: 'SVG' }, { value: 'png', label: 'PNG' }]} value={v.sheet} onChange={(sheet) => patchView({ sheet })} />}
         />
-      </ExportList>
+      </div>
+      <InspectorRow label="PNG size" pair>
+        <NumberField label="Height" min={LIMIT.pngHeight[0]} max={LIMIT.pngHeight[1]} unit="px" {...height} />
+        <NumberField label="DPI" min={LIMIT.dpi[0]} max={LIMIT.dpi[1]} value={v.dpi} onChange={(dpi) => patchView({ dpi })} />
+      </InspectorRow>
+      <div className={s.go} data-export="go">
+        <ExportButton ex={ex} what="assets" lead folder={count !== 1 || pairs.length !== 1} why={why} onClick={go}>
+          {count === 1 && pairs.length === 1 ? 'Export…' : `Export ${plural(count, 'asset')}…`}
+        </ExportButton>
+        <div data-row="SVG" className={s.copy}>
+          <CopyButton ex={ex} what="SVG" why={lockup ? null : 'Every lockup is off'} onClick={() => void ex.copySvg('SVG', async () => markup())} />
+        </div>
+      </div>
       <LastExport last={v.last} />
-    </Module>
+    </InspectorGroup>
   );
 }

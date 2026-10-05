@@ -1,15 +1,14 @@
-// The inspector's lockup and colour modules (spec §2): Lockups, Proportions, Versions, Clearspace.
+// The inspector's lockup and colour groups (spec §5): Lockups, Proportions, Versions, Clearspace.
 // Every value is typable and each change is one history step; fix() keeps the document valid.
-import { useMemo } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
 import { layoutLockup, spaceUnit } from '../../../shared/logo/layout.ts';
-import { ALIGNS, type Align } from '../../../shared/logo/types.ts';
-import { ColorField, IconButton, menu, Module, Segmented, Slider, Toggle, Tooltip, useDocColour, useDocNumber, type MenuItem } from '../../ui/index.ts';
+import { ALIGNS, sideBySide, type Align } from '../../../shared/logo/types.ts';
+import { ColorField, IconButton, InfoTip, InspectorGroup, InspectorRow, menu, Segmented, Slider, Tooltip, useDocColour, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { displayName } from '../common/names.ts';
 import { paletteMenu, useReadAhead } from '../common/palettes.ts';
 import { copyProportions, resetProportions, select, toggleLockup, type Doc } from './actions.ts';
-import { available, fix, KIND_LABEL, KIND_WHERE, LIMIT, mapLockup, proposed, twoParts, VERSION_LABEL, VERSION_NOTE, VERSIONS, type Lockup, type LockupKind, type LogoDoc, type Part, type Version } from './doc.ts';
+import { available, fix, KIND_LABEL, KIND_WHERE, LIMIT, mapLockup, twoParts, VERSION_LABEL, VERSIONS, type Lockup, type LockupKind, type LogoDoc, type Part, type Version } from './doc.ts';
 import { palette } from './view-state.ts';
 import s from './Inspector.module.css';
 
@@ -30,13 +29,13 @@ const STAND_IN: Record<'icon' | 'wordmark', Part> = {
 function Diagram({ d, lockup }: { d: LogoDoc; lockup: Lockup }) {
   const parts = { icon: d.icon ?? STAND_IN.icon, wordmark: d.wordmark ?? STAND_IN.wordmark };
   const lay = layoutLockup(parts, lockup);
-  const k = Math.min(40 / Math.max(lay.w, 1e-6), 22 / Math.max(lay.h, 1e-6));
-  const [ox, oy] = [(48 - lay.w * k) / 2, (28 - lay.h * k) / 2];
+  const k = Math.min(30 / Math.max(lay.w, 1e-6), 16 / Math.max(lay.h, 1e-6));
+  const [ox, oy] = [(34 - lay.w * k) / 2, (20 - lay.h * k) / 2];
   const wm = lay.wordmark;
   const band = wm && parts.wordmark.type ? parts.wordmark.type : null;
   const wk = wm ? wm.h / parts.wordmark.box.h : 1;
   return (
-    <svg className={s.diagram} width="48" height="28" viewBox="0 0 48 28" aria-hidden>
+    <svg className={s.diagram} width="34" height="20" viewBox="0 0 34 20" aria-hidden>
       {lay.icon && <rect x={ox + lay.icon.x * k} y={oy + lay.icon.y * k} width={lay.icon.w * k} height={lay.icon.h * k} rx="1.5" />}
       {wm && (
         <rect
@@ -52,45 +51,51 @@ function Diagram({ d, lockup }: { d: LogoDoc; lockup: Lockup }) {
   );
 }
 
-export function LockupsModule({ doc, d, edited }: { doc: Doc; d: LogoDoc; edited: LockupKind | null }) {
-  const ideas = useMemo(() => new Set(proposed(d).filter((l) => l.on).map((l) => l.kind)), [d.icon, d.wordmark]);
+/** one lockup's row: pick it (the row), turn it on or off (the eye) */
+export function LockupsGroup({ doc, d, edited }: { doc: Doc; d: LogoDoc; edited: LockupKind | null }) {
   const on = d.lockups.filter((l) => l.on && available(d, l.kind)).length;
-  // only where the choice differs from the proposal: one the parts suit left off, or one added
-  const tag = (l: Lockup): [string, string] | null =>
-    l.on === ideas.has(l.kind) ? null : l.on ? ['Added', 'Not one the parts’ shapes suggest'] : ['Proposed', 'The parts’ shapes suit this one'];
   return (
-    <Module title="Lockups" sub={`${on} on · ${ideas.size} proposed`}>
-      <div className={s.lockups}>
+    <InspectorGroup id="logo.lockups" title="Lockups" meta={`${on} on`}>
+      <div className={s.lockups} role="radiogroup" aria-label="Lockup to edit">
         {d.lockups.map((l) => {
           const ok = available(d, l.kind);
-          const needs = !ok ? `Needs ${!d.icon ? 'an icon' : 'a wordmark'}` : null;
+          const shown = l.on && ok;
           const mine = l.kind === edited;
-          const t = ok ? tag(l) : null;
-          const meta = needs ?? (twoParts(l.kind) ? `${KIND_WHERE[l.kind]} · ratio ${l.ratio.toFixed(2)} · gap ${l.gap.toFixed(2)}` : KIND_WHERE[l.kind]);
+          const info = !ok
+            ? `Needs ${!d.icon ? 'an icon' : 'a wordmark'}`
+            : `${KIND_WHERE[l.kind]}${twoParts(l.kind) ? ` · ratio ${l.ratio.toFixed(2)} · gap ${l.gap.toFixed(2)}` : ''}`;
           return (
-            <div key={l.kind} className={cx(s.lockup, mine && s.edited, !ok && s.off)}>
-              <Diagram d={d} lockup={l} />
-              <div className={s.lockText}>
-                <Toggle label={KIND_LABEL[l.kind]} checked={l.on && ok} disabled={!ok} onChange={(v) => toggleLockup(doc, l.kind, v)} className={s.toggle} quiet />
-                <Tooltip content={meta} overflowOnly>
-                  <span className={s.meta}>{meta}</span>
-                </Tooltip>
-              </div>
-              {t && (
-                <Tooltip content={t[1]}>
-                  <span className={cx('lbl', s.tag)}>{t[0]}</span>
-                </Tooltip>
-              )}
-              <IconButton icon="edit" label={l.on && ok ? `Edit ${KIND_LABEL[l.kind].toLowerCase()}` : 'Turn it on to edit it'} size="sm" latched={mine} disabled={!l.on || !ok} onClick={() => select(l.kind)} />
+            <div key={l.kind} className={cx(s.lockup, mine && s.edited, !shown && s.off)} data-lockup={l.kind}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={mine}
+                disabled={!ok}
+                className={s.pick}
+                onClick={() => (shown ? select(l.kind) : toggleLockup(doc, l.kind, true))}
+              >
+                <Diagram d={d} lockup={l} />
+                <span className={s.lockName}>{KIND_LABEL[l.kind]}</span>
+              </button>
+              <Tooltip content={info}>
+                <span className={s.where}>{KIND_WHERE[l.kind]}</span>
+              </Tooltip>
+              <IconButton
+                icon={shown ? 'visibility' : 'visibility_off'}
+                label={!ok ? info : shown ? `Hide ${KIND_LABEL[l.kind].toLowerCase()}` : `Show ${KIND_LABEL[l.kind].toLowerCase()}`}
+                size="sm"
+                disabled={!ok}
+                onClick={() => toggleLockup(doc, l.kind, !shown)}
+              />
             </div>
           );
         })}
       </div>
-    </Module>
+    </InspectorGroup>
   );
 }
 
-export function ProportionsModule({ doc, d, lockup }: { doc: Doc; d: LogoDoc; lockup: Lockup | null }) {
+export function ProportionsGroup({ doc, d, lockup }: { doc: Doc; d: LogoDoc; lockup: Lockup | null }) {
   const kind = lockup?.kind ?? 'horizontal';
   const ratio = useDocNumber(doc, {
     label: `Change the ratio of ${KIND_LABEL[kind].toLowerCase()}`,
@@ -110,8 +115,15 @@ export function ProportionsModule({ doc, d, lockup }: { doc: Doc; d: LogoDoc; lo
   // without a cap height found, Cap and Baseline would only be Centre and Bottom again
   const aligns = ALIGNS[kind].filter((a) => !noType || (a !== 'cap' && a !== 'baseline')).map((value) => ({ value, label: ALIGN_LABEL[value], tip: ALIGN_TIP[value] }));
   const align = noType && lockup.align === 'cap' ? 'center' : noType && lockup.align === 'baseline' ? 'bottom' : lockup.align;
+  const alone =
+    kind === 'icon'
+      ? 'The icon on its own has nothing to set against another part.'
+      : d.icon
+        ? 'The wordmark on its own takes the main lockup’s size, so its clearspace is in the same icon heights.'
+        : 'The wordmark on its own: with no icon, its clearspace is in cap heights.';
   return (
-    <Module
+    <InspectorGroup
+      id="logo.proportions"
       title="Proportions"
       sub={KIND_LABEL[kind]}
       actions={
@@ -124,26 +136,53 @@ export function ProportionsModule({ doc, d, lockup }: { doc: Doc; d: LogoDoc; lo
       }
     >
       {two ? (
-        <div className={s.stack}>
-          <div className={s.group}>
-            <Slider label="Ratio" min={LIMIT.ratio[0]} max={LIMIT.ratio[1]} step={0.01} unit="×" {...ratio} />
-            <Slider label="Gap" min={LIMIT.gap[0]} max={LIMIT.gap[1]} step={0.01} unit="×" {...gap} />
-          </div>
-          <Segmented label="Align" options={aligns} value={align} onChange={(align) => doc.transact(`Align ${KIND_LABEL[kind].toLowerCase()} by ${ALIGN_LABEL[align].toLowerCase()}`, (x) => mapLockup(x, kind, (l) => ({ ...l, align })))} />
-          <p className={s.note}>
-            Ratio is the icon’s height over the wordmark’s {noType ? 'artwork height (no cap height was found)' : 'cap height'}; the gap is in icon heights, artwork to artwork. Drag a corner of the icon to size it by eye.
-          </p>
-        </div>
+        <>
+          <Slider
+            label="Ratio"
+            info={`The icon’s height over the wordmark’s ${noType ? 'artwork height (no cap height was found)' : 'cap height'}. Drag a corner of the icon on the artboard to size it by eye.`}
+            min={LIMIT.ratio[0]}
+            max={LIMIT.ratio[1]}
+            step={0.01}
+            unit="×"
+            {...ratio}
+          />
+          <Slider label="Gap" info="Between the artworks, in icon heights." min={LIMIT.gap[0]} max={LIMIT.gap[1]} step={0.01} unit="×" {...gap} />
+          <Segmented
+            label="Align"
+            info={sideBySide(kind) ? 'How the icon sits against the wordmark, top to bottom.' : 'How the icon and the wordmark line up, left to right.'}
+            options={aligns}
+            value={align}
+            onChange={(align) => doc.transact(`Align ${KIND_LABEL[kind].toLowerCase()} by ${ALIGN_LABEL[align].toLowerCase()}`, (x) => mapLockup(x, kind, (l) => ({ ...l, align })))}
+          />
+        </>
       ) : (
         <p className={s.note}>
-          {kind === 'icon' ? 'The icon on its own has nothing to set against another part.' : d.icon ? 'The wordmark on its own takes the main lockup’s size, so its clearspace is in the same icon heights.' : 'The wordmark on its own: with no icon, its clearspace is in cap heights.'} Its clearspace and export size are below.
+          Nothing to set for a single part.
+          <InfoTip text={`${alone} Its clearspace and export size are set below.`} />
         </p>
       )}
-    </Module>
+    </InspectorGroup>
   );
 }
 
-export function VersionsModule({ doc, d }: { doc: Doc; d: LogoDoc }) {
+const VERSION_SHORT: Record<Version, string> = {
+  original: 'The artwork’s own colours',
+  black: 'Every fill black, white ones cut out',
+  white: 'Every fill white, white ones cut out',
+  colour: 'Every fill the colour, white ones cut out',
+  knockout: 'White on a field of the colour',
+};
+
+/** what a version paints, as a swatch: the chip is what it controls */
+function Chip({ version, d }: { version: Version; d: LogoDoc }) {
+  const colour = cssColor(d.colour);
+  const style =
+    version === 'black' ? { background: cssColor([0, 0, 0]) } : version === 'white' ? { background: cssColor([1, 0, 0]) } : version === 'colour' ? { background: colour } : version === 'knockout' ? { background: colour } : undefined;
+  return <i className={cx(s.swatch, version === 'original' && s.original, version === 'knockout' && s.knock)} style={style} />;
+}
+
+/** which versions ship (a chip pressed = it exports), and the colour One colour and Knockout use */
+export function VersionsGroup({ doc, d }: { doc: Doc; d: LogoDoc }) {
   const colour = useDocColour(doc, { label: 'Change the colour', key: 'colour', get: (x) => x.colour, set: (x, o) => ({ ...x, colour: o }) });
   const pal = palette.use();
   useReadAhead();
@@ -151,38 +190,51 @@ export function VersionsModule({ doc, d }: { doc: Doc; d: LogoDoc }) {
     doc.transact(`${on ? 'Turn on' : 'Turn off'} ${VERSION_LABEL[v].toLowerCase()}`, (x) => fix({ ...x, versions: on ? [...x.versions, v] : x.versions.filter((y) => y !== v) }));
   const raster = !!(d.icon && !d.icon.svg) || !!(d.wordmark && !d.wordmark.svg);
   return (
-    <Module title="Versions" sub={`${d.versions.length} on`} actions={<IconButton icon="palette" label="The colour from a Library palette" size="sm" onClick={(e) => menu.open(e.currentTarget.getBoundingClientRect(), paletteMenu('logo'), { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined })} />}>
-      <div className={s.versions}>
+    <InspectorGroup
+      id="logo.versions"
+      title="Versions"
+      meta={`${d.versions.length} on`}
+      actions={<InfoTip text="A pressed version goes into the sheet and every export. The switch in the bar chooses which one you look at." />}
+    >
+      <div className={s.chipsGrid} role="group" aria-label="Versions that are exported">
         {VERSIONS.map((v) => {
           const on = d.versions.includes(v);
           const last = on && d.versions.length === 1;
           return (
-            <div key={v} className={s.version}>
-              <Toggle label={VERSION_LABEL[v]} checked={on} disabled={last} onChange={(x) => toggle(v, x)} className={s.toggle} quiet />
-              <span className={s.meta}>{last ? 'The last one stays on' : VERSION_NOTE[v]}</span>
-            </div>
+            <Tooltip key={v} content={last ? 'The last one stays on' : `${on ? 'In the export' : 'Not in the export'}: ${VERSION_SHORT[v]}`}>
+              <button type="button" aria-pressed={on} disabled={last} className={cx(s.vchip, on && s.pressed)} onClick={() => toggle(v, !on)}>
+                <Chip version={v} d={d} />
+                {VERSION_LABEL[v]}
+              </button>
+            </Tooltip>
           );
         })}
       </div>
-      <div className={cx(s.group, s.rule)}>
+      <InspectorRow
+        label="Colour"
+        info={`One colour and knockout use it. Every fill in the export is this colour itself, never a filter. In every version but the original, white inside the artwork is cut out, so a white detail on a dark shape stays a detail.${raster ? ' A PNG part takes it as a flat tint.' : ''}`}
+      >
         <ColorField {...colour} name={displayName({ name: '', oklch: colour.value })} />
-        {pal && (
-          <div className={s.chips} role="group" aria-label={`Colours from ${pal.name}`}>
-            <span className={cx('lbl', s.from)}>{pal.name}</span>
-            {pal.swatches.map((w) => (
-              <Tooltip key={w.id} content={`Use ${displayName(w)}`}>
-                <button type="button" className={s.chip} aria-label={`Use ${displayName(w)}`} onClick={() => doc.transact(`Colour from ${displayName(w)}`, (x) => ({ ...x, colour: w.oklch }))}>
-                  <i style={{ background: cssColor(w.oklch) }} />
-                </button>
-              </Tooltip>
-            ))}
-          </div>
-        )}
-        <p className={s.note}>
-          One colour and knockout use it. Every fill in the export is this colour itself, never a filter. In every version but the original, white inside the artwork is cut out, so a white detail on a dark shape stays a detail.{raster ? ' A PNG part takes it as a flat tint.' : ''}
-        </p>
-      </div>
-    </Module>
+        <IconButton
+          icon="palette"
+          label="The colour from a Library palette"
+          size="sm"
+          onClick={(e) => menu.open(e.currentTarget.getBoundingClientRect(), paletteMenu('logo'), { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined })}
+        />
+      </InspectorRow>
+      {pal && (
+        <div className={s.chips} role="group" aria-label={`Colours from ${pal.name}`}>
+          <span className={s.from}>{pal.name}</span>
+          {pal.swatches.map((w) => (
+            <Tooltip key={w.id} content={`Use ${displayName(w)}`}>
+              <button type="button" className={s.chip} aria-label={`Use ${displayName(w)}`} onClick={() => doc.transact(`Colour from ${displayName(w)}`, (x) => ({ ...x, colour: w.oklch }))}>
+                <i style={{ background: cssColor(w.oklch) }} />
+              </button>
+            </Tooltip>
+          ))}
+        </div>
+      )}
+    </InspectorGroup>
   );
 }
 
@@ -191,23 +243,18 @@ const PADDINGS = [
   { value: 'tight' as const, label: 'Tight' },
 ];
 
-export function ClearspaceModule({ doc, d }: { doc: Doc; d: LogoDoc }) {
+export function ClearspaceGroup({ doc, d }: { doc: Doc; d: LogoDoc }) {
   const space = useDocNumber(doc, { label: 'Change the clearspace', key: 'clearspace', get: (x) => x.clearspace, set: (x, v) => fix({ ...x, clearspace: v }) });
   return (
-    <Module title="Clearspace" readout={`${d.clearspace.toFixed(2)} × ${spaceUnit(d)}`}>
-      <div className={s.stack}>
-        <Slider label="Clearspace" min={LIMIT.clearspace[0]} max={LIMIT.clearspace[1]} step={0.05} precision={2} unit="×" {...space} />
-        <Segmented
-          label="Exports"
-          options={PADDINGS}
-          value={d.exportPadding}
-          onChange={(exportPadding) => doc.transact(exportPadding === 'tight' ? 'Export trimmed tight' : 'Export with clearspace', (x) => ({ ...x, exportPadding }))}
-        />
-        <p className={s.note}>
-          The room kept clear on every side, in {spaceUnit(d)}s, the same for every lockup. {d.exportPadding === 'tight' ? 'Exports are trimmed to the artwork; a knockout keeps it, as its field.' : 'Exports carry it as transparent padding.'}
-        </p>
-      </div>
-    </Module>
+    <InspectorGroup id="logo.clearspace" title="Clearspace" meta={`${d.clearspace.toFixed(2)} × ${spaceUnit(d)}`} defaultOpen={false}>
+      <Slider label="Clearspace" info={`The room kept clear on every side, in ${spaceUnit(d)}s, the same for every lockup.`} min={LIMIT.clearspace[0]} max={LIMIT.clearspace[1]} step={0.05} precision={2} unit="×" {...space} />
+      <Segmented
+        label="Exports"
+        info={d.exportPadding === 'tight' ? 'Exports are trimmed to the artwork; a knockout keeps its clearspace, as its field.' : 'Exports carry the clearspace as transparent padding.'}
+        options={PADDINGS}
+        value={d.exportPadding}
+        onChange={(exportPadding) => doc.transact(exportPadding === 'tight' ? 'Export trimmed tight' : 'Export with clearspace', (x) => ({ ...x, exportPadding }))}
+      />
+    </InspectorGroup>
   );
 }
-
