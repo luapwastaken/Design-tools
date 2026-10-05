@@ -13,7 +13,8 @@ export const DEFAULT_VIEW: DesignView = {
   surround: 'grey',
   chipData: 'short',
   stage: 'swatches',
-  dock: true,
+  // closed to its summary chips until opened; the choice is kept
+  dock: false,
   cvd: 'deutan',
   sim: 'normal',
   locked: [],

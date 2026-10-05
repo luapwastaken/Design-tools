@@ -26,9 +26,9 @@ const same = (a: number[], b: number[]) => a.every((x, i) => x === b[i]);
 /** which groups are open in a mode: the mode decides what is open, not what exists */
 const OPEN: Record<Mode, { step: boolean; ramp: boolean; light: boolean }> = {
   ramps: { step: true, ramp: true, light: false },
-  light: { step: false, ramp: true, light: true },
+  light: { step: true, ramp: true, light: true },
   check: { step: true, ramp: false, light: false },
-  paint: { step: false, ramp: false, light: false },
+  paint: { step: true, ramp: false, light: false },
 };
 
 /** Step colour, Ramp, Light & shadow, in the mode's order; `lead` goes first (Checks, the Mixer) */
@@ -82,7 +82,7 @@ function Editor({ doc, d, w, r }: { doc: Doc; d: IllustrationDoc; w: Swatch; r: 
       <div className={s.ident}>
         <i className={s.big} style={{ background: cssColor(colour.value) }} />
         <div className={s.fields}>
-          <TextInput value={w.name} placeholder={w.name.trim() ? undefined : name} onCommit={(t) => doc.transact(`Rename ${name}`, (x) => renameSwatch(x, w.id, t.trim()))} />
+          <TextInput className={s.name} value={w.name} placeholder={w.name.trim() ? undefined : name} onCommit={(t) => doc.transact(`Rename ${name}`, (x) => renameSwatch(x, w.id, t.trim()))} />
           <span className={s.where}>
             L {fmtL(w.oklch[0])}
             {word ? ` · ${word}` : ''}

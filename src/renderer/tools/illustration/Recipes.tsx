@@ -56,10 +56,9 @@ export function Recipes({ d, v, sel, owned, hidden, onTry, className }: Props) {
       sub={v.recipesFor === 'bases' ? 'a recipe for every base' : sel ? `a recipe for ${sel.name}` : undefined}
       actions={<PaintsButton v={v} />}
       className={className}
-      footer={<span className={s.fine}>Parts by volume, tinting strength included. Tube colours vary: mix, then adjust by eye. Try it in gouache for the mix at full strength; one watercolour pass is a first wash.</span>}
     >
       <div className={s.opts}>
-        <Segmented label="Paints per mix" options={MAX} value={String(v.maxPaints) as '1' | '2' | '3'} onChange={(m) => patchView({ maxPaints: Number(m) as 1 | 2 | 3 })} />
+        <Segmented label="Paints per mix" info="Parts by volume, tinting strength included. Tubes vary, so adjust by eye. Gouache gives the mix at full strength; one watercolour pass is a first wash." options={MAX} value={String(v.maxPaints) as '1' | '2' | '3'} onChange={(m) => patchView({ maxPaints: Number(m) as 1 | 2 | 3 })} />
         <Segmented label="For" options={FOR} value={v.recipesFor} onChange={(recipesFor) => patchView({ recipesFor })} />
       </div>
       {!owned.length ? (

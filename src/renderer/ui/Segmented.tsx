@@ -8,7 +8,7 @@ import s from './Segmented.module.css';
 
 export type SegmentedProps<T extends string> = {
   /** `tip`: the tooltip, and the accessible name of an icon alone; with a label, the label stays the name (voice control says it) and `tip` is its description */
-  options: { value: T; label: string; icon?: IconName; tip?: string }[];
+  options: { value: T; label: string; icon?: IconName; tip?: string; /** a count after the label, in the danger tone (a check's problems); 0 shows nothing */ badge?: number; /** this segment can't be chosen yet (its `tip` says why) */ disabled?: boolean }[];
   value: T;
   onChange(v: T): void;
   /** a row label on the left, like a Slider's */
@@ -32,8 +32,11 @@ export function Segmented<T extends string>({ options, value, onChange, label, i
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const n = options.length;
-    const i = e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : e.key in STEP ? (Math.max(at, 0) + STEP[e.key] + n) % n : -1;
+    let i = e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : e.key in STEP ? (Math.max(at, 0) + STEP[e.key] + n) % n : -1;
     if (i < 0) return;
+    // past segments that can't be chosen
+    for (let k = 0; k < n && options[i].disabled; k++) i = (i + (STEP[e.key] ?? 1) + n) % n;
+    if (options[i].disabled) return;
     e.preventDefault();
     onChange(options[i].value);
     (e.currentTarget.children[i] as HTMLElement | undefined)?.focus();
@@ -53,15 +56,16 @@ export function Segmented<T extends string>({ options, value, onChange, label, i
             type="button"
             role="radio"
             aria-checked={i === at}
-            aria-label={o.label ? undefined : o.tip}
+            aria-label={o.label ? (o.badge ? `${o.label}, ${o.badge} to look at` : undefined) : o.tip}
             aria-description={o.label ? o.tip : undefined}
             tabIndex={i === at || (at < 0 && i === 0) ? 0 : -1}
-            disabled={disabled}
+            disabled={disabled || o.disabled}
             className={i === at ? s.on : undefined}
             onClick={() => o.value !== value && onChange(o.value)}
           >
             {o.icon && <Icon name={o.icon} size={16} />}
             {o.label}
+            {!!o.badge && <span className={s.badge}>{o.badge > 99 ? '99+' : o.badge}</span>}
           </button>
         </Tooltip>
       ))}

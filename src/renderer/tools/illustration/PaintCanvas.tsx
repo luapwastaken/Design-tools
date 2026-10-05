@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerE
 import { createPortal } from 'react-dom';
 import { cssColor, toHex, toOklch, type Oklch } from '../../../shared/color/index.ts';
 import type { Pigment } from '../../../shared/paint/pigments.ts';
-import { ConfirmInline, Icon, InspectorGroup, toast, ViewStrip } from '../../ui/index.ts';
+import { ConfirmInline, Icon, IconButton, InspectorGroup, toast, ViewStrip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { brushWidth, toSample, WIDTH, type PaintingState, type PointerSample } from './paint/index.ts';
 import { HEIGHT } from './paint/types.ts';
@@ -44,6 +44,7 @@ export type PaintCanvasProps = {
   target: Oklch | null;
 };
 
+const noop = () => {};
 const BLANK: PaintingState = { depth: 0, redoDepth: 0, lastIsClear: false, blank: true };
 /** after a lift the ring waits until the pointer moves this far, so it never sits on the fresh paint */
 const RING_SLOP = 2;
@@ -64,6 +65,15 @@ export function PaintCanvas(p: PaintCanvasProps) {
   const wellEl = useRef<HTMLDivElement>(null);
   const clearBtn = useRef<HTMLButtonElement>(null);
   const [painting, setPainting] = useState(BLANK);
+  // how much of the paper's own pixels the fit shows, for the view strip's readout
+  const [shownPct, setShownPct] = useState(100);
+  useEffect(() => {
+    const el = canvas.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => el.clientWidth && setShownPct(Math.round((el.clientWidth / WIDTH) * 100)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const [armed, setArmed] = useState(false);
   const [over, setOver] = useState(false);
 
@@ -265,8 +275,6 @@ export function PaintCanvas(p: PaintCanvasProps) {
         readout={readout}
         painting={painting}
         ready={ready}
-        onUndo={undo}
-        onRedo={redo}
         onClear={() => setArmed(true)}
         clearBtn={clearBtn}
       />
@@ -332,10 +340,19 @@ export function PaintCanvas(p: PaintCanvasProps) {
 
       </div>
       <ViewStrip
+        // the engine has no zoom: the paper always fits, so the zoom half is shown as it is (Fit, and how much of 100% the fit is) but off
+        zoom={{ pct: shownPct, preset: 'fit', disabled: true, onFit: noop, onActual: noop, onIn: noop, onOut: noop, onType: noop }}
         overlays={
-          <span className={s.paper}>
-            Fit · Paper <b>{WIDTH} x {HEIGHT} px</b>
-          </span>
+          <>
+            <span className={s.strokes}>
+              <span className="lbl">Strokes</span>
+              <IconButton icon="undo" label={`Undo a stroke on the paper, or a Clear${painting.depth ? ` (${painting.depth} kept)` : ''}`} shortcut="Ctrl+Z" size="sm" disabled={!ready || !painting.depth} onClick={undo} />
+              <IconButton icon="redo" label="Redo a stroke on the paper" shortcut="Ctrl+Y" size="sm" disabled={!ready || !painting.redoDepth} onClick={redo} />
+            </span>
+            <span className={s.paper}>
+              Paper <b>{WIDTH} x {HEIGHT} px</b>
+            </span>
+          </>
         }
         readout={
           <>

@@ -46,6 +46,8 @@
 
 /* ── the toolbox and the paper ── */
 .body { display: flex; flex: 1 1 auto; min-height: 0; }
+.strokes { display: inline-flex; flex: none; align-items: center; gap: 2px; margin-left: 8px; }
+.strokes > :global(.lbl) { margin-right: 6px; }
 .paper, .where, .keys { color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); white-space: nowrap; }
 .paper b { color: var(--ink); font-weight: 400; }
 .keys { color: var(--ink-3); }

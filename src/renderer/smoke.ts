@@ -109,13 +109,18 @@ const rowOf = (b: Element) => b.closest('[data-row]')?.getAttribute('data-row');
 const shows = (el: Element | null | undefined) => !!el && el.getClientRects().length > 0;
 /** a tool's showing button whose text ends with `text` (an icon's name comes first) */
 const button = (id: ToolId, text: string) => [...(host(id)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith(text) && shows(b));
-/** the Check list that shows: its open row, its first row that fails ('' when none does), and its first row */
-function openCheck(id: ToolId): { open: string; bad: string; first: string } | null {
-  const list = [...(host(id)?.querySelectorAll('[role="tablist"][aria-orientation="vertical"]') ?? [])].find(shows);
-  const rows = [...(list?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [])];
-  if (!rows.length) return null;
-  const label = (r?: HTMLElement) => r?.children[1]?.textContent ?? '';
-  return { open: label(rows.find((r) => r.ariaSelected === 'true')), bad: label(rows.find((r) => r.firstElementChild?.getAttribute('data-icon') === 'error')), first: label(rows[0]) };
+/** Illustration's Check pane that shows: its problem rows, and the count the Check segment carries */
+function problemPane(): { rows: number; fixes: number; badge: number; inspectorChecks: boolean } | null {
+  const pane = [...(host('illustration')?.querySelectorAll('section[aria-label="Problems"]') ?? [])].find(shows);
+  if (!pane) return null;
+  const seg = [...(host('illustration')?.querySelectorAll('[role="radio"]') ?? [])].find((r) => r.textContent?.includes('Check'));
+  const inspector = [...(host('illustration')?.querySelectorAll('aside[aria-label="Inspector"] h2') ?? [])];
+  return {
+    rows: pane.querySelectorAll('[data-icon="error"]').length,
+    fixes: pane.querySelectorAll('button').length,
+    badge: Number(seg?.textContent?.match(/\d+/)?.[0] ?? 0),
+    inspectorChecks: inspector.some((h) => h.textContent === 'Checks'),
+  };
 }
 /** Design's options-bar Generate (its label carries the Space key hint after it) */
 const generateButton = () => [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Generate') && shows(b));
@@ -397,7 +402,7 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
 
   // the Checks dock sits under the artboard, always attached: four cards, and it counts what fails (Smoke text on Smoke ground)
   patchDesign({ dock: true, inks: false, stage: 'swatches' });
-  const dock = await until(() => (dockText()?.head.includes('to look at') ? dockText() : null));
+  const dock = await until(() => (dockText()?.head.includes('to look at') && (dockText()?.cards.length ?? 0) > 1 ? dockText() : null));
   check('the Checks dock shows its four cards and counts what is left to look at', JSON.stringify(dock?.cards) === JSON.stringify(['Checks', 'Contrast', 'Colour vision', 'Value', 'Print']) && /\d+ to look at/.test(dock?.head ?? ''), dock);
 
   const inDesign = (id: string) => dd.get().swatches.find((w) => w.id === id);
@@ -1916,9 +1921,9 @@ async function illustration(): Promise<void> {
     return p?.ramps?.length === 2 && p.swatches.length === 10 && p.swatches.every((w) => typeof w.group === 'string' && Number.isInteger(w.step));
   });
   check('its file holds two 5-step ramps, each swatch with its ramp and step', whole, await payload());
-  patchIllustration({ tab: 'check', check: null });
-  const opened = await until(() => openCheck('illustration'));
-  check('Illustration’s Check lists problems first and opens on the first, or on its first check', opened && opened.open === (opened.bad || opened.first) && (!opened.bad || opened.first === opened.bad), opened);
+  patchIllustration({ tab: 'check' });
+  const opened = await until(() => problemPane());
+  check('Illustration’s Check lists its problems under the boards, as many as the Check segment counts, and the inspector has no second Checks group', opened && opened.rows === opened.badge && opened.fixes <= opened.rows && !opened.inspectorChecks, opened);
 
   // a hand-edited step stays put when its ramp regenerates; the others follow the new settings
   const ramp = il.get().ramps[0].id;
@@ -1986,13 +1991,11 @@ async function illustration(): Promise<void> {
 
   // a new palette's first stroke: the quit, straight after this pass, must save it (the quiet pass looks)
   shell.setActive('illustration');
-  patchIllustration({ check: 'vision' });
   await shell.newDoc('illustration');
   await emptyUi();
   il.transact('Add base colours', (d) => addRamp(d, [0.62, 0.12, 40]).doc);
   const last = await until(() => (il.state().t === 'saved' ? il.source() : null));
   if (!check('a new Illustration palette for the last painting', last && last.itemId !== id && last.itemId !== fork?.itemId, il.state())) return;
-  check('it lets the check chosen on the last palette go, so Check opens on its own first problem', await until(() => illustrationView().check === null), illustrationView().check);
   check('its canvas starts blank', await until(() => liveEngine.get()?.state.blank), liveEngine.get()?.state);
   await stroke(0.5);
   check('the last stroke is on the canvas', await until(painted), liveEngine.get()?.state);
@@ -2064,7 +2067,7 @@ async function emptyUi(): Promise<void> {
   patchIllustration({ tab: 'ramps' });
   const start = await until(() => host('illustration')?.querySelector('section[aria-label="Start"]'), 3000);
   check('an empty palette shows the start artboard in Ramps', shows(start), start?.textContent?.slice(0, 40));
-  const off = (label: string) => [...(host('illustration')?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? [])].find((t) => t.textContent?.includes(label))?.disabled;
+  const off = (label: string) => [...(host('illustration')?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [])].find((t) => t.textContent?.includes(label))?.disabled;
   check('and holds Light and Check back until there is a colour, but not Paint', off('Light') === true && off('Check') === true && off('Paint') === false, [off('Light'), off('Check'), off('Paint')]);
   patchIllustration({ tab: 'light' });
   await sleep(100);

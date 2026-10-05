@@ -1,10 +1,9 @@
-import { useRef, useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent, type ReactNode, type Ref } from 'react';
+import { useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode, type Ref } from 'react';
 import type { DocController } from '../../../shared/doc-api.ts';
 import type { ToolId } from '../../../shared/types.ts';
 import { shell, useShell } from '../../shell/core/index.ts';
-import type { IconName } from '../../shell/tool.ts';
 import { cx } from '../../ui/cx.ts';
-import { Button, Icon, menu, TextInput, Tooltip, UndoRedo, type MenuItem } from '../../ui/index.ts';
+import { Button, menu, TextInput, Tooltip, UndoRedo, type MenuItem } from '../../ui/index.ts';
 import { useWidth } from './useWidth.ts';
 import s from './DocBar.module.css';
 
@@ -23,7 +22,7 @@ export type DocBarProps = {
   meta?: ReactNode;
   /** small tool actions after the meta: IconButtons (New, Open an image), one Button (Surprise me) */
   actions?: ReactNode;
-  /** the tool's one view/mode switch, centred: a Segmented with icons (or DocTabs while a tool still has badges) */
+  /** the tool's one view/mode switch, centred: a Segmented with icons (badges go in the Segmented's options) */
   modes?: ReactNode;
   /** Send to's wording (see SendTo); false: the tool hands nothing on */
   send?: { noun?: string; empty: string; tip?: string } | false;
@@ -76,57 +75,6 @@ export function ExportMenu({ items, disabled, tooltip }: { items(): MenuItem[]; 
     if (b) menu.open(b.getBoundingClientRect(), items(), { owner: b, initial: e.detail === 0 ? 0 : undefined });
   };
   return <ExportButton ref={at} disabled={disabled} tooltip={tooltip} onClick={open} />;
-}
-
-/** `off`: why the tab can't open yet (its tooltip) */
-export type DocTab<T extends string> = { value: T; label: string; icon: IconName; badge?: number; off?: string };
-
-/** a count past two digits is noise on a tab: the check's own line says how many */
-const badgeText = (n: number) => (n > 99 ? '99+' : String(n));
-
-const STEP: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 };
-
-/**
- * Tabs for a DocBar's `modes` where a mode needs a badge or can be off (the colour tools' Check).
- * Otherwise use a Segmented with icons. One Tab stop; the arrows move and choose, past tabs that are off.
- */
-export function DocTabs<T extends string>({ options, value, onChange }: { options: DocTab<T>[]; value: T; onChange(t: T): void }) {
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const open = options.filter((o) => !o.off);
-    const n = open.length;
-    const at = open.findIndex((o) => o.value === value);
-    const i = e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : e.key in STEP ? (Math.max(at, 0) + STEP[e.key] + n) % n : -1;
-    if (i < 0 || !n) return;
-    e.preventDefault();
-    onChange(open[i].value);
-    (e.currentTarget.children[options.indexOf(open[i])] as HTMLElement | undefined)?.focus();
-  };
-  return (
-    <div role="tablist" aria-label="Jobs" className={s.tabs} onKeyDown={onKeyDown}>
-      {options.map((o) => {
-        const on = o.value === value;
-        const tip = o.off ?? (o.badge ? `${o.label}: ${o.badge} to look at` : o.label);
-        return (
-          <Tooltip key={o.value} content={tip}>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={on}
-              aria-label={o.badge ? `${o.label}, ${o.badge} to look at` : o.label}
-              tabIndex={on ? 0 : -1}
-              disabled={!!o.off}
-              className={cx(s.tab, on && s.on)}
-              onClick={() => onChange(o.value)}
-            >
-              <Icon name={o.icon} fill={on} />
-              <span className={s.tabLabel}>{o.label}</span>
-              {!!o.badge && <span className={s.badge}>{badgeText(o.badge)}</span>}
-            </button>
-          </Tooltip>
-        );
-      })}
-    </div>
-  );
 }
 
 /**

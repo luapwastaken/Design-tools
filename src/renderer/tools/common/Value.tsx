@@ -25,7 +25,7 @@ const pct = (l: number) => `${Math.min(1, Math.max(0, l)) * 100}%`;
 const clamp01 = (l: number) => Math.min(1, Math.max(0, l));
 const LANE = 13;
 /** 10px Plex Mono: 0.6em advance plus the pin's letter spacing */
-const CHAR = 6.2;
+const CHAR = 7.2;
 /** a pin shows this much of a long name; its tooltip has all of it */
 const NAME_CHARS = 10;
 const cut = (name: string) => (name.length > NAME_CHARS ? `${name.slice(0, NAME_CHARS - 1)}…` : name);
@@ -43,7 +43,7 @@ function laneOut(list: Swatch[], width: number) {
     const wide = label(w).length * CHAR;
     const align: 'start' | 'centre' | 'end' = x - wide / 2 < 0 ? 'start' : x + wide / 2 > width ? 'end' : 'centre';
     const left = align === 'start' ? x : align === 'end' ? x - wide : x - wide / 2;
-    const lane = ends.findIndex((e) => left >= e + 8);
+    const lane = ends.findIndex((e) => left >= e + 12);
     if (lane >= 0) ends[lane] = left + wide;
     return { lane: lane >= 0 ? lane : null, align };
   });

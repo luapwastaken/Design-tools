@@ -1,11 +1,11 @@
 // Light mode (spec §4): the lit object IS the canvas, big, with a sun you drag on its ring; the exact
-// azimuth and elevation are typed in the bar above. Every ramp sits in a filmstrip under it, on the
+// azimuth and elevation are typed in the bar above. Every ramp sits in a filmstrip under it (off while All ramps shows), on the
 // same shape under the same light, one click each. Judged colour sits on the neutral surround.
 import { memo, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { Oklch } from '../../../shared/color/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { useDrag } from '../../ui/drag.ts';
-import { EmptyState, Icon, NumberField, Segmented, Select, Tooltip } from '../../ui/index.ts';
+import { EmptyState, Icon, InspectorGroup, NumberField, Segmented, Select, Tooltip } from '../../ui/index.ts';
 import { OptionsBar, OptionsField } from '../common/OptionsBar.tsx';
 import { SURROUNDS, surroundOf } from '../common/surround.ts';
 import { baseOf, looseOf, rampName, stepsOf, type IllustrationDoc } from './doc.ts';
@@ -75,15 +75,6 @@ export function LightMode({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illu
   return (
     <div className={s.mode}>
       <OptionsBar>
-        <OptionsField label="Shape">
-          <Segmented fit options={[...SHAPES]} value={view.shape} onChange={(shape) => onView({ shape })} />
-        </OptionsField>
-        <OptionsField label="Show">
-          <Segmented fit options={[...SHOWS]} value={view.all ? 'all' : 'one'} onChange={(m) => onView({ all: m === 'all' })} />
-        </OptionsField>
-        <OptionsField label="Shading">
-          <Segmented fit options={[...SHADINGS]} value={view.banded ? 'banded' : 'smooth'} onChange={(m) => onView({ banded: m === 'banded' })} />
-        </OptionsField>
         <OptionsField label="Surround">
           <Select className={s.sel} options={SURROUNDS.map((o) => ({ value: o.value, label: o.tip.replace(' surround', '').replace(/^The /, ''), swatch: surroundOf(o.value, d.swatches) }))} value={v.surround} onChange={(surround) => patchView({ surround })} />
         </OptionsField>
@@ -112,10 +103,23 @@ export function LightMode({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illu
           <One ramp={ramp} shape={view.shape} light={light} banded={view.banded} gesture={gesture} onKey={(l) => onView(l)} />
         )}
       </div>
-      {ramp && (
+      {ramp && !view.all && (
         <Film ramps={ramps} selected={ramp.id} shape={view.shape} light={light} banded={view.banded} surround={surround} onSelect={(id) => select(baseOf(d, id)?.id ?? null)} />
       )}
     </div>
+  );
+}
+
+/** the inspector's group for what the object is and how it is drawn: Shape, Show, Shading (the bar keeps the light, the surround and the proof) */
+export function LightViewGroup({ v }: { v: IllustrationView }) {
+  const view = shaped(v.preview, LIT_VIEW);
+  const onView = (patch: Partial<LitView>) => patchView({ preview: { ...view, ...patch } });
+  return (
+    <InspectorGroup id="illustration.litview" title="Lit preview" sub={`${view.shape} · ${view.all ? 'all ramps' : 'this ramp'}`}>
+      <Segmented label="Shape" options={[...SHAPES]} value={view.shape} onChange={(shape) => onView({ shape })} />
+      <Segmented label="Show" options={[...SHOWS]} value={view.all ? 'all' : 'one'} onChange={(m) => onView({ all: m === 'all' })} />
+      <Segmented label="Shading" options={[...SHADINGS]} value={view.banded ? 'banded' : 'smooth'} onChange={(m) => onView({ banded: m === 'banded' })} />
+    </InspectorGroup>
   );
 }
 

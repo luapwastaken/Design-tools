@@ -169,7 +169,7 @@ export function Well(p: {
         </Tooltip>
         <div className={s.wellText}>
           <b>The well</b>
-          {p.mix ? <span className={s.hex}>{toHex(p.mix).toUpperCase()}</span> : <span className={s.hint}>Shift-click tubes, or drag them here, to mix your own.</span>}
+          {p.mix ? <span className={s.hex}>{toHex(p.mix).toUpperCase()}</span> : <span className={s.hint}>Empty. Shift-click a tube to add it.</span>}
           {e !== null && (
             <span className={cx(s.de, e < 2 ? s.match : e < 5 && s.close)}>
               dE {e.toFixed(1)} · {e < 2 ? 'match' : e < 5 ? 'close' : 'near'}
