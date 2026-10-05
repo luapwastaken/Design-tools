@@ -2,18 +2,18 @@
 // naming the colours that collide and carrying its fix; then print: ≈CMYK, gamut and, on request,
 // the nearest reference inks.
 import { useMemo } from 'react';
-import { contrast, cssColor, hexToOklch, simulateCvd, toSrgbGamut, type Cvd, type Oklch } from '../../../shared/color/index.ts';
-import { printInfo, type CvdClosest, type PrintInfo, type ValueCollision } from '../../../shared/palette/checks.ts';
+import { cssColor, hexToOklch, simulateCvd, toSrgbGamut, type Cvd, type Oklch } from '../../../shared/color/index.ts';
+import { printInfo, type CvdClosest, type PrintInfo } from '../../../shared/palette/checks.ts';
 import type { InkMatch } from '../../../shared/palette/inks.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
-import { Button, Icon, IconButton, NumberField, toast, Tooltip } from '../../ui/index.ts';
-import { cvdFix, valueFix } from '../common/adjust.ts';
-import { plural } from '../common/names.ts';
+import { Button, Icon, NumberField, toast, Tooltip } from '../../ui/index.ts';
+import { cvdFix } from '../common/adjust.ts';
+import { Value } from '../common/Value.tsx';
 import { VISIONS, type Kind } from '../common/Vision.tsx';
 import { setColours, type Doc } from './actions.ts';
-import { displayName, listNames, type DesignDoc, type DesignView, type Simulate } from './doc.ts';
-import type { Results } from './results.ts';
+import { displayName, type DesignDoc, type DesignView, type Simulate } from './doc.ts';
+import type { Results, Verdict } from './results.ts';
 import { patchView, pointAt } from './view-state.ts';
 import s from './Tabs.module.css';
 
@@ -32,27 +32,70 @@ export function CheckTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: DesignVi
   const few = shown.length < 2;
   return (
     <>
-      <div className={s.h3}>
-        Colour vision and value
-        <small>how the palette reads for everyone</small>
+      <Verdicts list={r.verdicts} />
+      <div className={s.h3} data-check="vision">
+        Colour vision
+        <small>how the palette reads for everyone · Machado 2009</small>
         <span className={s.flags}>
           <NumberField label="Flag ΔE <" value={v.flagE} min={1} max={40} step={0.5} precision={1} size="sm" width={120} onChange={(flagE) => patchView({ flagE })} />
-          <NumberField label="Flag ΔL <" value={v.flagL} min={1} max={20} step={0.5} precision={1} size="sm" width={120} onChange={(flagL) => patchView({ flagL })} />
         </span>
       </div>
       {few ? (
         <p className={s.none}>With two or more colours, this shows how each colour vision deficiency sees them, and which look the same in greyscale.</p>
       ) : (
-        <div className={s.cvs} role="group" aria-label="Colour vision and value">
+        <div className={s.cvs} role="group" aria-label="Colour vision">
+          <div className={cx(s.cv, s.names)} aria-hidden="true">
+            <span />
+            <span className={s.nameStrip} style={{ gridTemplateColumns: `repeat(${shown.length}, 1fr)` }}>
+              {shown.map((w) => (
+                <span key={w.id}>{displayName(w)}</span>
+              ))}
+            </span>
+            <span />
+          </div>
           <VisionRow kind="typical" shown={shown} pair={r.vision.typical} sim={v.sim} />
           {CVDS.map((k) => (
             <VisionRow key={k} kind={k} shown={shown} pair={r.vision[k]} sim={v.sim} r={r} flagE={v.flagE} onFix={fix} />
           ))}
-          <ValueRow shown={shown} r={r} flagL={v.flagL} sim={v.sim} onFix={fix} />
         </div>
       )}
-      <PrintBlock doc={doc} d={d} v={v} r={r} />
+      <div data-check="value" className={s.valueBox}>
+        <Value
+          swatches={shown}
+          onFix={fix}
+          pointAt={pointAt}
+          collisions={r.collisions}
+          contrast={r.contrast}
+          flagL={v.flagL}
+          onFlagL={(flagL) => patchView({ flagL })}
+          extra={
+            <Button size="xs" onClick={() => toggleSim('greyscale', v.sim)} aria-pressed={v.sim === 'greyscale'} tooltip={v.sim === 'greyscale' ? 'Show the palette as it is' : 'Show the palette row in greyscale'}>
+              {v.sim === 'greyscale' ? 'Stop greyscale' : 'See as greyscale'}
+            </Button>
+          }
+        />
+      </div>
+      <div data-check="print" />
+      <PrintBlock doc={doc} d={d} r={r} />
     </>
+  );
+}
+
+/** one line per check, problems first; a click goes to the check (Contrast has its own tab) */
+function Verdicts({ list }: { list: Verdict[] }) {
+  const rank = (x: Verdict) => (x.ok === false ? 0 : x.ok === undefined ? 1 : 2);
+  const sorted = [...list].sort((a, b) => rank(a) - rank(b));
+  const go = (id: string) => (id === 'contrast' ? patchView({ tab: 'contrast' }) : document.querySelector(`[data-check="${id}"]`)?.scrollIntoView({ block: 'start' }));
+  return (
+    <div className={s.verdicts} role="list" aria-label="Checks">
+      {sorted.map((x) => (
+        <button key={x.id} type="button" role="listitem" className={cx(s.verdict, x.ok === false && s.bad)} data-verdict={x.id} onClick={() => go(x.id)}>
+          <Icon name={x.ok === false ? 'error' : x.ok ? 'check_circle' : x.icon} size={16} />
+          <b>{x.label}</b>
+          <span>{x.verdict}</span>
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -90,10 +133,10 @@ function VisionRow({ kind, shown, pair, sim, r, flagE, onFix }: { kind: Kind; sh
         ))}
       </span>
       <span className={cx(s.res, flagged && s.bad)}>
-        {flagged && pair ? (
+        {!pair ? null : flagged ? (
           <>
             <span>
-              {displayName(pair.a)} and {displayName(pair.b)} look alike
+              {displayName(pair.a)} and {displayName(pair.b)} look alike, ΔE {pair.deltaE.toFixed(1)}
             </span>
             {parted && onFix && (
               <Button size="xs" onClick={() => onFix(`Part ${displayName(pair.a)} and ${displayName(pair.b)}`, parted)} tooltip={`Spread them in lightness until ΔE reaches ${flagE!.toFixed(1)}`}>
@@ -103,69 +146,9 @@ function VisionRow({ kind, shown, pair, sim, r, flagE, onFix }: { kind: Kind; sh
             {!parted && <small>change one hue</small>}
           </>
         ) : (
-          'All colours distinct'
-        )}
-      </span>
-    </div>
-  );
-}
-
-/** the swatches that chain into the worst collision: together they read as one grey (lightest last) */
-function clusterOf(collisions: ValueCollision[]): Swatch[] {
-  const found = new Map([collisions[0].a, collisions[0].b].map((w) => [w.id, w]));
-  for (let grew = true; grew; ) {
-    grew = false;
-    for (const c of collisions) {
-      if (found.has(c.a.id) === found.has(c.b.id)) continue;
-      for (const w of [c.a, c.b]) found.set(w.id, w);
-      grew = true;
-    }
-  }
-  return [...found.values()].sort((a, b) => a.oklch[0] - b.oklch[0]);
-}
-
-function ValueRow({ shown, r, flagL, sim, onFix }: { shown: Swatch[]; r: Results; flagL: number; sim: Simulate; onFix(label: string, c: Record<string, Oklch>): void }) {
-  const cs = r.collisions;
-  const cluster = cs.length ? clusterOf(cs) : [];
-  const ids = new Set(cluster.map((w) => w.id));
-  const elsewhere = cs.filter((c) => !ids.has(c.a.id) || !ids.has(c.b.id)).length;
-  const fits = (cluster.length - 1) * (flagL + 0.5) <= 100;
-  const spread = () => {
-    const others = shown.filter((w) => !ids.has(w.id)).map((w) => w.oklch[0]);
-    // a spread that breaks a contrast pair which passes now just trades one problem for another
-    const passing = r.contrast.filter((p) => p.ratio >= p.target);
-    const ok = (next: Oklch[]) => {
-      const moved = new Map(cluster.map((w, i) => [w.id, next[i]]));
-      const now = (w: Swatch) => moved.get(w.id) ?? w.oklch;
-      return passing.every((p) => contrast(now(p.text), now(p.ground)) >= p.target);
-    };
-    const next = valueFix(cluster.map((w) => w.oklch), flagL / 100, others, ok);
-    const names = cluster.map(displayName);
-    onFix(cluster.length === 2 ? `Spread ${names[0]} and ${names[1]} in lightness` : `Spread ${cluster.length} swatches in lightness`, Object.fromEntries(cluster.map((w, i) => [w.id, next[i]])));
-  };
-  return (
-    <div className={s.cv} {...pointAt(cluster.map((w) => w.id))}>
-      <Label text="Greyscale" to="greyscale" sim={sim} />
-      <span className={s.strip} style={{ gridTemplateColumns: `repeat(${shown.length}, 1fr)` }}>
-        {shown.map((w) => (
-          <Tooltip key={w.id} content={`${displayName(w)}: L ${(w.oklch[0] * 100).toFixed(1)}`}>
-            <i style={{ background: cssColor([w.oklch[0], 0, 0]) }} />
-          </Tooltip>
-        ))}
-      </span>
-      <span className={cx(s.res, cs.length > 0 && s.bad)}>
-        {cs.length ? (
-          <>
-            <span>
-              {cluster.length === 2 ? `${displayName(cluster[0])} and ${displayName(cluster[1])} have the same lightness` : `${listNames(cluster.map(displayName))} have the same lightness`}
-              {elsewhere > 0 ? `, and ${plural(elsewhere, 'more pair')}` : ''}
-            </span>
-            <Button size="xs" onClick={spread} tooltip={fits ? `Spread them in lightness until ΔL reaches ${(flagL + 0.5).toFixed(1)}` : 'Spread them as evenly as lightness allows'}>
-              Spread them
-            </Button>
-          </>
-        ) : (
-          'Every colour stands apart in value'
+          <span>
+            {kind === 'typical' ? 'Closest pair' : 'Nothing merges: closest pair'} {displayName(pair.a)} / {displayName(pair.b)}, ΔE {pair.deltaE.toFixed(1)}
+          </span>
         )}
       </span>
     </div>
@@ -174,7 +157,7 @@ function ValueRow({ shown, r, flagL, sim, onFix }: { shown: Swatch[]; r: Results
 
 // ── print ────────────────────────────────────────────────────────────────────────────────────────
 
-function PrintBlock({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: DesignView; r: Results }) {
+function PrintBlock({ doc, d, r }: { doc: Doc; d: DesignDoc; r: Results }) {
   const out = r.outOfSrgb;
   const toSrgb = () =>
     setColours(doc, out.length === 1 ? `Bring ${displayName(out[0])} into sRGB` : `Bring ${out.length} colours into sRGB`, Object.fromEntries(out.map((w) => [w.id, toSrgbGamut(w.oklch)])));
@@ -182,39 +165,17 @@ function PrintBlock({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: DesignView; r
   return (
     <>
       <div className={s.h3}>
-        Print
-        <small>{v.inks ? '≈CMYK estimate · reference inks' : '≈CMYK estimate'}</small>
+        Print inks
+        <small>≈CMYK estimate · nearest Riso, RAL, HKS and NCS inks · click one to match</small>
         <span className={s.flags}>
           {out.length > 0 && (
             <Button size="xs" onClick={toSrgb} tooltip="Reduce chroma until each shows exactly on an sRGB screen">
               Map into sRGB
             </Button>
           )}
-          {v.inks ? (
-            <IconButton icon="close" label="Hide the reference inks" size="sm" onClick={() => patchView({ inks: false })} />
-          ) : (
-            <Button size="xs" iconEnd="chevron_right" onClick={() => patchView({ inks: true })} tooltip="The nearest Riso, RAL, HKS and NCS inks for each colour">
-              Inks
-            </Button>
-          )}
         </span>
       </div>
-      {rows.length === 0 ? (
-        <p className={s.none}>Each colour’s ≈CMYK and gamut shows here.</p>
-      ) : v.inks ? (
-        <PrintTable doc={doc} rows={rows} />
-      ) : (
-        <div className={s.prints}>
-          {rows.map(([w, info]) => (
-            <div key={w.id} className={s.print} {...pointAt([w.id])}>
-              <i className={s.pchip} style={{ background: cssColor(w.oklch) }} />
-              <span className={s.pname}>{displayName(w)}</span>
-              <span className={s.pnum}>{info.cmyk.join(' ')}</span>
-              <Gamut ok={info.inSrgb} label={info.inSrgb ? 'In gamut' : 'Out of sRGB'} />
-            </div>
-          ))}
-        </div>
-      )}
+      {rows.length === 0 ? <p className={s.none}>Each colour’s ≈CMYK, gamut and nearest inks show here.</p> : <PrintTable doc={doc} rows={rows} />}
     </>
   );
 }

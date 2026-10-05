@@ -3,6 +3,7 @@
 // Tints & harmonies). Adding a tab later is one more entry in the array below.
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { shell } from '../../shell/core/index.ts';
+import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { isTextField } from '../../shell/core/keys.ts';
 import { Button, IconButton, Kbd, menu, toast } from '../../ui/index.ts';
 import { DocBar } from '../common/DocBar.tsx';
@@ -20,8 +21,10 @@ import { PreviewTab } from './PreviewTab.tsx';
 import { proposals } from './proposals.ts';
 import { results } from './results.ts';
 import { takeText } from './sources.ts';
-import { TintsTab } from './TintsTab.tsx';
-import { hot, patchView, useView } from './view-state.ts';
+import { HarmoniesTab } from './HarmoniesTab.tsx';
+import { NotesModule } from '../common/Notes.tsx';
+import { hot, PALETTE_H, patchView, PICKER_W, useView } from './view-state.ts';
+import type { CSSProperties } from 'react';
 import { named } from './doc.ts';
 import s from './View.module.css';
 
@@ -61,14 +64,16 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const quiet = (what: string) => <p className={s.quiet}>{what}</p>;
   const when = (render: () => React.ReactNode): (() => React.ReactNode) => () => (empty ? quiet('Add a colour to the palette first.') : render());
   const tabs: SectionTab[] = [
-    { id: 'contrast', label: 'Contrast', render: when(() => <ContrastTab doc={doc} d={d} v={v} r={r} />) },
-    { id: 'check', label: 'Check palette', badge: empty ? 0 : r.toLookAt, render: when(() => <CheckTab doc={doc} d={settled} v={v} r={r} />) },
+    { id: 'contrast', label: 'Contrast', badge: empty ? 0 : r.failing.length, render: when(() => <ContrastTab doc={doc} d={d} v={v} r={r} />) },
+    { id: 'check', label: 'Check palette', badge: empty ? 0 : r.toLookAt - r.failing.length, render: when(() => <CheckTab doc={doc} d={settled} v={v} r={r} />) },
     { id: 'preview', label: 'Preview in use', render: when(() => <PreviewTab v={v} r={r} />) },
-    { id: 'tints', label: 'Tints & harmonies', render: when(() => <TintsTab doc={doc} d={d} v={v} />) },
+    { id: 'harmonies', label: 'Harmonies', render: when(() => <HarmoniesTab d={d} v={v} />) },
+    // the file's own notes (an import's warnings): a tab only while there are any
+    ...(d.notes ? [{ id: 'notes', label: 'Notes', render: () => <NotesModule doc={doc} /> }] : []),
   ];
 
   return (
-    <div className={s.view}>
+    <div className={s.view} style={{ '--palh': `${v.paletteH}px`, '--pw': `${v.pickerW}px` } as CSSProperties}>
       <DocBar
         tool="design"
         doc={doc}
@@ -78,9 +83,15 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         send={{ empty: 'Add a colour first: an empty palette has nothing to send' }}
         exportButton={<ExportPalette tool="design" swatches={d.swatches} named={(list) => named(list, doc.get().ramps)} format={v.format} onFormat={(format) => patchView({ format })} />}
       />
-      <PaletteSection doc={doc} d={d} v={v} onPop={openPop} />
+      <div className={s.cell}>
+        <PaletteSection doc={doc} d={d} v={v} onPop={openPop} />
+        <ResizeHandle edge="bottom" label="Palette height" value={v.paletteH} min={PALETTE_H.min} max={PALETTE_H.max} reset={PALETTE_H.reset} onChange={(paletteH) => patchView({ paletteH })} />
+      </div>
       <div className={s.bottom}>
-        <PickerSection doc={doc} d={d} v={v} />
+        <div className={s.cell}>
+          <PickerSection doc={doc} d={d} v={v} />
+          <ResizeHandle edge="right" label="Colour picker width" value={v.pickerW} min={PICKER_W.min} max={PICKER_W.max} reset={PICKER_W.reset} onChange={(pickerW) => patchView({ pickerW })} />
+        </div>
         <TabbedSection tabs={tabs} value={v.tab} onChange={(tab) => patchView({ tab: tab as DesignTab })} bodyClassName={s.tabBody} />
       </div>
       {pop && (

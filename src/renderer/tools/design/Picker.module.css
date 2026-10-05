@@ -1,7 +1,7 @@
 /* the Colour picker section (~560px wide at 1920): the area takes what height the window leaves, the rows under it never shrink */
 .section { min-width: 0; }
 .styles { flex: none; }
-.picker { display: flex; flex-direction: column; flex: none; min-width: 0; --sb-h: clamp(150px, calc(100vh - 740px), 400px); --plane-h: var(--sb-h); }
+.picker { display: flex; flex-direction: column; flex: none; min-width: 0; --sb-h: clamp(150px, calc(100vh - 440px - var(--palh, 300px)), 460px); --plane-h: var(--sb-h); }
 .idle { display: flex; align-items: center; justify-content: center; flex: 1; min-height: 120px; color: var(--ink-3); }
 .hint { max-width: 32ch; margin: 0; text-align: center; font-size: var(--fs-base); line-height: 1.45; }
 
@@ -17,3 +17,12 @@
 .hex { flex: 1; min-width: 0; }
 .nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; min-width: 0; }
 .types { min-width: 0; }
+
+/* tints: nine small steps under the picker, a click adds one */
+.tints { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; flex: none; }
+.tintRow { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
+.tint { display: block; padding: 2px; border-radius: 6px; }
+.tint i { display: block; height: 26px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--edge); }
+.tint:hover { background: var(--well-hover); }
+/* the tint nearest the colour: a neutral ring, never ember */
+.tint.here { box-shadow: inset 0 0 0 1.5px var(--ink-2); }

@@ -1,7 +1,7 @@
 // Contrast tab: the selected colour as text on every other colour, then the palette's role pairs
 // with the one-click fixes the checks have.
 import { useMemo } from 'react';
-import { contrast, cssColor } from '../../../shared/color/index.ts';
+import { contrast, cssColor, type Oklch } from '../../../shared/color/index.ts';
 import type { ContrastPair } from '../../../shared/palette/checks.ts';
 import { isGround, isInk, ROLES } from '../../../shared/palette/roles.ts';
 import { cx } from '../../ui/cx.ts';
@@ -18,6 +18,49 @@ const gradeOf = (ratio: number): { label: string; tone: Tone } =>
   ratio >= 7 ? { label: 'AAA', tone: 'ok' } : ratio >= 4.5 ? { label: 'AA', tone: 'ok' } : ratio >= 3 ? { label: 'Large only', tone: 'mid' } : { label: 'Fails', tone: 'bad' };
 
 const fixVerb = (p: ContrastPair) => (p.fix!.oklch[0] > p.text.oklch[0] ? 'Lift' : 'Darken');
+
+const LOG21 = Math.log(21);
+/** ratios 1 to 21 on a log scale, as WCAG's thresholds are spaced */
+const at = (ratio: number) => `${(Math.log(Math.min(21, Math.max(1, ratio))) / LOG21) * 100}%`;
+const MARKS = [3, 4.5, 7];
+
+/** the text on its ground at the two sizes a layout uses */
+function Specimen({ text, ground }: { text: Oklch; ground: Oklch }) {
+  return (
+    <span className={s.aa} style={{ background: cssColor(ground), color: cssColor(text) }} aria-hidden="true">
+      <b>Aa</b>
+      <span>
+        Body 12
+        <br />
+        Label 11
+      </span>
+    </span>
+  );
+}
+
+/** the ratio on a log scale with the 3 / 4.5 / 7 thresholds ticked; the one this pair must reach is taller */
+function Gauge({ ratio, target }: { ratio: number; target: number }) {
+  return (
+    <span className={s.gauge} aria-hidden="true">
+      <i className={s.bar} />
+      <i className={s.fill} style={{ width: at(ratio) }} />
+      {MARKS.map((m) => (
+        <i key={m} className={cx(s.th, m === target && s.target)} style={{ left: at(m) }} />
+      ))}
+      <i className={s.end} style={{ left: at(ratio) }} />
+    </span>
+  );
+}
+
+/** a badge says what the grade means: 3:1 for a fill, 4.5:1 for text */
+function Badge({ label, tone, target, ratio }: { label: string; tone: Tone; target: number; ratio: number }) {
+  const why = `${ratio.toFixed(2)}:1. ${target === 3 ? 'A fill (button, chart mark) needs 3:1.' : 'Body text needs 4.5:1; large text and shapes need 3:1.'}`;
+  return (
+    <Tooltip content={why}>
+      <span className={cx(s.badge, s[tone])}>{label}</span>
+    </Tooltip>
+  );
+}
 
 export function ContrastTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: DesignView; r: Results }) {
   const w = activeSwatch(d, v);
@@ -45,15 +88,14 @@ export function ContrastTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: Desig
             const g = gradeOf(ratio);
             return (
               <div key={o.id} className={s.pair} {...pointAt([mine.id, o.id])}>
-                <span className={s.aa} style={{ background: cssColor(o.oklch), color: cssColor(mine.oklch) }}>
-                  Aa
-                </span>
+                <Specimen text={mine.oklch} ground={o.oklch} />
                 <span className={s.n}>
                   <span>on {displayName(o)}</span>
                   {o.role && <small>{o.role}</small>}
                 </span>
                 <span className={s.r}>{ratio.toFixed(2)}</span>
-                <span className={cx(s.badge, s[g.tone])}>{g.label}</span>
+                <Badge label={g.label} tone={g.tone} target={4.5} ratio={ratio} />
+                <Gauge ratio={ratio} target={4.5} />
               </div>
             );
           })}
@@ -123,9 +165,7 @@ function RolePair({ doc, p }: { doc: Doc; p: ContrastPair }) {
   const fix = () => p.fix && setColours(doc, `${fixVerb(p)} ${displayName(p.text)} for contrast`, { [p.fix.swatchId]: p.fix.oklch });
   return (
     <div className={cx(s.pair, p.ratio < p.target && s.failing)} data-fixable={p.fix ? '' : undefined} {...pointAt([p.text.id, p.ground.id])}>
-      <span className={s.aa} style={{ background: cssColor(p.ground.oklch), color: cssColor(p.text.oklch) }}>
-        Aa
-      </span>
+      <Specimen text={p.text.oklch} ground={p.ground.oklch} />
       <span className={s.n}>
         <span>
           {displayName(p.text)} on {displayName(p.ground)}
@@ -135,7 +175,8 @@ function RolePair({ doc, p }: { doc: Doc; p: ContrastPair }) {
         </small>
       </span>
       <span className={s.r}>{p.ratio.toFixed(2)}</span>
-      <span className={cx(s.badge, s[g.tone])}>{g.label}</span>
+      <Badge label={g.label} tone={g.tone} target={p.target} ratio={p.ratio} />
+      <Gauge ratio={p.ratio} target={p.target} />
       {p.fix && (
         <Button size="xs" onClick={fix} className={s.fix} tooltip={`${fixVerb(p)} ${displayName(p.text)} to L ${fmtL(p.fix.oklch[0])} for ${p.fix.ratio.toFixed(2)}:1`}>
           {fixVerb(p)} to L {fmtL(p.fix.oklch[0])}

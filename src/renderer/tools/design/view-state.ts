@@ -8,13 +8,21 @@ import type { DesignView } from './doc.ts';
 
 const ID = 'design';
 
+/** the two draggable seams: palette height (top of the lower row) and picker width */
+export const PALETTE_H = { min: 200, max: 520, reset: 300 };
+export const PICKER_W = { min: 420, max: 900, reset: 560 };
+const clamp = (v: number, r: { min: number; max: number }) => Math.round(Math.min(r.max, Math.max(r.min, v)));
+
 export const DEFAULT_VIEW: DesignView = {
   selected: [],
   tab: 'contrast',
   cvd: 'deutan',
   sim: 'normal',
   locked: [],
-  inks: false,
+  surround: 'plain',
+  chipData: 'hex',
+  paletteH: PALETTE_H.reset,
+  pickerW: PICKER_W.reset,
   lockL: false,
   lockH: false,
   flagL: 6,
@@ -29,7 +37,9 @@ export const DEFAULT_VIEW: DesignView = {
 };
 
 const ENUMS: Partial<Record<keyof DesignView, readonly string[]>> = {
-  tab: ['contrast', 'check', 'preview', 'tints'],
+  tab: ['contrast', 'check', 'preview', 'harmonies', 'notes'],
+  surround: ['grey', 'ground', 'plain'],
+  chipData: ['hex', 'lch', 'table'],
   cvd: ['protan', 'deutan', 'tritan', 'achromat'],
   sim: ['normal', 'protan', 'deutan', 'tritan', 'achromat', 'greyscale'],
   format: EXPORT_FORMATS,
@@ -39,7 +49,8 @@ const ENUMS: Partial<Record<keyof DesignView, readonly string[]>> = {
 /** what a saved workspace holds, field by field; anything odd falls back to the default (a dropped field, like `picker`, is left behind) */
 function sanitize(raw: unknown): DesignView {
   const r = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
-  const out: Record<string, unknown> = { ...DEFAULT_VIEW };
+  // the Harmonies tab was Tints & harmonies
+  const out: Record<string, unknown> = { ...DEFAULT_VIEW, ...(r.tab === 'tints' && { tab: 'harmonies' }) };
   for (const [key, def] of Object.entries(DEFAULT_VIEW) as [keyof DesignView, unknown][]) {
     const v = r[key];
     const ok = Array.isArray(def)
@@ -49,6 +60,8 @@ function sanitize(raw: unknown): DesignView {
         : typeof v === typeof def && (typeof v !== 'number' || Number.isFinite(v)) && (!ENUMS[key] || ENUMS[key]!.includes(v as string));
     if (ok) out[key] = v;
   }
+  out.paletteH = clamp(out.paletteH as number, PALETTE_H);
+  out.pickerW = clamp(out.pickerW as number, PICKER_W);
   if (!PRESETS.some((p) => p.id === out.preset)) out.preset = DEFAULT_VIEW.preset;
   return out as DesignView;
 }

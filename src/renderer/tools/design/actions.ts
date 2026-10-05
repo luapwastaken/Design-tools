@@ -226,37 +226,26 @@ export function roleSelected(doc: Doc, role: string | null): void {
   if (w) setRole(doc, w.id, role);
 }
 
-/** the palette exactly as the last Generate made it: the next one rerolls it in place */
-let fresh = '';
-const signature = (list: Swatch[]) => list.map((w) => w.id + w.oklch.join(',')).join('|');
-
-/** a changed Style, Colours or Seed redoes what Generate last made (its proposals, or the palette it is still) and only that */
+/** a changed Style, Colours or Seed redoes the proposals Generate last made (and only those) */
 export function regenerate(doc: Doc, patch: Partial<DesignView>): void {
   patchView(patch);
-  const d = doc.get();
-  if (proposalsFrom('generate') || (d.swatches.length && signature(d.swatches) === fresh)) generateNow(doc, getView().seed);
+  if (proposalsFrom('generate')) runGenerate(doc.get().swatches, getView());
 }
 
 /**
- * Generate (Space), always with a new seed. An empty palette, or one still as Generate made it,
- * is rerolled in place in one step, the pinned columns staying; any other palette gets the new
- * colours as proposals beside its own.
+ * Generate (Space), always with a new seed. On a palette that has colours the new ones land as
+ * proposals beside its own (a locked proposal is kept through a reroll); an empty palette is made
+ * in one step, roles suggested. Locks are view-state (L): the palette's own colours already count as
+ * locked slots, so there is nothing to reroll in place.
  */
 export function generateNow(doc: Doc, seed = 1 + Math.floor(Math.random() * 99999)): void {
   patchView({ seed });
   const v = getView();
   const d = doc.get();
-  if (proposalsFrom('generate') || (d.swatches.length && signature(d.swatches) !== fresh)) return runGenerate(d.swatches, v);
-  clearProposals();
-  const pinned = (w: Swatch | undefined) => (w && v.locked.includes(w.id) ? w : null);
-  const slots = Array.from({ length: v.count }, (_, i) => pinned(d.swatches[i]));
-  const made = generate({ seed, count: v.count, preset: v.preset, locked: slots.map((w) => w?.oklch ?? null) });
-  const taken = new Set(d.swatches.filter((w) => pinned(w)).flatMap((w) => (w.role ? [w.role] : [])));
-  const roles = suggestRoles(made, taken, new Set(slots.flatMap((w, i) => (w ? [i] : []))));
-  const next = made.map((o, i) => slots[i] ?? { ...newSwatch(o, '', roles[i]), id: d.swatches[i]?.id ?? crypto.randomUUID() });
-  const extra = d.swatches.slice(v.count).filter((w) => pinned(w));
-  doc.transact(d.swatches.length ? 'Reroll palette' : 'Generate palette', (x) => ({ ...x, swatches: [...next, ...extra] }));
-  fresh = signature(doc.get().swatches);
-  const kept = selection(doc.get(), v);
-  select(kept.length ? kept : [next[0].id]);
+  if (proposalsFrom('generate') || d.swatches.length) return runGenerate(d.swatches, v);
+  const made = generate({ seed, count: v.count, preset: v.preset, locked: Array.from({ length: v.count }, () => null) });
+  const roles = suggestRoles(made, new Set(), new Set());
+  const next = made.map((o, i) => newSwatch(o, '', roles[i]));
+  doc.transact('Generate palette', (x) => ({ ...x, swatches: next }));
+  select([next[0].id]);
 }

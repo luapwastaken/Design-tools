@@ -25,6 +25,7 @@ import { shell } from './shell/core/index.ts';
 import { select as selectInDesign } from './tools/design/actions.ts';
 import { newSwatch as designSwatch, recolour as recolourInDesign, type DesignDoc } from './tools/design/doc.ts';
 import { clearProposals, proposals } from './tools/design/proposals.ts';
+import { results as designResults } from './tools/design/results.ts';
 import { armed as armedInDesign, getView as designView, patchView as patchDesign } from './tools/design/view-state.ts';
 import { used, type DitherDoc } from './tools/dither/doc.ts';
 import { lookOf as ditherLook, withLook } from './tools/dither/looks.ts';
@@ -400,10 +401,10 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   check('an edit in Design writes the file', await until(async () => (await swatchCount(palette!.id)) === n + 2), n);
 
   // the tabs under the palette: Check palette carries the count of what is left to look at (Smoke text on Smoke ground)
-  patchDesign({ tab: 'check', inks: false });
+  patchDesign({ tab: 'check' });
   const checkTab = await until(() => (/\d+/.test(designTab('check')?.textContent ?? '') && designPanel()?.textContent?.includes('Protanopia') ? designTab('check') : null));
   const checkText = designPanel()?.textContent ?? '';
-  check('the Check palette tab counts what is left to look at and shows vision, greyscale and print', !!checkTab && ['Typical vision', 'Protanopia', 'Deuteranopia', 'Tritanopia', 'Greyscale', 'Print'].every((w) => checkText.includes(w)), [checkTab?.textContent, checkText.slice(0, 120)]);
+  check('the Check palette tab counts what is left to look at and shows vision, greyscale and print', !!checkTab && ['Typical vision', 'Protanopia', 'Deuteranopia', 'Tritanopia', 'OKLCH lightness', 'Print inks'].every((w) => checkText.includes(w)), [checkTab?.textContent, checkText.slice(0, 120)]);
   patchDesign({ tab: 'contrast' });
 
   const inDesign = (id: string) => dd.get().swatches.find((w) => w.id === id);
@@ -473,18 +474,157 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   clearProposals();
 
   // the tabs: each one shows its own panel, the palette and the picker stay, and the choice is saved with the workspace
-  const tabsOk: [string, string][] = [['contrast', 'role pairs'], ['check', 'Protanopia'], ['preview', ''], ['tints', 'Harmonies of']];
+  const tabsOk: [string, string][] = [['contrast', 'role pairs'], ['check', 'Protanopia'], ['preview', ''], ['harmonies', 'Harmonies of']];
   for (const [id, word] of tabsOk) {
     designTab(id)?.click();
     const shown = await until(() => designView().tab === id && designTab(id)?.getAttribute('aria-selected') === 'true' && (word ? designPanel()?.textContent?.includes(word) : host('design')?.querySelector('[role="img"][aria-label*="website preview"]')));
     check(`the ${id} tab shows its panel with the palette and the picker still there`, !!shown && !!host('design')?.querySelector('[role="listbox"]') && !!pickerSection(), [id, designView().tab]);
   }
-  check('the chosen tab is saved in the workspace view', (shell.view('design') as { tab?: string } | undefined)?.tab === 'tints', shell.view('design'));
+  check('the chosen tab is saved in the workspace view', (shell.view('design') as { tab?: string } | undefined)?.tab === 'harmonies', shell.view('design'));
   // arrows move along the strip, one Tab stop
-  designTab('tints')?.focus();
+  designTab('harmonies')?.focus();
   press('ArrowLeft');
-  check('the arrow keys move along the tab strip', (await until(() => designView().tab === 'preview')) && designTab('preview')?.tabIndex === 0 && designTab('tints')?.tabIndex === -1, designView().tab);
+  check('the arrow keys move along the tab strip', (await until(() => designView().tab === 'preview')) && designTab('preview')?.tabIndex === 0 && designTab('harmonies')?.tabIndex === -1, designView().tab);
   patchDesign({ tab: 'contrast' });
+
+  // the two seams: drag, persist, double-click resets, arrows; the sections follow
+  const sep = (label: string) => host('design')?.querySelector<HTMLElement>(`[role="separator"][aria-label="${label}"]`) ?? null;
+  const sizeOf = (sec: Element | null | undefined) => sec?.getBoundingClientRect();
+  const paletteSec = () => host('design')?.querySelector('[role="listbox"]')?.closest('section');
+  const dragHandle = (el: HTMLElement, dx: number, dy: number) => {
+    const r = el.getBoundingClientRect();
+    const [x, y] = [r.left + r.width / 2, r.top + r.height / 2];
+    const fire = (type: string, mx: number, my: number) =>
+      el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerup' ? 0 : 1, clientX: mx, clientY: my }));
+    // a synthetic pointer is no active pointer, so capture would throw: stand in for it for this one gesture
+    const capture = el.setPointerCapture;
+    el.setPointerCapture = () => {};
+    try {
+      fire('pointerdown', x, y);
+      fire('pointermove', x + dx / 2, y + dy / 2);
+      fire('pointermove', x + dx, y + dy);
+      fire('pointerup', x + dx, y + dy);
+    } catch (e) {
+      return String(e);
+    } finally {
+      el.setPointerCapture = capture;
+    }
+    return null;
+  };
+  patchDesign({ paletteH: 300, pickerW: 480, tab: 'contrast' });
+  await until(() => sep('Palette height'));
+  const h0 = sizeOf(paletteSec())?.height ?? 0;
+  const dragErr = dragHandle(sep('Palette height')!, 0, 80);
+  check('dragging the Palette seam down makes the palette taller and saves it', !dragErr && (await until(() => designView().paletteH === 380)) && (sizeOf(paletteSec())?.height ?? 0) >= h0 + 70 && (shell.view('design') as { paletteH?: number } | undefined)?.paletteH === 380, [dragErr, h0, designView().paletteH, sizeOf(paletteSec())?.height]);
+  sep('Palette height')!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+  check('double-click resets the palette height', (await until(() => designView().paletteH === 300)) && Math.abs((sizeOf(paletteSec())?.height ?? 0) - h0) < 2, designView().paletteH);
+  sep('Palette height')!.focus();
+  press('ArrowDown');
+  check('the arrow keys move the palette seam', await until(() => designView().paletteH === 310), designView().paletteH);
+  patchDesign({ paletteH: 300 });
+  const w0 = sizeOf(pickerSection())?.width ?? 0;
+  const dragErr2 = dragHandle(sep('Colour picker width')!, 60, 0);
+  check('dragging the picker seam right widens the Colour picker and saves it', !dragErr2 && (await until(() => designView().pickerW === 540)) && (sizeOf(pickerSection())?.width ?? 0) >= w0 + 50 && (shell.view('design') as { pickerW?: number } | undefined)?.pickerW === 540, [dragErr2, w0, designView().pickerW, sizeOf(pickerSection())?.width]);
+  sep('Colour picker width')!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+  check('double-click resets the picker width', await until(() => designView().pickerW === 560), designView().pickerW);
+
+  // the palette header: Surround and Show, the L C H readout, Table, and the chip's hover More button
+  const selectBtn = (lead: string) => [...(host('design')?.querySelectorAll<HTMLElement>('button') ?? [])].find((b) => (b.getAttribute('aria-label') ?? '').startsWith(`${lead}:`));
+  const stage = () => host('design')?.querySelector<HTMLElement>('[role="listbox"]')?.parentElement;
+  const anyRow = (text: string) => [...document.querySelectorAll<HTMLElement>('[role="option"],[role="menuitem"],[role="menuitemradio"]')].find((r) => r.textContent?.includes(text) && shows(r) && !r.hasAttribute('data-swatch'));
+  check('the Palette header carries Surround and Show', !!selectBtn('Surround') && !!selectBtn('Show'));
+  patchDesign({ surround: 'plain', chipData: 'hex' });
+  const plainBg = getComputedStyle(stage()!).backgroundColor;
+  selectBtn('Surround')?.click();
+  (await until(() => anyRow('18% grey')))?.click();
+  check('choosing 18% grey puts the palette on that surround (saved)', (await until(() => designView().surround === 'grey')) && getComputedStyle(stage()!).backgroundColor !== plainBg, [designView().surround, plainBg]);
+  patchDesign({ surround: 'ground' });
+  check('the Ground surround shows the palette’s own background', (await until(() => getComputedStyle(stage()!).backgroundColor !== plainBg)) && designView().surround === 'ground');
+  patchDesign({ surround: 'plain' });
+  const tileText = () => host('design')?.querySelector('[role="listbox"] [data-swatch]')?.textContent ?? '';
+  check('Hex only shows no L C H', !/L \d/.test(tileText()) && !tileText().includes('CMYK'), tileText());
+  selectBtn('Show')?.click();
+  (await until(() => anyRow('Hex + L C H')))?.click();
+  check('Hex + L C H puts the lightness, chroma and hue on every chip', (await until(() => designView().chipData === 'lch')) && /L \d/.test(tileText()) && /C \.?\d/.test(tileText()) && /H \d/.test(tileText()), tileText());
+  patchDesign({ chipData: 'table' });
+  check('Table adds RGB and ≈CMYK to every chip', await until(() => tileText().includes('RGB') && tileText().includes('≈CMYK')), tileText());
+  patchDesign({ chipData: 'hex' });
+  const moreBtn = host('design')?.querySelector<HTMLElement>('[role="listbox"] [data-swatch] button[aria-label="More"]');
+  moreBtn?.click();
+  const dup = await until(() => menuRow('Duplicate'));
+  check('the chip’s More button opens the same menu as a right-click', !!moreBtn && !!dup && !!menuRow('Copy hex') && !!menuRow('Delete'));
+  press('Escape');
+  await until(() => !menuRow('Duplicate'));
+
+  // the tints strip sits in the Colour picker section; a click adds a tint
+  const nBefore = dd.get().swatches.length;
+  const tintBtn = pickerSection()?.querySelector<HTMLElement>('button[aria-label^="Add a tint"]');
+  tintBtn?.click();
+  check('a tint in the Colour picker section adds a colour in one step', !!tintBtn && dd.get().swatches.length === nBefore + 1 && dd.undoLabel() === 'Add tint', dd.undoLabel());
+  ctrlZ();
+  check('and undoes', dd.get().swatches.length === nBefore);
+
+  // Contrast: the ratio gauge, the specimen and the badge's tooltip; the tab badge counts failures
+  patchDesign({ tab: 'contrast' });
+  const live = designResults(dd.get().swatches, dd.get().ramps, designView().flagL, designView().flagE);
+  await until(() => designPanel()?.textContent?.includes('Body 12'));
+  check('Contrast rows carry the Body 12 / Label 11 specimen and a log-scale gauge', !!designPanel()?.textContent?.includes('Body 12') && !!designPanel()?.textContent?.includes('Label 11') && (designPanel()?.querySelectorAll('[class*="gauge"]').length ?? 0) > 0);
+  const badgeNum = (id: string) => Number(designTab(id)?.textContent?.match(/\d+/)?.[0] ?? 0);
+  check('the Contrast tab counts contrast failures and Check palette only its own problems', badgeNum('contrast') === live.failing.length && badgeNum('check') === live.toLookAt - live.failing.length, [badgeNum('contrast'), live.failing.length, badgeNum('check'), live.toLookAt]);
+
+  // Check palette: the verdict list (problems first), colour-vision detail, the Value ruler, Print inks
+  patchDesign({ tab: 'check' });
+  await until(() => designPanel()?.querySelector('[data-verdict]'));
+  const ids = [...(designPanel()?.querySelectorAll('[data-verdict]') ?? [])].map((e) => e.getAttribute('data-verdict'));
+  const rank = (x: { ok?: boolean }) => (x.ok === false ? 0 : x.ok === undefined ? 1 : 2);
+  const wantIds = [...live.verdicts].sort((a, b) => rank(a) - rank(b)).map((x) => x.id);
+  check('the Check palette tab lists a verdict per check, problems first', ids.length === 4 && ids.join() === wantIds.join(), [ids, wantIds]);
+  const panelText = designPanel()?.textContent ?? '';
+  check('colour vision names the closest pair and its ΔE for every simulation, and the names sit over the strips', (panelText.match(/ΔE \d/g)?.length ?? 0) >= 4 && /closest pair|look alike/.test(panelText) && !!designPanel()?.querySelector('[aria-hidden="true"] span'), panelText.slice(0, 200));
+  check('the Print inks table shows without a click (P3, all four libraries)', ['P3', 'Riso ΔE', 'RAL ΔE', 'HKS ΔE', 'NCS ΔE'].every((w) => panelText.includes(w)) && ![...(designPanel()?.querySelectorAll('button') ?? [])].some((b) => b.textContent?.trim() === 'Inks'));
+  // two colours of one lightness make the ruler flag them with a Spread fix
+  // (a palette of just those two and a far dark and light, so they are the one collision)
+  const twin = [designSwatch([0.5, 0.1, 10], 'Smoke twin A'), designSwatch([0.52, 0.1, 200], 'Smoke twin B')];
+  const keep = dd.get().swatches;
+  dd.transact('Twins', (d) => ({ ...d, swatches: [designSwatch([0.1, 0.02, 40], 'Smoke dark'), ...twin, designSwatch([0.95, 0.02, 90], 'Smoke light')] }));
+  const spreadBtn = await until(() => [...(designPanel()?.querySelectorAll('button') ?? [])].find((b) => /^Spread /.test(b.textContent ?? '')));
+  check('the Value ruler pins every colour by L and flags the collision with its gap and a Spread fix', !!spreadBtn && !!designPanel()?.textContent?.includes('OKLCH lightness') && /sit \d+\.\d apart/.test(designPanel()?.textContent ?? ''), designPanel()?.textContent?.match(/Smoke twin A.{0,80}apart/)?.[0]);
+  const spreadDepth = dd.depth();
+  spreadBtn?.click();
+  const [ta, tb] = twin.map((w) => dd.get().swatches.find((x) => x.id === w.id)!.oklch[0]);
+  check('Spread apart is one step and parts them in lightness', dd.depth() === spreadDepth + 1 && Math.abs(ta - tb) > 0.05, [ta, tb]);
+  ctrlZ();
+  ctrlZ();
+  check('two undos take the spread and the twins back', dd.get().swatches === keep);
+  patchDesign({ tab: 'contrast' });
+
+  // Notes: a tab only while the file has any, not part of the picker section
+  check('without notes there is no Notes tab', !designTab('notes'));
+  dd.transact('Notes', (d) => ({ ...d, notes: 'Smoke note from the file' }));
+  const notesTab = await until(() => designTab('notes'));
+  notesTab?.click();
+  check('a file with notes gets a Notes tab that shows them, and the picker section no longer does', !!notesTab && !!(await until(() => designPanel()?.textContent?.includes('Smoke note from the file'))) && !pickerSection()?.textContent?.includes('Smoke note'), designView().tab);
+  dd.transact('Clear the notes', (d) => ({ ...d, notes: '' }));
+  check('clearing the notes removes the tab', await until(() => !designTab('notes')));
+  patchDesign({ tab: 'contrast' });
+
+  // Gradient: while its stops are the ones proposed, a changed setting updates them live
+  clearProposals();
+  button('design', 'Add colours')?.click();
+  (await until(() => menuRow('Gradient between two')))?.click();
+  const gradPop = () => document.querySelector<HTMLElement>('[role="dialog"][aria-label="Gradient between two"]');
+  const propose = await until(() => [...(gradPop()?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Propose')));
+  propose?.click();
+  const firstStops = proposals.get()?.items.map((p) => p.oklch.join()).join('|');
+  button('design', 'Add colours')?.click();
+  (await until(() => menuRow('Gradient between two')))?.click();
+  const lab = await until(() => [...(gradPop()?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])].find((b) => b.textContent?.includes('OKLab')));
+  lab?.click();
+  check('changing the gradient settings updates the proposed stops live', !!firstStops && (await until(() => proposals.get()?.from === 'gradient' && proposals.get()?.items.map((p) => p.oklch.join()).join('|') !== firstStops)), [firstStops, proposals.get()?.items.length]);
+  press('Escape');
+  await until(() => !gradPop());
+  patchDesign({ space: 'oklch' });
+  clearProposals();
 
   // Generate's settings are one click away on the caret beside it: Style, Colours and Seed in a popover
   host('design')?.querySelector<HTMLElement>('button[aria-label^="Generate settings"]')?.click();
@@ -562,7 +702,7 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   patchDesign({ tab: 'contrast' });
 
   // Space generates (never while a text field has focus); an empty palette is made in one step, roles
-  // suggested; the next Space rerolls it in place and a locked (L) column stays exactly as it was
+  // suggested; on a palette with colours Space adds proposals beside it and moves nothing
   await shell.newDoc('design');
   clearProposals();
   (document.activeElement as HTMLElement | null)?.blur?.();
@@ -585,21 +725,18 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     press('l', { code: 'KeyL' });
     check('L locks the selected column (its lock stays visible)', designView().locked.includes(pin.id) && !!(await until(() => host("design")?.querySelector(`[data-swatch="${pin.id}"] button[aria-pressed="true"]`))), designView().locked);
     const steps = dd.depth();
-    press(' ', { code: 'Space' });
-    const again = (await until(() => dd.depth() === steps + 1 && dd.get().swatches)) || null;
-    check('Space again rerolls in place, one step: the locked column survives, the rest change', !!again && again.length === 5 && JSON.stringify(again[1].oklch) === JSON.stringify(pin.oklch) && again.some((w, i) => i !== 1 && JSON.stringify(w.oklch) !== JSON.stringify(made![i].oklch)), dd.depth() - steps);
-    press('Delete', { code: 'Delete' });
-    check('Delete leaves a locked column alone (no confirm arms)', !!dd.get().swatches.find((w) => w.id === pin.id) && !armedInDesign.get());
-    // a later Space on a palette that was edited by hand proposes beside it and moves nothing
-    dd.transact('Edit', (d) => ({ ...d, swatches: d.swatches.map((w, i) => (i === 0 ? { ...w, oklch: [0.5, 0.05, 100] } : w)) }));
-    selectInDesign([dd.get().swatches[0].id]);
-    patchDesign({ locked: [] });
-    // the swatches share the row, but nothing around it moves: the row and the tab strip keep their boxes
     const frame = () => ['[role="listbox"]', '[role="tablist"]'].map((q) => host('design')?.querySelector(q)?.getBoundingClientRect()).map((r) => [r?.top, r?.height]);
     const before = JSON.stringify(frame());
     press(' ', { code: 'Space' });
-    check('a hand-edited palette gets proposals in the row and nothing around it moves', (await until(() => host('design')?.querySelector('[data-ghost]'))) && (proposals.get()?.items.length ?? 0) > 0 && JSON.stringify(frame()) === before, [before, JSON.stringify(frame())]);
+    check('Space on a palette with colours adds proposals in the row and leaves the palette alone', (await until(() => host('design')?.querySelector('[data-ghost]'))) && (proposals.get()?.items.length ?? 0) === 5 && dd.depth() === steps && JSON.stringify(dd.get().swatches) === JSON.stringify(made), [dd.depth() - steps, proposals.get()?.items.length]);
+    check('and nothing around the row moves', JSON.stringify(frame()) === before, [before, JSON.stringify(frame())]);
+    const first = proposals.get()?.items.map((p) => p.oklch.join());
+    press(' ', { code: 'Space' });
+    check('Space again replaces the proposals with a new set', (await until(() => proposals.get()?.items.map((p) => p.oklch.join()).join('|') !== first?.join('|'))) && dd.depth() === steps, dd.depth() - steps);
+    press('Delete', { code: 'Delete' });
+    check('Delete leaves a locked column alone (no confirm arms)', !!dd.get().swatches.find((w) => w.id === pin.id) && !armedInDesign.get());
     clearProposals();
+    patchDesign({ locked: [] });
   }
 
   // Send to Design from Dither: the dithered colours as proposals, the document untouched (the CGA

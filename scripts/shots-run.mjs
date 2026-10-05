@@ -20,7 +20,7 @@ export async function run({ page, ev, shot, clickText, drop, rail, photo, four, 
   if (at) { await page.mouse.move(at[0], at[1]); await page.mouse.click(at[0], at[1]); }
   await settle();
   // the four tabs, one shot each
-  for (const [label, f] of [['Contrast', 'contrast'], ['~Check palette', 'check'], ['Preview in use', 'preview'], ['~Tints', 'tints']]) {
+  for (const [label, f] of [['Contrast', 'contrast'], ['~Check palette', 'check'], ['Preview in use', 'preview'], ['Harmonies', 'harmonies']]) {
     await click(label, 'design'); await settle(); await shot(`01-design-tab-${f}`);
   }
   await click('Contrast', 'design'); await sleep(400);
@@ -37,10 +37,9 @@ export async function run({ page, ev, shot, clickText, drop, rail, photo, four, 
   await clickText('~Harmony from a colour', 'body', '[role=menuitem],[role=menuitemradio]'); await sleep(600); await shot('01-design-add-popover');
   await clickText('~Triad', 'body', '[role=dialog] [role=listitem]'); await settle(); await shot('01-design-proposals');
   await click('Keep all', 'design'); await sleep(800);
-  // the Check palette tab's Print: the reference inks table, and back
+  // the Check palette tab: its verdicts, vision rows and value ruler on top; Print inks lower down, scrolled into view
   await click('~Check palette', 'design'); await sleep(500);
-  await click('Inks', 'design'); await settle(); await shot('01-design-check-inks');
-  await click('Hide the reference inks', 'design'); await sleep(500);
+  await ev(() => document.querySelector('[data-tool="design"] [role=tabpanel]')?.scrollTo(0, 1e5)); await settle(); await shot('01-design-check-inks');
   // See as: the Preview tab under a colour vision simulation
   await click('Preview in use', 'design'); await sleep(500);
   await clickText('~See as', 'body', '[aria-haspopup=listbox]'); await sleep(400);

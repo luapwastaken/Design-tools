@@ -3,6 +3,7 @@ import type { Cvd, Oklch } from '../../../shared/color/index.ts';
 import type { PalettePayload, RampSpec, Swatch } from '../../../shared/types.ts';
 import type { ExportFormat } from '../common/ExportPalette.tsx';
 
+import type { Surround } from '../common/surround.ts';
 import { displayName, named } from '../common/names.ts';
 
 export { displayName, listNames, named, plural } from '../common/names.ts';
@@ -12,7 +13,9 @@ export type DesignDoc = { swatches: Swatch[]; notes: string; ramps?: RampSpec[] 
 
 export type BuildMethod = 'harmony' | 'generate' | 'image' | 'logo' | 'gradient' | 'paste';
 /** the tabs under the palette and picker; the active one is saved in the view */
-export type DesignTab = 'contrast' | 'check' | 'preview' | 'tints';
+export type DesignTab = 'contrast' | 'check' | 'preview' | 'harmonies' | 'notes';
+/** what each palette chip says: Hex; Hex and L C H; the Table adds RGB and ≈CMYK */
+export type ChipData = 'hex' | 'lch' | 'table';
 /** the view filter over the artboard and the In use page; never written to the document */
 export type Simulate = 'normal' | Cvd | 'greyscale';
 export type CheckId = 'contrast' | 'value' | 'vision' | 'print';
@@ -28,8 +31,12 @@ export type DesignView = {
   sim: Simulate;
   /** swatch ids pinned with L: a re-roll keeps them, Delete leaves them */
   locked: string[];
-  /** the Check palette tab's Print list shows the reference-inks table */
-  inks: boolean;
+  /** the surround the palette is judged on */
+  surround: Surround;
+  chipData: ChipData;
+  /** the Palette section's height and the Colour picker section's width, dragged on their seams */
+  paletteH: number;
+  pickerW: number;
   /** Value and Hue lock: the OKLCH picker's drags keep L or H; typed values still change them (spec §5) */
   lockL: boolean;
   lockH: boolean;
