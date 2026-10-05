@@ -12,8 +12,3 @@
 .ext { flex: none; color: var(--ink-3); font: 400 var(--fs-ctl)/1 var(--font-mono); }
 .row { display: flex; gap: 6px; }
 .grow { flex: 1; }
-
-/* a narrow doc bar keeps the icon; the tooltip names it */
-@container docbar (max-width: 860px) {
-  .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}

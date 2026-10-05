@@ -3,15 +3,18 @@ import type { ToolId } from '../../shared/types.ts';
 import { Icon, Tooltip } from '../ui/index.ts';
 import { cx } from '../ui/cx.ts';
 import { shell, useShell } from './core/index.ts';
-import { GROUP_LABEL } from './TitleBar.tsx';
 import type { IconName, ToolDefinition } from './tool.ts';
 import s from './Rail.module.css';
 
 const GROUPS: ToolDefinition['group'][] = ['colour', 'make', 'image'];
 const NEXT: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
 
-/** Tools by group, then SHARED (Library, Settings). One Tab stop; arrow keys move inside (brief §6). */
-export function Rail({ collapsed }: { collapsed: boolean }) {
+/**
+ * The 60px rail: each tool an icon with its name under it, the groups apart by a 12px gap (no
+ * headings), then Library and Settings at the bottom. One Tab stop; arrow keys move inside (brief §6).
+ * Shortcuts live in the tooltips.
+ */
+export function Rail() {
   const tools = useShell((st) => st.tools);
   const active = useShell((st) => st.active);
   const libraryOpen = useShell((st) => st.libraryOpen);
@@ -32,59 +35,49 @@ export function Rail({ collapsed }: { collapsed: boolean }) {
     items[to].focus();
   };
 
-  const item = (p: { key: string; icon: IconName; label: string; digit?: string; shortcut?: string; on: boolean; stop?: boolean; current?: boolean; onClick(): void }) => (
-    <Tooltip key={p.key} content={p.label} shortcut={p.shortcut} disabled={!collapsed} side="right">
+  const item = (p: { key: string; icon: IconName; label: string; shortcut?: string; on: boolean; stop?: boolean; current?: boolean; onClick(): void }) => (
+    <Tooltip key={p.key} content={p.label} shortcut={p.shortcut} side="right">
       <button
         type="button"
         className={cx(s.item, p.on && s.on)}
         tabIndex={p.stop ? 0 : -1}
-        aria-label={collapsed ? p.label : undefined}
         aria-current={p.current ? 'page' : undefined}
         aria-pressed={p.current === undefined ? p.on : undefined}
         aria-keyshortcuts={p.shortcut?.replace('Ctrl', 'Control')}
         data-rail={p.key}
         onClick={p.onClick}
       >
-        {p.on && <i className={s.led} />}
-        <Icon name={p.icon} fill={p.on} />
+        <Icon name={p.icon} size={20} fill={p.on} />
         <span className={s.name}>{p.label}</span>
-        {p.digit && <span className={s.key}>{p.digit}</span>}
       </button>
     </Tooltip>
   );
 
-  const heading = (label: string) => (
-    <div className={s.head} key={`h-${label}`}>
-      <span className="caps">{label}</span>
-    </div>
-  );
-
   return (
-    <nav className={cx(s.rail, collapsed && s.collapsed)} aria-label="Tools" data-region="rail" onKeyDown={onKeyDown}>
+    <nav className={s.rail} aria-label="Tools" data-region="rail" onKeyDown={onKeyDown}>
       {GROUPS.map((g) => {
         const list = tools.filter((t) => t.group === g);
         if (!list.length) return null;
-        return [
-          heading(GROUP_LABEL[g]),
-          ...list.map((t) =>
-            item({
-              key: t.id,
-              icon: t.icon,
-              label: t.label,
-              digit: t.shortcut ? String(t.shortcut) : undefined,
-              shortcut: t.shortcut ? `Ctrl+${t.shortcut}` : undefined,
-              on: t.id === active && !settingsOpen,
-              current: t.id === active && !settingsOpen,
-              stop: t.id === active,
-              onClick: () => open(t.id),
-            }),
-          ),
-        ];
+        return (
+          <div className={s.group} key={g}>
+            {list.map((t) =>
+              item({
+                key: t.id,
+                icon: t.icon,
+                label: t.label,
+                shortcut: t.shortcut ? `Ctrl+${t.shortcut}` : undefined,
+                on: t.id === active && !settingsOpen,
+                current: t.id === active && !settingsOpen,
+                stop: t.id === active,
+                onClick: () => open(t.id),
+              }),
+            )}
+          </div>
+        );
       })}
-      <div className={s.foot}>
-        {heading('Shared')}
-        {item({ key: 'library', icon: 'collections_bookmark', label: 'Library', digit: 'L', shortcut: 'Ctrl+L', on: libraryOpen, onClick: () => shell.toggleLibrary() })}
-        {item({ key: 'settings', icon: 'settings', label: 'Settings', digit: ',', shortcut: 'Ctrl+,', on: settingsOpen, onClick: () => shell.openSettings(!settingsOpen) })}
+      <div className={cx(s.group, s.foot)}>
+        {item({ key: 'library', icon: 'collections_bookmark', label: 'Library', shortcut: 'Ctrl+L', on: libraryOpen, onClick: () => shell.toggleLibrary() })}
+        {item({ key: 'settings', icon: 'settings', label: 'Settings', shortcut: 'Ctrl+,', on: settingsOpen, onClick: () => shell.openSettings(!settingsOpen) })}
       </div>
     </nav>
   );

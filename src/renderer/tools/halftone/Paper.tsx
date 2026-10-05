@@ -1,6 +1,6 @@
 // Paper (spec §3): the sheet the inks print on, and whether the exports carry it or leave it clear.
 import { toHex } from '../../../shared/color/index.ts';
-import { ColorField, Module, Toggle, useDocColour } from '../../ui/index.ts';
+import { ColorField, InspectorGroup, Toggle, useDocColour } from '../../ui/index.ts';
 import { displayName } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { BONE, opaqueOf, overlapOf, type HalftoneDoc } from './doc.ts';
@@ -15,7 +15,7 @@ export function PaperModule({ doc, d }: { doc: Doc; d: HalftoneDoc }) {
   const name = toHex(d.paper.colour) === toHex(BONE) ? 'Bone, uncoated' : displayName({ name: '', oklch: d.paper.colour });
   const dark = d.paper.colour[0] < DARK && overlapOf(d) === 'overprint' && !d.inks.some((k) => k.visible && opaqueOf(k));
   return (
-    <Module title="Paper">
+    <InspectorGroup id="halftone.paper" title="Paper">
       <div className={s.stack}>
         <ColorField {...paper} name={name} />
         {dark && (
@@ -28,6 +28,6 @@ export function PaperModule({ doc, d }: { doc: Doc; d: HalftoneDoc }) {
           <p className={s.note}>{d.paper.include ? 'Under the SVG (a preview-only layer) and the PNG; never on the plates.' : 'The SVG and PNG are clear round the dots; the view still shows the paper.'}</p>
         </div>
       </div>
-    </Module>
+    </InspectorGroup>
   );
 }

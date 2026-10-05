@@ -1,24 +1,13 @@
 .screen { position: absolute; inset: 0; display: flex; }
 .mod { flex: 1; }
-.page { display: flex; flex-direction: column; gap: 22px; max-width: 640px; padding: 6px 4px 12px; }
+/* a centred 640px column of grouped sections */
+.page { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 640px; margin: 0 auto; padding: 18px 4px 24px; }
 
 .section { display: flex; flex-direction: column; gap: 6px; }
-.title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-  color: var(--ink-3);
-  font: 500 var(--fs-caps)/1 var(--font-sans);
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-}
-.title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.section + .section { padding-top: 18px; border-top: 1px solid var(--line); }
+.title { margin-bottom: 6px; color: var(--ink); font: 500 var(--fs-base)/1 var(--font-sans); }
 
-.row { display: flex; align-items: center; gap: 10px; min-height: var(--row); }
-.row > :global(.lbl) { flex: none; width: 96px; }
-.indent, .hint { margin-left: 106px; }
-.hint { max-width: 62ch; color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.45; }
+.indent { margin-left: 106px; }
 
 .folder { display: flex; flex: 1; align-items: center; gap: 6px; min-width: 0; }
 .path {

@@ -4,7 +4,7 @@
 import { useEffect, useState, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { cssColor, toHex } from '../../../shared/color/index.ts';
 import { shell } from '../../shell/core/index.ts';
-import { Button, Icon, IconButton, menu, Module, NumberField, SwatchStrip, Tooltip, type MenuItem } from '../../ui/index.ts';
+import { Button, Icon, IconButton, InfoTip, InspectorGroup, menu, NumberField, SwatchStrip, Tooltip, type MenuItem } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { plural } from '../common/names.ts';
 import { libraryPalettes, paletteMenu, useReadAhead } from '../common/palettes.ts';
@@ -76,11 +76,12 @@ export function PaletteModule({ doc, d, frame }: { doc: Doc; d: DitherDoc; frame
   };
 
   return (
-    <Module
+    <InspectorGroup id="dither.palette"
       title="Palette"
-      readout={on === colours.length ? plural(on, 'colour') : `${on} of ${colours.length} on`}
+      meta={on === colours.length ? plural(on, 'colour') : `${on} of ${colours.length} on`}
       actions={
         <>
+          <InfoTip text="Click a colour to leave it out. Drag it, or Alt and an arrow, to reorder: the gradient map and the indexed PNG follow this order." />
           <IconButton icon="sort" label="Sort dark to light" size="sm" onClick={() => sortByLightness(doc)} />
           <IconButton icon="open_in_new" label="Edit the colours in Design" size="sm" onClick={() => void editInDesign(d)} />
         </>
@@ -125,7 +126,6 @@ export function PaletteModule({ doc, d, frame }: { doc: Doc; d: DitherDoc; frame
               );
             })}
           </div>
-          <p className={i.note}>Click a colour to leave it out. Drag it, or Alt and an arrow, to reorder: the gradient map and the indexed PNG follow this order.</p>
         </div>
         <div className={cx(i.row, i.rule)}>
           <NumberField label="Colours" min={LIMIT.extract[0]} max={LIMIT.extract[1]} width={120} value={v.extract} onChange={(extract) => patchView({ extract })} disabled={!d.source} />
@@ -134,6 +134,6 @@ export function PaletteModule({ doc, d, frame }: { doc: Doc; d: DitherDoc; frame
           </Button>
         </div>
       </div>
-    </Module>
+    </InspectorGroup>
   );
 }

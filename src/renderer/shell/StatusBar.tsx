@@ -1,24 +1,19 @@
-import { useSyncExternalStore } from 'react';
-import type { DocController } from '../../shared/doc-api.ts';
 import { Icon } from '../ui/index.ts';
 import { shell, useShell } from './core/index.ts';
 import { Boundary } from './ToolHost.tsx';
 import s from './StatusBar.module.css';
 
-/** Mono caps readouts (spec §4): the active tool's slot on the left, the shell's own on the right. */
+/** Facts, tasks and warnings only (spec §4): the active tool's facts on the left, running tasks and warnings on the right. Undo's depth lives in the Undo tooltip. */
 export function StatusBar() {
   const active = useShell((st) => st.active);
   const shown = useShell((st) => st.mounted.includes(st.active) && !st.crashed[st.active]);
   const warning = useShell((st) => st.statusWarning);
   const busy = useShell((st) => st.busy);
-  // Ctrl+Z does nothing while Settings or the crash panel covers the tool, so the readout goes too
-  const covered = useShell((st) => st.settingsOpen || !!st.crashed[st.active]);
   const Slot = shell.tool(active).StatusSlot;
   const doc = shell.doc(active);
 
   return (
     <footer className={s.bar}>
-      {!covered && <UndoDepth doc={doc} />}
       {Slot && shown && (
         <Boundary key={active} onError={(e) => shell.reportCrash(active, e)}>
           <Slot doc={doc} />
@@ -34,14 +29,5 @@ export function StatusBar() {
         </span>
       )}
     </footer>
-  );
-}
-
-function UndoDepth({ doc }: { doc: DocController<unknown> }) {
-  const n = useSyncExternalStore(doc.subscribe, () => doc.depth());
-  return (
-    <span>
-      Undo <b>{n}</b> {n === 1 ? 'step' : 'steps'}
-    </span>
   );
 }

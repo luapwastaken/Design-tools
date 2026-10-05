@@ -124,7 +124,7 @@ export function Stage({ doc, d, v, lockup }: { doc: Doc; d: LogoDoc; v: LogoView
       zoom={held ?? v.zoom}
       onZoom={(zoom) => !hold.current && patchView({ zoom })}
       cursor={readout}
-      bar={
+      overlays={
         <>
           <span className={s.sep} />
           <Toggle label="Clearspace" checked={v.clearspace} onChange={(clearspace) => patchView({ clearspace })} className={s.toggle} />

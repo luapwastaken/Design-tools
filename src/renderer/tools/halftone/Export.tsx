@@ -3,7 +3,7 @@
 import { svgProblem } from '../../../shared/halftone/svg.ts';
 import { intoFolder, leaf, saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
-import { Module, NumberField, Segmented } from '../../ui/index.ts';
+import { InspectorGroup, NumberField, Segmented } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { CopyButton, ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx, plural } from '../common/names.ts';
@@ -62,7 +62,7 @@ export function ExportModule({ d, v, screened, error }: { d: HalftoneDoc; v: Hal
   const unit = d.size.unit;
 
   return (
-    <Module title="Export" readout={`${fmt(d.size.w, unit)} × ${fmt(d.size.h, unit)} ${unit}`}>
+    <InspectorGroup id="halftone.export" title="Export" meta={`${fmt(d.size.w, unit)} × ${fmt(d.size.h, unit)} ${unit}`}>
       <ExportList>
         <ExportRow
           main
@@ -96,6 +96,6 @@ export function ExportModule({ d, v, screened, error }: { d: HalftoneDoc; v: Hal
         </ExportRow>
       </ExportList>
       <LastExport last={v.last} />
-    </Module>
+    </InspectorGroup>
   );
 }

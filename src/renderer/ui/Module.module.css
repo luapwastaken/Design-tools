@@ -24,14 +24,19 @@
   padding: 0 5px 0 12px;
   background: var(--module-head);
 }
+.name { display: flex; flex: none; align-items: center; min-width: 0; height: 100%; }
 .title {
   flex: none;
   color: var(--ink);
-  font: 500 var(--fs-mod-title)/1 var(--font-sans);
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
+  font: 500 var(--fs-base)/1 var(--font-sans);
   white-space: nowrap;
 }
+/* an InspectorGroup's twirl: the whole title is the button */
+.toggle { display: flex; align-items: center; gap: 4px; height: 100%; padding: 0 8px 0 0; border-radius: var(--r-ctl); }
+.toggle > :global(.ico) { color: var(--ink-3); }
+.toggle:hover > :global(.ico) { color: var(--ink); }
+.twirl { padding-left: 6px; }
+.folded .head { background: none; }
 .sub {
   /* a narrow module gives up its sub-label before its actions */
   min-width: 0;
@@ -64,3 +69,4 @@
   color: var(--ink-2);
   font-size: var(--fs-base);
 }
+

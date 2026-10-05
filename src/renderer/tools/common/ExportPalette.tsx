@@ -6,6 +6,7 @@ import type { Swatch, ToolId } from '../../../shared/types.ts';
 import { exporting, leaf, saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
 import { Button, Popover, Select, TextInput, toast } from '../../ui/index.ts';
+import { ExportButton } from './DocBar.tsx';
 import { plural } from './names.ts';
 import s from './ExportPalette.module.css';
 
@@ -67,9 +68,7 @@ export function ExportPalette(p: ExportPaletteProps) {
   };
   return (
     <>
-      <Button ref={button} icon="download" disabled={!p.swatches.length} onClick={() => setOpen(!open)} tooltip={p.swatches.length ? 'Export the whole palette' : 'Add a colour first: an empty palette has nothing to export'}>
-        <span className={s.label}>Export</span>
-      </Button>
+      <ExportButton ref={button} disabled={!p.swatches.length} onClick={() => setOpen(!open)} tooltip={p.swatches.length ? 'Export the whole palette' : 'Add a colour first: an empty palette has nothing to export'} />
       {open && p.swatches.length > 0 && button.current && (
         <Popover anchor={button.current} label="Export" align="end" onClose={close} className={s.pop}>
           <ExportBody {...p} name={name} onName={setName} onDone={() => close(true)} />

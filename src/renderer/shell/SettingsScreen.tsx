@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Theme } from '../../shared/types.ts';
-import { Button, FieldError, IconButton, Module, PICKER_STYLE_OPTIONS, Segmented, Tooltip, usePickerStyle } from '../ui/index.ts';
+import { Button, FieldError, IconButton, InspectorRow, Module, PICKER_STYLE_OPTIONS, Segmented, Tooltip, usePickerStyle } from '../ui/index.ts';
 import { shell, useShell } from './core/index.ts';
 import { ipc } from './core/ipc.ts';
 import s from './SettingsScreen.module.css';
@@ -44,17 +44,19 @@ export function SettingsScreen() {
       >
         <div ref={page} className={s.page}>
           <Section title="Appearance">
-            <Row label="Theme">
+            <InspectorRow label="Theme">
               <Segmented options={THEMES} value={settings?.theme ?? 'dark'} fit onChange={(t) => void shell.setTheme(t)} />
-            </Row>
-            <Row label="Colour picker">
+            </InspectorRow>
+          </Section>
+
+          <Section title="Colour picker">
+            <InspectorRow label="Style" info="Every colour picker in the app uses this style. The switch at the top of any picker changes it too.">
               <Segmented options={PICKER_STYLE_OPTIONS} value={pickerStyle} fit onChange={(style) => void shell.setPicker({ pickerStyle: style })} />
-            </Row>
-            <p className={s.hint}>Every colour picker in the app uses this style. The switch at the top of any picker changes it too.</p>
+            </InspectorRow>
           </Section>
 
           <Section title="Library">
-            <Row label="Folder">
+            <InspectorRow label="Folder" info="Change points the app at another folder and moves nothing. Documents open from the old folder stay open, detached from their files.">
               <div className={s.folder}>
                 <Tooltip overflowOnly>
                   <span className={s.path}>
@@ -68,21 +70,18 @@ export function SettingsScreen() {
                   Reveal in Explorer
                 </Button>
               </div>
-            </Row>
+            </InspectorRow>
             {library?.ok === false && (
               <div className={s.indent}>
                 <FieldError>{library.error ?? 'The Library folder is missing.'}</FieldError>
               </div>
             )}
-            <p className={s.hint}>
-              Change points the app at another folder and moves nothing. Documents open from the old folder stay open, detached from their files.
-            </p>
           </Section>
 
           <Section title="About">
-            <Row label="Version">
+            <InspectorRow label="Version">
               <span className={s.value}>{version ?? ''}</span>
-            </Row>
+            </InspectorRow>
           </Section>
         </div>
       </Module>
@@ -96,14 +95,5 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <h3 className={s.title}>{title}</h3>
       {children}
     </section>
-  );
-}
-
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className={s.row}>
-      <span className="lbl">{label}</span>
-      {children}
-    </div>
   );
 }

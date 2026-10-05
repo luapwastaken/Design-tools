@@ -1,0 +1,6 @@
+.row { display: flex; align-items: center; gap: 10px; min-height: var(--row); }
+.label { display: flex; flex: none; align-items: center; gap: 4px; width: var(--label-w, 96px); min-width: 0; color: var(--ink-2); font: 400 var(--fs-label)/1 var(--font-sans); }
+.text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.value { display: flex; flex: 1; align-items: center; gap: 6px; min-width: 0; }
+.value > * { min-width: 0; }
+.pair > * { flex: 1 1 0; }

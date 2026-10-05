@@ -35,19 +35,6 @@
 .frame { position: absolute; box-shadow: 0 0 0 1px var(--edge); pointer-events: none; }
 .overlay { position: absolute; inset: 0; pointer-events: none; }
 
-.bar {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 8px;
-  height: var(--canvas-bar);
-  padding: 0 12px 0 6px;
-  overflow: hidden;
-  background: var(--module-head);
-}
-.zoom { flex: none; }
-.grow { flex: 1; }
-
 /* brief §7 overflow: a part that doesn't fit wraps onto a hidden second line, whole, instead of being cut */
 .readout {
   display: flex;

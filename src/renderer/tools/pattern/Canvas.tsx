@@ -162,7 +162,7 @@ export function PatternCanvas({ d, tile, preview, v, active }: { d: PatternDoc; 
       zoom={v.zoom}
       onZoom={(zoom) => patchView({ zoom })}
       cursor={readout}
-      bar={
+      overlays={
         <>
           <span className={s.sep} />
           <Toggle label="Seams" checked={v.seams} onChange={(seams) => patchView({ seams })} className={s.seams} />

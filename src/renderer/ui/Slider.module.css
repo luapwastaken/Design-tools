@@ -1,8 +1,9 @@
 .row { display: flex; align-items: center; gap: 10px; min-height: var(--row); }
 
+.cell { display: flex; flex: none; align-items: center; gap: 4px; width: var(--label-w, 86px); min-width: 0; }
 .label {
-  flex: none;
-  width: var(--label-w, 86px);
+  flex: 0 1 auto;
+  min-width: 0;
   color: var(--ink-2);
   font: 400 var(--fs-label)/1 var(--font-sans);
   white-space: nowrap;

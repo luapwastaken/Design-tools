@@ -3,7 +3,7 @@
 // PNG frames, all from the index buffer the view shows, through the shared export paths.
 import { saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
-import { Button, Module, NumberField } from '../../ui/index.ts';
+import { Button, InspectorGroup, NumberField } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { CopyButton, ExportButton, ExportList, ExportRow, LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx, plural } from '../common/names.ts';
@@ -40,7 +40,7 @@ export function ExportModule({ d, v, frame, ready, error }: { d: DitherDoc; v: D
   const loop = d.source && anim ? `${plural(d.source.frames, 'frame')} looping every ${(loopMs(d.source) / 1000).toFixed(2)} s` : '';
 
   return (
-    <Module title="Export" readout={d.source ? fmtPx(out.w, out.h) : undefined}>
+    <InspectorGroup id="dither.export" title="Export" meta={d.source ? fmtPx(out.w, out.h) : undefined}>
       <ExportList>
         <div className={cx(i.row, s.scale)}>
           <NumberField label="Scale" min={1} max={TIMES_MAX} unit="×" width={104} value={v.times || 1} disabled={v.times === 0} onChange={(times) => patchView({ times })} />
@@ -94,6 +94,6 @@ export function ExportModule({ d, v, frame, ready, error }: { d: DitherDoc; v: D
         )}
       </ExportList>
       <LastExport last={v.last} />
-    </Module>
+    </InspectorGroup>
   );
 }

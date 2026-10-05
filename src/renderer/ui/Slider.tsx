@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { cx } from './cx.ts';
+import { InfoTip } from './InfoTip.tsx';
 import { NumberField } from './NumberField.tsx';
 import { clamp, decimalsOf, roundTo, useScrub, type NumberGesture } from './scrub.ts';
 import { Ticks } from './Ticks.tsx';
@@ -7,6 +8,8 @@ import s from './Slider.module.css';
 
 export type SliderProps = {
   label: string;
+  /** one sentence of help: an (i) after the label shows it in a tooltip */
+  info?: string;
   value: number;
   min: number;
   max: number;
@@ -66,8 +69,11 @@ export function Slider(p: SliderProps) {
 
   return (
     <div className={cx(s.row, disabled && s.off, className)}>
-      <span className={cx(s.label, scrub.active && s.scrubbing)} aria-hidden="true" {...scrub.handlers}>
-        {label}
+      <span className={s.cell}>
+        <span className={cx(s.label, scrub.active && s.scrubbing)} aria-hidden="true" {...scrub.handlers}>
+          {label}
+        </span>
+        {p.info && <InfoTip text={p.info} />}
       </span>
       <div
         className={s.track}

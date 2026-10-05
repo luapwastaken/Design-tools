@@ -1,6 +1,6 @@
 // Pixel size (spec §3): the exact block size in the exported file, 1 to 32 px, and how the image is
 // reduced to one pixel a block. The working size follows from it, so a size of 8 really is 8.
-import { Module, NumberField, Segmented, useDocNumber } from '../../ui/index.ts';
+import { InspectorGroup, NumberField, Segmented, useDocNumber } from '../../ui/index.ts';
 import { fmtPx } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { fix, LIMIT, scaleOf, workProblem, workSize, type DitherDoc } from './doc.ts';
@@ -23,7 +23,7 @@ export function PixelModule({ doc, d }: { doc: Doc; d: DitherDoc }) {
   const size = d.source ? `: ${fmtPx(w * block, h * block)}` : ', whatever the zoom';
   const setPixel = (n: number) => doc.transact(`Pixel size ${n}`, (x) => ({ ...x, pixel: n }));
   return (
-    <Module title="Pixel size" readout={d.source ? `${w.toLocaleString('en')} × ${h.toLocaleString('en')} blocks` : undefined}>
+    <InspectorGroup id="dither.pixel" title="Pixel size" meta={d.source ? `${w.toLocaleString('en')} × ${h.toLocaleString('en')} blocks` : undefined}>
       <div className={s.stack}>
         <div className={s.row}>
           <Segmented mono fit options={PICKS} value={`${d.pixel}`} onChange={(n) => setPixel(Number(n))} />
@@ -44,6 +44,6 @@ export function PixelModule({ doc, d }: { doc: Doc; d: DitherDoc }) {
           </p>
         )}
       </div>
-    </Module>
+    </InspectorGroup>
   );
 }

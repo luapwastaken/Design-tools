@@ -12,33 +12,22 @@
 .tg[aria-checked="true"] { color: var(--ink); }
 .tg:not(:disabled):hover { color: var(--ink); }
 
-.sw {
-  position: relative;
+.box {
+  display: grid;
   flex: none;
-  width: 30px;
-  height: 18px;
-  border-radius: var(--r-pill);
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--r-badge);
   background: var(--well);
-  box-shadow: inset 0 0 0 1px var(--line);
+  box-shadow: inset 0 0 0 1px var(--tick);
+  color: var(--signal-ink);
 }
-.sw::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--tick-strong);
-  transition: transform var(--t-move) var(--ease);
-}
-.tg[aria-checked="true"] .sw { background: var(--signal); box-shadow: none; }
-.tg[aria-checked="true"] .sw::after { transform: translateX(12px); background: var(--signal-ink); }
+.tg:not(:disabled):hover .box { box-shadow: inset 0 0 0 1px var(--tick-strong); }
+.tg[aria-checked="true"] .box { background: var(--signal); box-shadow: none; }
 
-.tg.quiet[aria-checked="true"] .sw { background: var(--tick-strong); }
-.tg.quiet[aria-checked="true"] .sw::after { background: var(--well); }
+.tg.quiet[aria-checked="true"] .box { background: var(--tick-strong); color: var(--well); }
 
 .tg:disabled { color: var(--ink-4); }
-.tg:disabled .sw::after { background: var(--ink-4); }
-.tg:disabled[aria-checked="true"] .sw { background: var(--tick); }
-.tg:disabled[aria-checked="true"] .sw::after { background: var(--well); }
+.tg:disabled .box { box-shadow: inset 0 0 0 1px var(--line); }
+.tg:disabled[aria-checked="true"] .box { background: var(--tick); color: var(--well); box-shadow: none; }

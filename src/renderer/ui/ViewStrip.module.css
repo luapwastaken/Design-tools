@@ -1,0 +1,13 @@
+/* the strip under a canvas (brief §5): 36px, the zoom on the left, what the canvas shows and its readouts on the right */
+.bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: var(--canvas-bar);
+  padding: 0 12px 0 6px;
+  overflow: hidden;
+  background: var(--module-head);
+}
+.zoom { flex: none; }
+.grow { flex: 1; }

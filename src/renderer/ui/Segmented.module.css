@@ -1,5 +1,5 @@
 .row { display: flex; align-items: center; gap: 10px; min-height: var(--row); }
-.label { flex: none; width: var(--label-w, 86px); }
+.label { display: flex; flex: none; align-items: center; gap: 4px; width: var(--label-w, 86px); }
 .row .seg { flex: 1; min-width: 0; }
 
 .seg {

@@ -4,7 +4,7 @@ const NAV = 'nav[aria-label=Tools]';
 const NAVSEL = 'button,a,[role=tab],[role=button]';
 export async function run({ page, ev, shot, clickText, drop, rail, photo, four, svgA, svgB, sleep, key }) {
   const tab = (t, tool) => clickText(t, T(tool), '[role=tab],[role=radio],button');
-  const click = (t, tool) => clickText(t, T(tool), 'button,[role=tab],[role=radio],[role=switch],[role=option]');
+  const click = (t, tool) => clickText(t, T(tool), 'button,[role=tab],[role=radio],[role=checkbox],[role=option]');
   const settle = () => sleep(1200);
   const visible = (tool) => ev((tool) => [...document.querySelectorAll(`[data-tool="${tool}"] [role=tab],[data-tool="${tool}"] [role=radio]`)].filter((e) => e.getClientRects().length).map((e) => e.textContent.trim().replace(/\s+/g, ' ').slice(0, 30)), tool);
 
@@ -94,6 +94,6 @@ export async function run({ page, ev, shot, clickText, drop, rail, photo, four, 
   const sets = await ev(() => [...document.querySelectorAll('[role=tab],[role=radio]')].filter((e) => e.getClientRects().length && !e.closest('[data-tool]')).map((e) => e.textContent.trim().slice(0, 24)));
   console.log('  settings controls:', JSON.stringify(sets));
   await clickText('Design', NAV, NAVSEL); await sleep(600);
-  await clickText('Library', NAV, NAVSEL); await settle(); await shot('09-library-toggled');
-  await clickText('Library', NAV, NAVSEL); await settle(); await shot('09-library-toggled-back');
+  await clickText('Library', NAV, NAVSEL); await settle(); await shot('09-library-open'); // closed on first run
+  await clickText('Library', NAV, NAVSEL); await settle(); await shot('09-library-closed');
 }

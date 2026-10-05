@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { INKS } from '../../../shared/palette/inks.ts';
-import { ColorField, ConfirmInline, FieldError, Icon, IconButton, menu, Module, NumberField, Segmented, SwatchStrip, TextInput, Toggle, useDocColour, useDocNumber, type MenuItem } from '../../ui/index.ts';
+import { ColorField, ConfirmInline, FieldError, Icon, IconButton, InspectorGroup, menu, NumberField, Segmented, SwatchStrip, TextInput, Toggle, useDocColour, useDocNumber, type MenuItem } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { plural } from '../common/names.ts';
 import { paletteMenu, useReadAhead } from '../common/palettes.ts';
@@ -212,7 +212,7 @@ export function InksModule({ doc, d, plateOf }: { doc: Doc; d: HalftoneDoc; plat
   const library = fromShown ? null : libraryOf(d.inks);
   const visible = d.inks.filter((k) => k.visible).length;
   return (
-    <Module
+    <InspectorGroup id="halftone.inks"
       title="Inks"
       sub={visible === d.inks.length ? plural(d.inks.length, 'plate') : `${visible} of ${plural(d.inks.length, 'plate')}`}
       actions={
@@ -261,6 +261,6 @@ export function InksModule({ doc, d, plateOf }: { doc: Doc; d: HalftoneDoc; plat
           </p>
         </div>
       </div>
-    </Module>
+    </InspectorGroup>
   );
 }

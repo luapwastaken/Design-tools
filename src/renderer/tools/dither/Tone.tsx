@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
 import { toneAt } from '../../../shared/halftone/tone.ts';
-import { IconButton, Module, Slider, SwatchStrip, Toggle, useDocNumber } from '../../ui/index.ts';
+import { IconButton, InfoTip, InspectorGroup, Slider, SwatchStrip, Toggle, useDocNumber } from '../../ui/index.ts';
 import type { Doc } from './actions.ts';
 import { NEUTRAL_TONE, fix, used, type DitherDoc, type Tone } from './doc.ts';
 import s from './Tone.module.css';
@@ -45,26 +45,24 @@ export function ToneModule({ doc, d, hist }: { doc: Doc; d: DitherDoc; hist: Uin
   const t = d.tone;
   const plain = t.black === 0 && t.white === 1 && t.gamma === 1 && t.contrast === 0 && !t.map;
   return (
-    <Module title="Tone" sub="Before dithering" actions={<IconButton icon="restart_alt" label="Reset the tone" size="sm" disabled={plain} onClick={() => doc.transact('Reset the tone', (x) => ({ ...x, tone: NEUTRAL_TONE }))} />}>
+    <InspectorGroup id="dither.tone" title="Tone" sub="Before dithering" actions={<IconButton icon="restart_alt" label="Reset the tone" size="sm" disabled={plain} onClick={() => doc.transact('Reset the tone', (x) => ({ ...x, tone: NEUTRAL_TONE }))} />}>
       <div className={i.stack}>
         <Histogram hist={hist} tone={t} />
         <div className={i.group}>
-          <Slider label="Black point" min={0} max={99} step={0.5} unit="%" {...black} />
-          <Slider label="White point" min={1} max={100} step={0.5} unit="%" {...white} />
-          <Slider label="Gamma" min={0.2} max={5} step={0.01} {...gamma} />
+          <Slider label="Black point" info="Tones at or below this become the darkest colour." min={0} max={99} step={0.5} unit="%" {...black} />
+          <Slider label="White point" info="Tones at or above this become the lightest colour." min={1} max={100} step={0.5} unit="%" {...white} />
+          <Slider label="Gamma" info="Above 1 opens the midtones." min={0.2} max={5} step={0.01} {...gamma} />
           <Slider label="Contrast" min={-100} max={100} step={1} unit="%" origin={0} {...contrast} />
         </div>
         <div className={i.group}>
           <div className={i.row}>
             <Toggle label="Gradient map" checked={t.map} onChange={(map) => doc.transact(map ? 'Map the tones onto the palette' : 'Match colours as they are', (x) => ({ ...x, tone: { ...x.tone, map } }))} />
+            <InfoTip text={t.map ? 'Black takes the first colour, white the last: reorder the palette to recolour.' : 'Lays the image’s lightness along the palette in its order, instead of matching each pixel’s nearest colours.'} />
             <span className={i.grow} />
             {t.map && <SwatchStrip colors={used(d).map(cssColor)} height={12} className={s.map} />}
           </div>
-          <p className={i.note}>
-            {t.map ? 'Black takes the first colour, white the last: reorder the palette to recolour.' : 'Lays the image’s lightness along the palette in its order, instead of matching each pixel’s nearest colours.'}
-          </p>
         </div>
       </div>
-    </Module>
+    </InspectorGroup>
   );
 }

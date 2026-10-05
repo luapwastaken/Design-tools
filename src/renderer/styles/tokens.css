@@ -1,4 +1,4 @@
-/* Design tokens. Source: docs/rewrite/design-brief.md §3, values from the Bone Ember UI kit
+/* Design tokens. Source: docs/rewrite/design-brief.md ï¿½3, values from the Bone Ember UI kit
    (D:\stuff\!projects\! UI Kits\Bone Ember). The ONLY file allowed to hold colour literals
    (hard rule 2), always as oklch(). Both theme blocks must define exactly the same names:
    scripts/check-rules.mjs diffs them. Names are the app's own; the kit's names are noted where they differ. */
@@ -7,7 +7,7 @@
   --font-sans: "Instrument Sans Variable", "Instrument Sans", system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
 
-  /* type scale (§3.3) */
+  /* type scale (ï¿½3.3) */
   --fs-meta: 11.5px;       /* kit label */
   --fs-base: 12.5px;       /* kit medium: buttons, tooltips */
   --fs-ctl: 12.5px;
@@ -27,7 +27,7 @@
   --space-1: 2px; --space-2: 4px; --space-3: 6px; --space-4: 8px;
   --space-5: 10px; --space-6: 12px; --space-7: 14px; --space-8: 18px;
 
-  /* geometry (§3.2) */
+  /* geometry (ï¿½3.2) */
   --row: 32px;
   --ctl: 28px;
   --r-badge: 5px;
@@ -46,18 +46,18 @@
   --toast-h: 40px;
   --canvas-bar: 36px;
   --docbar: 44px;
+  --options-h: 36px;
   --lib-row: 44px;
   --titlebar-h: 40px;
   --statusbar-h: 24px;
-  --rail-w: 184px;
-  --rail-w-collapsed: 52px;
+  --rail-w: 60px;
 
   /* shadows: floating layers only */
   --shadow-popover: inset 0 1px 0 var(--highlight), 0 20px 50px var(--shadow);
   --shadow-dialog: 0 30px 70px var(--shadow);
   --ring-focus: 0 0 0 1.5px var(--signal);
 
-  /* motion (§8): transform only, 120ms at most */
+  /* motion (ï¿½8): transform only, 120ms at most */
   --ease: cubic-bezier(.2, .8, .2, 1);
   --t-fast: 90ms;
   --t-move: 120ms;

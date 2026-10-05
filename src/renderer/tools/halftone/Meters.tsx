@@ -2,7 +2,7 @@
 // under the pointer. Props only: the tool measures, these show.
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { Module, Tooltip } from '../../ui/index.ts';
+import { InspectorGroup, Tooltip } from '../../ui/index.ts';
 import s from './Meters.module.css';
 
 /** one ink's plate, coverage 0..1; null while it is measured */
@@ -18,7 +18,7 @@ const pct = (v: number) => Math.round(v * 100);
  */
 export function Meters({ inks, maxInk }: { inks: InkCoverage[]; maxInk: number | null }) {
   return (
-    <Module title="Coverage" sub="Mean / peak" readout={maxInk === null ? undefined : `Max ink ${pct(maxInk)}%`}>
+    <InspectorGroup id="halftone.coverage" title="Coverage" sub="Mean / peak" meta={maxInk === null ? undefined : `Max ink ${pct(maxInk)}%`}>
       <div className={s.list}>
         {inks.map((k) => (
           <div key={k.id} className={cx(s.row, k.hidden && s.hidden)}>
@@ -34,7 +34,7 @@ export function Meters({ inks, maxInk }: { inks: InkCoverage[]; maxInk: number |
           </div>
         ))}
       </div>
-    </Module>
+    </InspectorGroup>
   );
 }
 

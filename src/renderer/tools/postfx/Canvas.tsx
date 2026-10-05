@@ -164,7 +164,7 @@ export function PostFxCanvas({ d, v, busy }: Props) {
           )}
         </>
       )}
-      bar={
+      overlays={
         <>
           {compare === 'split' && <NumberField label="Split" min={0} max={100} step={1} unit="%" width={96} value={Math.round(split * 100)} onChange={(p) => patchView({ split: p / 100 })} className={s.split} />}
           {busy && (

@@ -1,6 +1,6 @@
 // Output size (spec §3): the page in mm or inches at a print DPI. The screen's frequency counts
 // per inch of this page, so the dot count is real (v1 tied it to pixels).
-import { IconButton, Module, NumberField, Segmented, useDocNumber } from '../../ui/index.ts';
+import { IconButton, InspectorGroup, NumberField, Segmented, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { fmtPx } from '../common/names.ts';
 import type { Doc } from './actions.ts';
@@ -57,9 +57,9 @@ export function OutputModule({ doc, d }: { doc: Doc; d: HalftoneDoc }) {
   const want = 2 * d.screen.lpi;
 
   return (
-    <Module
+    <InspectorGroup id="halftone.output"
       title="Output size"
-      readout={fmtPx(px.w, px.h)}
+      meta={fmtPx(px.w, px.h)}
       actions={<Segmented mono fit options={UNITS} value={unit} onChange={(u) => doc.transact(`Show sizes in ${u}`, (x) => ({ ...x, size: { ...x.size, unit: u } }))} />}
     >
       <div className={s.stack}>
@@ -82,6 +82,6 @@ export function OutputModule({ doc, d }: { doc: Doc; d: HalftoneDoc }) {
           </p>
         )}
       </div>
-    </Module>
+    </InspectorGroup>
   );
 }

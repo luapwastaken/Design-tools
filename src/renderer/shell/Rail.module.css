@@ -1,37 +1,21 @@
-.rail { display: flex; flex-direction: column; min-height: 0; padding-top: 6px; overflow: hidden auto; scrollbar-width: none; }
+/* 60px: an icon with its name under it; groups are told apart by a 12px gap, not a heading */
+.rail { display: flex; flex-direction: column; gap: 12px; min-height: 0; padding: 6px 4px 8px; overflow: hidden auto; scrollbar-width: none; }
+.group { display: flex; flex-direction: column; gap: 2px; }
+.foot { margin-top: auto; }
 
-.head { display: flex; align-items: center; gap: 8px; height: 26px; padding: 8px 12px 0 14px; }
-.head::after { content: ""; flex: 1; height: 1px; margin-top: 1px; background: var(--line); }
-
-/* nav rows: tone, not lines */
+/* nav tiles: tone, not lines */
 .item {
-  position: relative;
   display: flex;
   flex: none;
+  flex-direction: column;
   align-items: center;
-  gap: 9px;
-  height: var(--row);
-  margin: 0 6px;
-  padding: 0 8px 0 18px;
+  justify-content: center;
+  gap: 4px;
+  height: 48px;
   border-radius: var(--r-field);
-  color: var(--ink-2);
-  font-size: var(--fs-row);
-  text-align: left;
+  color: var(--ink-3);
 }
 .item:hover { background: var(--well-hover); color: var(--ink); }
-.item > :global(.ico) { color: var(--ink-3); }
-.on, .on:hover { background: var(--module); color: var(--ink); font-weight: 500; }
-.on > :global(.ico) { color: var(--ink); }
-
-.name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.key { color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); }
-.led { position: absolute; top: 11px; left: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--signal); }
-
-.foot { display: flex; flex-direction: column; margin-top: auto; padding: 8px 0; }
-
-/* 48px icon rail below a 1440px window: names and digits move into tooltips */
-.collapsed .head { padding: 8px 10px 0; }
-.collapsed .head > :global(.caps) { display: none; }
-.collapsed .item { justify-content: center; padding: 0; }
-.collapsed .name, .collapsed .key { display: none; }
-.collapsed .led { left: 3px; }
+.on, .on:hover { background: var(--raise-hover); color: var(--ink); }
+.name { max-width: 100%; overflow: hidden; font: 400 10.5px/1 var(--font-sans); letter-spacing: -.01em; text-overflow: clip; white-space: nowrap; }
+.on .name { font-weight: 500; }

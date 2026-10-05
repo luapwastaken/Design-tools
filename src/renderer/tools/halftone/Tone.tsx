@@ -2,7 +2,7 @@
 // resulting curve drawn on it, so a change reads as a shape before it reads as dots.
 import { useMemo } from 'react';
 import { toneAt } from '../../../shared/halftone/tone.ts';
-import { IconButton, Module, Slider, useDocNumber } from '../../ui/index.ts';
+import { IconButton, InspectorGroup, Slider, useDocNumber } from '../../ui/index.ts';
 import type { Doc } from './actions.ts';
 import { emptyDoc, type HalftoneDoc } from './doc.ts';
 import s from './Tone.module.css';
@@ -44,17 +44,16 @@ export function ToneModule({ doc, d, hist }: { doc: Doc; d: HalftoneDoc; hist: U
   const t = d.tone;
   const plain = t.black === 0 && t.white === 1 && t.gamma === 1 && t.contrast === 0;
   return (
-    <Module title="Tone" sub="Before screening" actions={<IconButton icon="restart_alt" label="Reset the tone" size="sm" disabled={plain} onClick={() => doc.transact('Reset the tone', (x) => ({ ...x, tone: emptyDoc().tone }))} />}>
+    <InspectorGroup id="halftone.tone" title="Tone" sub="Before screening" actions={<IconButton icon="restart_alt" label="Reset the tone" size="sm" disabled={plain} onClick={() => doc.transact('Reset the tone', (x) => ({ ...x, tone: emptyDoc().tone }))} />}>
       <div className={i.stack}>
         <Histogram hist={hist} tone={t} />
         <div className={i.group}>
-          <Slider label="Black point" min={0} max={99} step={0.5} unit="%" {...black} />
-          <Slider label="White point" min={1} max={100} step={0.5} unit="%" {...white} />
-          <Slider label="Gamma" min={0.2} max={5} step={0.01} {...gamma} />
+          <Slider label="Black point" info="Tones at or below this print as solid ink." min={0} max={99} step={0.5} unit="%" {...black} />
+          <Slider label="White point" info="Tones at or above this print as bare paper." min={1} max={100} step={0.5} unit="%" {...white} />
+          <Slider label="Gamma" info="Above 1 opens the midtones." min={0.2} max={5} step={0.01} {...gamma} />
           <Slider label="Contrast" min={-100} max={100} step={1} unit="%" origin={0} {...contrast} />
         </div>
-        <p className={i.note}>Black and white points print as solid ink and bare paper; gamma above 1 opens the midtones.</p>
       </div>
-    </Module>
+    </InspectorGroup>
   );
 }

@@ -1,25 +1,67 @@
-import { useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent } from 'react';
+import { useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent, type ReactNode, type Ref } from 'react';
 import type { DocController } from '../../../shared/doc-api.ts';
 import type { ToolId } from '../../../shared/types.ts';
 import { shell, useShell } from '../../shell/core/index.ts';
 import type { IconName } from '../../shell/tool.ts';
 import { cx } from '../../ui/cx.ts';
-import { Button, Icon, IconButton, menu, TextInput, Tooltip, UndoRedo, type MenuItem } from '../../ui/index.ts';
-import { ExportPalette, type ExportPaletteProps } from './ExportPalette.tsx';
+import { Button, Icon, menu, TextInput, Tooltip, UndoRedo, type MenuItem } from '../../ui/index.ts';
 import { useWidth } from './useWidth.ts';
 import s from './DocBar.module.css';
 
-const CAN_PICK = 'EyeDropper' in globalThis;
-/**
- * A narrowing bar gives way in this order (after the place, the count and Add's label, in CSS):
- * Send to's label, then the tab names (their icons stay, and the badge): the document's own name
- * matters more than the tab labels, which the icons and tooltips carry, since two palettes are told apart by it.
- */
+/** Send to loses its label first; the meta goes in CSS (container query) before that */
 const SEND_ICON = 740;
-const TAB_LABELS_ONLY = 680;
-/** the work area is 540 to 560 with the Library open on a 1280 window: there the name keeps 140px or so; from 600 down the bar's gaps tighten too */
-const TAB_ICONS_ONLY = 620;
-const TIGHT = 600;
+
+export type DocBarProps = {
+  tool: ToolId;
+  doc: DocController<unknown>;
+  /**
+   * The name shown. Omit it for a tool whose document is a Library item: the shell's name for it,
+   * click to rename, with the collection after it. Give it for a tool named after its source ("photo.png").
+   */
+  title?: string;
+  /** mono meta after the title: "6 swatches", "786 × 512 px · 300 ppi" */
+  meta?: ReactNode;
+  /** small tool actions after the meta: IconButtons (New, Open an image), one Button (Surprise me) */
+  actions?: ReactNode;
+  /** the tool's one view/mode switch, centred: a Segmented with icons (or DocTabs while a tool still has badges) */
+  modes?: ReactNode;
+  /** Send to's wording (see SendTo); false: the tool hands nothing on */
+  send?: { noun?: string; empty: string; tip?: string } | false;
+  /** the primary Export: an ExportButton (or ExportPalette). The slot is kept when absent, so Send to never shifts. */
+  exportButton?: ReactNode;
+};
+
+/**
+ * A tool's document bar, the same slots in all seven tools:
+ * title + meta + actions | modes (centred) | Undo, Redo | Send to | Export (last).
+ */
+export function DocBar({ tool, doc, title, meta, actions, modes, send, exportButton }: DocBarProps) {
+  const { ref, width } = useWidth<HTMLDivElement>();
+  return (
+    <div ref={ref} className={s.docbar}>
+      <div className={s.left}>
+        {title === undefined ? <DocHead tool={tool} doc={doc} /> : <DocTitle>{title}</DocTitle>}
+        {meta !== undefined && meta !== null && meta !== false && <span className={s.meta}>{meta}</span>}
+        {actions}
+      </div>
+      <div className={s.modes}>{modes}</div>
+      <div className={s.right}>
+        <UndoRedo doc={doc} />
+        {send !== false && <SendTo tool={tool} doc={doc} noun={send?.noun} empty={send?.empty ?? 'Nothing to send yet'} tip={send?.tip} compact={width > 0 && width < SEND_ICON} />}
+        <div className={s.exportSlot}>{exportButton}</div>
+      </div>
+    </div>
+  );
+}
+
+/** The primary Export for a DocBar's `exportButton`: bone fill, always labelled. `tooltip` names why it is off. */
+export function ExportButton({ onClick, disabled, tooltip, ref }: { onClick?(e: MouseEvent<HTMLButtonElement>): void; disabled?: boolean; tooltip?: string; ref?: Ref<HTMLButtonElement> }) {
+  return (
+    <Button ref={ref} variant="primary" icon="download" disabled={disabled} onClick={onClick} tooltip={tooltip}>
+      Export
+    </Button>
+  );
+}
 
 /** `off`: why the tab can't open yet (its tooltip) */
 export type DocTab<T extends string> = { value: T; label: string; icon: IconName; badge?: number; off?: string };
@@ -27,53 +69,13 @@ export type DocTab<T extends string> = { value: T; label: string; icon: IconName
 /** a count past two digits is noise on a tab: the check's own line says how many */
 const badgeText = (n: number) => (n > 99 ? '99+' : String(n));
 
-type Props<T extends string> = {
-  tool: ToolId;
-  doc: DocController<unknown>;
-  /** mono caps after the name: "6 swatches", "4 ramps" */
-  count: string;
-  onNew(): void;
-  /** the tool's jobs, in working order (Build · Check · Preview, Light · Check · Paint) */
-  tabs: { options: DocTab<T>[]; value: T; onChange(t: T): void };
-  onPick(): void;
-  add: { label: string; tooltip: string; run(): void };
-  /** Send to's tooltip while the palette is empty */
-  empty: string;
-  exportPalette: ExportPaletteProps;
-};
-
-/** A colour tool's document bar: its palette's name and place, New, the jobs as tabs, undo, pick, add, Export, Send to. */
-export function DocBar<T extends string>({ tool, doc, count, onNew, tabs, onPick, add, empty, exportPalette }: Props<T>) {
-  const { ref, width } = useWidth<HTMLDivElement>();
-  const narrow = (below: number) => width > 0 && width < below;
-  return (
-    <div ref={ref} className={cx(s.docbar, s.jobs, narrow(TIGHT) && s.tight)}>
-      <DocHead tool={tool} doc={doc} />
-      <span className={cx('lbl', s.count)}>{count}</span>
-      <IconButton icon="note_add" label="New palette" shortcut="Ctrl+N" size="sm" onClick={onNew} />
-      <Tabs {...tabs} show={narrow(TAB_ICONS_ONLY) ? 'icons' : narrow(TAB_LABELS_ONLY) ? 'labels' : 'both'} />
-      <span className={s.grow} />
-      <UndoRedo doc={doc} />
-      {CAN_PICK && (
-        <>
-          <span className={s.sep} />
-          <IconButton icon="colorize" label="Pick a colour from the screen" shortcut="I" onClick={onPick} />
-        </>
-      )}
-      <span className={s.sep} />
-      <Button icon="add" onClick={add.run} tooltip={add.tooltip}>
-        <span className={s.addText}>{add.label}</span>
-      </Button>
-      <ExportPalette {...exportPalette} />
-      <SendTo tool={tool} doc={doc} empty={empty} compact={narrow(SEND_ICON)} />
-    </div>
-  );
-}
-
 const STEP: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 };
 
-/** One Tab stop; the arrows move and choose, past tabs that are off (brief §6). Icons alone: each named by its tooltip. */
-function Tabs<T extends string>({ options, value, onChange, show }: Props<T>['tabs'] & { show: 'both' | 'labels' | 'icons' }) {
+/**
+ * Tabs for a DocBar's `modes` where a mode needs a badge or can be off (the colour tools' Check).
+ * Otherwise use a Segmented with icons. One Tab stop; the arrows move and choose, past tabs that are off.
+ */
+export function DocTabs<T extends string>({ options, value, onChange }: { options: DocTab<T>[]; value: T; onChange(t: T): void }) {
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const open = options.filter((o) => !o.off);
     const n = open.length;
@@ -85,12 +87,12 @@ function Tabs<T extends string>({ options, value, onChange, show }: Props<T>['ta
     (e.currentTarget.children[options.indexOf(open[i])] as HTMLElement | undefined)?.focus();
   };
   return (
-    <div role="tablist" aria-label="Jobs" className={cx(s.tabs, show === 'icons' && s.iconsOnly, show === 'labels' && s.labelsOnly)} onKeyDown={onKeyDown}>
+    <div role="tablist" aria-label="Jobs" className={s.tabs} onKeyDown={onKeyDown}>
       {options.map((o) => {
         const on = o.value === value;
         const tip = o.off ?? (o.badge ? `${o.label}: ${o.badge} to look at` : o.label);
         return (
-          <Tooltip key={o.value} content={tip} disabled={!o.off && show !== 'icons' && !o.badge}>
+          <Tooltip key={o.value} content={tip}>
             <button
               type="button"
               role="tab"
@@ -101,8 +103,8 @@ function Tabs<T extends string>({ options, value, onChange, show }: Props<T>['ta
               className={cx(s.tab, on && s.on)}
               onClick={() => onChange(o.value)}
             >
-              {show !== 'labels' && <Icon name={o.icon} fill={on} />}
-              {show !== 'icons' && o.label}
+              <Icon name={o.icon} fill={on} />
+              <span className={s.tabLabel}>{o.label}</span>
               {!!o.badge && <span className={s.badge}>{badgeText(o.badge)}</span>}
             </button>
           </Tooltip>
@@ -157,7 +159,7 @@ export function DocHead({ tool, doc }: { tool: ToolId; doc: DocController<unknow
       ) : (
         <DocTitle onRename={ref ? () => setRenaming(true) : undefined}>{name}</DocTitle>
       )}
-      {collection !== null && <span className={cx('lbl', s.where)}>{collection || 'Library'} ·</span>}
+      {collection !== null && <span className={s.where}>{collection || 'Library'} ·</span>}
     </>
   );
 }

@@ -4,8 +4,9 @@ import { useEffect, useSyncExternalStore, type CSSProperties } from 'react';
 import type { IconName } from '../../shell/tool.ts';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { cx } from '../../ui/cx.ts';
-import { toast } from '../../ui/index.ts';
-import { DocBar } from '../common/DocBar.tsx';
+import { Button, IconButton, toast } from '../../ui/index.ts';
+import { DocBar, DocTabs } from '../common/DocBar.tsx';
+import { ExportPalette } from '../common/ExportPalette.tsx';
 import { plural } from '../common/names.ts';
 import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import { NotesModule } from '../common/Notes.tsx';
@@ -27,6 +28,7 @@ const TABS: { value: Tab; label: string; icon: IconName }[] = [
   { value: 'paint', label: 'Paint', icon: 'brush' },
 ];
 const INSPECTOR = { min: 340, max: 460, reset: 380 };
+const CAN_PICK = 'EyeDropper' in globalThis;
 
 export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const d = useSyncExternalStore(doc.subscribe, doc.get);
@@ -46,13 +48,19 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         <DocBar
           tool="illustration"
           doc={doc}
-          count={plural(d.ramps.length, 'ramp')}
-          onNew={() => void newPalette()}
-          tabs={{ options: tabs, value: v.tab, onChange: (tab: Tab) => patchView({ tab }) }}
-          onPick={() => void eyedrop(doc)}
-          add={{ label: 'Add base', tooltip: 'A new ramp, from a hue well away from the others', run: () => addBase(doc) }}
-          empty="Add a base colour first: an empty palette has nothing to send"
-          exportPalette={{ tool: 'illustration', swatches: d.swatches, named: () => named(doc.get()), format: v.format, onFormat: (format) => patchView({ format }) }}
+          meta={plural(d.ramps.length, 'ramp')}
+          actions={
+            <>
+              <IconButton icon="note_add" label="New palette" shortcut="Ctrl+N" size="sm" onClick={() => void newPalette()} />
+              {CAN_PICK && <IconButton icon="colorize" label="Pick a colour from the screen" shortcut="I" size="sm" onClick={() => void eyedrop(doc)} />}
+              <Button icon="add" onClick={() => addBase(doc)} tooltip="A new ramp, from a hue well away from the others">
+                Add base
+              </Button>
+            </>
+          }
+          modes={<DocTabs options={tabs} value={v.tab} onChange={(tab: Tab) => patchView({ tab })} />}
+          send={{ empty: 'Add a base colour first: an empty palette has nothing to send' }}
+          exportButton={<ExportPalette tool="illustration" swatches={d.swatches} named={() => named(doc.get())} format={v.format} onFormat={(format) => patchView({ format })} />}
         />
         <Ramps doc={doc} d={d} v={v} />
         {/* Light and Paint stay mounted, so each keeps its state (the painting, the light) when switched */}

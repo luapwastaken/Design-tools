@@ -103,7 +103,7 @@ export function DitherCanvas({ d, v, frame, result, busy }: Props) {
       zoom={v.zoom}
       onZoom={(zoom) => patchView({ zoom })}
       cursor={cursor}
-      bar={
+      overlays={
         busy && (
           <span className={s.busy} role="status">
             Dithering

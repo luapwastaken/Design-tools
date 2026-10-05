@@ -3,7 +3,7 @@
 // through the same engine the image goes through.
 import { useMemo, useRef, useState, type MouseEvent } from 'react';
 import { ALGORITHMS, type Algorithm } from '../../../shared/dither/algorithms.ts';
-import { Icon, IconButton, menu, Module, NumberField, Slider, Toggle, useDocNumber, type MenuItem } from '../../ui/index.ts';
+import { Icon, IconButton, InspectorGroup, menu, NumberField, Slider, Toggle, useDocNumber, type MenuItem } from '../../ui/index.ts';
 import { useWidth } from '../common/useWidth.ts';
 import type { Doc } from './actions.ts';
 import { fix, LIMIT, NEUTRAL_TONE, used, type DitherDoc } from './doc.ts';
@@ -81,7 +81,7 @@ export function AlgorithmModule({ doc, d }: { doc: Doc; d: DitherDoc }) {
   };
   const reseed = () => doc.transact('New seed', (x) => ({ ...x, seed: (x.seed * 7919 + 13) % (LIMIT.seed[1] + 1) }));
   return (
-    <Module title="Algorithm" readout={FAMILY[a.group]}>
+    <InspectorGroup id="dither.algorithm" title="Algorithm" meta={FAMILY[a.group]}>
       <div className={i.stack}>
         <div className={i.group}>
           <button
@@ -116,6 +116,6 @@ export function AlgorithmModule({ doc, d }: { doc: Doc; d: DitherDoc }) {
           </div>
         </div>
       </div>
-    </Module>
+    </InspectorGroup>
   );
 }

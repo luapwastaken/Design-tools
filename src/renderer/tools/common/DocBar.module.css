@@ -1,8 +1,11 @@
-/* a tool's document bar (the colour tools' DocBar; Pattern, Logo, Dither and Halftone borrow it) */
+/* a tool's document bar (44px): title + meta + actions | modes, centred | undo, send to, export.
+   The middle column is `auto` between two 1fr ends, so the switch sits at the bar's centre while
+   there's room; the right end never gives up its width (max-content), the left end gives way. */
 .docbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
   padding: 0 8px 0 14px;
   overflow: hidden;
@@ -10,27 +13,16 @@
   background: var(--module);
   container: docbar / inline-size;
 }
-.docbar > :global(.lbl) { flex: none; white-space: nowrap; }
-.docbar .lowerSwitch { align-self: center; }
-/* short of room the collection goes first: the title bar's readout names it too */
-@container docbar (max-width: 880px) {
-  .where { display: none; }
-}
-/* at the work area's 540px minimum: the count goes (the status bar reads it too) and Add keeps its
-   icon and tooltip, so Send to stays on screen */
-@container docbar (max-width: 700px) {
-  .count { display: none; }
-  .addText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}
-/* the colour tools' bar also carries its tabs and Export, so it gives way sooner */
-@container docbar (max-width: 1000px) {
-  .jobs .where { display: none; }
-}
-@container docbar (max-width: 860px) {
-  .jobs .count { display: none; }
-  .jobs .addText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .jobs .tabs { margin-left: 4px; }
-}
+.left, .right, .modes { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.left { overflow: hidden; }
+.left > * { flex: none; }
+.left > .title, .left > .rename { flex: 0 1 auto; }
+.modes { justify-content: center; align-self: stretch; }
+.right { justify-content: flex-end; }
+.right > * { flex: none; }
+/* Export's slot is kept when a tool has none (Send to stays put) */
+.exportSlot { display: flex; min-width: 84px; justify-content: flex-end; }
+
 .title {
   flex: 0 1 auto;
   min-width: 48px;
@@ -44,11 +36,25 @@
 .titleBtn { display: block; max-width: 100%; overflow: hidden; border-radius: var(--r-ctl); color: inherit; font: inherit; letter-spacing: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: text; }
 .titleBtn:hover { background: var(--well-hover); }
 .rename { flex: 0 1 280px; min-width: 140px; }
-.grow { flex: 1; }
-.sep { flex: none; width: 1px; height: 16px; margin: 0 2px; background: var(--line); }
+.meta { color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; white-space: nowrap; }
+.where { color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-sans); white-space: nowrap; }
+/* short of room the collection goes first, then the meta: the title bar and the status bar name them too */
+@container docbar (max-width: 880px) {
+  .where { display: none; }
+}
+@container docbar (max-width: 760px) {
+  .meta { display: none; }
+}
+/* the tabs drop their labels: icons stay, named by their tooltips */
+@container docbar (max-width: 640px) {
+  .tabLabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
 
-/* the jobs: icon and label, a signal underline on the open one */
-.tabs { display: flex; flex: none; align-self: stretch; gap: 2px; margin-left: 20px; }
+/* a label the bar has no room for: still the button's name, just not drawn */
+.hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* DocTabs: icon and label, a signal underline on the open one */
+.tabs { display: flex; flex: none; align-self: stretch; gap: 2px; }
 .tab {
   position: relative;
   display: flex;
@@ -59,14 +65,7 @@
   font: 400 var(--fs-row)/1 var(--font-sans);
   white-space: nowrap;
 }
-.iconsOnly .tab { gap: 4px; padding: 0 8px; }
-.labelsOnly .tab { padding: 0 8px; }
-.tight { gap: 6px; padding-left: 10px; }
-/* a colour tool's bar: the name is what tells two palettes apart, so it keeps room before anything else gives */
-.jobs .title { min-width: 100px; }
 .tab:disabled { color: var(--ink-4); cursor: default; }
-/* a label the bar has no room for: still the button's name, just not drawn */
-.hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .tab:not(:disabled):hover { color: var(--ink-2); }
 .tab.on { color: var(--ink); font-weight: 500; }
 .tab.on::after {

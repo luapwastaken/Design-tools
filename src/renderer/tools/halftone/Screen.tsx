@@ -1,7 +1,7 @@
 // Screen (spec §3): the dot shape, the frequency in lines per inch of the page, the smallest dot a
 // press holds, and dot gain compensation.
 import { type KeyboardEvent, type ReactNode } from 'react';
-import { IconButton, Module, Slider, useDocNumber } from '../../ui/index.ts';
+import { IconButton, InspectorGroup, Slider, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import type { Doc } from './actions.ts';
 import { emptyDoc, fix, LIMIT, type HalftoneDoc, type Shape } from './doc.ts';
@@ -74,7 +74,7 @@ export function ScreenModule({ doc, d }: { doc: Doc; d: HalftoneDoc }) {
   const reset = () => doc.transact('Reset the screen', (x) => ({ ...x, screen: emptyDoc().screen }));
 
   return (
-    <Module title="Screen" readout={fm ? `FM · ${d.size.dpi} dpi` : `${d.screen.lpi} lpi`} actions={<IconButton icon="restart_alt" label="Reset the screen" size="sm" onClick={reset} />}>
+    <InspectorGroup id="halftone.screen" title="Screen" meta={fm ? `FM · ${d.size.dpi} dpi` : `${d.screen.lpi} lpi`} actions={<IconButton icon="restart_alt" label="Reset the screen" size="sm" onClick={reset} />}>
       <div className={i.stack}>
         <ShapeKeys value={d.screen.shape} onChange={(shape) => doc.transact(`Screen with ${SHAPES.find((x) => x.value === shape)!.label.toLowerCase()} dots`, (x) => ({ ...x, screen: { ...x.screen, shape } }))} />
         <div className={i.group}>
@@ -93,11 +93,10 @@ export function ScreenModule({ doc, d }: { doc: Doc; d: HalftoneDoc }) {
           {!fm && cellPx < 4 && <p className={i.warn}>Under 4 printer pixels a cell: at {d.size.dpi} dpi the plates can't draw {d.screen.lpi} lpi dots cleanly. Raise the DPI or lower the frequency.</p>}
         </div>
         <div className={i.group}>
-          <Slider label="Min dot" min={0} max={LIMIT.minDot[1] * 100} step={0.5} unit="%" disabled={fm} {...minDot} />
-          <Slider label="Dot gain" min={0} max={LIMIT.gain[1] * 100} step={0.5} unit="%" {...gain} />
-          <p className={i.note}>{fm ? 'FM dots are all the smallest size, so min dot is for cell shapes.' : 'Gain shrinks each dot so the press brings it back; the view shows the plate.'}</p>
+          <Slider label="Min dot" info="The smallest dot a press holds; FM dots are all the smallest size, so this is for cell shapes." min={0} max={LIMIT.minDot[1] * 100} step={0.5} unit="%" disabled={fm} {...minDot} />
+          <Slider label="Dot gain" info="Shrinks each dot so the press brings it back; the view shows the plate." min={0} max={LIMIT.gain[1] * 100} step={0.5} unit="%" {...gain} />
         </div>
       </div>
-    </Module>
+    </InspectorGroup>
   );
 }

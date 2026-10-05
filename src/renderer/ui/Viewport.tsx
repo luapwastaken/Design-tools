@@ -2,12 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type R
 import { comboOf, isTextField, toolMayTake } from '../shell/core/keys.ts';
 import { cx } from './cx.ts';
 import { Icon } from './Icon.tsx';
-import { IconButton } from './IconButton.tsx';
-import { NumberField } from './NumberField.tsx';
 import { Rulers, useHover, type Hover } from './Rulers.tsx';
 import type { RulerUnit } from './rulers.ts';
-import { Segmented } from './Segmented.tsx';
 import { clampScale, clampView, fitView, MAX_SCALE, MIN_SCALE, originOf, panBy, sameZoom, snapScale, stepScale, wheelFactor, zoomAt, zoomKey, type Point, type Size, type View, type Zoom, type ZoomKey } from './viewport.ts';
+import { ViewStrip } from './ViewStrip.tsx';
 import s from './Viewport.module.css';
 
 /** Where the content is on screen, handed to `render` and `overlay`. */
@@ -44,8 +42,10 @@ export type ViewportProps = {
   onZoom?(z: Zoom): void;
   /** the readout at the bottom right, given the pointer in content px (null off the view); values in <b> read as values; false for none */
   cursor?: false | ((p: Point | null) => ReactNode);
-  /** the tool's own controls in the bar, after the zoom (a Seams toggle) */
-  bar?: ReactNode;
+  /** the strip's overlay toggles, after the zoom (Seams, Guides, Clearspace) */
+  overlays?: ReactNode;
+  /** the strip's canvas-background control, right-aligned before the readout */
+  background?: ReactNode;
   /** content px in a cell of a pixel grid (Dither's block): Fit, the wheel and the zoom steps land
    *  where a cell is a whole number of device pixels; a typed zoom and 100% stay as asked */
   cell?: number;
@@ -59,10 +59,6 @@ export type ViewportProps = {
 
 type Box = Size & { pw: number; ph: number };
 type Preset = 'fit' | 'actual' | 'none';
-const PRESETS: { value: Preset; label: string; tip: string }[] = [
-  { value: 'fit', label: 'Fit', tip: 'Fit in view (Ctrl 0)' },
-  { value: 'actual', label: '100%', tip: 'Actual size (Ctrl Alt 0)' },
-];
 const SETTLE_MS = 250;
 
 /**
@@ -71,7 +67,7 @@ const SETTLE_MS = 250;
  * It takes its keys only while it is on screen, so a hidden tool's viewport never moves.
  */
 export function Viewport(p: ViewportProps) {
-  const { contentWidth, contentHeight, children, render, overlay, cursor = cursorXY, bar, rulers, probe, className, cell } = p;
+  const { contentWidth, contentHeight, children, render, overlay, cursor = cursorXY, overlays, background, rulers, probe, className, cell } = p;
   const content: Size = { w: contentWidth, h: contentHeight };
   const viewEl = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -305,36 +301,32 @@ export function Viewport(p: ViewportProps) {
         {rulers && <Rulers t={t} unit={rulers} hover={hover} />}
         {viewer}
       </div>
-      <div className={s.bar}>
-        <IconButton icon="zoom_out" label="Zoom out" shortcut="Ctrl+-" disabled={!view || view.scale <= MIN_SCALE} onClick={() => act('out')} />
-        <NumberField
-          label="Zoom"
-          hideLabel
-          value={pct}
-          min={MIN_SCALE * 100}
-          max={MAX_SCALE * 100}
-          precision={pct < 10 ? 2 : pct < 100 ? 1 : 0}
-          unit="%"
-          width={78}
-          className={s.zoom}
-          disabled={!view}
-          onChange={(v) => zoomTo(v / 100)}
-          onError={(m) => setZoomBad(m !== null)}
-        />
-        <IconButton icon="zoom_in" label="Zoom in" shortcut="Ctrl+=" disabled={!view || view.scale >= MAX_SCALE} onClick={() => act('in')} />
-        <Segmented<Preset> mono fit options={PRESETS} value={preset} disabled={!view} onChange={(v) => act(v === 'fit' ? 'fit' : 'actual')} />
-        {bar}
-        <span className={s.grow} />
-        {zoomBad ? (
-          // the field's own message is too long for the bar: its danger edge says what's wrong, this the range
-          <span className={s.error} role="alert">
-            <Icon name="error" size={14} />
-            {`${MIN_SCALE * 100}% to ${MAX_SCALE * 100}%`}
-          </span>
-        ) : (
-          cursor && <Readout bind={readout} cursor={cursor} />
-        )}
-      </div>
+      <ViewStrip
+        zoom={{
+          pct,
+          preset,
+          disabled: !view,
+          onFit: () => act('fit'),
+          onActual: () => act('actual'),
+          onIn: () => act('in'),
+          onOut: () => act('out'),
+          onType: (v) => zoomTo(v / 100),
+          onBad: setZoomBad,
+        }}
+        overlays={overlays}
+        background={background}
+        readout={
+          zoomBad ? (
+            // the field's own message is too long for the strip: its danger edge says what's wrong, this the range
+            <span className={s.error} role="alert">
+              <Icon name="error" size={14} />
+              {`${MIN_SCALE * 100}% to ${MAX_SCALE * 100}%`}
+            </span>
+          ) : (
+            cursor && <Readout bind={readout} cursor={cursor} />
+          )
+        }
+      />
     </div>
   );
 }

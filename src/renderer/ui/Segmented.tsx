@@ -2,6 +2,7 @@ import { useId, type KeyboardEvent } from 'react';
 import type { IconName } from '../shell/tool.ts';
 import { cx } from './cx.ts';
 import { Icon } from './Icon.tsx';
+import { InfoTip } from './InfoTip.tsx';
 import { Tooltip } from './Tooltip.tsx';
 import s from './Segmented.module.css';
 
@@ -12,6 +13,8 @@ export type SegmentedProps<T extends string> = {
   onChange(v: T): void;
   /** a row label on the left, like a Slider's */
   label?: string;
+  /** one sentence of help: an (i) after the row label shows it in a tooltip */
+  info?: string;
   /** mono caps segments (format switches: OKLCH, RGB) */
   mono?: boolean;
   /** segments hug their labels instead of sharing the width */
@@ -23,7 +26,7 @@ export type SegmentedProps<T extends string> = {
 const STEP: Record<string, number> = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 };
 
 /** One Tab stop; arrow keys move and choose (brief §6). */
-export function Segmented<T extends string>({ options, value, onChange, label, mono, fit, disabled, className }: SegmentedProps<T>) {
+export function Segmented<T extends string>({ options, value, onChange, label, info, mono, fit, disabled, className }: SegmentedProps<T>) {
   const labelId = useId();
   const at = options.findIndex((o) => o.value === value);
 
@@ -67,8 +70,11 @@ export function Segmented<T extends string>({ options, value, onChange, label, m
   if (!label) return group;
   return (
     <div className={cx(s.row, className)}>
-      <span id={labelId} className={cx('lbl', s.label)}>
-        {label}
+      <span className={s.label}>
+        <span id={labelId} className="lbl">
+          {label}
+        </span>
+        {info && <InfoTip text={info} />}
       </span>
       {group}
     </div>

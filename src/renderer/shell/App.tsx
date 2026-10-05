@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { MenuHost, ToastHost } from '../ui/index.ts';
 import { useShell } from './core/index.ts';
 import { LibraryPanel } from './LibraryPanel.tsx';
@@ -9,13 +9,6 @@ import { StatusBar } from './StatusBar.tsx';
 import { TitleBar } from './TitleBar.tsx';
 import { ToolHost } from './ToolHost.tsx';
 import s from './App.module.css';
-
-// brief §5: the rail collapses to icons below a 1440px window
-const narrow = matchMedia('(max-width: 1439.98px)');
-const onNarrow = (fn: () => void) => {
-  narrow.addEventListener('change', fn);
-  return () => narrow.removeEventListener('change', fn);
-};
 
 // below `roomy` the kind filter takes its short labels
 const LIB = { min: 240, max: 420, reset: 300, roomy: 290, key: 'dt.libraryWidth' };
@@ -36,17 +29,18 @@ export function App() {
   const active = useShell((st) => st.active);
   const libraryOpen = useShell((st) => st.libraryOpen);
   const settingsOpen = useShell((st) => st.settingsOpen);
-  const collapsed = useSyncExternalStore(onNarrow, () => narrow.matches);
   const [libWidth, setLibWidth] = useState(readWidth);
   // the panel stays mounted once opened, so search, scroll and folded collections survive a close
-  const [libSeen, setLibSeen] = useState(libraryOpen);
-  if (libraryOpen && !libSeen) setLibSeen(true);
+  // Settings is a page of its own: the Library steps aside while it is open, and comes back after
+  const libShown = libraryOpen && !settingsOpen;
+  const [libSeen, setLibSeen] = useState(libShown);
+  if (libShown && !libSeen) setLibSeen(true);
   // closing the Library with focus inside it (its Close button, Ctrl+L) hands focus to the rail's
   // Library button, not to the page
   const lib = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
-    if (!libraryOpen && lib.current?.contains(document.activeElement)) document.querySelector<HTMLElement>('[data-rail="library"]')?.focus();
-  }, [libraryOpen]);
+    if (!libShown && lib.current?.contains(document.activeElement)) document.querySelector<HTMLElement>('[data-rail="library"]')?.focus();
+  }, [libShown]);
 
   const resize = (w: number) => {
     setLibWidth(w);
@@ -56,17 +50,17 @@ export function App() {
   };
 
   const vars = {
-    '--rail': collapsed ? 'var(--rail-w-collapsed)' : 'var(--rail-w)',
-    '--lib': libraryOpen ? `${libWidth}px` : '0px',
+    '--rail': 'var(--rail-w)',
+    '--lib': libShown ? `${libWidth}px` : '0px',
   } as CSSProperties;
 
   return (
     <div className={s.app} inert={!ready}>
       <TitleBar />
-      <div className={libraryOpen ? s.cols : s.colsNoLib} style={vars}>
-        <Rail collapsed={collapsed} />
+      <div className={libShown ? s.cols : s.colsNoLib} style={vars}>
+        <Rail />
         {libSeen && (
-          <div ref={lib} className={s.lib} hidden={!libraryOpen}>
+          <div ref={lib} className={s.lib} hidden={!libShown}>
             <LibraryPanel narrow={libWidth < LIB.roomy} />
             <ResizeHandle value={libWidth} min={LIB.min} max={LIB.max} reset={LIB.reset} label="Library width" onChange={resize} />
           </div>

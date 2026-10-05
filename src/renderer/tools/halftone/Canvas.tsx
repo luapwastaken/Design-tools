@@ -230,7 +230,7 @@ export function HalftoneCanvas({ d, v, screened, dots, stats, busy, active, onDr
       zoom={sep ? v.sepZoom : v.zoom}
       onZoom={(zoom) => patchView(sep ? { sepZoom: zoom } : { zoom })}
       cursor={cursor}
-      bar={
+      overlays={
         busy && (
           <span className={s.busy} role="status">
             Screening

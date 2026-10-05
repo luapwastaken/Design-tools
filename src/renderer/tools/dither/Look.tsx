@@ -2,7 +2,7 @@
 // look (a grey ramp until there is one). A look is a start, not a mode: change anything after it.
 import { useMemo, type KeyboardEvent } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
-import { Module, SwatchStrip, Tooltip } from '../../ui/index.ts';
+import { InspectorGroup, SwatchStrip, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { applyLook, type Doc } from './actions.ts';
 import type { DitherDoc } from './doc.ts';
@@ -47,12 +47,12 @@ export function LookModule({ doc, d }: { doc: Doc; d: DitherDoc }) {
     (e.currentTarget.children[next] as HTMLElement | undefined)?.focus();
   };
   return (
-    <Module title="Look" readout={readout}>
+    <InspectorGroup id="dither.look" title="Look" meta={readout}>
       <div className={s.grid} role="radiogroup" aria-label="Look" onKeyDown={onKey}>
         {LOOKS.map((look, n) => (
           <LookKey key={look.id} d={d} look={look} img={img} on={n === at} focusable={n === (at < 0 ? 0 : at)} onPick={() => n !== at && applyLook(doc, look)} />
         ))}
       </div>
-    </Module>
+    </InspectorGroup>
   );
 }
