@@ -1,26 +1,11 @@
-/* brief §5: work area at least 540px, inspector 340–460 (380); the inspector gives way first */
-.view {
-  display: grid;
-  grid-template-columns: minmax(min(540px, calc(100% - 340px - var(--gap))), 1fr) minmax(340px, var(--insp));
-  gap: var(--gap);
-  min-width: 0;
-  min-height: 0;
-}
+/* Sections on the ground, a 6px gap apart (--gap): Ramps | (Selected ramp over (Colour picker | tabs)).
+   At the window's minimum the columns shrink and each section scrolls inside; nothing overlaps. */
+.view { display: grid; grid-template-rows: var(--docbar) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
+.main { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
+.right { display: grid; grid-template-rows: minmax(200px, 300px) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
+.lower { display: grid; grid-template-columns: minmax(0, min(560px, 40%)) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
 
-/* the doc bar, then the palette beside the canvas */
-.work {
-  position: relative;
-  display: grid;
-  grid-template-rows: var(--docbar) minmax(0, 1fr);
-  gap: var(--gap);
-  min-width: 0;
-  min-height: 0;
-}
-.main { display: grid; grid-template-columns: minmax(200px, 248px) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
-.canvas { position: relative; min-width: 0; min-height: 0; }
-.pane { height: 100%; min-height: 0; }
-.pane[hidden] { display: none; }
-/* Paint's Mixer slot: its groups sit in the inspector's own stack */
-.mixer { display: contents; }
-.mixer[hidden] { display: none; }
-.mixer > * { flex: none; }
+/* the Paint tab: no padding, no scrolling (the paper fits its box) */
+.flush { padding: 0; gap: 0; overflow: hidden; }
+.slot { flex: 1; min-height: 0; min-width: 0; display: flex; }
+.host { display: flex; flex: 1; min-width: 0; min-height: 0; }

@@ -8,9 +8,11 @@ import type { RampSpec, Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
 import { Button, ConfirmInline, Icon, IconButton, menu, toast, Tooltip, type MenuAnchor } from '../../ui/index.ts';
 import { fmtL, plural } from '../common/names.ts';
+import { Section } from '../common/Section.tsx';
 import { addBase, addProposals, arm, deleteLoose, deleteRamp, duplicate, focusStep, move, rampsFromLoose, reorder, select, selected, type Doc } from './actions.ts';
 import { brokenSteps, looseOf, nameOf, rampName, revertRamp, setSpec, stepsOf, wordOf, type IllustrationDoc } from './doc.ts';
 import { addMenu, pickImage } from './starts.ts';
+import { Start } from './Start.tsx';
 import { clearProposals, proposals } from './proposals.ts';
 import { addToWell, paintSettings } from './paint-sources.ts';
 import { armed, clicked, getView, hot, patchView, type IllustrationView } from './view-state.ts';
@@ -72,13 +74,13 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
   };
 
   return (
-    <aside className={s.palette} aria-label="Palette" data-region="palette">
-      <header className={s.head}>
-        <span className={s.title}>Palette</span>
-        <span className={s.count}>{plural(d.ramps.length, 'ramp')}</span>
-        <span className={s.grow} />
-        <IconButton icon="add" label="Add a base colour: new, from an image, from a palette" shortcut="Shift+A" size="sm" onClick={(e) => addMenu(doc, e.currentTarget.getBoundingClientRect(), e.currentTarget, e.detail === 0)} />
-      </header>
+    <Section
+      title="Ramps"
+      sub={d.ramps.length ? String(d.ramps.length) : undefined}
+      className={s.palette}
+      bodyClassName={s.pbody}
+      actions={<IconButton icon="add" label="Add a base colour: new, from an image, from the screen, from a palette" shortcut="Shift+A" size="sm" onClick={(e) => addMenu(doc, e.currentTarget.getBoundingClientRect(), e.currentTarget, e.detail === 0)} />}
+    >
       <div
         role="listbox"
         aria-label="Ramps"
@@ -94,7 +96,7 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
           move(doc, by[0], by[1]);
         }}
       >
-        {!d.swatches.length && !ghosts && <p className={s.hint}>No ramps yet. Every base colour you add becomes a ramp here: pick one to edit it, drag to reorder.</p>}
+        {!d.swatches.length && <Start doc={doc} />}
         {d.ramps.map((r, i) => (
           <RampItem
             key={r.id}
@@ -113,11 +115,13 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
           />
         ))}
         {loose.length > 0 && <LooseItem doc={doc} d={d} v={v} list={loose} sel={sel} lit={lit} armed={armedId} />}
-        <button type="button" className={s.add} onClick={() => addBase(doc)}>
-          <Icon name="add" size={16} />
-          <span>Add base</span>
-          <kbd>Shift A</kbd>
-        </button>
+        {d.swatches.length > 0 && (
+          <button type="button" className={s.add} onClick={() => addBase(doc)}>
+            <Icon name="add" size={16} />
+            <span>Add base colour</span>
+            <kbd>Shift A</kbd>
+          </button>
+        )}
         {ghosts && (
           <section className={s.ghosts} aria-label={`Proposed: ${ghosts.label}`} data-ghost-row="">
             <h3 className={s.ghostHead}>
@@ -145,13 +149,11 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
           </section>
         )}
       </div>
-      <footer className={s.foot}>
-        <button type="button" className={s.drop} onClick={pickImage}>
-          <Icon name="add_photo_alternate" size={16} />
-          <span>Drop an image anywhere to pick colours from it.</span>
-        </button>
-      </footer>
-    </aside>
+      <button type="button" className={s.drop} onClick={pickImage}>
+        <Icon name="add_photo_alternate" size={16} />
+        <span>Drop an image anywhere to pick colours from it.</span>
+      </button>
+    </Section>
   );
 }
 

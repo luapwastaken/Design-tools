@@ -1,0 +1,12 @@
+/* Ramp settings: two columns of label + control rows (one column when the tab is narrow), then the curves. */
+.tab { container-type: inline-size; display: flex; flex-direction: column; gap: 14px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
+@container (max-width: 560px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.quiet { color: var(--ink-3); font-size: var(--fs-base); line-height: 1.45; }
+.loose { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.dim { min-width: 0; overflow: hidden; color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.warn { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.35; }
+.bad { color: var(--danger); font-size: var(--fs-meta); line-height: 1.35; }
+.hint { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
+.view { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+.vtitle { margin: 0; color: var(--ink); font: 500 var(--fs-row)/1 var(--font-sans); }

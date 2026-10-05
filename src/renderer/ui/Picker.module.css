@@ -62,7 +62,7 @@ div.icons button { padding: 0 5px; }
 /* ── Square and Wheel: the saturation-by-brightness area ── */
 .sb {
   position: relative;
-  height: 196px;
+  height: var(--sb-h, 196px);
   border-radius: 2px;
   /* two gradients multiplied: white to the hue across, black to white up (HSB exactly) */
   background-blend-mode: multiply;

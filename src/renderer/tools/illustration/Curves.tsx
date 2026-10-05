@@ -1,5 +1,4 @@
-// The selected ramp's curves (Ramps mode): lightness, chroma and hue through its steps, in the
-// board's own columns. Dragging a point up or down is the same operation as typing that step's L, C
+// The selected ramp's curves (Ramp settings): lightness, chroma and hue through its steps. Dragging a point up or down is the same operation as typing that step's L, C
 // or H in the picker: one undoable step per drag (an edit of the base moves the ramp, any other
 // step keeps your colour), and Esc puts it back.
 import { useRef, useState, type PointerEvent } from 'react';
@@ -16,10 +15,10 @@ import type { IllustrationView } from './view-state.ts';
 import s from './Ramps.module.css';
 
 type Channel = 'L' | 'C' | 'H';
-const H = 168;
+const H = 200;
 const TOP = 14;
 const BOTTOM = 14;
-const LEFT = 14 + 150; // the board's row padding and label column, so points sit under their swatches
+const LEFT = 34; // room for the axis numbers
 const RIGHT = 14;
 const C_MAX = 0.4;
 /** the hue curve spans this far either side of the base's hue */
@@ -41,13 +40,16 @@ const LINES: { ch: Channel; name: string; cls: string }[] = [
   { ch: 'H', name: 'Hue', cls: 'ch' },
 ];
 
-export function Curves({ doc, d, v, lo, cols }: { doc: Doc; d: IllustrationDoc; v: IllustrationView; lo: number; cols: number }) {
+export function Curves({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: IllustrationView }) {
   const { ref, width } = useWidth<HTMLDivElement>();
   const w = selected(d, v.selected);
   const r = rampOf(d, w?.group);
   const steps = r ? stepsOf(d, r.id) : [];
   const base = r ? (baseOf(d, r.id)?.oklch ?? r.base) : null;
   const [at, setAt] = useState<{ id: string; ch: Channel } | null>(null);
+  const nums = steps.map((p) => p.step ?? 0);
+  const lo = Math.min(0, ...nums);
+  const cols = Math.max(1, Math.max(0, ...nums) - lo + 1);
   const plotW = Math.max(0, width - LEFT - RIGHT);
   const colW = plotW / cols;
   const x = (step: number) => LEFT + (step - lo + 0.5) * colW;

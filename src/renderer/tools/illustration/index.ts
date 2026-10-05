@@ -79,15 +79,15 @@ export const tool: ToolDefinition<IllustrationDoc> = {
 
   shortcuts: (doc) => {
     // Light and Check have nothing to show with no colour
-    const mode = (m: Mode) => () => doc.get().swatches.length || m === 'ramps' || m === 'paint' ? patchView({ tab: m }) : undefined;
+    const mode = (m: Mode) => () => doc.get().swatches.length || m === 'settings' || m === 'paint' ? patchView({ tab: m }) : undefined;
     const hero = () => {
       const r = rampOf(doc.get(), selected(doc.get())?.group);
       if (r) doc.transact(r.hero ? 'End the hero colour' : 'Make the hero colour', (d) => setSpec(d, r.id, { hero: !r.hero }));
     };
     return [
-      { keys: 'Alt+1', label: 'Ramps', run: mode('ramps') },
-      { keys: 'Alt+2', label: 'Light', run: mode('light') },
-      { keys: 'Alt+3', label: 'Check', run: mode('check') },
+      { keys: 'Alt+1', label: 'Ramp settings', run: mode('settings') },
+      { keys: 'Alt+2', label: 'Light & preview', run: mode('light') },
+      { keys: 'Alt+3', label: 'Check values', run: mode('check') },
       { keys: 'Alt+4', label: 'Paint', run: mode('paint') },
       { keys: 'Shift+A', label: 'Add a base colour', run: () => addBase(doc) },
       { keys: 'Delete', label: 'Delete ramp', run: () => arm(doc) },
@@ -96,7 +96,7 @@ export const tool: ToolDefinition<IllustrationDoc> = {
       { keys: 'ArrowLeft', label: 'Lighter step', run: () => move(doc, -1, 0) },
       { keys: 'ArrowRight', label: 'Darker step', run: () => move(doc, 1, 0) },
       { keys: 'H', label: 'Hero colour', run: hero },
-      { keys: 'G', label: 'Greyscale lens', run: () => (getView().tab === 'ramps' || getView().tab === 'light') && patchView({ proof: getView().proof === 'grey' ? 'off' : 'grey' }) },
+      { keys: 'G', label: 'Greyscale lens', run: () => (getView().tab === 'settings' || getView().tab === 'light') && patchView({ proof: getView().proof === 'grey' ? 'off' : 'grey' }) },
       // I picks: on the paper in Paint, anywhere on screen otherwise
       { keys: 'I', label: 'Pick', run: () => (inPaint() ? setPaint({ tool: 'pick' }) : void eyedrop(doc)) },
       { keys: 'B', label: 'Brush', run: () => inPaint() && setPaint({ tool: 'paint' }) },

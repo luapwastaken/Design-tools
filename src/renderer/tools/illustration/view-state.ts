@@ -12,14 +12,13 @@ const ID = 'illustration';
 export type IllustrationView = {
   /** the selected step or loose swatch (swatch id); null: the first ramp's base */
   selected: string | null;
-  /** the mode (doc bar, Alt+1-4): one workspace, four views of the palette */
-  tab: 'ramps' | 'light' | 'check' | 'paint';
-  /** Ramps: what the board prints under each swatch */
+  /** the tab of the tabbed section (Alt+1-4) */
+  tab: 'settings' | 'light' | 'check' | 'paint';
+  /** Selected ramp: what is printed under each step */
   show: 'hex' | 'name' | 'off';
-  /** Ramps and Light: the lens the swatches are seen through (G toggles greyscale) */
+  /** the lens the steps and the lit object are seen through (G toggles greyscale) */
   proof: 'off' | Cvd | 'grey';
   surround: Surround;
-  inspector: number;
   format: ExportFormat;
   /** Value check: flag pairs closer than this, in L × 100 */
   flagL: number;
@@ -43,11 +42,10 @@ export type IllustrationView = {
 
 export const DEFAULT_VIEW: IllustrationView = {
   selected: null,
-  tab: 'ramps',
+  tab: 'settings',
   show: 'hex',
   proof: 'off',
   surround: 'grey',
-  inspector: 380,
   format: 'ase',
   // lower than Design's 6 and 10: a painting's bases often sit close in value (skin and cloth mid-tones),
   // and its steps pack twenty colours or more
@@ -64,7 +62,7 @@ export const DEFAULT_VIEW: IllustrationView = {
 };
 
 const ENUMS: Partial<Record<keyof IllustrationView, readonly unknown[]>> = {
-  tab: ['ramps', 'light', 'check', 'paint'],
+  tab: ['settings', 'light', 'check', 'paint'],
   show: ['hex', 'name', 'off'],
   proof: ['off', 'grey', 'protan', 'deutan', 'tritan', 'achromat'],
   surround: ['grey', 'ground', 'plain'],
@@ -90,8 +88,9 @@ const customOf = (raw: unknown): CustomPigment[] =>
 /** what a saved workspace holds, field by field; anything odd falls back to the default */
 function sanitize(raw: unknown): IllustrationView {
   const saved = isObj(raw) ? raw : {};
-  // before the UX pass the switch was `lower` (Light | Paint), and the picker's mode lived here
-  const r = 'tab' in saved || !('lower' in saved) ? saved : { ...saved, tab: saved.lower };
+  // the tab was once the mode switch (`ramps` is now Ramp settings), and before that `lower` (Light | Paint)
+  const r0 = 'tab' in saved || !('lower' in saved) ? saved : { ...saved, tab: saved.lower };
+  const r = r0.tab === 'ramps' ? { ...r0, tab: 'settings' } : r0;
   const out: Record<string, unknown> = { ...DEFAULT_VIEW };
   for (const [key, def] of Object.entries(DEFAULT_VIEW) as [keyof IllustrationView, unknown][]) {
     const v = r[key];

@@ -1,42 +1,44 @@
-/* Check mode: two boards on the neutral surround, the checks under them. Colliding pairs are marked
-   with a neutral outline and the danger colour on the step's own edge, never over the colour. */
-.mode { display: grid; grid-template-rows: var(--options-h) minmax(0, 1fr) minmax(150px, 30%); height: 100%; min-height: 0; overflow: hidden; border-radius: var(--r-mod); background: var(--module); }
-.mode > :first-child { border-radius: 0; }
-.grow { flex: 1; min-width: 0; }
-.count { color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); }
+/* Check values: the boards on the section itself, then the problem list. Colliding pairs are marked
+   with a danger outline on the step's own edge, never over the colour. */
+.tab { display: flex; flex-direction: column; gap: 18px; container-type: inline-size; }
+.flags { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; }
+.flag { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font: 400 var(--fs-base)/1 var(--font-sans); }
+.count { margin-left: auto; color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); }
 
-.boards { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; min-height: 0; background: var(--line); }
-.board { display: flex; flex-direction: column; gap: 6px; min-width: 0; min-height: 0; padding: 14px 16px; overflow: auto; background: var(--surround); }
-.title { color: var(--on-content-ink); font: 600 var(--fs-row)/1.2 var(--font-sans); }
-.sub { color: var(--on-content-ink-2); font: 400 var(--fs-meta)/1.4 var(--font-sans); }
-.rowsWrap { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
-.row { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 10px; }
-.name { overflow: hidden; color: var(--on-content-ink); font: 500 var(--fs-base)/1.2 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
-.strip { display: flex; gap: 4px; min-width: 0; }
-.cell { position: relative; display: flex; flex: 1 1 0; flex-direction: column; gap: 3px; min-width: 0; }
-.cell i { display: block; height: 44px; border-radius: 5px; box-shadow: inset 0 0 0 1px var(--edge); }
-.l { color: var(--on-content-ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); text-align: center; }
-.close { position: absolute; top: -4px; right: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 1.5px var(--on-content-bg); }
-.collide i { outline: 2px solid var(--danger); outline-offset: 1px; }
-.hot i { outline: 1px dashed var(--on-content-ink); outline-offset: 2px; }
+.board { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.title { display: flex; align-items: baseline; gap: 10px; margin: 0; color: var(--ink); font: 500 var(--fs-row)/1.2 var(--font-sans); }
+.sub { color: var(--ink-3); font: 400 var(--fs-meta)/1.2 var(--font-sans); }
 
-.sims { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; margin-top: 8px; }
+.vrows { display: flex; flex-direction: column; }
+.vrow { display: grid; grid-template-columns: minmax(70px, 120px) minmax(0, 1fr) minmax(0, 1fr) minmax(110px, 190px); align-items: center; gap: 16px; padding: 12px 0; box-shadow: 0 -1px 0 var(--line); }
+.vrow:first-child { box-shadow: none; }
+.name { overflow: hidden; color: var(--ink); font: 400 var(--fs-row)/1.2 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
+.strip { display: flex; min-width: 0; }
+.strip i { display: block; flex: 1 1 0; height: 32px; min-width: 0; box-shadow: inset 0 0 0 1px var(--edge); }
+.strip i:first-child { border-radius: 4px 0 0 4px; }
+.strip i:last-child { border-radius: 0 4px 4px 0; }
+.verdict { color: var(--ink-2); font: 400 var(--fs-base)/1.3 var(--font-sans); }
+.verdict.bad { color: var(--danger); }
+.collide { outline: 2px solid var(--danger); outline-offset: -2px; }
+.near { box-shadow: inset 2px 0 0 var(--danger); }
+.hot { outline: 1px dashed var(--ink); outline-offset: 2px; }
+
+.sims { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; }
+@container (max-width: 520px) { .sims { grid-template-columns: minmax(0, 1fr); } }
 .sim { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.simLabel { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; color: var(--on-content-ink-2); font: 500 var(--fs-meta)/1 var(--font-sans); }
+.simLabel { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; color: var(--ink-2); font: 500 var(--fs-meta)/1 var(--font-sans); }
 .warn { color: var(--danger); }
 .simRow { display: flex; gap: 2px; }
 .simRow i { flex: 1 1 0; height: 16px; min-width: 0; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--edge); }
 .simRow i.merge { outline: 2px solid var(--danger); outline-offset: 0; z-index: 1; }
-.simRow i.hot { outline: 1px dashed var(--on-content-ink); outline-offset: 1px; }
+.simRow i.hot { outline: 1px dashed var(--ink); outline-offset: 1px; }
 
-.dock { min-height: 0; overflow: hidden; box-shadow: inset 0 1px 0 var(--line); }
-
-/* the problem list under the boards: one row per problem, its fix at the end; the list scrolls */
-.problems { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.phead { display: flex; flex: none; align-items: baseline; gap: 10px; padding: 10px 14px 6px; }
-.ptitle { color: var(--ink); font: 500 var(--fs-row)/1 var(--font-sans); }
+/* the problem list: one row per problem, its fix at the end */
+.problems { display: flex; flex-direction: column; min-width: 0; }
+.phead { display: flex; flex: none; align-items: baseline; gap: 10px; padding-bottom: 6px; }
+.ptitle { margin: 0; color: var(--ink); font: 500 var(--fs-row)/1 var(--font-sans); }
 .pcount { color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); }
-.plist { flex: 1; min-height: 0; overflow: auto; padding: 0 6px 8px; }
+.plist { display: flex; flex-direction: column; }
 .prow { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 36px; padding: 4px 8px; border-radius: var(--r-ctl); }
 .prow:hover { background: var(--well-hover); }
 .picon { color: var(--danger); }
