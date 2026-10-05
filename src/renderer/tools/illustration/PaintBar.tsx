@@ -1,5 +1,5 @@
-// The paint canvas's options bar (the tool itself is the toolbox's): medium, brush, the loaded paint,
-// size and load, and Clear. The paper's stroke undo and redo sit in the view strip under it. One line down to a 724 px section: below 1000 px the paint's
+// The paint canvas's options row (the tool itself is the toolbox's): medium, brush, the loaded paint,
+// size and load, the paper's stroke undo and redo, and Clear. One line down to a 724 px section: below 1000 px the paint's
 // name goes (the chip keeps it in its tooltip), below 880 px the slider tracks go (the fields and
 // their scrubbing labels stay), and below 700 px it may wrap, between groups only.
 import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
@@ -36,6 +36,9 @@ export type PaintBarProps = {
   ready: boolean;
   onClear(): void;
   clearBtn: RefObject<HTMLButtonElement | null>;
+  /** the paper's own stroke undo and redo (never the palette's) */
+  onUndo(): void;
+  onRedo(): void;
 };
 
 export function PaintBar(p: PaintBarProps) {
@@ -104,6 +107,8 @@ export function PaintBar(p: PaintBarProps) {
         {number(smudge ? 'Strength' : 'Load', smudge ? 120 : 92, v.load, LOAD, '%', (load) => p.onSettings({ load }))}
       </span>
       <span className={cx(s.group, s.acts)}>
+        <IconButton icon="undo" label={`Undo a stroke on the paper, or a Clear${p.painting.depth ? ` (${p.painting.depth} kept)` : ''}`} shortcut="Ctrl+Z" size="sm" disabled={!p.ready || !p.painting.depth} onClick={p.onUndo} />
+        <IconButton icon="redo" label="Redo a stroke on the paper" shortcut="Ctrl+Y" size="sm" disabled={!p.ready || !p.painting.redoDepth} onClick={p.onRedo} />
         <IconButton ref={p.clearBtn} icon="delete_sweep" label="Clear the painting" size="sm" disabled={!p.ready || p.painting.blank} onClick={p.onClear} />
       </span>
     </header>

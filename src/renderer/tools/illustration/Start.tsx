@@ -1,9 +1,8 @@
-// The empty state (04-empty): one dashed artboard whose primary action is the one colour to start
-// from, with the two other ways in and four pre-set starters. The inspector teaches the model once
-// (HowItWorks): base + light + shadow = the steps.
+// The empty state, in the Ramps section: the one colour to start from (a hex), the other ways in and
+// four pre-set starters. Base + light + shadow = the steps.
 import { useRef } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
-import { Button, InspectorGroup, TextInput } from '../../ui/index.ts';
+import { Button, TextInput } from '../../ui/index.ts';
 import { addBase, type Doc } from './actions.ts';
 import { baseFromHex, CAN_PICK, fromPaletteMenu, pickImage, STARTERS, addStarter } from './starts.ts';
 import { eyedrop } from './actions.ts';
@@ -45,10 +44,10 @@ export function Start({ doc }: { doc: Doc }) {
         </div>
         <div className={s.row}>
           <Button icon="add_photo_alternate" onClick={pickImage}>
-            Pick from an image
+            From an image
           </Button>
           <Button icon="palette" onClick={(e) => fromPaletteMenu(doc, e.currentTarget.getBoundingClientRect(), e.currentTarget, e.detail === 0)}>
-            Make ramps from a palette
+            From a palette
           </Button>
           {CAN_PICK && (
             <Button icon="colorize" onClick={() => void eyedrop(doc)}>
@@ -67,40 +66,5 @@ export function Start({ doc }: { doc: Doc }) {
         </div>
       </div>
     </section>
-  );
-}
-
-/** the inspector's one group while there is nothing yet: how a ramp is made, in pictures */
-export function HowItWorks() {
-  const base: Oklch = [0.62, 0.12, 40];
-  const light: Oklch = [0.97, 0.04, 85];
-  const shadow: Oklch = [0.4, 0.09, 270];
-  const steps: Oklch[] = [
-    [0.8, 0.09, 50],
-    [0.7, 0.11, 45],
-    [0.62, 0.12, 40],
-    [0.5, 0.11, 22],
-    [0.38, 0.09, 355],
-  ];
-  return (
-    <InspectorGroup title="How a ramp works" defaultOpen>
-      <div className={s.how} aria-hidden="true">
-        <i className={s.hbase} style={{ background: cssColor(base) }} />
-        <span>+</span>
-        <span className={s.hpair}>
-          <i style={{ background: cssColor(light) }} />
-          <i style={{ background: cssColor(shadow) }} />
-        </span>
-        <span>=</span>
-        <span className={s.hsteps}>
-          {steps.map((o, i) => (
-            <i key={i} style={{ background: cssColor(o) }} />
-          ))}
-        </span>
-      </div>
-      <p className={s.explain}>
-        <b>Base</b> + <b>light</b> and <b>shadow</b> colours = the steps. Edit any step by hand and it stays put.
-      </p>
-    </InspectorGroup>
   );
 }

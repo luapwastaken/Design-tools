@@ -1,14 +1,14 @@
 // The paint canvas (spec §3.3, engine spec 2026-09-29): a scratch pad where paints mix as paint,
-// watercolour or gouache, on the GPU painting engine (./paint). Layout (Bone Ember pass): the options
-// bar over a toolbox and the paper, the view strip under it; the well and the tubes are drawn into the
-// inspector (the Mixer) through `mixer`. The engine and its input are untouched.
+// watercolour or gouache, on the GPU painting engine (./paint). Layout (the Paint tab): the toolbox at
+// the left edge, a row of options over the paper; the well and the tubes are drawn into the tab's right
+// column (the Mixer) through `mixer`. The engine and its input are untouched.
 // Its painting is a PNG workspace asset per Library item. Its undo is its own (the last strokes and
 // Clear), never the document's. What shows under the brush is final: nothing changes after the lift.
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { cssColor, toHex, toOklch, type Oklch } from '../../../shared/color/index.ts';
 import type { Pigment } from '../../../shared/paint/pigments.ts';
-import { ConfirmInline, Icon, IconButton, InspectorGroup, toast, ViewStrip } from '../../ui/index.ts';
+import { ConfirmInline, Icon, InspectorGroup, toast } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { brushWidth, toSample, WIDTH, type PaintingState, type PointerSample } from './paint/index.ts';
 import { HEIGHT } from './paint/types.ts';
@@ -44,7 +44,6 @@ export type PaintCanvasProps = {
   target: Oklch | null;
 };
 
-const noop = () => {};
 const BLANK: PaintingState = { depth: 0, redoDepth: 0, lastIsClear: false, blank: true };
 /** after a lift the ring waits until the pointer moves this far, so it never sits on the fresh paint */
 const RING_SLOP = 2;
@@ -65,15 +64,6 @@ export function PaintCanvas(p: PaintCanvasProps) {
   const wellEl = useRef<HTMLDivElement>(null);
   const clearBtn = useRef<HTMLButtonElement>(null);
   const [painting, setPainting] = useState(BLANK);
-  // how much of the paper's own pixels the fit shows, for the view strip's readout
-  const [shownPct, setShownPct] = useState(100);
-  useEffect(() => {
-    const el = canvas.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => el.clientWidth && setShownPct(Math.round((el.clientWidth / WIDTH) * 100)));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
   const [armed, setArmed] = useState(false);
   const [over, setOver] = useState(false);
 
@@ -267,100 +257,85 @@ export function PaintCanvas(p: PaintCanvasProps) {
   const ready = !!engine && !save.loading;
   return (
     <section className={s.paint} aria-label="Paint canvas">
-      <PaintBar
-        v={v}
-        onSettings={p.onSettings}
-        brush={brush}
-        emptyTray={!sources.length}
-        readout={readout}
-        painting={painting}
-        ready={ready}
-        onClear={() => setArmed(true)}
-        clearBtn={clearBtn}
-      />
-
-      <div className={s.body}>
       <Toolbox tool={v.tool} onTool={(tool) => p.onSettings({ tool })} colour={brush?.oklch ?? null} />
-      <div
-        ref={view}
-        className={cx(s.view, v.tool === 'pick' && s.picking, !ready && s.waiting)}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onLostPointerCapture={() => endStroke(true)}
-        onPointerEnter={(e) => {
-          moveCursor(e);
-          hoverRing();
-        }}
-        onPointerLeave={() => {
-          cursor.current!.hidden = true;
-          if (where.current) where.current.textContent = '';
-        }}
-      >
-        <canvas
-          ref={canvas}
-          className={s.canvas}
-          tabIndex={0}
-          aria-label="Painting. Drag to paint; [ and ] change the brush size; Ctrl+Z undoes a stroke, Ctrl+Y redoes it."
-          aria-disabled={!ready || undefined}
-          onKeyDown={onKeyDown}
+      <div className={s.col}>
+        <PaintBar
+          v={v}
+          onSettings={p.onSettings}
+          brush={brush}
+          emptyTray={!sources.length}
+          readout={readout}
+          painting={painting}
+          ready={ready}
+          onClear={() => setArmed(true)}
+          clearBtn={clearBtn}
+          onUndo={undo}
+          onRedo={redo}
         />
-        <div ref={cursor} className={s.cursor} hidden aria-hidden="true">
-          <i ref={ring} className={s.ring} data-ring="" />
-          <i className={s.dot} />
-        </div>
-        {started.t === 'starting' && started.slow && (
-          <span className={s.note} role="status">
-            Getting the paper ready
-          </span>
-        )}
-        {started.t === 'failed' && (
-          <p className={cx(s.note, s.failed)} role="alert">
-            <Icon name="error" size={16} />
-            {`The canvas couldn't start: ${started.message}`}
-          </p>
-        )}
-        {armed && (
-          <div className={s.confirm}>
-            <ConfirmInline
-              icon="delete_sweep"
-              title="Clear the painting?"
-              detail="The canvas goes back to blank paper. Undo brings the painting back."
-              confirmLabel="Clear"
-              danger
-              onConfirm={clear}
-              onKeep={() => {
-                setArmed(false);
-                clearBtn.current?.focus({ preventScroll: true });
-              }}
-            />
+        <div
+          ref={view}
+          className={cx(s.view, v.tool === 'pick' && s.picking, !ready && s.waiting)}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onLostPointerCapture={() => endStroke(true)}
+          onPointerEnter={(e) => {
+            moveCursor(e);
+            hoverRing();
+          }}
+          onPointerLeave={() => {
+            cursor.current!.hidden = true;
+            if (where.current) where.current.textContent = '';
+          }}
+        >
+          <canvas
+            ref={canvas}
+            className={s.canvas}
+            tabIndex={0}
+            aria-label="Painting. Drag to paint; [ and ] change the brush size; Ctrl+Z undoes a stroke, Ctrl+Y redoes it."
+            aria-disabled={!ready || undefined}
+            onKeyDown={onKeyDown}
+          />
+          <div ref={cursor} className={s.cursor} hidden aria-hidden="true">
+            <i ref={ring} className={s.ring} data-ring="" />
+            <i className={s.dot} />
           </div>
-        )}
-      </div>
-
-      </div>
-      <ViewStrip
-        // the engine has no zoom: the paper always fits, so the zoom half is shown as it is (Fit, and how much of 100% the fit is) but off
-        zoom={{ pct: shownPct, preset: 'fit', disabled: true, onFit: noop, onActual: noop, onIn: noop, onOut: noop, onType: noop }}
-        overlays={
-          <>
-            <span className={s.strokes}>
-              <span className="lbl">Strokes</span>
-              <IconButton icon="undo" label={`Undo a stroke on the paper, or a Clear${painting.depth ? ` (${painting.depth} kept)` : ''}`} shortcut="Ctrl+Z" size="sm" disabled={!ready || !painting.depth} onClick={undo} />
-              <IconButton icon="redo" label="Redo a stroke on the paper" shortcut="Ctrl+Y" size="sm" disabled={!ready || !painting.redoDepth} onClick={redo} />
+          {started.t === 'starting' && started.slow && (
+            <span className={s.note} role="status">
+              Getting the paper ready
             </span>
-            <span className={s.paper}>
-              Paper <b>{WIDTH} x {HEIGHT} px</b>
-            </span>
-          </>
-        }
-        readout={
-          <>
-            <span ref={where} className={s.where} />
-            <span className={s.keys}>[ ] size · hold Alt to pick</span>
-          </>
-        }
-      />
+          )}
+          {started.t === 'failed' && (
+            <p className={cx(s.note, s.failed)} role="alert">
+              <Icon name="error" size={16} />
+              {`The canvas couldn't start: ${started.message}`}
+            </p>
+          )}
+          {armed && (
+            <div className={s.confirm}>
+              <ConfirmInline
+                icon="delete_sweep"
+                title="Clear the painting?"
+                detail="The canvas goes back to blank paper. Undo brings the painting back."
+                confirmLabel="Clear"
+                danger
+                onConfirm={clear}
+                onKeep={() => {
+                  setArmed(false);
+                  clearBtn.current?.focus({ preventScroll: true });
+                }}
+              />
+            </div>
+          )}
+        </div>
+        <div className={s.foot}>
+          <span className={s.paperSize}>
+            Paper <b>{WIDTH} x {HEIGHT} px</b>
+          </span>
+          <span ref={where} className={s.where} />
+          <span className={s.keys}>[ ] size · hold Alt to pick</span>
+        </div>
+      </div>
       {p.mixer &&
         createPortal(
           <>

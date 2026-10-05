@@ -109,17 +109,16 @@ const rowOf = (b: Element) => b.closest('[data-row]')?.getAttribute('data-row');
 const shows = (el: Element | null | undefined) => !!el && el.getClientRects().length > 0;
 /** a tool's showing button whose text ends with `text` (an icon's name comes first) */
 const button = (id: ToolId, text: string) => [...(host(id)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith(text) && shows(b));
-/** Illustration's Check pane that shows: its problem rows, and the count the Check segment carries */
-function problemPane(): { rows: number; fixes: number; badge: number; inspectorChecks: boolean } | null {
+/** a tab of Illustration's tabbed section, by its id */
+const illusTab = (id: string) => host('illustration')?.querySelector<HTMLButtonElement>(`[role="tab"][data-tab="${id}"]`) ?? null;
+/** Illustration's Check pane that shows: its problem rows, and the count the Check values tab carries */
+function problemPane(): { rows: number; fixes: number; badge: number } | null {
   const pane = [...(host('illustration')?.querySelectorAll('section[aria-label="Problems"]') ?? [])].find(shows);
   if (!pane) return null;
-  const seg = [...(host('illustration')?.querySelectorAll('[role="radio"]') ?? [])].find((r) => r.textContent?.includes('Check'));
-  const inspector = [...(host('illustration')?.querySelectorAll('aside[aria-label="Inspector"] h2') ?? [])];
   return {
     rows: pane.querySelectorAll('[data-icon="error"]').length,
     fixes: pane.querySelectorAll('button').length,
-    badge: Number(seg?.textContent?.match(/\d+/)?.[0] ?? 0),
-    inspectorChecks: inspector.some((h) => h.textContent === 'Checks'),
+    badge: Number(illusTab('check')?.textContent?.match(/\d+/)?.[0] ?? 0),
   };
 }
 /** Design's doc-bar Generate (its label carries the Space key hint after it) */
@@ -1970,7 +1969,7 @@ async function illustration(): Promise<void> {
   check('its file holds two 5-step ramps, each swatch with its ramp and step', whole, await payload());
   patchIllustration({ tab: 'check' });
   const opened = await until(() => problemPane());
-  check('Illustration’s Check lists its problems under the boards, as many as the Check segment counts, and the inspector has no second Checks group', opened && opened.rows === opened.badge && opened.fixes <= opened.rows && !opened.inspectorChecks, opened);
+  check('Illustration’s Check values tab lists its problems, as many as its badge counts', opened && opened.rows === opened.badge && opened.fixes <= opened.rows, opened);
 
   // a hand-edited step stays put when its ramp regenerates; the others follow the new settings
   const ramp = il.get().ramps[0].id;
@@ -2017,11 +2016,11 @@ async function illustration(): Promise<void> {
   if (!check('Paint shows the canvas', await stroke(0.5))) return;
   check('the stroke is on the canvas', await until(painted), liveEngine.get()?.state);
   check('and is saved under its palette', (await saved()) && illustrationView().paintings[id], illustrationView().paintings);
-  for (const tab of ['ramps', 'light', 'check', 'paint'] as const) {
+  for (const tab of ['settings', 'light', 'check', 'paint'] as const) {
     patchIllustration({ tab });
     await sleep(50);
   }
-  check('a mode switch keeps the painting: Paint, Ramps, Light, Check, Paint', painted(), liveEngine.get()?.state);
+  check('a tab switch keeps the painting: Paint, Ramp settings, Light, Check, Paint', painted(), liveEngine.get()?.state);
   await modesUi();
   await paintUi(id);
 
@@ -2108,17 +2107,17 @@ async function v1Painting(): Promise<Blob> {
   return c.convertToBlob({ type: 'image/png' });
 }
 
-/** the empty palette: its start artboard, Light and Check held back, and a starter chip that makes the first ramp */
+/** the empty palette: the start in the Ramps section, Light and Check held back, and a starter chip that makes the first ramp */
 async function emptyUi(): Promise<void> {
   const il = illustrationDoc();
-  patchIllustration({ tab: 'ramps' });
+  patchIllustration({ tab: 'settings' });
   const start = await until(() => host('illustration')?.querySelector('section[aria-label="Start"]'), 3000);
-  check('an empty palette shows the start artboard in Ramps', shows(start), start?.textContent?.slice(0, 40));
-  const off = (label: string) => [...(host('illustration')?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [])].find((t) => t.textContent?.includes(label))?.disabled;
-  check('and holds Light and Check back until there is a colour, but not Paint', off('Light') === true && off('Check') === true && off('Paint') === false, [off('Light'), off('Check'), off('Paint')]);
+  check('an empty palette shows the start in the Ramps section', shows(start) && !!start?.parentElement?.closest('section')?.textContent?.startsWith('Ramps'), start?.textContent?.slice(0, 40));
+  const off = (id: string) => illusTab(id)?.disabled;
+  check('and holds Light and Check back until there is a colour, but not Ramp settings or Paint', off('light') === true && off('check') === true && off('settings') === false && off('paint') === false, [off('light'), off('check'), off('settings'), off('paint')]);
   patchIllustration({ tab: 'light' });
   await sleep(100);
-  check('a saved Light mode on an empty palette still shows the start, not an empty lit pane', shows(host('illustration')?.querySelector('section[aria-label="Start"]')));
+  check('a saved Light tab on an empty palette still shows the start and a usable tab, not an empty lit pane', shows(host('illustration')?.querySelector('section[aria-label="Start"]')));
   const skin = await until(() => button('illustration', 'Skin'), 2000);
   skin?.click();
   const made = await until(() => (il.get().ramps.length === 1 ? il.get().ramps[0] : null));
@@ -2138,16 +2137,33 @@ async function modesUi(): Promise<void> {
   const tab = () => illustrationView().tab;
   const chord = (n: string) => press(n, { code: `Digit${n}`, altKey: true });
   const seen: string[] = [];
-  for (const [n, want] of [['2', 'light'], ['3', 'check'], ['1', 'ramps'], ['4', 'paint']] as const) {
+  for (const [n, want] of [['2', 'light'], ['3', 'check'], ['1', 'settings'], ['4', 'paint']] as const) {
     chord(n);
     await until(() => tab() === want, 1000);
     seen.push(tab());
   }
-  check('Alt+1 to Alt+4 switch Ramps, Light, Check and Paint', seen.join() === 'light,check,ramps,paint', seen);
+  check('Alt+1 to Alt+4 switch Ramp settings, Light & preview, Check values and Paint', seen.join() === 'light,check,settings,paint', seen);
+  const picked = () => ['settings', 'light', 'check', 'paint'].filter((id) => illusTab(id)?.getAttribute('aria-selected') === 'true');
+  check('and the tab strip shows the one that is on', picked().join() === 'paint', picked());
+  // clicking a tab, and the choice kept in the workspace (view state) for the next launch
+  illusTab('light')?.click();
+  await until(() => tab() === 'light', 1000);
+  check('clicking a tab opens it and the workspace keeps it', picked().join() === 'light' && (shell.view('illustration') as { tab?: string } | null)?.tab === 'light', [picked(), shell.view('illustration')]);
+  // B, S and I act only while Paint shows
+  setPaint({ tool: 'smudge' });
+  press('b', { code: 'KeyB' });
+  await sleep(60);
+  check('B does nothing while another tab shows', paint().tool === 'smudge', paint().tool);
+  chord('4');
+  await until(() => tab() === 'paint', 1000);
+  press('b', { code: 'KeyB' });
+  check('and picks the Brush while Paint shows', await until(() => paint().tool === 'paint', 1000), paint().tool);
+  chord('1');
+  await until(() => tab() === 'settings', 1000);
 
   // the selected step carries across the modes
   chord('1');
-  await until(() => tab() === 'ramps' && host('illustration')?.querySelector('[role="listbox"][aria-label="Swatch board"]'), 1000);
+  await until(() => tab() === 'settings' && host('illustration')?.querySelector('[role="listbox"][aria-label="Swatch board"]'), 1000);
   const ramp = il.get().ramps[0].id;
   const step = stepsOf(il.get(), ramp)[1];
   host('illustration')?.querySelector<HTMLButtonElement>(`[data-step="${step.id}"]`)?.click();
@@ -2159,7 +2175,7 @@ async function modesUi(): Promise<void> {
     const chip = host('illustration')?.querySelector(`[data-step="${step.id}"]`);
     kept.push(`${tab()}:${illustrationView().selected === step.id}:${chip?.getAttribute('aria-selected')}`);
   }
-  check('the selected step stays selected through every mode', kept.every((k) => k.endsWith(':true:true')), kept);
+  check('the selected step stays selected through every tab', kept.every((k) => k.endsWith(':true:true')), kept);
 
   // Shift+A adds a base colour, as one undo step
   const n = il.get().ramps.length;
@@ -2190,7 +2206,7 @@ async function modesUi(): Promise<void> {
     check('and Undo puts it back', L(il.get()) === L0 && il.depth() === depth0, [L0, L(il.get())]);
   }
 
-  // the hero checkbox, in the Ramp group
+  // the hero checkbox, in Ramp settings
   const hero = () => [...(host('illustration')?.querySelectorAll<HTMLButtonElement>('button[role="checkbox"]') ?? [])].find((b) => b.textContent?.includes('Quieten the other ramps'));
   hero()?.click();
   check('the Hero checkbox makes the selected ramp the hero', await until(() => il.get().ramps[0].hero === true), il.get().ramps.map((r) => r.hero));
@@ -2330,19 +2346,42 @@ async function paintUi(id: string): Promise<void> {
   check("the chip's tooltip names the wash and keeps the paint's own colour", tip === `Ultramarine Blue · a wash at Load 100 looks like this. Paint colour ${toHex(ultra.oklch).toUpperCase()}.`, tip);
   setPaint({ medium, load, size, brushes });
 
-  // the options bar: one line at 1000px with the paint's name, and still one line at 724px
+  // the options row: one line at 1000px with the paint's name, and still one line at 724px (the toolbox is 48px of the section)
   const head = section.querySelector('header')!;
   const oneLine = () => {
     const r = head.getBoundingClientRect();
     const mid = r.top + r.height / 2;
     return r.height <= 36.5 && head.scrollWidth <= head.clientWidth + 1 && [...head.children].every((c) => Math.abs(c.getBoundingClientRect().top + c.getBoundingClientRect().height / 2 - mid) <= 2);
   };
+  section.style.flex = 'none';
   for (const w of [1000, 724]) {
-    section.style.width = `${w}px`;
+    section.style.width = `${w + 48}px`;
     const fits = await until(() => head.dataset.fit === (w >= 1000 ? 'full' : 'compact') && oneLine(), 5000);
-    check(`the options bar is one line at ${w}px`, fits && (w < 1000 || head.textContent?.includes('Ultramarine Blue')), [head.dataset.fit, head.getBoundingClientRect().height, head.scrollWidth, head.clientWidth]);
+    check(`the options row is one line at ${w}px`, fits && (w < 1000 || head.textContent?.includes('Ultramarine Blue')), [head.dataset.fit, head.getBoundingClientRect().height, head.scrollWidth, head.clientWidth]);
   }
   section.style.width = '';
+  section.style.flex = '';
+
+  // the paper fits its tab: it re-fits when the tab narrows and widens, and when Paint is switched away and back
+  const paperFits = (c: HTMLCanvasElement) => {
+    const r = c.getBoundingClientRect();
+    const v = c.parentElement!.getBoundingClientRect();
+    return r.width > 0 && r.left >= v.left - 1 && r.right <= v.right + 1 && r.top >= v.top - 1 && r.bottom <= v.bottom + 1 && Math.abs(c.width - Math.round(c.clientWidth * devicePixelRatio)) <= 2;
+  };
+  const tabbed = canvas.closest('[role="tabpanel"]')!.parentElement!;
+  const fullW = canvas.clientWidth;
+  tabbed.style.maxWidth = `${Math.round(tabbed.getBoundingClientRect().width * 0.6)}px`;
+  const narrowed = await until(() => canvas.clientWidth < fullW - 20 && paperFits(canvas), 5000);
+  check('the paper re-fits when the tab narrows', narrowed, [fullW, canvas.clientWidth, canvas.width]);
+  tabbed.style.maxWidth = '';
+  check('and when it widens again', await until(() => Math.abs(canvas.clientWidth - fullW) <= 2 && paperFits(canvas), 5000), [fullW, canvas.clientWidth, canvas.width]);
+  const drawn = e.state.depth;
+  illusTab('settings')?.click();
+  const away = await until(() => !paperCanvas(), 3000);
+  illusTab('paint')?.click();
+  const returned = await until(() => paperCanvas(), 3000);
+  check('switching Paint away and back puts the paper back, fitted to the tab', away && returned === canvas && (await until(() => paperFits(canvas), 3000)), [away, canvas.clientWidth, canvas.width]);
+  check('and it still paints', (await stroke(0.75)) && (await until(() => e.state.depth > drawn, 3000)), [drawn, e.state]);
 
   // Clear, then its toast's Undo: the painting comes back
   host('illustration')?.querySelector<HTMLButtonElement>('[aria-label="Clear the painting"]')?.click();

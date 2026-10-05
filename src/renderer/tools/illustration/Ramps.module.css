@@ -1,45 +1,24 @@
-/* Ramps mode: the swatch board on the neutral surround, and the curves under it. The surround
-   band runs down the rows as one piece; names and numbers stay off the colours except the small
-   print on the band itself. The selected swatch's ring is neutral, drawn clear of the colour. */
-.mode { display: grid; grid-template-rows: var(--options-h) minmax(0, 1fr) 226px; height: 100%; min-height: 0; overflow: hidden; border-radius: var(--r-mod); background: var(--module); }
-.mode > :first-child { border-radius: 0; }
-
-.board { --label-w: 150px; position: relative; min-height: 0; overflow: hidden; background: var(--module); }
-.scroll { height: 100%; overflow: auto; padding: 10px 0 14px; }
-
-.names { display: grid; grid-template-columns: var(--label-w) minmax(0, 1fr); padding-bottom: 8px; color: var(--ink-3); font: 500 var(--fs-meta)/1 var(--font-sans); }
-.nameCols { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); padding: 0 12px; }
-.nameCols span { padding-left: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.rows { position: relative; }
-/* the surround, behind every row's cells at once */
-.mat { position: absolute; top: 0; right: 14px; bottom: 0; left: calc(var(--label-w) + 14px); border-radius: var(--r-ctl); background: var(--surround); box-shadow: inset 0 0 0 1px var(--edge); }
-.mat.plain { background: var(--well); }
-
-.row { position: relative; display: grid; grid-template-columns: var(--label-w) minmax(0, 1fr); padding: 0 14px; }
-.label { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; padding: 0 12px 0 10px; border-radius: var(--r-ctl) 0 0 var(--r-ctl); color: var(--ink); text-align: left; }
-.row.on .label { background: var(--raise); }
-.rname { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; font: 500 var(--fs-swatch)/1.15 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
-.hero { flex: none; color: var(--ink-2); }
-.rmeta { color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-sans); }
-.row.on .cells { background: var(--highlight); }
-
-.cells { position: relative; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 0; padding: 12px 0; }
-.cell { position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 0 6px; border-radius: var(--r-ctl); text-align: left; }
-.colour { position: relative; display: block; height: 70px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--edge); }
-.value { display: block; height: 6px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
-.read { display: flex; justify-content: space-between; gap: 6px; min-height: 12px; color: var(--on-content-ink-2); font: 400 var(--fs-unit)/1.1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
-.cells.plain .read { color: var(--ink-2); }
-.nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-sans); }
-
-.cell:hover .colour { outline: 1px solid var(--tick-strong); outline-offset: 2px; }
-.cell.hot .colour { outline: 1px dashed var(--tick-strong); outline-offset: 2px; }
-.cell.sel .colour, .cell.sel:hover .colour { outline: 2px solid var(--ink); outline-offset: 2px; }
-.cell:focus-visible { outline: none; }
-.cell:focus-visible .read::after { content: ""; position: absolute; right: 8px; bottom: -6px; left: 8px; height: 2px; border-radius: 1px; background: var(--signal); }
-.badge { position: absolute; top: 6px; left: 6px; padding: 3px 5px; border-radius: 3px; background: var(--on-content-bg); color: var(--on-content-ink); font: 500 var(--fs-label)/1 var(--font-sans); }
-.edited .colour::after { content: ""; position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--on-content-ink); box-shadow: 0 0 0 1.5px var(--on-content-bg); }
-.cell.broken .value { box-shadow: inset 0 0 0 1.5px var(--danger); }
+/* The Selected ramp section: big step tiles. The selected tile's ring is neutral, drawn clear of the colour. */
+.selected { min-width: 0; }
+.none { flex: 1; align-items: center; justify-content: center; text-align: center; }
+.steps { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(var(--cols), minmax(96px, 1fr)); gap: 14px; align-items: stretch; border-radius: var(--r-ctl); padding: 4px; }
+.steps.mat { background: var(--surround); box-shadow: inset 0 0 0 1px var(--edge); padding: 12px; }
+.step { position: relative; display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; padding: 6px; border-radius: var(--r-ctl); text-align: left; }
+.colour { position: relative; display: block; flex: 1; min-height: 70px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--edge); }
+.read { display: flex; flex: none; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; padding: 0 4px; font-variant-numeric: tabular-nums slashed-zero; color: var(--on-content-ink); }
+.steps:not(.mat) .read { color: var(--ink); }
+.word { overflow: hidden; font: 500 var(--fs-row)/1.2 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
+.hex { flex: none; color: var(--on-content-ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); }
+.steps:not(.mat) .hex { color: var(--ink-3); }
+.step:hover .colour { outline: 1px solid var(--tick-strong); outline-offset: 2px; }
+.step.hot .colour { outline: 1px dashed var(--tick-strong); outline-offset: 2px; }
+.step.sel, .step.sel:hover { box-shadow: 0 0 0 1.5px var(--ink); }
+.step.sel .colour, .step.sel:hover .colour { outline: none; }
+.step:focus-visible { outline: none; }
+.step:focus-visible .read::after { content: ""; position: absolute; right: 10px; bottom: -4px; left: 10px; height: 2px; border-radius: 1px; background: var(--signal); }
+.badge { position: absolute; top: 8px; left: 8px; padding: 3px 6px; border-radius: 3px; background: var(--on-content-bg); color: var(--on-content-ink); font: 500 var(--fs-label)/1 var(--font-sans); }
+.edited .colour::after { content: ""; position: absolute; top: 9px; right: 9px; width: 7px; height: 7px; border-radius: 50%; background: var(--on-content-ink); box-shadow: 0 0 0 1.5px var(--on-content-bg); }
+.step.broken .colour { box-shadow: inset 0 0 0 2px var(--danger); }
 
 /* ── curves ── */
 .curves { display: flex; flex-direction: column; min-height: 0; overflow: hidden; background: var(--module); box-shadow: inset 0 1px 0 var(--line); }

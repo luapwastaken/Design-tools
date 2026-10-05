@@ -1,8 +1,8 @@
-// Paint (spec §3.3): the scratch canvas (options bar, toolbox, paper) in the canvas panel, and the
-// inspector's Mixer: the well and tubes (drawn by the canvas, which owns the brush) and Mix it, how to
-// mix the selected colour from the paints you own (the paint box is behind Mix it's paints button).
+// Paint tab (spec §3.3): the scratch canvas (toolbox, options row, paper) on the left, and the
+// Mixer in a column on the right: the well and tubes (drawn by the canvas, which owns the brush) and
+// Mix it, how to mix the selected colour from the paints you own (the paint box is behind Mix it's paints button).
 // A ramp colour clicked while Paint shows loads the brush; Try it on a recipe fills the well with it.
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import type { Recipe } from '../../../shared/paint/recipe.ts';
 import { toast } from '../../ui/index.ts';
@@ -15,6 +15,7 @@ import { paintSettings, wellFromRecipe, type PaintSettings, type PaletteSet, typ
 import { pickFromCanvas } from './proposals.ts';
 import { recipeTarget, Recipes } from './Recipes.tsx';
 import { clicked, getView, patchView, type IllustrationView } from './view-state.ts';
+import s from './PaintPane.module.css';
 
 /** written whole: a saved view from before the brushes existed is read once, as its sizes were meant */
 const setPaint = (patch: Partial<PaintSettings>) => patchView({ canvas: { ...paintSettings(getView().canvas), ...patch } });
@@ -34,7 +35,9 @@ function tryRecipe(r: Recipe): void {
   });
 }
 
-export function PaintPane({ doc, d, v, hidden, mixer }: { doc: Doc; d: IllustrationDoc; v: IllustrationView; hidden: boolean; mixer: HTMLElement | null }) {
+export function PaintPane({ doc, d, v, hidden }: { doc: Doc; d: IllustrationDoc; v: IllustrationView; hidden: boolean }) {
+  // the well and the tubes are drawn by the paint canvas into this column
+  const [mixer, setMixer] = useState<HTMLElement | null>(null);
   // recipes wait for a drag to end: solving them is too slow for every frame
   const settled = useSettled(doc, 0);
   const owned = useMemo(() => ownedPaints(v), [v.owned, v.custom]);
@@ -63,7 +66,7 @@ export function PaintPane({ doc, d, v, hidden, mixer }: { doc: Doc; d: Illustrat
 
   const sel = recipeTarget(settled, selected(settled, v.selected));
   return (
-    <>
+    <div className={s.pane}>
       <PaintCanvas
         itemId={itemId}
         hidden={hidden}
@@ -77,7 +80,8 @@ export function PaintPane({ doc, d, v, hidden, mixer }: { doc: Doc; d: Illustrat
         mixer={mixer}
         target={sel?.oklch ?? null}
       />
+      <div ref={setMixer} className={s.mixer} />
       {mixer && createPortal(<Recipes d={settled} v={v} sel={sel} owned={owned} hidden={hidden} onTry={tryRecipe} />, mixer)}
-    </>
+    </div>
   );
 }
