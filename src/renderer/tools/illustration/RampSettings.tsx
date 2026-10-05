@@ -45,7 +45,7 @@ export function RampSettings({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: I
           <Curves doc={doc} d={d} v={v} />
         </>
       )}
-      <ViewControls d={d} v={v} />
+      {w && <ViewControls d={d} v={v} />}
       <NotesModule doc={doc} />
     </div>
   );
@@ -90,7 +90,7 @@ function RampControls({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec
           <Toggle label="Quieten the other ramps" checked={r.hero} onChange={(hero) => doc.transact(hero ? `Make ${name} the hero` : `End ${name} as hero`, (x) => setSpec(x, r.id, { hero }))} />
         </InspectorRow>
         <InspectorRow label="Material" info={material?.describe}>
-          <Select label="Material" options={MATERIAL_OPTIONS} value={r.material} onChange={(m) => set('Change the material', { material: m })} />
+          <Select options={MATERIAL_OPTIONS} value={r.material} onChange={(m) => set('Change the material', { material: m })} />
         </InspectorRow>
       </div>
       <p className={s.hint}>Edit any step and it keeps your colour; Regenerate rebuilds the ramp from the base.</p>
@@ -105,13 +105,13 @@ function ViewControls({ d, v }: { d: IllustrationDoc; v: IllustrationView }) {
       <h3 className={s.vtitle}>How the steps are seen</h3>
       <div className={s.grid}>
         <InspectorRow label="Show">
-          <Select label="Show" options={SHOWS} value={v.show} onChange={(show) => patchView({ show })} />
+          <Select options={SHOWS} value={v.show} onChange={(show) => patchView({ show })} />
         </InspectorRow>
-        <InspectorRow label="Surround">
-          <Select label="Surround" options={SURROUNDS.map((o) => ({ value: o.value, label: o.label, swatch: surroundOf(o.value, d.swatches) }))} value={v.surround} onChange={(surround) => patchView({ surround })} />
+        <InspectorRow label="Steps sit on">
+          <Select options={SURROUNDS.map((o) => ({ value: o.value, label: o.label, swatch: surroundOf(o.value, d.swatches) }))} value={v.board} onChange={(board) => patchView({ board })} />
         </InspectorRow>
         <InspectorRow label="Seen as">
-          <Select label="Seen as" options={PROOFS} value={v.proof} onChange={(proof: Proof) => patchView({ proof })} />
+          <Select options={PROOFS} value={v.proof} onChange={(proof: Proof) => patchView({ proof })} />
         </InspectorRow>
         <InspectorRow label="Greyscale">
           <Toggle label="Greyscale (G)" checked={v.proof === 'grey'} onChange={(on) => patchView({ proof: on ? 'grey' : 'off' })} />

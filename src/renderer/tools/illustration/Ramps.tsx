@@ -30,8 +30,8 @@ export function SelectedRamp({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: I
   const broken = new Set(r ? brokenSteps(list) : []);
   const edited = list.filter((w) => w.edited).length;
   const name = r ? rampName(d, r) : 'Loose colours';
-  const surround = surroundOf(v.surround, d.swatches);
-  const plain = v.surround === 'plain';
+  const surround = surroundOf(v.board, d.swatches);
+  const plain = v.board === 'plain';
 
   const onKeyDown = (e: KeyboardEvent) => {
     // on a step, up and down go to the next ramp as well (left and right also work from anywhere: the tool's shortcuts)

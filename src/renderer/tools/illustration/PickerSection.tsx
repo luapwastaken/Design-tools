@@ -14,7 +14,7 @@ export function PickerSection({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: 
   const w = selected(d, v.selected);
   const r = rampOf(d, w?.group);
   const steps = r ? stepsOf(d, r.id) : [];
-  const where = !w ? undefined : r ? `${w.step === 0 ? 'Base' : `Step ${steps.findIndex((x) => x.id === w.id) + 1}`} of ${rampName(d, r)}` : `${nameOf(d, w)} · in no ramp`;
+  const where = !w ? undefined : r ? `${w.step === 0 ? 'Base step' : `Step ${steps.findIndex((x) => x.id === w.id) + 1}`} of ${rampName(d, r)}` : `${nameOf(d, w)} · in no ramp`;
   return (
     <Section
       title="Colour picker"

@@ -105,10 +105,10 @@ export function LightTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illus
         {spec && <LightColours key={spec.id} doc={doc} d={d} r={spec} />}
         <Segmented label="Shading" options={[...SHADINGS]} value={view.banded ? 'banded' : 'smooth'} onChange={(m) => onView({ banded: m === 'banded' })} />
         <InspectorRow label="Surround">
-          <Select label="Surround" options={SURROUNDS.map((o) => ({ value: o.value, label: o.tip.replace(' surround', '').replace(/^The /, ''), swatch: surroundOf(o.value, d.swatches) }))} value={v.surround} onChange={(surround) => patchView({ surround })} />
+          <Select options={SURROUNDS.map((o) => ({ value: o.value, label: o.tip.replace(' surround', '').replace(/^The /, ''), swatch: surroundOf(o.value, d.swatches) }))} value={v.surround} onChange={(surround) => patchView({ surround })} />
         </InspectorRow>
         <InspectorRow label="Seen as">
-          <Select label="Seen as" options={PROOFS} value={v.proof} onChange={(proof: Proof) => patchView({ proof })} />
+          <Select options={PROOFS} value={v.proof} onChange={(proof: Proof) => patchView({ proof })} />
         </InspectorRow>
         {spec && d.ramps.length > 1 && <EveryRamp doc={doc} d={d} r={spec} />}
       </div>

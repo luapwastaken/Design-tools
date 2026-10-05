@@ -18,7 +18,10 @@ export type IllustrationView = {
   show: 'hex' | 'name' | 'off';
   /** the lens the steps and the lit object are seen through (G toggles greyscale) */
   proof: 'off' | Cvd | 'grey';
+  /** what the lit preview and the checks sit on */
   surround: Surround;
+  /** what the Selected ramp's steps sit on (none by default) */
+  board: Surround;
   format: ExportFormat;
   /** Value check: flag pairs closer than this, in L × 100 */
   flagL: number;
@@ -46,6 +49,7 @@ export const DEFAULT_VIEW: IllustrationView = {
   show: 'hex',
   proof: 'off',
   surround: 'grey',
+  board: 'plain',
   format: 'ase',
   // lower than Design's 6 and 10: a painting's bases often sit close in value (skin and cloth mid-tones),
   // and its steps pack twenty colours or more
@@ -66,6 +70,7 @@ const ENUMS: Partial<Record<keyof IllustrationView, readonly unknown[]>> = {
   show: ['hex', 'name', 'off'],
   proof: ['off', 'grey', 'protan', 'deutan', 'tritan', 'achromat'],
   surround: ['grey', 'ground', 'plain'],
+  board: ['grey', 'ground', 'plain'],
   format: EXPORT_FORMATS,
   cvd: ['protan', 'deutan', 'tritan', 'achromat'],
   recipesFor: ['selected', 'bases'],
