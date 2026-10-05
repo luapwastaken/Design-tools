@@ -70,6 +70,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
       <DocBar
         tool="illustration"
         doc={doc}
+        switcher={{ kind: 'palette' }}
         meta={plural(d.ramps.length, 'ramp')}
         actions={
           <>
