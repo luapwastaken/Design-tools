@@ -1,0 +1,8 @@
+/* a clip's own loop, as readouts */
+.fact {
+  color: var(--ink-3);
+  font: 400 var(--fs-unit)/1 var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  white-space: nowrap;
+}
+.fact b { font-weight: 400; font-size: var(--fs-value); color: var(--ink); }

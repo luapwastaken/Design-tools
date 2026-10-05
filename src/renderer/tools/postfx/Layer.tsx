@@ -1,17 +1,15 @@
-// The selected layer (plan unit V): its opacity and blend, then the effect's own settings, each a
-// Slider with its NumberField, a Toggle, a choice, or a ColorField. The colour effects take their
-// colours from a Library palette too (Send to: EFFECT COLOURS lands on the selected layer).
+// The selected layer's settings (plan unit V), drawn inline under its row in the stack (Photoshop's
+// adjustments style): its opacity and blend, then the effect's own settings, each a Slider with its
+// NumberField, a Toggle, a choice, or a ColorField. The colour effects take their colours from a Library
+// palette too (Send to: EFFECT COLOURS lands on the selected layer).
 import type { MouseEvent } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
-import { ColorField, Icon, IconButton, menu, Module, Segmented, Select, Slider, SwatchStrip, Toggle, useDocColour, useDocNumber, type MenuItem } from '../../ui/index.ts';
-import { cx } from '../../ui/cx.ts';
+import { ColorField, InfoTip, InspectorRow, menu, Segmented, Select, Slider, SwatchStrip, Toggle, useDocColour, useDocNumber } from '../../ui/index.ts';
 import { paletteMenu, useReadAhead } from '../common/palettes.ts';
-import { labelOf, resetLayer, type Doc } from './actions.ts';
-import { BLENDS, effectOf, GROUPS, type Param } from './effects/index.ts';
+import { labelOf, type Doc } from './actions.ts';
+import { BLENDS, effectOf, type Param } from './effects/index.ts';
 import { perLoop } from './effects/params.ts';
-import { mapLayer, offered, RUN_IN, type Layer, type PostFxDoc, type Timeline } from './doc.ts';
-import { VIDEO_ONLY_TIP } from './EffectPicker.tsx';
-import { useView } from './view-state.ts';
+import { mapLayer, RUN_IN, type Layer, type PostFxDoc, type Timeline } from './doc.ts';
 import s from './Layer.module.css';
 
 const setParam = (d: PostFxDoc, id: string, key: string, v: Layer['params'][string]) => mapLayer(d, id, (l) => ({ ...l, params: { ...l.params, [key]: v } }));
@@ -35,10 +33,9 @@ function ColourParam({ doc, l, p }: { doc: Doc; l: Layer; p: Extract<Param, { ki
     set: (x, v) => setParam(x, l.id, p.key, v),
   });
   return (
-    <div className={s.row}>
-      <span className={cx('lbl', s.lab)}>{p.label}</span>
+    <InspectorRow label={p.label}>
       <ColorField {...bind} className={s.grow} />
-    </div>
+    </InspectorRow>
   );
 }
 
@@ -49,90 +46,65 @@ function ParamRow({ doc, l, p }: { doc: Doc; l: Layer; p: Param }) {
   const v = l.params[p.key] ?? p.def;
   if (p.kind === 'toggle')
     return (
-      <div className={s.row}>
-        <span className={cx('lbl', s.lab)} />
+      <InspectorRow label="">
         <Toggle label={p.label} checked={!!v} onChange={(on) => set(`${on ? 'Turn on' : 'Turn off'} ${labelOf(l)} ${p.label.toLowerCase()}`, on)} />
-      </div>
+      </InspectorRow>
     );
   const options = p.options.map((label, n) => ({ value: String(n), label }));
   const pick = (to: string) => set(`${labelOf(l)}: ${p.options[Number(to)] ?? to}`, Number(to));
   return options.length <= 4 ? (
     <Segmented label={p.label} options={options} value={String(v)} onChange={pick} />
   ) : (
-    <div className={s.row}>
-      <span className={cx('lbl', s.lab)}>{p.label}</span>
+    <InspectorRow label={p.label}>
       <Select options={options} value={String(v)} onChange={pick} className={s.grow} />
-    </div>
+    </InspectorRow>
   );
 }
 
 /** what the rates a second come to in this loop: whole counts, so the loop comes round exactly */
 function loopNote(params: readonly Param[], l: Layer, seconds: number): string {
   const counts = params.flatMap((p) => (p.kind === 'number' && p.unit === '/s' ? [`${p.label} ${perLoop((l.params[p.key] as number | undefined) ?? p.def, seconds)}`] : []));
-  return `Over this ${seconds.toFixed(2)} s loop: ${counts.join(', ')}. Whole counts, so it repeats exactly.`;
+  return `Over the ${seconds.toFixed(2)} s loop: ${counts.join(', ')}.`;
 }
 
-export function LayerModule({ doc, d, t }: { doc: Doc; d: PostFxDoc; t: Timeline }) {
-  const { selected } = useView();
-  const l = d.stack.find((x) => x.id === selected) ?? null;
-  const fx = l ? effectOf(l.effect) : undefined;
+/** the settings of layer `l`, for the stack to draw under its row */
+export function LayerBody({ doc, d, l, t }: { doc: Doc; d: PostFxDoc; l: Layer; t: Timeline }) {
+  const fx = effectOf(l.effect);
   const colours = fx?.params.some((p) => p.kind === 'colour' && p.tone !== undefined) ?? false;
   useReadAhead(colours);
-
-  if (!l || !fx)
-    return (
-      <Module title="Layer">
-        <p className={s.none}>{d.stack.length ? 'Pick a layer in the stack to set it.' : 'An effect’s settings show here once it is in the stack.'}</p>
-      </Module>
-    );
-
-  const skipped = !offered(d, l.effect);
-  const group = GROUPS.find((g) => g.id === fx.group)?.label;
+  if (!fx) return null;
   return (
-    <Module
-      title={fx.label}
-      sub={group}
-      actions={<IconButton icon="restart_alt" label={`Reset ${fx.label} to its defaults`} size="sm" onClick={() => resetLayer(doc, l.id)} />}
-    >
-      <div className={s.stack}>
-        {skipped && (
-          <p className={s.warn} role="status">
-            <Icon name="info" size={16} />
-            {VIDEO_ONLY_TIP} It is skipped until a clip is open.
-          </p>
-        )}
-        <div className={s.group}>
-          <LayerMix doc={doc} l={l} />
-        </div>
-        {fx.params.length > 0 && (
-          <div className={cx(s.group, s.rule)}>
-            {fx.params.map((p) => (
-              <ParamRow key={`${l.id}:${p.key}`} doc={doc} l={l} p={p} />
-            ))}
-          </div>
-        )}
-        {fx.moving && <p className={s.note}>{loopNote(fx.params, l, t.kind === 'still' ? d.loop.seconds : t.seconds)}</p>}
-        {fx.videoOnly && !skipped && (
-          <p className={s.note}>
-            Each frame builds on the one before. A frame on its own is drawn after the {RUN_IN} before it, as the playing picture is; a PNG sequence from the start has all of them.
-          </p>
-        )}
-        {colours && (
-          <div className={cx(s.row, s.rule)}>
-            <span className={cx('lbl', s.lab)}>Colours from</span>
-            <button
-              type="button"
-              className={s.from}
-              aria-haspopup="menu"
-              onClick={(e: MouseEvent<HTMLButtonElement>) => menu.open(e.currentTarget.getBoundingClientRect(), paletteMenu('postfx'), { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined })}
-            >
-              <SwatchStrip colors={fx.params.flatMap((p) => (p.kind === 'colour' && p.tone !== undefined ? [cssColor((l.params[p.key] as Oklch | undefined) ?? p.def)] : []))} height={14} className={s.strip} />
-              <span className={s.fromName}>Pick from a Library palette…</span>
-            </button>
-          </div>
-        )}
-      </div>
-    </Module>
+    <div className={s.body} data-layer-body={l.id}>
+      <LayerMix doc={doc} l={l} />
+      {fx.params.map((p) => (
+        <ParamRow key={`${l.id}:${p.key}`} doc={doc} l={l} p={p} />
+      ))}
+      {colours && (
+        <InspectorRow label="Colours from">
+          <button
+            type="button"
+            className={s.from}
+            aria-haspopup="menu"
+            onClick={(e: MouseEvent<HTMLButtonElement>) => menu.open(e.currentTarget.getBoundingClientRect(), paletteMenu('postfx'), { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined })}
+          >
+            <SwatchStrip colors={fx.params.flatMap((p) => (p.kind === 'colour' && p.tone !== undefined ? [cssColor((l.params[p.key] as Oklch | undefined) ?? p.def)] : []))} height={14} className={s.strip} />
+            <span className={s.fromName}>Pick from a Library palette…</span>
+          </button>
+        </InspectorRow>
+      )}
+      {fx.moving && (
+        <p className={s.note}>
+          {loopNote(fx.params, l, t.kind === 'still' ? d.loop.seconds : t.seconds)}
+          <InfoTip text="Rates are whole counts per loop, so the effect repeats exactly." />
+        </p>
+      )}
+      {fx.videoOnly && (
+        <p className={s.note}>
+          Builds on the frame before it.
+          <InfoTip text={`Each frame builds on the one before. A frame on its own is drawn after the ${RUN_IN} before it, as the playing picture is; a PNG sequence from the start has all of them.`} />
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -146,15 +118,14 @@ function LayerMix({ doc, l }: { doc: Doc; l: Layer }) {
   return (
     <>
       <Slider label="Opacity" min={0} max={100} step={1} unit="%" {...opacity} />
-      <div className={s.row}>
-        <span className={cx('lbl', s.lab)}>Blend</span>
+      <InspectorRow label="Blend">
         <Select
           options={BLENDS.map((b) => ({ value: b.id, label: b.label }))}
           value={l.blend}
           onChange={(blend) => doc.transact(`Blend ${labelOf(l)} as ${BLENDS.find((b) => b.id === blend)?.label.toLowerCase()}`, (x) => mapLayer(x, l.id, (y) => ({ ...y, blend })))}
           className={s.grow}
         />
-      </div>
+      </InspectorRow>
     </>
   );
 }

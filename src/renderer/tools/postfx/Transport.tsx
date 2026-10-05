@@ -1,4 +1,4 @@
-// The transport (plan unit V) for a clip, a GIF or a still's loop: play and pause (also a quick tap of
+// The transport (plan unit V), a cluster in the view strip, for a clip, a GIF or a still's loop: play and pause (also a quick tap of
 // Space, foundation spec §9), step, and scrub. Nothing plays until you press play (spec §5 q3), and
 // a pause, a step or a scrub leaves the frame in the view, so it is what shows and exports.
 import { useRef } from 'react';

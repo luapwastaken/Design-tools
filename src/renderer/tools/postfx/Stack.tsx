@@ -1,14 +1,16 @@
-// The stack (spec §2): the effects as layers, applied top to bottom. Add from a grouped list with a
+// The stack (spec §2): the effects as layers, applied top to bottom, with the selected layer's settings
+// open inline under its row. Add from a grouped list with a
 // search, reorder by drag or Alt and an arrow, hide, duplicate, and delete with the armed confirm and
 // an Undo toast. A video-only effect on a still keeps its row, set back, with a tag saying why it's skipped.
-import { useState, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react';
-import { Button, ConfirmInline, Icon, IconButton, menu, Module, Tooltip, type MenuAnchor } from '../../ui/index.ts';
+import { Fragment, useState, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react';
+import { Button, ConfirmInline, Icon, IconButton, InspectorGroup, menu, Tooltip, type MenuAnchor } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { plural } from '../common/names.ts';
 import { addEffect, deleteLayer, duplicate, labelOf, moveTo, resetLayer, toggleLayer, type Doc } from './actions.ts';
 import { BLENDS, effectOf } from './effects/index.ts';
-import { LIMIT, offered, type Layer, type PostFxDoc } from './doc.ts';
+import { LIMIT, offered, type Layer, type PostFxDoc, type Timeline } from './doc.ts';
 import { EffectPicker, VIDEO_ONLY_TIP } from './EffectPicker.tsx';
+import { LayerBody } from './Layer.tsx';
 import { patchView, useView } from './view-state.ts';
 import s from './Stack.module.css';
 
@@ -19,7 +21,7 @@ const blendOf = (l: Layer) => BLENDS.find((b) => b.id === l.blend)?.label ?? l.b
 
 type Picker = { anchor: DOMRect; owner: HTMLElement | null };
 
-export function StackModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
+export function StackModule({ doc, d, t }: { doc: Doc; d: PostFxDoc; t: Timeline }) {
   const { selected } = useView();
   const [picker, setPicker] = useState<Picker | null>(null);
   const [armed, setArmed] = useState<string | null>(null);
@@ -55,7 +57,7 @@ export function StackModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
 
   // one Tab stop: arrows choose, Alt and an arrow move, Delete arms the confirm (brief §6)
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (!sel || (e.target as Element).closest('[role="alertdialog"], button')) return;
+    if (!sel || (e.target as Element).closest('[role="alertdialog"], button, [data-layer-body], input, select, textarea')) return;
     const i = stack.indexOf(sel);
     const by = { ArrowUp: -1, ArrowDown: 1, Home: -Infinity, End: Infinity }[e.key];
     if (by !== undefined) {
@@ -96,16 +98,17 @@ export function StackModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
   const video = d.source?.kind === 'video';
 
   return (
-    <Module
-      title="Stack"
+    <InspectorGroup
+      id="postfx.effects"
+      title="Effects"
       sub="Top to bottom"
-      readout={stack.length ? (on === stack.length ? plural(stack.length, 'layer') : `${on} of ${stack.length} on`) : undefined}
+      meta={stack.length ? (on === stack.length ? plural(stack.length, 'layer') : `${on} of ${stack.length} on`) : undefined}
       actions={<IconButton icon="add" label={full ? `A stack holds up to ${LIMIT.layers} layers` : 'Add an effect'} size="sm" latched={!!picker} disabled={full} onClick={openPicker} />}
       flush
     >
       {stack.length === 0 ? (
         <div className={s.empty}>
-          <p className={s.emptyText}>No effects yet. Add one, or start from a preset.</p>
+          <p className={s.emptyText}>No effects yet. Add one, or start from a preset below.</p>
           <Button icon="add" onClick={openPicker}>
             Add an effect
           </Button>
@@ -146,8 +149,8 @@ export function StackModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
                 </div>
               );
             return (
+              <Fragment key={l.id}>
               <div
-                key={l.id}
                 role="option"
                 aria-selected={l.id === selected}
                 aria-label={`${labelOf(l)}${l.on ? '' : ', hidden'}${skipped ? ', video only, skipped' : ''}`}
@@ -205,11 +208,13 @@ export function StackModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
                 </span>
                 <IconButton icon="more_horiz" label={`More for ${labelOf(l)}`} size="sm" tabIndex={-1} onClick={(e) => openMenu(l, e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
               </div>
+              {l.id === selected && <LayerBody doc={doc} d={d} l={l} t={t} />}
+              </Fragment>
             );
           })}
         </div>
       )}
       {picker && <EffectPicker anchor={picker.anchor} owner={picker.owner} video={video} onPick={(id) => addEffect(doc, id)} onClose={() => setPicker(null)} />}
-    </Module>
+    </InspectorGroup>
   );
 }

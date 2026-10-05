@@ -46,3 +46,8 @@
 .mineName:hover { background: var(--well-hover); color: var(--ink); }
 .mine.on .mineName { background: var(--raise); color: var(--ink); }
 .confirm { padding: 4px 0; }
+
+.yours { display: flex; flex-direction: column; gap: 4px; }
+.rule { padding-top: 8px; box-shadow: 0 -1px 0 var(--line); }
+.grow { flex: 1; min-width: 0; }
+.warn { color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.4; }

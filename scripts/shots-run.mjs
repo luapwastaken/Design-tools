@@ -53,9 +53,9 @@ export async function run({ page, ev, shot, clickText, drop, rail, photo, four, 
   // 03 Pattern
   await rail(3); await shot('03-pattern-default');
   for (const [lbl, f] of [['Half-drop', 'halfdrop'], ['Brick', 'brick'], ['Scatter', 'scatter']]) { await click(lbl, 'pattern'); await sleep(900); await shot(`03-pattern-${f}`); }
-  await click('Grid', 'pattern'); await click('Seams', 'pattern'); await sleep(700); await shot('03-pattern-seams');
-  await click('Seams', 'pattern'); await click('Tile', 'pattern'); await sleep(700); await shot('03-pattern-tile-view');
-  await click('Artboard', 'pattern'); await click('Surprise me', 'pattern'); await settle(); await shot('03-pattern-surprise');
+  await click('Grid', 'pattern'); await click('Tile seams', 'pattern'); await sleep(700); await shot('03-pattern-seams');
+  await click('Tile seams', 'pattern'); await click('Surprise me', 'pattern'); await settle(); await shot('03-pattern-surprise');
+  await click('Export', 'pattern'); await sleep(500); await shot('03-pattern-export-menu'); await key('Escape'); await sleep(300);
 
   // 04 Logo
   await rail(4); await shot('04-logo-empty');
@@ -88,7 +88,10 @@ export async function run({ page, ev, shot, clickText, drop, rail, photo, four, 
   await drop('postfx', photo); await settle(); await shot('07-postfx-loaded');
   await click('Add an effect', 'postfx'); await sleep(800); await shot('07-postfx-add-effect-picker');
   await key('Escape'); await sleep(300);
-  await click('~VHS tape', 'postfx'); await sleep(1500); await shot('07-postfx-preset-vhs');
+  await click('Presets', 'postfx'); await sleep(500); await shot('07-postfx-presets-open');
+  await click('~VHS tape', 'postfx'); await sleep(1500); await click('Presets', 'postfx'); await sleep(500); await shot('07-postfx-preset-vhs');
+  await click('Loop', 'postfx'); await sleep(500); await shot('07-postfx-loop-open'); await click('Loop', 'postfx');
+  await click('Export', 'postfx'); await sleep(500); await shot('07-postfx-export-menu'); await key('Escape'); await sleep(300);
   await click('Split', 'postfx'); await sleep(1200); await shot('07-postfx-split');
   await click('Original', 'postfx'); await sleep(800); await shot('07-postfx-original');
   await click('Result', 'postfx');

@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Tile } from '../../../shared/pattern/types.ts';
 import { useShell } from '../../shell/core/index.ts';
-import { cursorXY, Toggle, toast, Viewport, type ViewTransform } from '../../ui/index.ts';
+import { cursorXY, InfoTip, Toggle, toast, Viewport, type ViewTransform } from '../../ui/index.ts';
 import { PX_PER, UNIT_STEP, type PatternDoc } from './doc.ts';
 import { drawSvg } from './raster.ts';
 import { dropSprites, spriteTile } from './sprites.ts';
@@ -165,7 +165,8 @@ export function PatternCanvas({ d, tile, preview, v, active }: { d: PatternDoc; 
       overlays={
         <>
           <span className={s.sep} />
-          <Toggle label="Seams" checked={v.seams} onChange={(seams) => patchView({ seams })} className={s.seams} />
+          <Toggle label="Tile seams" checked={v.seams} onChange={(seams) => patchView({ seams })} className={s.seams} />
+          <InfoTip text="Lines every tile edge in view, so a broken repeat shows at once." />
         </>
       }
     />

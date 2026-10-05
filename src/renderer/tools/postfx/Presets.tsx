@@ -1,8 +1,8 @@
-// Presets (spec §3, §5 q4): a few built-in starting stacks, your own (save, rename, delete with the
-// confirm and an Undo toast), and share codes to copy and paste. A preset replaces the stack in one
+// Presets (spec §3, §5 q4): a few built-in starting stacks and your own (save, rename, delete with the
+// confirm and an Undo toast), and Share code to copy and paste. Two collapsed groups of the inspector. A preset replaces the stack in one
 // step, which Undo brings back; the presets themselves never enter the document's history.
 import { useEffect, useState, type KeyboardEvent } from 'react';
-import { Button, ConfirmInline, IconButton, menu, Module, TextInput, toast, Tooltip } from '../../ui/index.ts';
+import { Button, ConfirmInline, IconButton, InspectorGroup, menu, TextInput, toast, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { plural } from '../common/names.ts';
 import { createStore } from '../common/store.ts';
@@ -12,7 +12,6 @@ import type { Layer, PostFxDoc } from './doc.ts';
 import { deletePreset, freeName, loadSaved, renamePreset, saved, savePreset, type Preset } from './presets.ts';
 import { decodeStack, encodeStack } from './share.ts';
 import s from './Presets.module.css';
-import i from './Layer.module.css';
 
 /** the preset the stack last came from (this session), so the readout can say it was changed */
 const from = createStore<string | null>(null);
@@ -43,7 +42,7 @@ function Yours({ doc, d, p }: { doc: Doc; d: PostFxDoc; p: Preset }) {
           value={p.name}
           autoFocus
           selectOnFocus
-          className={i.grow}
+          className={s.grow}
           validate={(v) => (v.trim() ? null : 'A preset needs a name.')}
           onCommit={(v) => {
             setMode('rest');
@@ -118,28 +117,32 @@ export function PresetsModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
   };
 
   return (
-    <Module title="Presets" readout={readout}>
-      <div className={i.stack}>
-        <div className={s.grid} role="group" aria-label="Built-in presets" onKeyDown={onKey}>
-          {BUILT_INS.map((p, n) => (
-            <Tooltip key={p.id} content={p.about}>
-              <button type="button" aria-pressed={match?.id === p.id} tabIndex={n === focus ? 0 : -1} className={cx(s.key, match?.id === p.id && s.on)} onFocus={() => setFocus(n)} onClick={() => match?.id !== p.id && pick(doc, p)}>
-                <span className={s.text}>{p.name}</span>
-                <span className={s.count}>{p.layers.length} fx</span>
-              </button>
-            </Tooltip>
-          ))}
-        </div>
+    <InspectorGroup
+      id="postfx.presets"
+      title="Presets"
+      meta={readout}
+      defaultOpen={false}
+      actions={
+        !naming && (
+          <IconButton icon="bookmark_add" label={mine.error ?? (d.stack.length ? 'Save the stack as a preset of your own' : 'Add an effect first')} size="sm" disabled={!d.stack.length || !!mine.error} onClick={() => setNaming(true)} />
+        )
+      }
+    >
+      <div className={s.grid} role="group" aria-label="Built-in presets" onKeyDown={onKey}>
+        {BUILT_INS.map((p, n) => (
+          <Tooltip key={p.id} content={p.about}>
+            <button type="button" aria-pressed={match?.id === p.id} tabIndex={n === focus ? 0 : -1} className={cx(s.key, match?.id === p.id && s.on)} onFocus={() => setFocus(n)} onClick={() => match?.id !== p.id && pick(doc, p)}>
+              <span className={s.text}>{p.name}</span>
+              <span className={s.count}>{p.layers.length} fx</span>
+            </button>
+          </Tooltip>
+        ))}
+      </div>
 
-        <div className={cx(i.group, i.rule)}>
+      {(naming || mine.error || mine.list.length > 0) && (
+        <div className={cx(s.yours, s.rule)}>
           <div className={s.head}>
             <span className="lbl">Yours</span>
-            <span className={i.grow} />
-            {!naming && (
-              <Button size="xs" icon="bookmark_add" disabled={!d.stack.length || !!mine.error} tooltip={mine.error ?? (d.stack.length ? 'Keep this stack as a preset of your own' : 'Add an effect first')} onClick={() => setNaming(true)}>
-                Save the stack
-              </Button>
-            )}
           </div>
           {naming && (
             // Enter on the empty field takes the name it suggests (TextInput treats an unchanged field as Esc)
@@ -155,48 +158,48 @@ export function PresetsModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
             </div>
           )}
           {mine.error ? (
-            <p className={i.warn} role="status">
+            <p className={s.warn} role="status">
               {mine.error} Saving is off, so nothing is written over them.
             </p>
-          ) : mine.list.length ? (
+          ) : (
             <div className={s.list}>
               {mine.list.map((p) => (
                 <Yours key={p.id} doc={doc} d={d} p={p} />
               ))}
             </div>
-          ) : (
-            !naming && <p className={i.note}>Stacks you save show here, and stay between sessions.</p>
           )}
         </div>
+      )}
+    </InspectorGroup>
+  );
+}
 
-        <div className={cx(i.group, i.rule)}>
-          <div className={s.head}>
-            <span className="lbl">Share code</span>
-            <span className={i.grow} />
-            <Button size="xs" icon="content_copy" disabled={!d.stack.length} tooltip={d.stack.length ? 'A PFX2 code for this stack, to paste into Post FX anywhere' : 'Add an effect first'} onClick={() => void copy(encodeStack(d.stack), 'this stack')}>
-              Copy code
-            </Button>
-          </div>
-          <TextInput
-            value=""
-            mono
-            icon="content_paste"
-            placeholder="Paste a PFX2 code, then Enter"
-            validate={(v) => {
-              try {
-                decodeStack(v);
-                return null;
-              } catch (e) {
-                return e instanceof Error ? e.message : String(e);
-              }
-            }}
-            onCommit={(v) => {
-              importCode(doc, v);
-              from.set(null);
-            }}
-          />
-        </div>
-      </div>
-    </Module>
+export function ShareModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
+  return (
+    <InspectorGroup
+      id="postfx.share"
+      title="Share code"
+      defaultOpen={false}
+      actions={<IconButton icon="content_copy" label={d.stack.length ? 'Copy a PFX2 code for this stack, to paste into Post FX anywhere' : 'Add an effect first'} size="sm" disabled={!d.stack.length} onClick={() => void copy(encodeStack(d.stack), 'this stack')} />}
+    >
+      <TextInput
+        value=""
+        mono
+        icon="content_paste"
+        placeholder="Paste a PFX2 code, then Enter"
+        validate={(v) => {
+          try {
+            decodeStack(v);
+            return null;
+          } catch (e) {
+            return e instanceof Error ? e.message : String(e);
+          }
+        }}
+        onCommit={(v) => {
+          importCode(doc, v);
+          from.set(null);
+        }}
+      />
+    </InspectorGroup>
   );
 }

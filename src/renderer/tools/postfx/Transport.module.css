@@ -1,13 +1,11 @@
-/* the timeline strip under the image, the height of the canvas bar, as a docked module */
+/* the transport lives in the view strip: play, step and scrub in the strip's own row, no bar of its own */
 .transport {
   display: flex;
+  flex: 100 1 0;
   align-items: center;
   gap: 8px;
-  height: var(--canvas-bar);
-  padding: 0 12px 0 6px;
+  min-width: 0;
   overflow: hidden;
-  border-radius: var(--r-mod);
-  background: var(--module);
   container-type: inline-size;
 }
 .scrub { flex: 1; min-width: 180px; --label-w: 44px; }

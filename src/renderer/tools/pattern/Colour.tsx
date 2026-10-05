@@ -3,7 +3,7 @@
 import { useState, type KeyboardEvent } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import { fitChroma, wrapHue } from '../../../shared/palette/space.ts';
-import { ColorField, ConfirmInline, IconButton, menu, Module, Segmented, Toggle, Tooltip, useDocColour } from '../../ui/index.ts';
+import { ColorField, ConfirmInline, IconButton, InspectorGroup, menu, Segmented, Toggle, Tooltip, useDocColour } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { displayName, plural } from '../common/names.ts';
 import { paletteMenu, useReadAhead } from '../common/palettes.ts';
@@ -67,7 +67,7 @@ export function ColourModule({ doc, d }: { doc: Doc; d: PatternDoc }) {
   };
 
   return (
-    <Module
+    <InspectorGroup id="pattern.colour"
       title="Colour"
       sub={plural(d.palette.length, 'shape colour')}
       actions={<IconButton icon="palette" label="Shape colours from a Library palette" size="sm" onClick={(e) => menu.open(e.currentTarget.getBoundingClientRect(), paletteMenu('pattern'), { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined })} />}
@@ -124,11 +124,8 @@ export function ColourModule({ doc, d }: { doc: Doc; d: PatternDoc }) {
           )}
         </div>
 
-        <Segmented label="Give out" options={MODES} value={d.paletteMode} onChange={(paletteMode) => doc.transact(paletteMode === 'random' ? 'Give out colours at random' : 'Give out colours by shape', (x) => ({ ...x, paletteMode }))} />
-        <p className={i.note}>
-          {d.paletteMode === 'random' ? 'Each item draws a colour from the palette, from its own seed.' : 'The shapes that take palette colours get them in order.'} Send a palette here from the Library or Design to use its colours; one with a Background role sets the background too.
-        </p>
+        <Segmented label="Give out" info={`${d.paletteMode === 'random' ? 'Each item draws a colour from the palette, from its own seed.' : 'The shapes that take palette colours get them in order.'} Send a palette here from the Library or Design to use its colours; one with a Background role sets the background too.`} options={MODES} value={d.paletteMode} onChange={(paletteMode) => doc.transact(paletteMode === 'random' ? 'Give out colours at random' : 'Give out colours by shape', (x) => ({ ...x, paletteMode }))} />
       </div>
-    </Module>
+    </InspectorGroup>
   );
 }

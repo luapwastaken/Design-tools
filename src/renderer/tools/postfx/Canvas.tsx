@@ -6,8 +6,9 @@ import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode
 import { useShell } from '../../shell/core/index.ts';
 import { cursorXY, Icon, NumberField, Viewport, type ViewTransform } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import type { PostFxDoc } from './doc.ts';
+import type { PostFxDoc, Timeline } from './doc.ts';
 import { shown } from './preview.ts';
+import { Transport } from './Transport.tsx';
 import { patchView, type PostFxView } from './view-state.ts';
 import s from './Canvas.module.css';
 
@@ -34,9 +35,9 @@ function checker(ctx: CanvasRenderingContext2D, t: ViewTransform): CanvasPattern
 /** the divider's device column: the clip and the line land on the same whole pixel */
 const columnOf = (t: ViewTransform, x: number) => Math.round((t.x + x * t.scale) * t.dpr);
 
-type Props = { d: PostFxDoc; v: PostFxView; busy: boolean };
+type Props = { d: PostFxDoc; v: PostFxView; busy: boolean; t: Timeline; active: boolean };
 
-export function PostFxCanvas({ d, v, busy }: Props) {
+export function PostFxCanvas({ d, v, busy, t: timeline, active }: Props) {
   useShell((st) => st.settings?.theme);
   const frame = shown.use();
   const src = d.source!;
@@ -166,7 +167,12 @@ export function PostFxCanvas({ d, v, busy }: Props) {
       )}
       overlays={
         <>
-          {compare === 'split' && <NumberField label="Split" min={0} max={100} step={1} unit="%" width={96} value={Math.round(split * 100)} onChange={(p) => patchView({ split: p / 100 })} className={s.split} />}
+          {timeline.count > 1 && (
+            <>
+              <span className={s.sep} />
+              <Transport t={timeline} active={active} />
+            </>
+          )}
           {busy && (
             <span className={s.busy} role="status">
               Rendering
@@ -174,6 +180,7 @@ export function PostFxCanvas({ d, v, busy }: Props) {
           )}
         </>
       }
+      background={compare === 'split' ? <NumberField label="Split" min={0} max={100} step={1} unit="%" width={96} value={Math.round(split * 100)} onChange={(p) => patchView({ split: p / 100 })} className={s.split} /> : undefined}
     />
   );
 }

@@ -699,6 +699,19 @@ async function pattern(dir: string, palette: LibraryItemRef, dt: DocController<D
   const after = pd.get();
   check('Surprise me changes the layout in one step and leaves the shapes and colours alone', pd.depth() === steps + 1 && pd.undoLabel() === 'Surprise me' && kept(after) === kept(before) && layout(after) !== layout(before), [pd.depth() - steps, pd.undoLabel()]);
   check('and writes the file', await until(async () => (await read())?.seed === after.seed));
+  // the doc bar's Export is a menu of every format, and their copies
+  [...(host('pattern')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim() === 'Export' && !b.closest('[data-row]'))?.click();
+  const formatsShown = await until(() => {
+    const l = [...document.querySelectorAll('[role="menu"] [role="menuitem"]')].map((x) => x.textContent?.trim() ?? '');
+    return l.length ? l : null;
+  });
+  check(
+    'the doc bar’s Export opens a menu of the swatch, the artboard and the PNG, with the two SVG copies',
+    !!formatsShown && ['Illustrator swatch', 'Artboard', 'PNG'].every((n) => formatsShown.some((l) => l.includes(n))) && formatsShown.filter((l) => l.includes('Copy')).length === 2,
+    formatsShown,
+  );
+  press('Escape');
+  check('the arrangement is chosen in the options bar, as pictograms: four of them', document.querySelectorAll('[data-tool="pattern"] [role="toolbar"] [role="radio"]').length >= 4);
 
   // Send to: Dither takes the pattern as a 4096 square of its tile; over a background, not one clear pixel at a seam
   const name = (await find((i) => i.id === id))?.name;
@@ -1693,6 +1706,9 @@ async function postfx(dir: string): Promise<void> {
   const code = encodeStack(made);
   check('a share code is PFX2. and the stack, and it round-trips with every setting', code.startsWith('PFX2.') && bare(decodeStack(code)) === bare(made), code.slice(0, 24));
   pd.transact('Empty the stack', (d) => ({ ...d, stack: [] }));
+  // the Share code group starts folded: open it, as a person would, before typing into its field
+  const share = [...(host('postfx')?.querySelectorAll<HTMLButtonElement>('button[aria-expanded]') ?? [])].find((b) => b.textContent?.trim() === 'Share code');
+  if (share?.getAttribute('aria-expanded') === 'false') share.click();
   const field = await until(() => host('postfx')?.querySelector<HTMLInputElement>('input[placeholder^="Paste a PFX2"]'));
   if (field) {
     typeInto(field, code);
@@ -1766,6 +1782,15 @@ async function postfx(dir: string): Promise<void> {
   check(`a WebM made in the page opens as a clip of its ${N} frames at 25 fps`, vid?.frames === N && vid.fps === 25 && vid.w === 160 && vid.h === 96, vid);
   pd.transact('Grade', (d) => ({ ...d, stack: [layerOf('grade')] }));
   check('and datamosh is offered on it', offered(pd.get(), 'datamosh'));
+  check('the transport sits in the view strip under the canvas, one row of chrome', !!host('postfx')?.querySelector('[data-view-strip] [aria-label="Playback"]'));
+  check('the selected layer’s settings open inline under its row in the Effects group', !!(await until(() => host('postfx')?.querySelector('[role="option"][aria-selected="true"] + [data-layer-body]'))));
+  [...(host('postfx')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim() === 'Export' && !b.closest('[data-row]'))?.click();
+  const clipFormats = await until(() => {
+    const l = [...document.querySelectorAll('[role="menu"] [role="menuitem"]')].map((x) => x.textContent?.trim() ?? '');
+    return l.length ? l : null;
+  });
+  check('the doc bar’s Export lists the GIF, the PNG and the PNG sequence for a clip', !!clipFormats && ['GIF', 'PNG sequence'].every((n) => clipFormats.some((l) => l.includes(n))), clipFormats);
+  press('Escape');
   const before = toastStore.get().length;
   exportRow('postfx', 'PNG sequence')?.click();
   const clipDone = await until(() => toastStore.get().slice(before).find((t) => t.icon === 'download'), 60_000);
