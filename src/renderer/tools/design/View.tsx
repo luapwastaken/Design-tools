@@ -22,7 +22,7 @@ import { Inspector } from './Inspector.tsx';
 import { DesignPopover, type PopState } from './Popovers.tsx';
 import { proposals } from './proposals.ts';
 import { takeText } from './sources.ts';
-import { Toolbar } from './Toolbar.tsx';
+import { SimulateSelect, Toolbar } from './Toolbar.tsx';
 import { hot, patchView, useView } from './view-state.ts';
 import s from './View.module.css';
 
@@ -114,7 +114,14 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
                 <Kbd>Space</Kbd> generate <Kbd>L</Kbd> lock <Kbd>I</Kbd> pick <Kbd>V</Kbd> in use
               </span>
             }
-            background={<Button size="xs" variant="ghost" icon="tune" iconEnd="keyboard_arrow_down" onClick={(e) => openView(e, v)}>View</Button>}
+            background={
+              <>
+                <SimulateSelect v={v} />
+                <Button size="xs" variant="ghost" icon="tune" iconEnd="keyboard_arrow_down" onClick={(e) => openView(e, v)}>
+                  View
+                </Button>
+              </>
+            }
             readout={
               <span className={s.readout}>
                 {v.sim !== 'normal' && <span className={s.sim}>Simulating: {SIM_NAME[v.sim]}</span>}

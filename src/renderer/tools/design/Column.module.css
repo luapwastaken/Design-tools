@@ -107,6 +107,10 @@ span.plate { cursor: grab; }
   padding: 0 7px 0 5px;
   border: 1px solid currentColor;
   border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
   white-space: nowrap;
 }
 /* a pair below its target: the ink fills the pill, so it is the one thing on the column that shouts */

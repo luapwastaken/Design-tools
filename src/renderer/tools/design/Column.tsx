@@ -73,9 +73,11 @@ export type ColumnProps = {
   onDragEnd(): void;
   onRole(anchor: HTMLElement): void;
   onLock(): void;
+  onBadge(): void;
   onCopy(): void;
   onDelete(): void;
   onRename(name: string): void;
+  /** the badge: select the pair and open the dock on it */
   /** the "+" on the seam after this column (not on the last) */
   seam?: ReactNode;
 };
@@ -150,23 +152,31 @@ export function Column(p: ColumnProps) {
           </Tooltip>
         )}
         <Readouts oklch={w.oklch} full={p.full} />
-        {p.badge && <BadgeRow b={p.badge} />}
+        {p.badge && <BadgeRow b={p.badge} onPick={p.onBadge} />}
       </div>
       {p.seam}
     </div>
   );
 }
 
-function BadgeRow({ b }: { b: Badge }) {
+function BadgeRow({ b, onPick }: { b: Badge; onPick(): void }) {
   const name = displayName(b.other);
   return (
     <span className={s.badgeRow}>
       <b className={s.aa}>Aa</b>
-      <Tooltip content={`${b.ratio.toFixed(2)}:1 on ${name}${b.guessed ? ' (set roles to choose the pair)' : ''}`}>
-        <span className={cx(s.badge, !b.ok && s.fail)}>
-          <Icon name={b.ok ? "check" : "priority_high"} size={14} />
+      <Tooltip content={`${b.ratio.toFixed(2)}:1 on ${name}${b.guessed ? ' (set roles to choose the pair)' : ''}. Click to select the pair and open the checks.`}>
+        <button
+          type="button"
+          className={cx(s.badge, !b.ok && s.fail)}
+          tabIndex={-1}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPick();
+          }}
+        >
+          <Icon name={b.ok ? 'check' : 'priority_high'} size={14} />
           {b.ratio.toFixed(1)} {b.grade}
-        </span>
+        </button>
       </Tooltip>
       <span className={s.onName}>on {name}</span>
     </span>

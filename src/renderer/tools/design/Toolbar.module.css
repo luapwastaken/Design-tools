@@ -1,4 +1,8 @@
-.grow { flex: 1; min-width: 0; }
+/* a container, so the bar can give up its least needed parts as the work area narrows */
+.wrap { min-width: 0; container-type: inline-size; }
+@container (max-width: 860px) {
+  .reroll { display: none; }
+}
 /* the key hint inside the primary button: a hairline cap in the button's own ink */
 .key {
   margin-left: 4px;
@@ -10,4 +14,4 @@
 }
 .rule { flex: none; width: 1px; height: 18px; background: var(--line); }
 .style { width: 120px; }
-.sim { width: 150px; }
+.sim { width: 140px; }

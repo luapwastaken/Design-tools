@@ -41,6 +41,7 @@ export function Toolbar({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v: Desig
     );
   };
   return (
+    <div className={s.wrap}>
     <OptionsBar>
       <Button variant="primary" icon="star_shine" onClick={() => generateNow(doc)} shortcut="Space" tooltip="Generate a new palette: unlocked columns change, locked ones stay">
         Generate
@@ -55,18 +56,24 @@ export function Toolbar({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v: Desig
       </OptionsField>
       <OptionsField label="Seed">
         <NumberField label="Seed" hideLabel value={v.seed} min={0} max={99999} step={1} width={72} onChange={(seed) => regenerate(doc, { seed })} />
-        <IconButton icon="casino" label="Reroll: a new seed" size="sm" onClick={() => regenerate(doc, { seed: 1 + Math.floor(Math.random() * 99999) })} />
+        <IconButton icon="casino" label="Reroll: a new seed" size="sm" className={s.reroll} onClick={() => regenerate(doc, { seed: 1 + Math.floor(Math.random() * 99999) })} />
       </OptionsField>
       <span className={s.rule} aria-hidden="true" />
       <Button ref={add} icon="add" iconEnd="keyboard_arrow_down" onClick={open}>
         Add
       </Button>
       {CAN_PICK && <IconButton icon="colorize" label="Pick a colour from the screen" shortcut="I" onClick={() => void eyedrop(doc)} />}
-      <span className={s.grow} />
-      <OptionsField label="Simulate">
-        <Select label="" options={SIMULATE} value={v.sim} onChange={(sim) => patchView({ sim })} className={s.sim} />
-      </OptionsField>
     </OptionsBar>
+    </div>
+  );
+}
+
+/** the view filter, in the stage's strip beside the View menu: it changes how the stage looks, never the file */
+export function SimulateSelect({ v }: { v: DesignView }) {
+  return (
+    <OptionsField label="Simulate">
+      <Select label="" options={SIMULATE} value={v.sim} onChange={(sim) => patchView({ sim })} className={s.sim} />
+    </OptionsField>
   );
 }
 

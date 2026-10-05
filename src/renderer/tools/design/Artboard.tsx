@@ -12,7 +12,7 @@ import { Column, GhostColumn } from './Column.tsx';
 import { DeleteConfirm } from './DeleteConfirm.tsx';
 import { displayName, moveIds, namesOf, plural, type DesignDoc, type DesignView, mapSwatch } from './doc.ts';
 import { clearProposals, proposals, toggleLock } from './proposals.ts';
-import { armed, hot } from './view-state.ts';
+import { armed, hot, patchView } from './view-state.ts';
 import s from './Artboard.module.css';
 
 /** internal reorders carry this type (spec 9), so OS files dropped here still go to onFiles */
@@ -146,6 +146,11 @@ export function Artboard({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v: Desi
             insert={insertOf(i)}
             focusable={sel[0] === w.id}
             badge={badgeFor(w, shownList)}
+            onBadge={() => {
+              const other = badgeFor(w, shownList)?.other.id;
+              select(other ? [w.id, other] : [w.id]);
+              patchView({ dock: true });
+            }}
             onSelect={(e) => clickSelect(d, w.id, { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey })}
             onMenu={(at, fromKey) => openMenu(w, at, fromKey)}
             onDragStart={onDragStart(w)}
