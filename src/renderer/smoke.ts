@@ -25,7 +25,7 @@ import { shell } from './shell/core/index.ts';
 import { select as selectInDesign } from './tools/design/actions.ts';
 import { newSwatch as designSwatch, recolour as recolourInDesign, type DesignDoc } from './tools/design/doc.ts';
 import { clearProposals, proposals } from './tools/design/proposals.ts';
-import { getView as designView, patchView as patchDesign } from './tools/design/view-state.ts';
+import { armed as armedInDesign, getView as designView, patchView as patchDesign } from './tools/design/view-state.ts';
 import { used, type DitherDoc } from './tools/dither/doc.ts';
 import { lookOf as ditherLook, withLook } from './tools/dither/looks.ts';
 import { dithered, ready as ditherReady, type Result } from './tools/dither/pipeline.ts';
@@ -117,6 +117,15 @@ function openCheck(id: ToolId): { open: string; bad: string; first: string } | n
   const label = (r?: HTMLElement) => r?.children[1]?.textContent ?? '';
   return { open: label(rows.find((r) => r.ariaSelected === 'true')), bad: label(rows.find((r) => r.firstElementChild?.getAttribute('data-icon') === 'error')), first: label(rows[0]) };
 }
+/** Design's options-bar Generate (its label carries the Space key hint after it) */
+const generateButton = () => [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Generate') && shows(b));
+/** the Checks dock's header text and its cards' titles, as they show */
+const dockText = () => {
+  const dock = host('design')?.querySelector('section[aria-label="Checks"]');
+  return dock ? { head: dock.querySelector('header')?.textContent ?? '', cards: [...dock.querySelectorAll('h2')].map((h) => h.textContent ?? '') } : null;
+};
+/** a menu row that shows, by its text */
+const menuRow = (text: string) => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((r) => r.textContent?.includes(text) && shows(r));
 /** a textarea's text as typing leaves it (React hears the input event) */
 function type(el: HTMLTextAreaElement, text: string): void {
   Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(el, text);
@@ -182,7 +191,7 @@ async function full(): Promise<void> {
   const dp = designDoc();
   shell.setActive('design');
   check('Design starts new', dp.state().t === 'new' && dp.depth() === 0, dp.state());
-  check('an empty Design palette opens on Build', (await until(() => button('design', 'Generate'))) && designView().tab === 'build', designView().tab);
+  check('an empty Design palette shows the start screen with Generate in the options bar', (await until(() => generateButton())) && !!host('design')?.textContent?.includes('Start a palette'), designView().stage);
   addSwatch(dp, 'Smoke 1');
   const first = await until(() => (dp.state().t === 'saved' ? dp.source() : null));
   if (!check('the first commit creates a palette in Scratch', first?.collection === 'Scratch', first ?? dp.state())) return;
@@ -386,15 +395,14 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   dd.transact('Add swatches', (d) => ({ ...d, swatches: [...d.swatches, ground, text] }));
   check('an edit in Design writes the file', await until(async () => (await swatchCount(palette!.id)) === n + 2), n);
 
-  // a visit to Check with no check chosen opens on the first that fails (Smoke text on Smoke ground)
-  patchDesign({ tab: 'check', check: null });
-  const opened = await until(() => (openCheck('design')?.first === 'Contrast' ? openCheck('design') : null));
-  check('Check opens on the first failing check', opened?.bad === 'Contrast' && opened.open === opened.bad, opened);
-  patchDesign({ check: 'contrast' });
+  // the Checks dock sits under the artboard, always attached: four cards, and it counts what fails (Smoke text on Smoke ground)
+  patchDesign({ dock: true, inks: false, stage: 'swatches' });
+  const dock = await until(() => (dockText()?.head.includes('to look at') ? dockText() : null));
+  check('the Checks dock shows its four cards and counts what is left to look at', JSON.stringify(dock?.cards) === JSON.stringify(['Checks', 'Contrast', 'Colour vision', 'Value', 'Print']) && /\d+ to look at/.test(dock?.head ?? ''), dock);
 
   const inDesign = (id: string) => dd.get().swatches.find((w) => w.id === id);
   const fixButton = await until(() =>
-    [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => /^(Lift|Darken) to L/.test(b.textContent ?? '') && b.parentElement?.parentElement?.textContent?.includes('Smoke text on Smoke ground')),
+    [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => /^(Lift|Darken) to L/.test(b.textContent ?? '') && b.parentElement?.textContent?.includes('Smoke text on Smoke ground')),
   );
   if (!check('the contrast check offers a fix for Smoke text on Smoke ground', fixButton)) return;
   const before = dd.get();
@@ -442,18 +450,26 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   }
   patchDesign({ format: 'ase' });
 
-  // each tab keeps its state when switched: Build's half-typed paste is still there after Check and Preview
-  patchDesign({ tab: 'build', build: 'paste' });
-  const box = await until(() => host('design')?.querySelector<HTMLTextAreaElement>('textarea[aria-label="Colours to parse"]'));
-  if (box) type(box, 'Half typed');
-  for (const tab of ['check', 'preview', 'build'] as const) {
-    patchDesign({ tab });
-    await sleep(50);
+  // + Add > Paste codes: a popover anchored to the menu, live parse, Add makes proposals on the artboard
+  clearProposals();
+  button('design', 'Add')?.click();
+  const pasteRow = await until(() => menuRow('Paste codes'));
+  if (check('the + Add menu offers Paste codes', pasteRow)) {
+    pasteRow!.click();
+    const box = await until(() => document.querySelector<HTMLTextAreaElement>('[role="dialog"][aria-label="Paste codes"] textarea[aria-label="Colours to parse"]'));
+    if (check('Paste codes opens a popover with its field', box)) {
+      type(box!, 'Smoke Ember: E8643C');
+      const addPasted = await until(() => [...(box!.closest('[role="dialog"]')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Add') && !b.disabled));
+      addPasted?.click();
+      check('Add in the popover proposes the pasted colour on the artboard and closes the popover', (await until(() => proposals.get()?.items.length === 1)) && (await until(() => !document.querySelector('[role="dialog"][aria-label="Paste codes"]'))) && !!host('design')?.querySelector('[data-ghost]'), proposals.get()?.items.length);
+    }
   }
-  const typed = host('design')?.querySelector<HTMLTextAreaElement>('textarea[aria-label="Colours to parse"]');
-  check('a tab switch keeps each tab’s state: Build’s typed paste outlasts Check and Preview', box && typed === box && shows(box) && box.value === 'Half typed', typed?.value);
-  if (box) type(box, '');
-  patchDesign({ build: 'generate' });
+  clearProposals();
+
+  // the doc bar's Swatches | In use switch swaps the stage and leaves the dock and the inspector in place
+  [...(host('design')?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])].find((r) => r.textContent?.includes('In use'))?.click();
+  check('In use shows the page with the dock and the inspector still there', (await until(() => designView().stage === 'inuse' && host('design')?.querySelector('[role="img"][aria-label*="website preview"]'))) && !!dockText() && !!host('design')?.querySelector('aside[aria-label="Inspector"]'), designView().stage);
+  patchDesign({ stage: 'swatches' });
 
   // ≈CMYK's four fields fit their values (100 on a black) at the inspector's narrowest
   const black = designSwatch([0, 0, 0], 'Smoke black');
@@ -475,23 +491,65 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   const prefs = await api.invoke('settings.get');
   check('the inspector’s Wheel switch draws the wheel and saves it, as the model is saved', wheel && (await until(() => host('design')?.querySelector('[data-picker="wheel"]'))) && prefs.pickerStyle === 'wheel' && prefs.pickerModel === 'rgb', [prefs.pickerStyle, prefs.pickerModel]);
 
-  // New palette: one step to an empty, unlinked document that opens on Build; each first edit makes
+  // New palette: one step to an empty, unlinked document that opens on the start screen; each first edit makes
   // its own Scratch palette (never writes over the last one); Undo goes back to the palette that was open
   const held = dd.source();
-  patchDesign({ tab: 'preview' });
+  patchDesign({ stage: 'inuse' });
   const newWithSwatch = async (name: string) => {
     await shell.newDoc('design');
-    const fresh = dd.get().swatches.length === 0 && !dd.source() && dd.undoLabel() === 'New palette' && !!(await until(() => designView().tab === 'build' && button('design', 'Generate')));
+    const fresh = dd.get().swatches.length === 0 && !dd.source() && dd.undoLabel() === 'New palette' && !!(await until(() => generateButton() && host('design')?.textContent?.includes('Start a palette')));
     dd.transact('Add swatch', (d) => ({ ...d, swatches: [designSwatch([0.5, 0.1, 200], name)] }));
     const made = await until(() => dd.state().t === 'saved' && dd.source()?.collection === 'Scratch' && dd.source());
     return { fresh, id: made ? made.itemId : null };
   };
   const first = await newWithSwatch('Smoke new 1');
   const second = await newWithSwatch('Smoke new 2');
-  check('New palette: an empty, unlinked document in one step, open on Build', first.fresh && second.fresh);
+  check('New palette: an empty, unlinked document in one step, open on the start screen', first.fresh && second.fresh);
   check('each New palette’s first edit makes its own Scratch item', first.id && second.id && first.id !== second.id && first.id !== held?.itemId && (await swatchCount(first.id)) === 1, [first.id, second.id]);
   for (let i = 0; i < 4; i++) ctrlZ();
   check('Undo goes back to the palette that was open', await until(() => dd.source()?.itemId === held?.itemId && dd.state().t === 'saved'), dd.source());
+  patchDesign({ stage: 'swatches' });
+
+  // Space generates (never while a text field has focus); an empty palette is made in one step, roles
+  // suggested; the next Space rerolls it in place and a locked (L) column stays exactly as it was
+  await shell.newDoc('design');
+  clearProposals();
+  (document.activeElement as HTMLElement | null)?.blur?.();
+  patchDesign({ count: 5, locked: [] });
+  const typing = document.createElement('input');
+  typing.type = 'text';
+  host('design')?.appendChild(typing);
+  typing.focus();
+  press(' ', { code: 'Space' });
+  const idle = dd.get().swatches.length === 0 && !proposals.get();
+  typing.remove();
+  check('Space is ignored while a text field has focus', idle);
+  (document.activeElement as HTMLElement | null)?.blur?.();
+  press(' ', { code: 'Space' });
+  const made = (await until(() => dd.get().swatches.length === 5 && dd.get().swatches)) || null;
+  check('Space on an empty palette makes the palette in one step, with roles suggested', made && dd.undoLabel() === 'Generate palette' && made.some((w) => w.role === 'Background') && made.some((w) => w.role === 'Text'), dd.undoLabel());
+  const pin = made ? made[1] : null;
+  if (pin) {
+    selectInDesign([pin.id]);
+    press('l', { code: 'KeyL' });
+    check('L locks the selected column (its lock stays visible)', designView().locked.includes(pin.id) && !!(await until(() => host("design")?.querySelector(`[data-swatch="${pin.id}"] button[aria-pressed="true"]`))), designView().locked);
+    const steps = dd.depth();
+    press(' ', { code: 'Space' });
+    const again = (await until(() => dd.depth() === steps + 1 && dd.get().swatches)) || null;
+    check('Space again rerolls in place, one step: the locked column survives, the rest change', !!again && again.length === 5 && JSON.stringify(again[1].oklch) === JSON.stringify(pin.oklch) && again.some((w, i) => i !== 1 && JSON.stringify(w.oklch) !== JSON.stringify(made![i].oklch)), dd.depth() - steps);
+    press('Delete', { code: 'Delete' });
+    check('Delete leaves a locked column alone (no confirm arms)', !!dd.get().swatches.find((w) => w.id === pin.id) && !armedInDesign.get());
+    // a later Space on a palette that was edited by hand proposes beside it and moves nothing
+    dd.transact('Edit', (d) => ({ ...d, swatches: d.swatches.map((w, i) => (i === 0 ? { ...w, oklch: [0.5, 0.05, 100] } : w)) }));
+    selectInDesign([dd.get().swatches[0].id]);
+    patchDesign({ locked: [] });
+    // the columns share the board, but nothing around it moves: the board and the dock keep their boxes
+    const frame = () => ['[role="listbox"]', 'section[aria-label="Checks"]'].map((q) => host('design')?.querySelector(q)?.getBoundingClientRect()).map((r) => [r?.top, r?.height]);
+    const before = JSON.stringify(frame());
+    press(' ', { code: 'Space' });
+    check('a hand-edited palette gets proposals on the artboard and nothing around the board moves', (await until(() => host('design')?.querySelector('[data-ghost]'))) && (proposals.get()?.items.length ?? 0) > 0 && JSON.stringify(frame()) === before, [before, JSON.stringify(frame())]);
+    clearProposals();
+  }
 
   // Send to Design from Dither: the dithered colours as proposals, the document untouched (the CGA
   // look, so four colours show)

@@ -15,9 +15,10 @@ export const HARMONIES: { kind: HarmonyKind; label: string }[] = [
   { kind: 'tetrad', label: 'Tetrad' },
 ];
 
-export function runHarmony(base: Swatch, kind: HarmonyKind): void {
+/** `withBase`: the base is not in the palette yet (a typed colour), so it is proposed with the rest */
+export function runHarmony(base: Pick<Swatch, 'name' | 'oklch'>, kind: HarmonyKind, withBase = false): void {
   const label = HARMONIES.find((x) => x.kind === kind)!.label;
-  propose('harmony', `${label} of ${displayName(base)}`, harmony(base.oklch, kind));
+  propose('harmony', `${label} of ${displayName(base)}`, [...(withBase ? [base.oklch] : []), ...harmony(base.oklch, kind)]);
 }
 
 /**

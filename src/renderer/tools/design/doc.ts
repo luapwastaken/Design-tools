@@ -12,7 +12,10 @@ export { displayName, listNames, named, plural } from '../common/names.ts';
 export type DesignDoc = { swatches: Swatch[]; notes: string; ramps?: RampSpec[] };
 
 export type BuildMethod = 'harmony' | 'generate' | 'image' | 'logo' | 'gradient' | 'paste';
-export type DesignTab = 'build' | 'check' | 'preview';
+/** what the stage shows (the doc bar's switch): the palette as an artboard, or the palette in use on a page */
+export type DesignStage = 'swatches' | 'inuse';
+/** the view filter over the artboard and the In use page; never written to the document */
+export type Simulate = 'normal' | Cvd | 'greyscale';
 export type CheckId = 'contrast' | 'value' | 'vision' | 'print';
 
 /** Never in history: saved with the workspace through shell.setView (spec §7.1). */
@@ -22,12 +25,17 @@ export type DesignView = {
   surround: Surround;
   /** short = Hex + L C H; full adds RGB and ≈CMYK rows */
   chipData: 'short' | 'full';
-  /** the job under the palette (UX pass): Build · Check · Preview, each keeping its state */
-  tab: DesignTab;
-  /** the open check; null opens the first failing one */
-  check: CheckId | null;
+  stage: DesignStage;
+  /** the Checks dock under the artboard is open */
+  dock: boolean;
+  /** the Colour vision card's chosen simulation */
   cvd: Cvd;
-  build: BuildMethod;
+  /** the view filter on the stage */
+  sim: Simulate;
+  /** swatch ids pinned with L: a re-roll keeps them, Delete leaves them */
+  locked: string[];
+  /** the Inks table of the Print card takes the whole dock */
+  inks: boolean;
   /** Value and Hue lock: the OKLCH picker's drags keep L or H; typed values still change them (spec §5) */
   lockL: boolean;
   lockH: boolean;

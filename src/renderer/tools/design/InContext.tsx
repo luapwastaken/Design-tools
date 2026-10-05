@@ -1,7 +1,7 @@
 // In context (plan unit X): the palette on a small website, a light and a dark version side by
 // side, with every text-on-fill pair in it checked by the shared grade. Pure presentation; which
 // colour plays which part is decided in context-slots.ts.
-import { memo, useMemo, useRef, type CSSProperties } from 'react';
+import { createContext, memo, useContext, useMemo, useRef, type CSSProperties } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { Icon, Module, Tooltip } from '../../ui/index.ts';
@@ -20,8 +20,11 @@ const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 const css = (x: Slot) => cssColor(x.oklch);
 
+/** a failing marker selects the swatch it is about (the artboard's, in Design) */
+const PickSwatch = createContext<((id: string) => void) | null>(null);
+
 /** `hidden`: behind the Checks switch, it keeps the last scenes it drew rather than work out new ones unseen */
-export const InContext = memo(function InContext({ swatches, hidden = false }: { swatches: Swatch[]; hidden?: boolean }) {
+export const InContext = memo(function InContext({ swatches, hidden = false, onSelect }: { swatches: Swatch[]; hidden?: boolean; onSelect?(id: string): void }) {
   const last = useRef<[Scene | null, Scene | null] | null>(null);
   const [light, dark] = useMemo(
     () => (hidden && last.current ? last.current : (last.current = [scene(swatches, 'light'), scene(swatches, 'dark')])),
@@ -30,12 +33,14 @@ export const InContext = memo(function InContext({ swatches, hidden = false }: {
   // no colours: the tool keeps Preview shut (Build shows), so there is nothing to say here
   if (!light || !dark) return null;
   return (
-    <div className={s.root}>
-      <div className={s.pair}>
-        <Frame scene={light} />
-        <Frame scene={dark} />
+    <PickSwatch.Provider value={onSelect ?? null}>
+      <div className={s.root}>
+        <div className={s.pair}>
+          <Frame scene={light} />
+          <Frame scene={dark} />
+        </div>
       </div>
-    </div>
+    </PickSwatch.Provider>
   );
 });
 
@@ -181,10 +186,19 @@ function Pill({ sc, status, label }: { sc: Scene; status: Status; label: string 
  * it covers none of it; hover says by how much.
  */
 function Flag({ pair, inline }: { pair: Pair; inline?: boolean }) {
+  const pick = useContext(PickSwatch);
   if (pair.ok) return null;
+  const id = pair.fg.swatchId ?? pair.bg.swatchId;
+  const go = pick && id ? () => pick(id) : undefined;
   return (
-    <Tooltip content={describe(pair)}>
-      <span className={inline ? s.flagInline : s.flag}>
+    <Tooltip content={go ? `${describe(pair)} Click to select ${pair.fg.swatchId ? pair.fg.name : pair.bg.name}.` : describe(pair)}>
+      <span
+        className={cx(inline ? s.flagInline : s.flag, go && s.pickable)}
+        role={go ? 'button' : undefined}
+        tabIndex={go ? 0 : undefined}
+        onClick={go}
+        onKeyDown={go && ((e) => e.key === 'Enter' && go())}
+      >
         <Icon name="priority_high" size={14} />
       </span>
     </Tooltip>

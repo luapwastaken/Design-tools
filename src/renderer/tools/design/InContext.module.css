@@ -187,3 +187,5 @@
 }
 .flag { position: absolute; top: -8px; right: -9px; }
 .flagInline { position: relative; margin-left: 6px; vertical-align: -3px; }
+.pickable { cursor: pointer; }
+.pickable:hover, .pickable:focus-visible { outline: 2px solid var(--cross); outline-offset: 1px; }
