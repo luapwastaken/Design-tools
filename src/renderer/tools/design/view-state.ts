@@ -12,10 +12,12 @@ export const DEFAULT_VIEW: DesignView = {
   selected: [],
   surround: 'grey',
   chipData: 'short',
-  tab: 'check',
-  check: null,
+  stage: 'swatches',
+  dock: true,
   cvd: 'deutan',
-  build: 'generate',
+  sim: 'normal',
+  locked: [],
+  inks: false,
   lockL: false,
   lockH: false,
   flagL: 6,
@@ -33,21 +35,21 @@ export const DEFAULT_VIEW: DesignView = {
 const ENUMS: Partial<Record<keyof DesignView, readonly string[]>> = {
   surround: ['grey', 'ground', 'plain'],
   chipData: ['short', 'full'],
-  tab: ['build', 'check', 'preview'],
-  check: ['contrast', 'value', 'vision', 'print'],
+  stage: ['swatches', 'inuse'],
   cvd: ['protan', 'deutan', 'tritan', 'achromat'],
-  build: ['harmony', 'generate', 'image', 'logo', 'gradient', 'paste'],
+  sim: ['normal', 'protan', 'deutan', 'tritan', 'achromat', 'greyscale'],
   format: EXPORT_FORMATS,
   space: ['oklch', 'oklab'],
 };
 
-/** before the UX pass the work area's switch was `lower` */
-const LOWER: Record<string, DesignView['tab']> = { checks: 'check', context: 'preview' };
+/** before the Bone Ember pass the work area's switch was `tab` (Preview is In use now), and before the UX pass `lower` */
+const IN_USE = new Set(['preview', 'context']);
 
 /** what a saved workspace holds, field by field; anything odd falls back to the default (a dropped field, like `picker`, is left behind) */
 function sanitize(raw: unknown): DesignView {
   const r = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
-  const out: Record<string, unknown> = { ...DEFAULT_VIEW, ...(typeof r.lower === 'string' && LOWER[r.lower] && { tab: LOWER[r.lower] }) };
+  const was = typeof r.tab === 'string' ? r.tab : typeof r.lower === 'string' ? r.lower : '';
+  const out: Record<string, unknown> = { ...DEFAULT_VIEW, ...(IN_USE.has(was) && { stage: 'inuse' }) };
   for (const [key, def] of Object.entries(DEFAULT_VIEW) as [keyof DesignView, unknown][]) {
     const v = r[key];
     const ok = Array.isArray(def)
@@ -80,7 +82,7 @@ const subscribe = (fn: () => void) => {
 
 export const useView = (): DesignView => useSyncExternalStore(subscribe, getView);
 
-/** swatch ids a check row or ruler pin points at, lit in the swatch row while hovered */
+/** swatch ids a check row or ruler pin points at, outlined on the artboard while hovered */
 export const hot = createStore<string[]>([]);
 
 /** hovering or focusing a check's row lights its swatches in the row above */

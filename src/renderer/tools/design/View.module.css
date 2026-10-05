@@ -1,4 +1,4 @@
-/* brief §5: work area at least 540px, inspector 340–460 (380); the inspector gives way first */
+/* brief 5: work area at least 540px, inspector 340-460 (380); the inspector gives way first */
 .view {
   display: grid;
   grid-template-columns: minmax(min(540px, calc(100% - 340px - var(--gap))), 1fr) minmax(340px, var(--insp));
@@ -7,16 +7,25 @@
   min-height: 0;
 }
 
-/* the doc bar, the palette at its own height, then the open job in the rest (a long palette
-   scrolls inside itself first) */
+/* doc bar, options bar, the stage (the artboard and its view strip), then the Checks dock */
 .work {
   position: relative;
   display: grid;
-  grid-template-rows: var(--docbar) auto minmax(260px, 1fr);
+  grid-template-rows: var(--docbar) var(--options-h) minmax(0, 1fr);
   gap: var(--gap);
   min-width: 0;
   min-height: 0;
 }
-.pane { min-width: 0; min-height: 0; }
-.pane[hidden] { display: none; }
+.work[data-open="true"] { grid-template-rows: var(--docbar) var(--options-h) minmax(220px, 1fr) auto; }
 
+.stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; border-radius: var(--r-mod); background: var(--module); }
+/* the pasteboard: a neutral surround the palette is judged on (SPEC 0), the artboard floating on it */
+.board { display: flex; flex: 1 1 0; min-width: 0; min-height: 0; padding: 22px 26px; }
+.inuse { display: flex; flex: 1 1 0; min-width: 0; min-height: 0; overflow: auto; }
+.inuse > * { flex: 1; min-width: 0; }
+
+.hints { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; color: var(--ink-3); font-size: var(--fs-meta); white-space: nowrap; }
+.hints > kbd { margin-left: 8px; }
+.hints > kbd:first-child { margin-left: 0; }
+.readout { display: inline-flex; align-items: center; gap: 14px; color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); white-space: nowrap; }
+.sim { color: var(--signal); }

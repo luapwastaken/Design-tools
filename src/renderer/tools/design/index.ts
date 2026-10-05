@@ -3,12 +3,14 @@
 import { asSvg, unsupportedImage } from '../../lib/load.ts';
 import type { ToolDefinition } from '../../shell/tool.ts';
 import { baseName, fetchBlob, isSvg } from '../common/take.ts';
-import { armDelete, duplicate, eyedrop, newPalette, step } from './actions.ts';
+import { ROLES } from '../../../shared/palette/roles.ts';
+import { armDelete, copySelected, duplicate, escape, eyedrop, generateNow, keepAll, newPalette, nudge, roleSelected, step, toggleLocked } from './actions.ts';
 import { emptyDoc, fromPayload, toPayload, type DesignDoc } from './doc.ts';
 import { clearProposals } from './proposals.ts';
 import { takeImage, takeSvg } from './sources.ts';
 import { StatusSlot } from './StatusSlot.tsx';
 import { View } from './View.tsx';
+import { getView, patchView } from './view-state.ts';
 
 export const tool: ToolDefinition<DesignDoc> = {
   id: 'design',
@@ -64,13 +66,25 @@ export const tool: ToolDefinition<DesignDoc> = {
     return files.filter((f) => f !== file);
   },
 
+  // the shell leaves bare keys to a focused text field (foundation 9), so none of these needs to look
   shortcuts: (doc) => [
+    { keys: 'Space', label: 'Generate', run: () => generateNow(doc) },
+    { keys: 'L', label: 'Lock or unlock the selected swatches', run: () => toggleLocked(doc) },
     { keys: 'Delete', label: 'Delete swatches', run: () => armDelete(doc) },
     { keys: 'Ctrl+D', label: 'Duplicate', run: () => duplicate(doc) },
     { keys: 'Ctrl+N', label: 'New palette', run: () => void newPalette() },
     { keys: 'ArrowLeft', label: 'Previous swatch', run: () => step(doc, -1) },
     { keys: 'ArrowRight', label: 'Next swatch', run: () => step(doc, 1) },
+    { keys: 'Alt+ArrowLeft', label: 'Move the selection left', run: () => nudge(doc, -1) },
+    { keys: 'Alt+ArrowRight', label: 'Move the selection right', run: () => nudge(doc, 1) },
     { keys: 'I', label: 'Pick from screen', run: () => void eyedrop(doc) },
+    { keys: 'C', label: 'Copy the hex', run: () => copySelected(doc) },
+    { keys: 'A', label: 'Keep all proposals', run: () => keepAll(doc) },
+    { keys: 'Escape', label: 'Discard proposals, then clear the selection', run: () => escape() },
+    { keys: 'V', label: 'Swatches or In use', run: () => patchView({ stage: getView().stage === 'inuse' ? 'swatches' : 'inuse' }) },
+    { keys: 'Ctrl+J', label: 'Show or hide the checks', run: () => patchView({ dock: !getView().dock }) },
+    ...ROLES.map((role, i) => ({ keys: String(i + 1), label: `Role: ${role}`, run: () => roleSelected(doc, role) })),
+    { keys: '0', label: 'Clear the role', run: () => roleSelected(doc, null) },
   ],
   StatusSlot,
   View,

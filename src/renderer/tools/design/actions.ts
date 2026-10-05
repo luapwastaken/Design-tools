@@ -1,12 +1,18 @@
 // Edits the row, the inspector and the keyboard share. Each is one history step (spec §8).
-import { hexToOklch, type Oklch } from '../../../shared/color/index.ts';
+import { hexToOklch, toHex, type Oklch } from '../../../shared/color/index.ts';
 import type { DocController } from '../../../shared/doc-api.ts';
+import { generate } from '../../../shared/palette/generate.ts';
+import { gradientStops } from '../../../shared/palette/gradient.ts';
+import { ROLES } from '../../../shared/palette/roles.ts';
 import { fitChroma } from '../../../shared/palette/space.ts';
+import type { Swatch } from '../../../shared/types.ts';
 import { shell } from '../../shell/core/index.ts';
 import { pickFromScreen, toast } from '../../ui/index.ts';
 import { nextL } from './adjust.ts';
-import { displayName, insertAfter, listNames, newSwatch, plural, recolour, removeIds, type DesignDoc, type DesignView } from './doc.ts';
-import { clearProposals, dropProposals, type Proposal } from './proposals.ts';
+import { suggestRoles } from './artboard.ts';
+import { runGenerate } from './build.ts';
+import { displayName, insertAfter, listNames, moveIds, newSwatch, plural, recolour, removeIds, type DesignDoc, type DesignView } from './doc.ts';
+import { clearProposals, dropProposals, proposals, proposalsFrom, type Proposal } from './proposals.ts';
 import { armed, getView, patchView } from './view-state.ts';
 
 export type Doc = DocController<DesignDoc>;
@@ -128,4 +134,129 @@ export async function eyedrop(doc: Doc): Promise<void> {
   }
 }
 
-export const armDelete = (doc: Doc): void => void (selection(doc.get()).length && armed.set(true));
+/** a pinned (L) swatch is left alone: the toast says how to free it */
+export function armDelete(doc: Doc): void {
+  const d = doc.get();
+  const ids = selection(d);
+  if (!ids.length) return;
+  const pinned = d.swatches.filter((w) => ids.includes(w.id) && getView().locked.includes(w.id));
+  if (pinned.length) return void toast.show({ icon: 'lock', message: `${listNames(pinned.map(displayName))} ${pinned.length === 1 ? 'is' : 'are'} locked. Press L to unlock before deleting.` });
+  armed.set(true);
+}
+
+/** L: pin or free the selected swatches (a view setting; the file never holds it) */
+export function toggleLocked(doc: Doc): void {
+  const d = doc.get();
+  const ids = selection(d);
+  if (!ids.length) return;
+  const have = getView().locked.filter((id) => d.swatches.some((w) => w.id === id));
+  const all = ids.every((id) => have.includes(id));
+  patchView({ locked: all ? have.filter((id) => !ids.includes(id)) : [...new Set([...have, ...ids])] });
+}
+
+export function copyHex(w: Swatch): void {
+  void navigator.clipboard.writeText(toHex(w.oklch).toUpperCase()).then(
+    () => toast.show({ icon: 'content_copy', message: 'Copied hex.' }),
+    () => toast.show({ kind: 'error', message: "Couldn't copy the hex." }),
+  );
+}
+
+/** a job role belongs to one swatch: giving it to another takes it from the first (Undo brings it back) */
+export function setRole(doc: Doc, id: string, role: string | null): void {
+  const d = doc.get();
+  const w = d.swatches.find((x) => x.id === id);
+  if (!w || w.role === role) return;
+  const job = role !== null && (ROLES as readonly string[]).includes(role);
+  const from = job ? d.swatches.filter((x) => x.id !== id && x.role === role) : [];
+  doc.transact(role ? `Set ${displayName(w)} to ${role}` : `Clear ${displayName(w)}'s role`, (x) => ({
+    ...x,
+    swatches: x.swatches.map((s) => (s.id === id ? { ...s, role } : job && s.role === role ? { ...s, role: null } : s)),
+  }));
+  if (!from.length) return;
+  const after = doc.get();
+  toast.show({
+    icon: 'swap_horiz',
+    message: `${role} moved from ${displayName(from[0])} to ${displayName(w)}.`,
+    when: () => doc.get() === after,
+    undo: () => void (doc.get() === after && doc.undo()),
+  });
+}
+
+/** a "+" on the seam after `afterId`: a colour half way to the next one, in the gradient's space */
+export function insertBetween(doc: Doc, afterId: string): void {
+  const d = doc.get();
+  const i = d.swatches.findIndex((w) => w.id === afterId);
+  const [a, b] = [d.swatches[i], d.swatches[i + 1]];
+  if (!a || !b) return;
+  const w = newSwatch(gradientStops(a.oklch, b.oklch, 1, getView().space)[0]);
+  doc.transact('Insert swatch', (x) => insertAfter(x, a.id, [w]));
+  select([w.id]);
+}
+
+/** Alt+arrows: the selection one place along (a transform only, one history step) */
+export function nudge(doc: Doc, dir: -1 | 1): void {
+  const d = doc.get();
+  const ids = selection(d);
+  const at = d.swatches.map((w, i) => (ids.includes(w.id) ? i : -1)).filter((i) => i >= 0);
+  if (!at.length || (dir < 0 ? at[0] === 0 : at.at(-1) === d.swatches.length - 1)) return;
+  doc.transact(ids.length === 1 ? 'Reorder swatch' : `Reorder ${ids.length} swatches`, (x) => moveIds(x, ids, dir < 0 ? at[0] - 1 : at.at(-1)! + 2));
+}
+
+export function copySelected(doc: Doc): void {
+  const w = activeSwatch(doc.get());
+  if (w) copyHex(w);
+}
+
+/** A: every proposal on the board joins the palette */
+export function keepAll(doc: Doc): void {
+  const p = proposals.get();
+  if (p) addProposals(doc, p.items);
+}
+
+/** Esc: the armed Delete first, then the proposals, then the selection */
+export function escape(): void {
+  if (armed.get()) return armed.set(false);
+  if (proposals.get()) return clearProposals();
+  select([]);
+}
+
+/** 1 to 7 and 0: the selected swatch's role */
+export function roleSelected(doc: Doc, role: string | null): void {
+  const w = activeSwatch(doc.get());
+  if (w) setRole(doc, w.id, role);
+}
+
+/** the palette exactly as the last Generate made it: the next one rerolls it in place */
+let fresh = '';
+const signature = (list: Swatch[]) => list.map((w) => w.id + w.oklch.join(',')).join('|');
+
+/** a changed Style, Colours or Seed redoes what Generate last made (its proposals, or the palette it is still) and only that */
+export function regenerate(doc: Doc, patch: Partial<DesignView>): void {
+  patchView(patch);
+  const d = doc.get();
+  if (proposalsFrom('generate') || (d.swatches.length && signature(d.swatches) === fresh)) generateNow(doc, getView().seed);
+}
+
+/**
+ * Generate (Space), always with a new seed. An empty palette, or one still as Generate made it,
+ * is rerolled in place in one step, the pinned columns staying; any other palette gets the new
+ * colours as proposals beside its own.
+ */
+export function generateNow(doc: Doc, seed = 1 + Math.floor(Math.random() * 99999)): void {
+  patchView({ seed });
+  const v = getView();
+  const d = doc.get();
+  if (proposalsFrom('generate') || (d.swatches.length && signature(d.swatches) !== fresh)) return runGenerate(d.swatches, v);
+  clearProposals();
+  const pinned = (w: Swatch | undefined) => (w && v.locked.includes(w.id) ? w : null);
+  const slots = Array.from({ length: v.count }, (_, i) => pinned(d.swatches[i]));
+  const made = generate({ seed, count: v.count, preset: v.preset, locked: slots.map((w) => w?.oklch ?? null) });
+  const taken = new Set(d.swatches.filter((w) => pinned(w)).flatMap((w) => (w.role ? [w.role] : [])));
+  const roles = suggestRoles(made, taken, new Set(slots.flatMap((w, i) => (w ? [i] : []))));
+  const next = made.map((o, i) => slots[i] ?? { ...newSwatch(o, '', roles[i]), id: d.swatches[i]?.id ?? crypto.randomUUID() });
+  const extra = d.swatches.slice(v.count).filter((w) => pinned(w));
+  doc.transact(d.swatches.length ? 'Reroll palette' : 'Generate palette', (x) => ({ ...x, swatches: [...next, ...extra] }));
+  fresh = signature(doc.get().swatches);
+  const kept = selection(doc.get(), v);
+  select(kept.length ? kept : [next[0].id]);
+}

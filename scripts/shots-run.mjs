@@ -10,32 +10,41 @@ export async function run({ page, ev, shot, clickText, drop, rail, photo, four, 
 
   // 01 Colour: Design
   await rail(1);
-  await shot('01-design-build-empty');
-  for (const [t, f] of [['Harmony', 'harmony'], ['From image', 'from-image'], ['From logo', 'from-logo'], ['Gradient', 'gradient'], ['Paste', 'paste']]) {
-    await tab('~' + t, 'design'); await sleep(600); await shot(`01-design-build-${f}-empty`);
+  await shot('01-design-empty');
+  await click('Add', 'design'); await sleep(500); await shot('01-design-empty-add-menu');
+  await key('Escape'); await sleep(300);
+  // Generate on an empty palette makes it in one step; a column is selected by clicking it
+  await click('~Generate', 'design'); await settle();
+  const column = (n) => ev((n) => { const c = document.querySelectorAll('[data-tool="design"] [role=listbox] > [data-swatch]')[n]; const r = c?.getBoundingClientRect(); return r ? [r.x + r.width / 2, r.y + r.height * 0.45] : null; }, n);
+  const at = await column(3);
+  if (at) { await page.mouse.move(at[0], at[1]); await page.mouse.click(at[0], at[1]); }
+  await settle(); await shot('01-design-artboard-selected');
+  // the "+" on a seam shows while the pointer is on it
+  const seam = await ev(() => { const c = document.querySelectorAll('[data-tool="design"] [role=listbox] > [data-swatch]')[1]; const r = c?.getBoundingClientRect(); return r ? [r.right, r.y + r.height / 2] : null; });
+  if (seam) { await page.mouse.move(seam[0] - 3, seam[1]); await sleep(200); await shot('01-design-seam'); await page.mouse.move(5, 5); }
+  // + Add: the menu, then Start from one colour as a popover, then its proposals on the artboard
+  await click('Add', 'design'); await sleep(500); await shot('01-design-add-menu');
+  await clickText('~Start from one colour', 'body', '[role=menuitem]'); await sleep(600); await shot('01-design-add-popover');
+  await clickText('~Triad', 'body', '[role=dialog] [role=listitem]'); await settle(); await shot('01-design-proposals');
+  await click('Keep all', 'design'); await sleep(800);
+  // the Checks dock: Print's Inks across the whole dock, then back
+  await shot('01-design-checks-dock');
+  await click('Inks', 'design'); await settle(); await shot('01-design-checks-inks');
+  await click('Back to the checks', 'design'); await sleep(500);
+  // In use, and the Simulate filter on the artboard
+  await click('In use', 'design'); await settle(); await shot('01-design-in-use');
+  await click('Swatches', 'design'); await sleep(500);
+  await clickText('Normal', 'body', '[aria-haspopup=listbox]'); await sleep(400);
+  await clickText('Deutan', 'body', '[role=option]'); await settle(); await shot('01-design-simulate');
+  await clickText('Deutan', 'body', '[aria-haspopup=listbox]'); await sleep(400);
+  await clickText('Normal', 'body', '[role=option]'); await sleep(500);
+  // inspector: the app-wide picker style switch
+  for (const label of ['Wheel', 'Sliders', 'OKLCH plane', 'Square']) {
+    await clickText(label, T('design'), '[role=radio]'); await sleep(700);
+    if (label !== 'Square') await shot(`01-design-inspector-${label.toLowerCase().replace(' ', '-')}`);
   }
-  await tab('~Generate', 'design');
-  await click('Generate', 'design'); await settle(); // fills proposals
-  await shot('01-design-build-generate-proposals');
-  // add the proposals as swatches if the UI offers it
-  await click('Add all', 'design');
-  await sleep(800);
-  await shot('01-design-build-swatches');
-  await tab('Check', 'design'); await settle(); await shot('01-design-check');
-  const rows = await ev(() => [...document.querySelectorAll('[data-tool="design"] [role=tablist][aria-orientation=vertical]')].find((l) => l.getClientRects().length)?.querySelectorAll('[role=tab]').length ?? 0);
-  for (let i = 1; i < Math.min(rows, 4); i++) {
-    await ev((i) => [...document.querySelectorAll('[data-tool="design"] [role=tablist][aria-orientation=vertical]')].find((l) => l.getClientRects().length).querySelectorAll('[role=tab]')[i].click(), i);
-    await sleep(500); await shot(`01-design-check-row${i + 1}`);
-  }
-  await tab('Preview', 'design'); await settle(); await shot('01-design-preview');
-  const pv = await visible('design');
-  console.log('  design preview controls:', JSON.stringify(pv));
-  let k = 2;
-  for (const label of pv.filter((l) => /^(crop_square|donut_large|tune|change_history)$/.test(l))) {
-    await clickText(label, T('design'), '[role=tab],[role=radio]'); await sleep(800); await shot(`01-design-inspector-${k++}-${{ crop_square: 'square', donut_large: 'wheel', tune: 'sliders', change_history: 'oklch-plan' }[label]}`);
-  }
-  await tab('Build', 'design');
-  await drop('design', photo); await settle(); await shot('01-design-build-after-image-drop');
+  await drop('design', photo); await settle(); await shot('01-design-after-image-drop');
+  await click('Discard', 'design'); await sleep(500);
 
   // 02 Colour: Illustration
   await rail(2); await shot('02-illustration-light-empty');

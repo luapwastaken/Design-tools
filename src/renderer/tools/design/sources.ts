@@ -5,7 +5,7 @@ import { svgColours } from '../../../shared/svg/index.ts';
 import { pixelsOf, unique } from '../common/take.ts';
 import { createStore } from '../common/store.ts';
 import { propose } from './proposals.ts';
-import { getView, patchView } from './view-state.ts';
+import { getView } from './view-state.ts';
 
 /** the last image the Image tab pulled from, kept small so a new count re-runs at once */
 export const picture = createStore<{ name: string; pixels: ImageData } | null>(null);
@@ -15,7 +15,6 @@ export async function takeImage(blob: Blob, name: string): Promise<void> {
   const pixels = await pixelsOf(blob, name);
   if (!pixels.data.some((a, i) => i % 4 === 3 && a >= 128)) throw new Error(`${name} has no opaque pixels to take colours from.`);
   picture.set({ name, pixels });
-  patchView({ tab: 'build', build: 'image' });
   extract();
 }
 
@@ -32,7 +31,6 @@ export function takeSvg(svgs: (string | null | undefined)[], name: string): void
   const colours = svgs.filter(Boolean).flatMap((s) => svgColours(s!));
   if (!colours.length) throw new Error(`${name} draws nothing with a colour to take.`);
   propose('logo', `From ${name}`, unique(colours));
-  patchView({ tab: 'build', build: 'logo' });
 }
 
 /** pasted text: hex lists, rgb(), hsl(), oklch()… (shared/palette/paste) */
