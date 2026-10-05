@@ -2,11 +2,13 @@
 // the Selected ramp (top right), the Colour picker (bottom left of the right column) and a tabbed
 // section (Ramp settings | Light & preview | Check values | Paint, Alt+1-4). A new tab is one more
 // entry in TABS. Paint stays mounted while another tab shows, so it keeps its engine and its painting.
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
+import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { Button, IconButton, toast } from '../../ui/index.ts';
 import { DocBar } from '../common/DocBar.tsx';
 import { ExportPalette } from '../common/ExportPalette.tsx';
+import { NotesModule } from '../common/Notes.tsx';
 import { plural } from '../common/names.ts';
 import { TabbedSection, type SectionTab } from '../common/Section.tsx';
 import { addBase, newPalette, type Doc } from './actions.ts';
@@ -21,19 +23,21 @@ import { takeImage } from './proposals.ts';
 import { SelectedRamp } from './Ramps.tsx';
 import { RampSettings } from './RampSettings.tsx';
 import { pickImage } from './starts.ts';
-import { hot, patchView, useView, type IllustrationView } from './view-state.ts';
+import { hot, patchView, SIZES, useView, type IllustrationView } from './view-state.ts';
 import s from './View.module.css';
 
 type Tab = IllustrationView['tab'];
 type Ctx = { doc: Doc; d: IllustrationDoc; v: IllustrationView; checks: Checks; empty: boolean; source: string | null; paint: HTMLElement };
 
 /** the tabs, in order: adding a feature is one more entry here (Alt+N in index.ts follows the order) */
-const TABS: { id: Tab; label: string; needsColour?: boolean; badge?(c: Ctx): number; render(c: Ctx): React.ReactNode }[] = [
+const TABS: { id: Tab; label: string; needsColour?: boolean; when?(c: Ctx): boolean; badge?(c: Ctx): number; render(c: Ctx): React.ReactNode }[] = [
   { id: 'settings', label: 'Ramp settings', render: (c) => <RampSettings doc={c.doc} d={c.d} v={c.v} /> },
   { id: 'light', label: 'Light & preview', needsColour: true, render: (c) => <LightTab doc={c.doc} d={c.d} v={c.v} /> },
   // mounted only while it shows
   { id: 'check', label: 'Check values', needsColour: true, badge: (c) => c.checks.problems, render: (c) => <CheckTab key={c.source} doc={c.doc} d={c.d} v={c.v} checks={c.checks} /> },
   { id: 'paint', label: 'Paint', render: (c) => <PaintSlot host={c.paint} /> },
+  // only while the file has notes (an imported palette's warnings); clearing them closes it
+  { id: 'notes', label: 'Notes', when: (c) => !!c.d.notes, render: (c) => <NotesModule doc={c.doc} /> },
 ];
 
 /** the paint pane lives in a DOM node of its own; the Paint tab holds it while it shows, so the engine is never torn down */
@@ -57,7 +61,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const empty = d.swatches.length === 0;
   // Light and Check have nothing to show without a colour; Paint doesn't need the palette (the tubes work alone)
   const ctx: Ctx = { doc, d, v, checks, empty, source, paint };
-  const tabs: SectionTab[] = TABS.map((t) => ({
+  const tabs: SectionTab[] = TABS.filter((t) => !t.when || t.when(ctx)).map((t) => ({
     id: t.id,
     label: t.label,
     badge: !empty && t.badge ? t.badge(ctx) : undefined,
@@ -86,12 +90,21 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         send={{ empty: 'Add a base colour first: an empty palette has nothing to send' }}
         exportButton={<ExportPalette tool="illustration" swatches={d.swatches} named={() => named(doc.get())} format={v.format} onFormat={(format) => patchView({ format })} />}
       />
-      <div className={s.main}>
-        <Palette doc={doc} d={d} v={v} />
+      <div className={s.main} style={{ '--ramps-w': `${v.rampsWidth}px`, '--ramp-h': `${v.rampHeight}px`, '--picker-w': `${v.pickerWidth}px` } as CSSProperties}>
+        <div className={s.cell}>
+          <Palette doc={doc} d={d} v={v} />
+          <ResizeHandle label="Ramps width" value={v.rampsWidth} min={SIZES.rampsWidth[0]} max={SIZES.rampsWidth[1]} reset={SIZES.rampsWidth[2]} onChange={(rampsWidth) => patchView({ rampsWidth })} />
+        </div>
         <div className={s.right}>
-          <SelectedRamp doc={doc} d={d} v={v} />
+          <div className={s.cell}>
+            <SelectedRamp doc={doc} d={d} v={v} />
+            <ResizeHandle edge="bottom" label="Selected ramp height" value={v.rampHeight} min={SIZES.rampHeight[0]} max={SIZES.rampHeight[1]} reset={SIZES.rampHeight[2]} onChange={(rampHeight) => patchView({ rampHeight })} />
+          </div>
           <div className={s.lower}>
-            <PickerSection doc={doc} d={d} v={v} />
+            <div className={s.cell}>
+              <PickerSection doc={doc} d={d} v={v} />
+              <ResizeHandle label="Colour picker width" value={v.pickerWidth} min={SIZES.pickerWidth[0]} max={SIZES.pickerWidth[1]} reset={SIZES.pickerWidth[2]} onChange={(pickerWidth) => patchView({ pickerWidth })} />
+            </div>
             <TabbedSection tabs={tabs} value={tab} onChange={(id) => patchView({ tab: id as Tab })} bodyClassName={tab === 'paint' ? s.flush : undefined} />
           </div>
         </div>

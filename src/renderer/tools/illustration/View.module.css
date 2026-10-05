@@ -1,11 +1,15 @@
 /* Sections on the ground, a 6px gap apart (--gap): Ramps | (Selected ramp over (Colour picker | tabs)).
    At the window's minimum the columns shrink and each section scrolls inside; nothing overlaps. */
 .view { display: grid; grid-template-rows: var(--docbar) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
-.main { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
-.right { display: grid; grid-template-rows: minmax(200px, 300px) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
-.lower { display: grid; grid-template-columns: minmax(0, min(560px, 40%)) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
+.main { display: grid; grid-template-columns: minmax(200px, var(--ramps-w)) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
+.right { display: grid; grid-template-rows: minmax(160px, var(--ramp-h)) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
+.lower { display: grid; grid-template-columns: minmax(0, min(var(--picker-w), 60%)) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
 
 /* the Paint tab: no padding, no scrolling (the paper fits its box) */
 .flush { padding: 0; gap: 0; overflow: hidden; }
 .slot { flex: 1; min-height: 0; min-width: 0; display: flex; }
 .host { display: flex; flex: 1; min-width: 0; min-height: 0; }
+
+/* a section with a drag handle on its edge: the handle sits in the gap beside it */
+.cell { position: relative; display: grid; min-width: 0; min-height: 0; }
+.cell > section { min-width: 0; min-height: 0; }

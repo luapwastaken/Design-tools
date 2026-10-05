@@ -1,7 +1,7 @@
 // The Palette panel (left, every mode): one item per ramp as a chip strip, reorder by dragging,
 // the hero star, the "+" menu; colours in no ramp; and picked-from-image proposals in periwinkle.
 // Selection here is the selection everywhere: it carries across the modes.
-import { useEffect, useState, type DragEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type PointerEvent } from 'react';
 import { cssColor, toHex } from '../../../shared/color/index.ts';
 import { MATERIALS } from '../../../shared/palette/ramp.ts';
 import type { RampSpec, Swatch } from '../../../shared/types.ts';
@@ -10,7 +10,7 @@ import { Button, ConfirmInline, Icon, IconButton, menu, toast, Tooltip, type Men
 import { fmtL, plural } from '../common/names.ts';
 import { Section } from '../common/Section.tsx';
 import { addBase, addProposals, arm, deleteLoose, deleteRamp, duplicate, focusStep, move, rampsFromLoose, reorder, select, selected, type Doc } from './actions.ts';
-import { brokenSteps, looseOf, nameOf, rampName, revertRamp, setSpec, stepsOf, wordOf, type IllustrationDoc } from './doc.ts';
+import { brokenSteps, looseOf, nameOf, rampName, regen, revertRamp, setSpec, stepsOf, wordOf, type IllustrationDoc } from './doc.ts';
 import { addMenu, pickImage } from './starts.ts';
 import { Start } from './Start.tsx';
 import { clearProposals, proposals } from './proposals.ts';
@@ -181,6 +181,7 @@ function RampItem(p: ItemProps) {
   const edited = steps.filter((w) => w.edited).length;
   const material = MATERIALS.find((m) => m.id === r.material)?.label ?? r.material;
   const on = p.sel?.group === r.id;
+  const baseless = !steps.some((w) => w.step === 0);
   const baseId = steps.find((w) => w.step === 0)?.id ?? steps[0]?.id ?? null;
 
   const openMenu = (at: MenuAnchor, fromKey: boolean) => {
@@ -196,6 +197,8 @@ function RampItem(p: ItemProps) {
         { label: 'Move down', icon: 'arrow_downward', disabled: i === d.ramps.length - 1, onSelect: () => reorder(doc, r.id, i + 2) },
         { label: edited ? `Back to generated (${plural(edited, 'edited step')})` : 'Back to generated', icon: 'restart_alt', disabled: !edited, onSelect: () => doc.transact(`Regenerate ${name}`, (x) => revertRamp(x, r.id)) },
         { label: 'Copy hex codes', onSelect: () => void copyHexes(name, steps) },
+        // another tool removed the base: the ramp still knows its colour and can make it again
+        { label: 'Rebuild base', icon: 'restart_alt', disabled: !baseless, onSelect: () => doc.transact(`Rebuild ${name}`, (x) => regen(x, r.id)) },
         'separator',
         { label: 'Delete ramp', icon: 'delete', shortcut: 'Delete', danger: true, onSelect: () => arm(doc, r.id) },
       ],
@@ -231,7 +234,12 @@ function RampItem(p: ItemProps) {
             {name}
           </button>
         </Tooltip>
-        <span className={s.meta}>{material}</span>
+        <Tooltip content={edited ? `${plural(edited, 'step')} edited by hand: the ramp leaves ${edited === 1 ? 'it' : 'them'} when it changes` : ''} disabled={!edited}>
+          <span className={s.meta}>
+            {material} · {plural(steps.length, 'step')}
+            {edited > 0 && <span className={s.editedCount}> · {edited} edited</span>}
+          </span>
+        </Tooltip>
         {broken.size > 0 && (
           <Tooltip content="A step is as light as, or lighter than, the one before it. Lightness should fall from highlight to deep shadow; a hand edit, or a base moved past one, breaks it.">
             <span className={s.broken}>
@@ -283,8 +291,52 @@ async function copyHexes(name: string, steps: Swatch[]): Promise<void> {
 
 type ChipsProps = { doc: Doc; d: IllustrationDoc; v: IllustrationView; list: Swatch[]; sel: Swatch | null; lit: string[]; broken?: Set<string>; tall: boolean };
 
-/** the steps as chips on one line: the neutral ring marks the selected one, clear of its colour */
+/** a step dragged from here lands in the Paint tab's well (pointer drag, the tray's own way); the click that ends a drag is not a click */
+const SLOP = 4;
+function useChipDrag() {
+  const drag = useRef<{ id: string; x: number; y: number; moving: boolean } | null>(null);
+  const dragged = useRef(false);
+  const ghost = useRef<HTMLSpanElement>(null);
+  const end = (drop: boolean, e?: PointerEvent) => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+    if (ghost.current) ghost.current.hidden = true;
+    dragged.current = d.moving;
+    if (!drop || !d.moving || !e) return;
+    const r = document.querySelector('[data-tool="illustration"] [role="group"][aria-label="Mixing well"]')?.getBoundingClientRect();
+    if (r && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) toWell(d.id);
+  };
+  const props = (w: Swatch, colour: string) => ({
+    onPointerDown(e: PointerEvent<HTMLButtonElement>) {
+      if (e.button !== 0 || getView().tab !== 'paint') return;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      dragged.current = false;
+      drag.current = { id: w.id, x: e.clientX, y: e.clientY, moving: false };
+      if (ghost.current) ghost.current.style.background = colour;
+    },
+    onPointerMove(e: PointerEvent<HTMLButtonElement>) {
+      const d = drag.current;
+      if (!d || (!d.moving && Math.hypot(e.clientX - d.x, e.clientY - d.y) < SLOP)) return;
+      d.moving = true;
+      const g = ghost.current!;
+      g.hidden = false;
+      g.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+    },
+    onPointerUp: (e: PointerEvent<HTMLButtonElement>) => end(true, e),
+    onLostPointerCapture: () => end(false),
+  });
+  const wasDragged = () => {
+    const was = dragged.current;
+    dragged.current = false;
+    return was;
+  };
+  return { props, ghost, wasDragged };
+}
+
+/** the steps as chips on one line, each over its value in greyscale: the neutral ring marks the selected one, clear of its colour */
 function Chips({ d, v, list, sel, lit, broken, tall }: ChipsProps) {
+  const dnd = useChipDrag();
   const onKeyDown = (w: Swatch) => (e: KeyboardEvent<HTMLButtonElement>) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault();
@@ -306,18 +358,23 @@ function Chips({ d, v, list, sel, lit, broken, tall }: ChipsProps) {
               data-step={w.id}
               tabIndex={sel?.id === w.id ? 0 : -1}
               className={cx(s.chip, sel?.id === w.id && s.sel, lit.includes(w.id) && s.hot, w.edited && s.edited, broken?.has(w.id) && s.broken, w.step === 0 && s.base)}
-              style={{ background: cssColor(w.oklch) }}
+              {...dnd.props(w, cssColor(w.oklch))}
               onClick={(e) => {
+                if (dnd.wasDragged()) return;
                 select(w.id);
                 if (v.tab === 'paint' && e.shiftKey) toWell(w.id);
                 else clicked.set({ id: w.id, at: performance.now() });
                 e.currentTarget.focus();
               }}
               onKeyDown={onKeyDown(w)}
-            />
+            >
+              <i className={s.colour} style={{ background: cssColor(w.oklch) }} />
+              <i className={s.value} style={{ background: cssColor([w.oklch[0], 0, 0]) }} />
+            </button>
           </Tooltip>
         );
       })}
+      <span ref={dnd.ghost} className={s.ghostDrag} hidden aria-hidden="true" />
     </div>
   );
 }

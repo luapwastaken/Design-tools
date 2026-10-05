@@ -353,8 +353,8 @@ export function PaintCanvas(p: PaintCanvasProps) {
                 onLoad={() => load('well')}
               />
             </InspectorGroup>
-            <InspectorGroup id="illustration.paints" title="Paints" meta={`${tubes.length} tubes`} sub="click to load the brush">
-              <Tray sources={tubes} current={brush?.id ?? ''} onLoad={load} onAddToWell={intoWell} well={wellEl} onOver={setOver} />
+            <InspectorGroup id="illustration.paints" title="Paints" meta={`${tubes.length} tubes${sources.length > tubes.length ? ` · ${sources.length - tubes.length} colours` : ''}`} sub="click to load the brush, or drag into the well">
+              <Tray sources={sources} current={brush?.id ?? ''} onLoad={load} onAddToWell={intoWell} well={wellEl} onOver={setOver} />
             </InspectorGroup>
           </>,
           p.mixer,

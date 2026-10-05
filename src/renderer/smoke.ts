@@ -2022,6 +2022,7 @@ async function illustration(): Promise<void> {
   }
   check('a tab switch keeps the painting: Paint, Ramp settings, Light, Check, Paint', painted(), liveEngine.get()?.state);
   await modesUi();
+  await restoredUi();
   await paintUi(id);
 
   // an edit while Design holds the palette forks it: the painting stays on screen and goes with the fork
@@ -2236,6 +2237,223 @@ async function modesUi(): Promise<void> {
   chord('4');
   await until(() => tab() === 'paint', 1000);
 }
+
+/** a synthetic pointer sequence on `el` (the three arguments are client positions); pointer capture has no real pointer to take, so it is a no-op for the duration */
+async function dragOn(el: Element, from: [number, number], to: [number, number], then?: () => void): Promise<void> {
+  const proto = HTMLElement.prototype;
+  const [cap, rel] = [proto.setPointerCapture, proto.releasePointerCapture];
+  proto.setPointerCapture = () => {};
+  proto.releasePointerCapture = () => {};
+  const fire = (type: string, [x, y]: [number, number]) =>
+    el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerup' ? 0 : 1, clientX: x, clientY: y }));
+  try {
+    fire('pointerdown', from);
+    fire('pointermove', [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2]);
+    fire('pointermove', to);
+    then?.();
+    fire('pointerup', to);
+  } finally {
+    proto.setPointerCapture = cap;
+    proto.releasePointerCapture = rel;
+  }
+  await frame();
+}
+const centre = (el: Element): [number, number] => {
+  const r = el.getBoundingClientRect();
+  return [r.left + r.width / 2, r.top + r.height / 2];
+};
+/** a content colour with no chroma: the greyscale value strip */
+const grey = (el: Element | null | undefined) => {
+  const c = el ? getComputedStyle(el).backgroundColor : '';
+  const lch = /^ok?lch\(\S+ ([\d.e-]+)/.exec(c);
+  if (lch) return +lch[1] <= 0.003;
+  const n = (/\(([^)]+)\)/.exec(c)?.[1] ?? '').split(/[ ,/]+/).slice(0, 3).map(Number);
+  return n.length === 3 && n.every(Number.isFinite) && Math.max(...n) - Math.min(...n) <= (c.startsWith('color(') ? 0.005 : 1);
+};
+
+/**
+ * What the colour redesign had dropped and Illustration has again: the three drag handles (and what
+ * they keep and refit), the value strips and the "N steps · M edited" line, Rebuild base in the menu,
+ * all three shapes together, the hero star and arrow keys in All ramps, a lit ramp beside its settings,
+ * the Value ruler's cluster fix and the colour-vision detail, the palette's colours in the tray and
+ * dragged into the well, and the Notes tab.
+ */
+async function restoredUi(): Promise<void> {
+  const il = illustrationDoc();
+  const ui = host('illustration')!;
+  const view = () => illustrationView();
+  const stored = () => shell.view('illustration') as Record<string, unknown> | null;
+  const handle = (label: string) => ui.querySelector<HTMLElement>(`[role="separator"][aria-label="${label}"]`);
+  const section = (title: string) => [...ui.querySelectorAll('section')].find((sec) => sec.querySelector('h2')?.textContent === title);
+  const selSection = () => ui.querySelector('[aria-label="Swatch board"]')?.closest('section');
+  const size = (el: Element | null | undefined) => el?.getBoundingClientRect() ?? new DOMRect();
+  const ramp0 = il.get().ramps[0].id;
+  const step = stepsOf(il.get(), ramp0)[1];
+  patchIllustration({ tab: 'paint', rampsWidth: 320, rampHeight: 300, pickerWidth: 560 });
+  await frame();
+
+  // the handles: drag, kept in the workspace, the paper refits; a double-click resets; arrows nudge
+  const paper = () => paperCanvas()!;
+  const paperBox = () => [paper().width, paper().height];
+  const refit = async (was: number[]) => !!(await until(() => paper().width !== was[0] || paper().height !== was[1], 1500));
+  for (const [label, key, def, dx, dy, grows] of [
+    ['Ramps width', 'rampsWidth', 320, 60, 0, 'w'],
+    ['Selected ramp height', 'rampHeight', 300, 0, 40, 'h'],
+    ['Colour picker width', 'pickerWidth', 560, -50, 0, 'w'],
+  ] as const) {
+    const h = handle(label);
+    if (!check(`${label}: there is a handle on the seam`, !!h && shows(h), label)) continue;
+    const box = () => size(label === 'Ramps width' ? section('Ramps') : label === 'Selected ramp height' ? selSection() : section('Colour picker'));
+    const at = box();
+    const was = paperBox();
+    await dragOn(h!, centre(h!), [centre(h!)[0] + dx, centre(h!)[1] + dy]);
+    const want = def + (dx || dy);
+    check(`${label}: a drag sets it (${want}) and the workspace keeps it`, await until(() => view()[key] === want && stored()?.[key] === want), [view()[key], stored()?.[key]]);
+    const now = box();
+    // the picker is held to 60% of its row, so on a narrow window it moves less than the handle did
+    const lower = section('Colour picker')!.parentElement!.parentElement!;
+    const goal = key === 'pickerWidth' ? Math.min(want, lower.clientWidth * 0.6) : want;
+    check(`${label}: the section follows`, Math.abs((grows === 'w' ? now.width : now.height) - goal) <= 2, [at.width, now.width, at.height, now.height, goal]);
+    check(`${label}: the paper refits`, await refit(was), [was, paperBox()]);
+    h!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    check(`${label}: a double-click resets it`, await until(() => view()[key] === def && stored()?.[key] === def), view()[key]);
+    h!.focus();
+    press(label === 'Selected ramp height' ? 'ArrowDown' : 'ArrowRight');
+    check(`${label}: an arrow key nudges it`, await until(() => view()[key] === def + 10), view()[key]);
+    h!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    await until(() => view()[key] === def);
+  }
+  // a saved size from before the handles is just the default (sanitize), and one out of range is pulled in
+  patchIllustration({ rampsWidth: 320 });
+
+  // the value strip under every step, and the step count with its edited count
+  const board = ui.querySelector('[role="listbox"][aria-label="Ramps"]')!;
+  const chips = [...board.querySelectorAll<HTMLElement>('[data-step]')];
+  check('every step chip in the Ramps list has a greyscale value strip under its colour', chips.length === 10 && chips.every((c) => c.querySelectorAll('i').length === 2 && grey(c.querySelectorAll('i')[1])), chips.length);
+  patchIllustration({ tab: 'settings' });
+  await sleep(60);
+  const sel = [...ui.querySelectorAll<HTMLElement>('[role="listbox"][aria-label="Swatch board"] [data-step]')];
+  check('and every step in the Selected ramp has one', sel.length === 5 && sel.every((c) => grey([...c.querySelectorAll('i')].at(-1))), sel.length);
+  const rampItem = () => board.querySelector<HTMLElement>(`[data-row="${ramp0}"]`);
+  const edited0 = stepsOf(il.get(), ramp0).filter((w) => w.edited).length;
+  check('a ramp says how many steps it has, and how many are edited by hand', /5 steps/.test(rampItem()?.textContent ?? '') && (edited0 ? rampItem()?.textContent?.includes(`${edited0} edited`) : !/edited/.test(rampItem()?.textContent ?? '')), [edited0, rampItem()?.textContent]);
+  const depth = il.depth();
+  const fresh = stepsOf(il.get(), ramp0).find((w) => !w.edited && w.step !== 0)!;
+  il.transact('Change a step', (d) => recolour(d, fresh.id, [0.5, 0.05, 20]));
+  check('and the count follows an edit', await until(() => rampItem()?.textContent?.includes(`5 steps · ${edited0 + 1} edited`)), rampItem()?.textContent);
+  check('the Selected ramp says so too', (selSection()?.querySelector('header')?.textContent ?? '').includes(`${edited0 + 1} edited`), selSection()?.querySelector('header')?.textContent);
+  il.undo();
+  check('(put back)', il.depth() === depth);
+
+  // Rebuild base is in each ramp's menu
+  rampItem()?.querySelector<HTMLButtonElement>('button[aria-label="More"]')?.click();
+  check('a ramp’s ... menu has Rebuild base', !!(await until(() => menuRow('Rebuild base'))), [...document.querySelectorAll('[role="menuitem"]')].map((r) => r.textContent));
+  press('Escape');
+  await sleep(60);
+
+  // the surround of the steps board is 18% grey unless chosen otherwise
+  check('the steps board sits on 18% grey by default', view().board === 'grey', view().board);
+
+  // Light & preview: sphere, cube and cloth together
+  const hero0 = il.get().ramps[0].hero;
+  patchIllustration({ tab: 'light', preview: { ...view().preview, shape: 'sphere', all: false } });
+  await sleep(60);
+  const allShapes = () => [...ui.querySelectorAll<HTMLElement>('button[role="radio"]')].find((b) => b.textContent?.trim() === 'All' && shows(b));
+  allShapes()?.click();
+  const three = await until(() => ui.querySelector('[data-three]'), 1500);
+  check('Shape: All shows a sphere, a cube and a cloth fold together', !!three && ['sphere', 'cube', 'cloth'].every((n) => three!.querySelector(`canvas[aria-label$="a ${n}"], canvas[aria-label$="a cloth fold"]`)) && three!.querySelectorAll('canvas').length === 3, three?.innerHTML.length);
+  // All ramps: the hero star on its small sphere, and arrow keys between them
+  il.transact('Hero', (d) => setSpec(d, ramp0, { hero: true }));
+  patchIllustration({ preview: { ...view().preview, shape: 'sphere', all: true } });
+  const cells = await until(() => {
+    const c = [...ui.querySelectorAll<HTMLElement>('[role="radiogroup"][aria-label="Ramps under the light"] [role="radio"]')];
+    return c.length === 2 ? c : null;
+  }, 1500);
+  check('All ramps puts the hero star on the hero ramp’s sphere only', !!cells && !!cells[0].querySelector('[data-icon="star"]') && !cells[1].querySelector('[data-icon="star"]'), cells?.map((c) => c.textContent));
+  if (cells) {
+    const sel0 = view().selected;
+    cells.find((c) => c.tabIndex === 0)?.focus();
+    press('ArrowRight');
+    check('and an arrow key moves to the next ramp', await until(() => view().selected !== sel0 && il.get().swatches.find((w) => w.id === view().selected)?.group === il.get().ramps[1].id), [sel0, view().selected]);
+    press('ArrowLeft');
+    await until(() => il.get().swatches.find((w) => w.id === view().selected)?.group === ramp0);
+  }
+  il.transact('Hero', (d) => setSpec(d, ramp0, { hero: hero0 }));
+  patchIllustration({ preview: { ...view().preview, shape: 'sphere', all: false } });
+  patchView0(step.id);
+
+  // Ramp settings: the ramp lit beside its settings, changing with them
+  patchIllustration({ tab: 'settings' });
+  const lit = await until(() => ui.querySelector<HTMLCanvasElement>('[data-live-preview] canvas'), 1500);
+  const sum = (c: HTMLCanvasElement) => {
+    const px = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+    let t = 0;
+    for (let i = 0; i < px.length; i += 4) t = (t * 31 + px[i] + px[i + 1] * 3 + px[i + 2] * 7) | 0;
+    return t;
+  };
+  if (check('Ramp settings shows the ramp lit beside its settings', !!lit && shows(lit))) {
+    const a = sum(lit!);
+    il.transact('Hue', (d) => setSpec(d, ramp0, { hueShift: 0.9, intensity: 'extreme' }));
+    check('and changing its hue shift lights it differently at once', await until(() => sum(ui.querySelector<HTMLCanvasElement>('[data-live-preview] canvas')!) !== a), a);
+    il.undo();
+  }
+
+  // Check values: the Value ruler and its cluster fix, the colour-vision detail
+  patchIllustration({ tab: 'check' });
+  await sleep(80);
+  const depth2 = il.depth();
+  const bases = il.get().swatches.filter((w) => w.step === 0);
+  check('Check values shows the Value ruler and the colour-vision rows (Typical, with pair names and ΔE)', !!ui.querySelector('section[aria-label="Problems"]') && !!ui.querySelector('[role="radiogroup"][aria-label="Simulation"]') && /Typical/.test(ui.textContent ?? '') && /\/.*\d+\.\d/.test(ui.querySelector('[role="radiogroup"][aria-label="Simulation"]')?.textContent ?? ''), bases.length);
+  il.transact('Close in value', (d) => addRamp(recolour(d, bases[1].id, [bases[0].oklch[0] + 0.01, 0.1, 250]), [bases[0].oklch[0] - 0.012, 0.09, 140]).doc);
+  const spread = await until(() => [...ui.querySelectorAll<HTMLButtonElement>('button')].find((b) => /^Spread these 3$/.test(b.textContent?.trim() ?? '') && shows(b)), 2000);
+  check('three bases that read as one grey get one flag with Spread these 3', !!spread, [...ui.querySelectorAll('button')].map((b) => b.textContent?.trim()).filter((t) => t?.startsWith('Spread')));
+  spread?.click();
+  const gap = () => {
+    const l = il.get().swatches.filter((w) => w.step === 0).map((w) => w.oklch[0]).sort((a, b) => a - b);
+    return Math.min(...l.slice(1).map((x, i) => x - l[i]));
+  };
+  check('and it spreads them all in one step', await until(() => gap() >= 0.03), gap());
+  while (il.depth() > depth2) il.undo();
+  patchView0(step.id);
+
+  // the palette in the paint tray under the tubes, grouped by ramp; dragged into the well as well as Shift-clicked
+  patchIllustration({ tab: 'paint' });
+  setPaint({ well: [] });
+  await sleep(80);
+  const tray = ui.querySelector('[role="radiogroup"][aria-label="Paints for the brush"]');
+  const groups = [...(tray?.querySelectorAll('[data-set]') ?? [])];
+  check('the paint tray has the palette’s colours, a group per ramp', groups.length === il.get().ramps.length && groups.every((g) => g.querySelectorAll('[role="radio"]').length === 5), groups.length);
+  const chip = board.querySelector<HTMLElement>(`[data-step="${step.id}"]`);
+  const well = ui.querySelector('[role="group"][aria-label="Mixing well"]');
+  if (check('Paint shows the well and the ramp chips', !!chip && !!well && shows(well))) {
+    await dragOn(chip!, centre(chip!), centre(well!));
+    check('dragging a ramp chip into the well adds it as a part', await until(() => paint().well.some((w) => w.id === `swatch:${step.id}`)), paint().well);
+    const other = groups[1]?.querySelector<HTMLElement>('[role="radio"]');
+    if (check('the tray’s own palette chips are there to drag', !!other)) {
+      const n = paint().well.length;
+      await dragOn(other!, centre(other!), centre(well!));
+      check('a palette chip in the tray drags into the well too', await until(() => paint().well.length === n + 1), paint().well);
+    }
+    await dragOn(chip!, centre(chip!), centre(chip!));
+    chip!.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+    check('and Shift-click still adds a part', await until(() => paint().well.find((w) => w.id === `swatch:${step.id}`)!.parts >= 2), paint().well);
+  }
+  setPaint({ well: [] });
+
+  // the Notes tab: only while the file has notes
+  check('no notes, no Notes tab', !illusTab('notes'), !!illusTab('notes'));
+  il.transact('Notes', (d) => ({ ...d, notes: 'Lab colours were converted to sRGB.' }));
+  const tabBtn = await until(() => illusTab('notes'), 1500);
+  check('a file with notes gets a Notes tab', !!tabBtn);
+  tabBtn?.click();
+  check('which shows them', !!(await until(() => /Lab colours were converted/.test(ui.querySelector('[role="tabpanel"]')?.textContent ?? ''), 1500)), ui.querySelector('[role="tabpanel"]')?.textContent);
+  il.transact('Clear the notes', (d) => ({ ...d, notes: '' }));
+  check('clearing them closes the tab', await until(() => !illusTab('notes'), 1500));
+  patchIllustration({ tab: 'paint' });
+  await until(() => paperCanvas(), 1500);
+}
+const patchView0 = (selected: string) => patchIllustration({ selected });
+
 
 /**
  * The paint canvas's own UI (engine plan §5, §6): nothing on the paper changes after the lift, the

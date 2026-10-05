@@ -50,3 +50,10 @@
 .dray { stroke: var(--tick-strong); }
 .knob { fill: var(--ink); stroke: var(--module); stroke-width: 2; }
 .dial:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+.gname { display: inline-flex; align-items: center; gap: 4px; }
+.hero { color: var(--on-content-ink-2); }
+/* Shape: All: the three shapes side by side; a tall narrow stage stacks two over one */
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-content: center; min-height: 100%; padding-top: 24px; }
+.tcanvas { display: block; width: 100%; height: auto; aspect-ratio: 1; }
+@container (max-width: 520px) { .three { grid-template-columns: repeat(2, minmax(0, 1fr)); } .three > :last-child { grid-column: 1 / -1; justify-self: center; width: 50%; } }

@@ -18,15 +18,17 @@ import { patchView, shaped, type IllustrationView } from './view-state.ts';
 import s from './Light.module.css';
 
 /** view state: the light, the shape, hard steps or blended, one ramp or all of them */
-export type LitView = Light & { shape: Shape; banded: boolean; all: boolean };
+export type LitView = Light & { shape: Shape | 'all'; banded: boolean; all: boolean };
 export const LIT_VIEW: LitView = { azimuth: 320, elevation: 35, shape: 'sphere', banded: false, all: false };
 
 const SHAPES = [
   { value: 'sphere', label: 'Sphere' },
   { value: 'cube', label: 'Cube' },
   { value: 'cloth', label: 'Cloth' },
+  { value: 'all', label: 'All' },
 ] as const;
-const SHAPE_NAME: Record<Shape, string> = { sphere: 'a sphere', cube: 'a cube', cloth: 'a cloth fold' };
+const ALL_SHAPES: Shape[] = ['sphere', 'cube', 'cloth'];
+export const SHAPE_NAME: Record<Shape, string> = { sphere: 'a sphere', cube: 'a cube', cloth: 'a cloth fold' };
 const SHOWS = [
   { value: 'one', label: 'This ramp' },
   { value: 'all', label: 'All ramps' },
@@ -39,7 +41,7 @@ const SHADINGS = [
 const BIG = 560;
 const SMALL = 160;
 
-type LitRamp = { id: string; name: string; steps: Oklch[]; hero: boolean };
+export type LitRamp = { id: string; name: string; steps: Oklch[]; hero: boolean };
 
 const RAD = Math.PI / 180;
 /** the sun's ring around the object, as a share of the canvas the object is drawn in (the sphere fills 0.64 of it) */
@@ -48,6 +50,7 @@ const RY = 0.35;
 
 export function LightTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: IllustrationView }) {
   const view = shaped(v.preview, LIT_VIEW);
+  if (view.shape !== 'all' && !ALL_SHAPES.includes(view.shape)) view.shape = 'sphere';
   const onView = (patch: Partial<LitView>) => patchView({ preview: { ...view, ...patch } });
   const ramps: LitRamp[] = d.ramps.map((r) => ({ id: r.id, name: rampName(d, r), steps: stepsOf(d, r.id).map((w) => proofOf(w.oklch, v.proof)), hero: r.hero })).filter((r) => r.steps.length > 0);
   const sel = selected(d, v.selected);
@@ -88,7 +91,9 @@ export function LightTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illus
             className={s.empty}
           />
         ) : view.all ? (
-          <Grid ramps={ramps} shape={view.shape} selected={ramp.id} light={light} banded={view.banded} onSelect={(id) => select(baseOf(d, id)?.id ?? null)} gesture={gesture} onKey={(l) => onView(l)} />
+          <Grid ramps={ramps} shape={view.shape === 'all' ? 'sphere' : view.shape} selected={ramp.id} light={light} banded={view.banded} onSelect={(id) => select(baseOf(d, id)?.id ?? null)} gesture={gesture} onKey={(l) => onView(l)} />
+        ) : view.shape === 'all' ? (
+          <Three ramp={ramp} light={light} banded={view.banded} gesture={gesture} onKey={(l) => onView(l)} />
         ) : (
           <One ramp={ramp} shape={view.shape} light={light} banded={view.banded} gesture={gesture} onKey={(l) => onView(l)} />
         )}
@@ -148,7 +153,7 @@ function EveryRamp({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec })
 type Gesture = { move(p: Partial<Light>): void; commit(): void; cancel(): void };
 
 /** a ramp's colours as 256 screen colours, rebuilt only when the colours themselves change */
-function useLut(steps: Oklch[], banded: boolean) {
+export function useLut(steps: Oklch[], banded: boolean) {
   const key = steps.map((c) => c.join(' ')).join('|');
   return useMemo(() => rampLut(steps, banded), [key, banded]);
 }
@@ -225,12 +230,39 @@ function One({ ramp, shape, light, banded, gesture, onKey }: { ramp: LitRamp; sh
   );
 }
 
+/** Shape: All: the selected ramp on a sphere, a cube and a cloth fold together, the dial in a corner for the light */
+function Three({ ramp, light, banded, gesture, onKey }: { ramp: LitRamp; light: Light; banded: boolean; gesture: Gesture; onKey(l: Light): void }) {
+  const lut = useLut(ramp.steps, banded);
+  return (
+    <div className={s.gridWrap}>
+      <p className={s.caption}>
+        <b>{ramp.name}</b> on a sphere, a cube and a cloth fold.
+      </p>
+      <div className={s.three} data-three="">
+        {ALL_SHAPES.map((shape) => (
+          <LitCanvas key={shape} shape={shape} size={BIG} lut={lut} azimuth={light.azimuth} elevation={light.elevation} label={`${ramp.name} on ${SHAPE_NAME[shape]}`} className={s.tcanvas} />
+        ))}
+      </div>
+      <Dial light={light} gesture={gesture} onKey={onKey} />
+    </div>
+  );
+}
+
 /** Show: All ramps: every ramp on the selected shape, a grid, with the dial in a corner for the light */
 function Grid({ ramps, shape, selected, light, banded, onSelect, gesture, onKey }: { ramps: LitRamp[]; shape: Shape; selected: string; light: Light; banded: boolean; onSelect(id: string): void; gesture: Gesture; onKey(l: Light): void }) {
+  // one Tab stop; arrows move between the ramps and pick
+  const onArrows = (e: KeyboardEvent<HTMLDivElement>) => {
+    const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const i = (ramps.findIndex((r) => r.id === selected) + step + ramps.length) % ramps.length;
+    onSelect(ramps[i].id);
+    (e.currentTarget.children[i] as HTMLElement | undefined)?.focus();
+  };
   const cols = ramps.length <= 2 ? ramps.length : ramps.length <= 4 ? 2 : ramps.length <= 9 ? 3 : 4;
   return (
     <div className={s.gridWrap}>
-      <div className={s.grid} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }} role="radiogroup" aria-label="Ramps under the light">
+      <div className={s.grid} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }} role="radiogroup" aria-label="Ramps under the light" onKeyDown={onArrows}>
         {ramps.map((r) => (
           <GridCell key={r.id} ramp={r} shape={shape} on={r.id === selected} light={light} banded={banded} onSelect={onSelect} />
         ))}
@@ -245,12 +277,15 @@ function GridCell({ ramp, shape, on, light, banded, onSelect }: { ramp: LitRamp;
   return (
     <button type="button" role="radio" aria-checked={on} tabIndex={on ? 0 : -1} className={cx(s.gcell, on && s.on)} onClick={() => onSelect(ramp.id)}>
       <LitCanvas shape={shape} size={SMALL * 2} lut={lut} azimuth={light.azimuth} elevation={light.elevation} label={`${ramp.name} on ${SHAPE_NAME[shape]}`} className={s.gcanvas} />
-      <span className={s.gname}>{ramp.name}</span>
+      <span className={s.gname}>
+        {ramp.hero && <Icon name="star" size={14} className={s.hero} />}
+        {ramp.name}
+      </span>
     </button>
   );
 }
 
-const LitCanvas = memo(function LitCanvas(p: { shape: Shape; size: number; lut: Uint8ClampedArray; azimuth: number; elevation: number; label: string; className?: string }) {
+export const LitCanvas = memo(function LitCanvas(p: { shape: Shape; size: number; lut: Uint8ClampedArray; azimuth: number; elevation: number; label: string; className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const image = useRef<ImageData>(null);
   useLayoutEffect(() => {

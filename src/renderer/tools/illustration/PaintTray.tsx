@@ -1,6 +1,7 @@
 // The Mixer's tubes and mixing well (the inspector in Paint mode). Click a tube to load the brush;
 // Shift-click it, drag it into the well or use its menu to add a part; the well's mix, by km.ts,
-// loads the brush. Palette colours load the brush from the Palette panel instead (Shift adds a part).
+// loads the brush. The palette's colours sit under the tubes, a ramp at a time, and work the same way
+// (the Ramps panel's steps load the brush too, and Shift-click or a drag adds a part).
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type PointerEvent, type RefObject } from 'react';
 import { cssColor, deltaE, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { Button, IconButton, menu, NumberField, Tooltip } from '../../ui/index.ts';
@@ -127,9 +128,27 @@ export function Tray(p: {
       />
     </Tooltip>
   );
+  const pigments = p.sources.filter((x) => !x.swatch);
+  // the palette's colours a ramp at a time, each under its name, so a colour is found by its ramp
+  const sets = p.sources
+    .filter((x) => x.swatch)
+    .reduce<{ key: string; name: string; list: Source[] }[]>((out, x) => {
+      const last = out.at(-1);
+      if (last && last.key === x.set?.key) last.list.push(x);
+      else out.push({ key: x.set?.key ?? x.id, name: x.set?.name ?? '', list: [x] });
+      return out;
+    }, []);
   return (
     <div className={s.tray} role="radiogroup" aria-label="Paints for the brush" onKeyDown={onKeyDown}>
-      {p.sources.length ? p.sources.map((x, i) => chip(x, i)) : <span className={s.hint}>Tick the paints you own to fill the tray.</span>}
+      <div className={s.tubes}>{pigments.length ? pigments.map((x) => chip(x, p.sources.indexOf(x))) : <span className={s.hint}>Tick the paints you own to fill the tray.</span>}</div>
+      {sets.map((set) => (
+        <div key={set.key} className={s.set} data-set={set.key}>
+          <Tooltip content={set.name} overflowOnly>
+            <span className={s.setLabel}>{set.name}</span>
+          </Tooltip>
+          <div className={s.tubes}>{set.list.map((x) => chip(x, p.sources.indexOf(x)))}</div>
+        </div>
+      ))}
       <span ref={ghost} className={s.ghost} hidden aria-hidden="true" />
     </div>
   );

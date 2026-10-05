@@ -1,6 +1,7 @@
 /* Check values: the boards on the section itself, then the problem list. Colliding pairs are marked
    with a danger outline on the step's own edge, never over the colour. */
 .tab { display: flex; flex-direction: column; gap: 18px; container-type: inline-size; }
+.module { flex: none; }
 .flags { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; }
 .flag { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font: 400 var(--fs-base)/1 var(--font-sans); }
 .count { margin-left: auto; color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); }

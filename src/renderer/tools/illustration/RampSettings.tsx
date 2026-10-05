@@ -4,13 +4,13 @@
 import { MATERIALS } from '../../../shared/palette/ramp.ts';
 import type { RampSpec } from '../../../shared/types.ts';
 import { Button, NumberField, Segmented, Select, Slider, Toggle, useDocNumber, InspectorRow } from '../../ui/index.ts';
-import { NotesModule } from '../common/Notes.tsx';
 import { SURROUNDS, surroundOf } from '../common/surround.ts';
 import { rampsFromLoose, selected, type Doc } from './actions.ts';
 import { Curves } from './Curves.tsx';
+import { LIT_VIEW, LitCanvas, SHAPE_NAME, useLut } from './Light.tsx';
 import { brokenSteps, rampName, rampOf, regen, setSpec, stepsOf, type IllustrationDoc } from './doc.ts';
-import { PROOFS, type Proof } from './proof.ts';
-import { patchView, type IllustrationView } from './view-state.ts';
+import { proofOf, PROOFS, type Proof } from './proof.ts';
+import { patchView, shaped, type IllustrationView } from './view-state.ts';
 import s from './RampSettings.module.css';
 
 const INTENSITIES: { value: RampSpec['intensity']; label: string; tip: string }[] = [
@@ -40,14 +40,30 @@ export function RampSettings({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: I
           </Button>
         </div>
       ) : (
-        <>
-          <RampControls key={r.id} doc={doc} d={d} r={r} />
-          <Curves doc={doc} d={d} v={v} />
-        </>
+        <div className={s.split}>
+          <div className={s.controls}>
+            <RampControls key={r.id} doc={doc} d={d} r={r} />
+            <Curves doc={doc} d={d} v={v} />
+          </div>
+          <LivePreview d={d} v={v} r={r} />
+        </div>
       )}
       {w && <ViewControls d={d} v={v} />}
-      <NotesModule doc={doc} />
     </div>
+  );
+}
+
+/** the selected ramp lit, beside its settings: hue shift, chroma, intensity and steps show at once (the light is set in Light & preview) */
+function LivePreview({ d, v, r }: { d: IllustrationDoc; v: IllustrationView; r: RampSpec }) {
+  const view = shaped(v.preview, LIT_VIEW);
+  const shape = view.shape === 'all' ? 'sphere' : view.shape;
+  const name = rampName(d, r);
+  const lut = useLut(stepsOf(d, r.id).map((w) => proofOf(w.oklch, v.proof)), view.banded);
+  return (
+    <aside className={s.live} aria-label="The ramp, lit" data-live-preview="" style={{ background: surroundOf(v.surround, d.swatches) }}>
+      <LitCanvas shape={shape} size={240} lut={lut} azimuth={view.azimuth} elevation={view.elevation} label={`${name} on ${SHAPE_NAME[shape]}`} className={s.litCanvas} />
+      <span className={s.liveCap}>{name}, lit</span>
+    </aside>
   );
 }
 

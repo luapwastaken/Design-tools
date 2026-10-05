@@ -44,7 +44,19 @@ export function SelectedRamp({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: I
   return (
     <Section
       title={list.length ? name : 'Selected ramp'}
-      sub={list.length ? `${plural(list.length, 'step')} · click a step to edit it` : undefined}
+      sub={
+        list.length ? (
+          <>
+            <Tooltip content={`${plural(edited, 'step')} edited by hand: the ramp leaves ${edited === 1 ? 'it' : 'them'} when it changes`} disabled={!edited}>
+              <span>
+                {plural(list.length, 'step')}
+                {edited ? ` · ${edited} edited` : ''}
+              </span>
+            </Tooltip>
+            {' · click a step to edit it'}
+          </>
+        ) : undefined
+      }
       className={s.selected}
       actions={
         r && (
@@ -102,6 +114,7 @@ function Step({ d, v, w, word, on, lit, broken, plain }: StepProps) {
         <i className={s.colour} style={{ background: cssColor(seen) }}>
           {w.step === 0 && <b className={s.badge}>Base</b>}
         </i>
+        <i className={s.value} style={{ background: cssColor([w.oklch[0], 0, 0]) }} />
         {v.show !== 'off' && (
           <span className={s.read}>
             {v.show === 'hex' ? (

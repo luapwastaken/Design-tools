@@ -1,24 +1,22 @@
-// Tab 3, Check values: every ramp in colour and in greyscale side by side with a verdict (Value),
-// then the ramps as each kind of colour vision sees them (outlined pairs merge), then the problems
-// as a list, each with its one-click fix. The two flag gaps are typed here.
+// Tab 3, Check values: every ramp in colour and in greyscale with a verdict, the Value ruler (the
+// bases pinned by lightness, one cluster flag with its fix), Colour vision (a strip per simulation
+// with its closest pair and ΔE), then the problems as a list, each with its one-click fix.
 import { useSyncExternalStore } from 'react';
-import { cssColor, simulateCvd, type Cvd } from '../../../shared/color/index.ts';
+import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
-import { Icon, NumberField, Tooltip } from '../../ui/index.ts';
-import { fmtL, plural, stepWord } from '../common/names.ts';
+import { Tooltip } from '../../ui/index.ts';
+import { fmtL, stepWord } from '../common/names.ts';
+import { Value } from '../common/Value.tsx';
+import { mergingCvd, Vision } from '../common/Vision.tsx';
 import type { Doc } from './actions.ts';
 import { Problems, type Checks } from './CheckPane.tsx';
-import { nameOf, rampName, stepsOf, type IllustrationDoc } from './doc.ts';
+import { nameOf, rampName, rampOf, recolour, stepsOf, type IllustrationDoc } from './doc.ts';
 import { hot, patchView, pointAt, type IllustrationView } from './view-state.ts';
 import s from './Check.module.css';
 
-const KINDS: { kind: Cvd; label: string }[] = [
-  { kind: 'deutan', label: 'Deuteranopia' },
-  { kind: 'protan', label: 'Protanopia' },
-  { kind: 'tritan', label: 'Tritanopia' },
-  { kind: 'achromat', label: 'Achromatopsia' },
-];
+/** past this many colours the strips' names over them can't be read */
+const NAMED = 12;
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 export function CheckTab({ doc, d, v, checks }: { doc: Doc; d: IllustrationDoc; v: IllustrationView; checks: Checks }) {
@@ -31,6 +29,19 @@ export function CheckTab({ doc, d, v, checks }: { doc: Doc; d: IllustrationDoc; 
       return loose.length ? [{ id: 'loose', name: 'Loose', steps: loose, ramp: false }] : [];
     })(),
   ];
+  // a ramp step by its place in the ramp ("Skin 4/5"): readable where a pair has one short line
+  const short = (w: Swatch) => {
+    const r = rampOf(checks.settled, w.group);
+    if (!r || w.step === 0) return w.name;
+    const list = stepsOf(checks.settled, r.id);
+    return `${rampName(checks.settled, r)} ${list.findIndex((x) => x.id === w.id) + 1}/${list.length}`;
+  };
+  const host = {
+    pointAt,
+    onFix: (label: string, changes: Record<string, Oklch>) => doc.transact(label, (x) => Object.entries(changes).reduce((y, [id, o]) => recolour(y, id, o), x)),
+  };
+  // a simulation chosen in the strips stays; otherwise the one that merges a pair shows
+  const cvd = mergingCvd(checks.vision, v.cvd);
   const hit = new Set(checks.collisions.flatMap((c) => [c.a.id, c.b.id]));
   const gap = v.flagL / 100;
 
@@ -46,18 +57,6 @@ export function CheckTab({ doc, d, v, checks }: { doc: Doc; d: IllustrationDoc; 
 
   return (
     <div className={s.tab}>
-      <div className={s.flags}>
-        <label className={s.flag}>
-          <span>Flag steps closer than</span>
-          <NumberField label="Value gap" hideLabel value={v.flagL} min={1} max={20} step={0.5} precision={1} unit="ΔL" width={96} onChange={(flagL) => patchView({ flagL })} />
-        </label>
-        <label className={s.flag}>
-          <span>Colours merge below</span>
-          <NumberField label="Vision gap" hideLabel value={v.flagE} min={1} max={40} step={0.5} precision={1} unit="ΔE" width={96} onChange={(flagE) => patchView({ flagE })} />
-        </label>
-        <span className={s.count}>{checks.problems ? plural(checks.problems, 'problem') : 'No problems'}</span>
-      </div>
-
       <section className={s.board} aria-label="Greyscale">
         <h3 className={s.title}>
           Value <span className={s.sub}>every ramp in greyscale; steps should step evenly</span>
@@ -92,32 +91,20 @@ export function CheckTab({ doc, d, v, checks }: { doc: Doc; d: IllustrationDoc; 
         </div>
       </section>
 
-      <section className={s.board} aria-label="Colour vision">
-        <h3 className={s.title}>
-          Colour vision <span className={s.sub}>the ramps as each kind of colour vision sees them; outlined pairs merge</span>
-        </h3>
-        <div className={s.sims}>
-          {KINDS.map(({ kind, label }) => {
-            const pair = checks.vision[kind];
-            const merged = pair?.flag ? new Set([pair.a.id, pair.b.id]) : new Set<string>();
-            return (
-              <div key={kind} className={s.sim}>
-                <span className={s.simLabel}>
-                  {label}
-                  {merged.size > 0 && <Icon name="error" size={14} className={s.warn} />}
-                </span>
-                {rows.map((r) => (
-                  <div key={r.id} className={s.simRow}>
-                    {r.steps.map((w: Swatch) => (
-                      <i key={w.id} className={cx(merged.has(w.id) && s.merge, lit.includes(w.id) && s.hot)} style={{ background: cssColor(simulateCvd(w.oklch, kind)) }} {...pointAt([w.id])} />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      {/* the ruler: the bases pinned by lightness, one flag and one fix for the run that reads as one grey */}
+      <Value {...host} swatches={checks.bases} sub={d.ramps.length ? 'Ramp bases' : undefined} collisions={checks.collisions} flagL={v.flagL} onFlagL={(flagL) => patchView({ flagL })} className={s.module} />
+      <Vision
+        {...host}
+        swatches={checks.shown}
+        short={short}
+        vision={checks.vision}
+        names={checks.shown.length <= NAMED}
+        flagE={v.flagE}
+        onFlagE={(flagE) => patchView({ flagE })}
+        cvd={cvd}
+        onCvd={(k) => patchView({ cvd: k })}
+        className={s.module}
+      />
 
       <Problems doc={doc} v={v} checks={checks} />
     </div>
