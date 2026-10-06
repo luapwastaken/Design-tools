@@ -164,15 +164,23 @@ const XML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&
 const xmlText = (s: string) => oneLine(s.replace(/[\u0000-\u0008\u000e-\u001f\u007f-\u009f￾￿]/g, ''));
 const xmlAttr = (s: string) => xmlText(s).replace(/[&<>"]/g, (ch) => XML_ESCAPES[ch]);
 
+/** an Illustration scene's light: the colours its ramps lean to */
+export type SceneLight = { light: Oklch; shadow: Oklch };
+
 /**
  * A Krita palette: a zip of mimetype, colorset.xml and profiles.xml. Each Illustration ramp is a
- * group laid out light to dark, and the colours in no ramp fill the palette's own group. Krita
- * sniffs the raw bytes for the mimetype, so that entry comes first and STORED. It drops swatches
- * silently where a group has no `rows`, and fails the whole file on an empty profiles.xml.
+ * group laid out light to dark, the colours in no ramp fill the palette's own group, and a scene's
+ * light and shadow colours are a group of their own after the ramps. Krita sniffs the raw bytes for
+ * the mimetype, so that entry comes first and STORED. It drops swatches silently where a group has
+ * no `rows`, and fails the whole file on an empty profiles.xml.
  */
-export function writeKpl(name: string, swatches: Swatch[]): Uint8Array {
+export function writeKpl(name: string, swatches: Swatch[], scene?: SceneLight | null): Uint8Array {
   const loose = swatches.filter((s) => s.group === undefined);
-  const ramps = sets(name, swatches.filter((s) => s.group !== undefined));
+  const lit = (step: number, label: string, oklch: Oklch): Swatch => ({ id: label, name: label, role: null, oklch, type: 'process', step });
+  const ramps = [
+    ...sets(name, swatches.filter((s) => s.group !== undefined)),
+    ...(scene ? [{ name: 'Scene light', list: [lit(0, 'Light', scene.light), lit(1, 'Shadow', scene.shadow)] }] : []),
+  ];
   const columns = Math.min(KPL_MAX_COLUMNS, Math.max(1, Math.min(KPL_ROW, loose.length), ...ramps.map((r) => r.list.length)));
 
   const entries = (list: Swatch[], width: number, pad: string) =>

@@ -23,6 +23,7 @@ import { PickerSection } from './PickerSection.tsx';
 import { sourcePop } from './proposals.ts';
 import { SelectedRamp } from './Ramps.tsx';
 import { RampSettings } from './RampSettings.tsx';
+import { sceneLight } from './scene.ts';
 import { pasteColours } from './starts.ts';
 import { hot, patchView, SIZES, useView, type IllustrationView } from './view-state.ts';
 import s from './View.module.css';
@@ -79,6 +80,9 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   useEffect(() => void (hot.get().length && hot.set([])), [d.swatches]);
   const source = useSyncExternalStore(doc.subscribe, () => doc.source()?.itemId ?? null);
   const empty = d.swatches.length === 0;
+  // the one light of the ramps, for a Krita export to keep (none while they disagree, or with no ramp)
+  const light = sceneLight(d);
+  const lit = d.ramps.length && !light.mixed ? light.pair : null;
   // Light and Check have nothing to show without a colour; Paint doesn't need the palette (the tubes work alone)
   const ctx: Ctx = { doc, d, v, checks, empty, source, paint };
   const tabs: SectionTab[] = TABS.filter((t) => !t.when || t.when(ctx)).map((t) => ({
@@ -102,7 +106,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
           </Button>
         }
         send={{ empty: 'Add a colour first: an empty palette has nothing to send' }}
-        exportButton={<ExportPalette tool="illustration" swatches={d.swatches} named={() => named(doc.get())} format={v.format} onFormat={(format) => patchView({ format })} />}
+        exportButton={<ExportPalette tool="illustration" swatches={d.swatches} named={() => named(doc.get())} scene={lit} format={v.format} onFormat={(format) => patchView({ format })} />}
       />
       <div className={s.main} style={{ '--ramps-w': `${v.rampsWidth}px`, '--ramp-h': `${v.rampHeight}px`, '--picker-w': `${v.pickerWidth}px` } as CSSProperties}>
         <div className={s.cell}>

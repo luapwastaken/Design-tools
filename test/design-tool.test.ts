@@ -96,6 +96,7 @@ test('an Illustration palette goes back to its file with its ramps, groups, step
   const file = {
     notes: 'n',
     ramps: [ramp],
+    scene: { light: [0.94, 0.1, 72] as Oklch, shadow: [0.4, 0.09, 290] as Oklch },
     swatches: [
       { ...sw('light', [0.7, 0.08, 40]), group: 'r', step: -1 },
       { ...sw('base', [0.5, 0.1, 30]), group: 'r', step: 0 },
@@ -111,6 +112,8 @@ test('an Illustration palette goes back to its file with its ramps, groups, step
   assert.equal(edited.swatches[0].group, 'r');
   assert.equal(edited.swatches[3].edited, undefined);
   assert.deepEqual(edited.ramps, [ramp]);
+  assert.deepEqual(edited.scene, file.scene, 'the scene light goes back too: the next ramp is born in it');
   // a plain palette stays plain
   assert.equal('ramps' in toPayload(fromPayload({ notes: '', swatches: [sw('a', [0.5, 0, 0])] })), false);
+  assert.equal('scene' in toPayload(fromPayload({ notes: '', swatches: [sw('a', [0.5, 0, 0])] })), false);
 });
