@@ -1,5 +1,5 @@
-// The popover of a source that stages several colours (Add colour > Type or paste codes, From an
-// image, From a Library palette, a limited set). The staged colours are the proposals: chips over
+// The popover of a source that stages several colours (From… > From image, Paste codes, From
+// Library, a limited set). The staged colours are the proposals: chips over
 // their value strips, light to dark; click one to leave it out. "Make N ramps" adds them to this
 // palette, lit by the Light row. The same colours wait in the Ramps list if the popover is closed.
 import { useEffect, useRef, useState } from 'react';
@@ -12,12 +12,12 @@ import { Button, NumberField, Popover, Select, SwatchStrip, toast, Tooltip } fro
 import { plural } from '../common/names.ts';
 import { addProposals, selected, type Doc } from './actions.ts';
 import type { IllustrationDoc } from './doc.ts';
-import { COLOURS, dropProposals, extract, picture, proposals, takeImage, type Proposal, type SourcePop } from './proposals.ts';
+import { COLOURS, dropProposals, extract, picture, pickPixel, proposals, takeImage, type Proposal, type SourcePop } from './proposals.ts';
 import { MAX_RAMPS, SETS } from './scene.ts';
 import { openPalette, readPalette, stagePalette, stagePaste, stageSet, startHue } from './starts.ts';
 import s from './SourcePop.module.css';
 
-const TITLES = { image: 'From an image', paste: 'Type or paste codes', library: 'From a Library palette', set: 'Limited set' } as const;
+const TITLES = { image: 'From image', paste: 'Paste codes', library: 'From Library', set: 'Limited set' } as const;
 
 type Props = { doc: Doc; d: IllustrationDoc; pop: SourcePop; anchor: HTMLElement; onClose(refocus: boolean): void };
 
@@ -89,7 +89,20 @@ function ImageBody() {
     <>
       {pic ? (
         <div className={s.pic}>
-          <canvas ref={canvas} className={s.thumb} aria-label={pic.name} />
+          <Tooltip content="Click the picture to add the colour under the pointer">
+            <canvas
+              ref={canvas}
+              className={s.thumb}
+              data-colour=""
+              aria-label={pic.name}
+              onClick={(e) => {
+                // the picture is drawn contained in its box: undo that scale to find the pixel
+                const box = e.currentTarget.getBoundingClientRect();
+                const scale = Math.min(box.width / pic.pixels.width, box.height / pic.pixels.height);
+                pickPixel((e.clientX - box.left - (box.width - pic.pixels.width * scale) / 2) / scale, (e.clientY - box.top - (box.height - pic.pixels.height * scale) / 2) / scale);
+              }}
+            />
+          </Tooltip>
           <span className={s.picName}>{pic.name}</span>
         </div>
       ) : (

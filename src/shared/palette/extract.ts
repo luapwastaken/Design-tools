@@ -15,22 +15,29 @@ export function extractColours(rgba: Uint8ClampedArray, w: number, h: number, k:
   if (!n) return [];
   const rnd = random(seed);
   const centres = seeds(points, weights, n, rnd);
-  const owner = new Int32Array(points.length).fill(-1);
-  for (let round = 0; round < MAX_ROUNDS; round++) {
-    let moved = false;
-    points.forEach((p, i) => {
-      const c = nearest(p, centres).index;
-      if (c !== owner[i]) [owner[i], moved] = [c, true];
-    });
-    if (!moved) break;
-    const sums = centres.map(() => [0, 0, 0, 0]);
-    points.forEach((p, i) => {
-      const s = sums[owner[i]];
-      for (let d = 0; d < 3; d++) s[d] += p[d] * weights[i];
-      s[3] += weights[i];
-    });
-    sums.forEach(([l, a, b, m], c) => m && (centres[c] = [l / m, a / m, b / m]));
-  }
+  const owner = new Int32Array(points.length);
+  // Lloyd's rounds from the seeds' places; `rounds` 0 only hands every point to its nearest centre
+  const settle = (rounds = MAX_ROUNDS) => {
+    owner.fill(-1);
+    for (let round = 0; round <= rounds; round++) {
+      let moved = false;
+      points.forEach((p, i) => {
+        const c = nearest(p, centres).index;
+        if (c !== owner[i]) [owner[i], moved] = [c, true];
+      });
+      if (!moved || round === rounds) break;
+      const sums = centres.map(() => [0, 0, 0, 0]);
+      points.forEach((p, i) => {
+        const s = sums[owner[i]];
+        for (let d = 0; d < 3; d++) s[d] += p[d] * weights[i];
+        s[3] += weights[i];
+      });
+      sums.forEach(([l, a, b, m], c) => m && (centres[c] = [l / m, a / m, b / m]));
+    }
+  };
+  settle();
+  // an accent keeps the place it is given: the rounds would pull it back into its neighbours
+  if (n > 1 && rescue(points, weights, centres, owner)) settle(0);
   const mass = new Float64Array(n);
   owner.forEach((c, i) => (mass[c] += weights[i]));
   const total = weights.reduce((a, b) => a + b, 0);
@@ -39,6 +46,40 @@ export function extractColours(rgba: Uint8ClampedArray, w: number, h: number, k:
     .map((c, i) => ({ oklch: fitChroma(fromOklab(c)), weight: mass[i] / total }))
     .filter((x) => x.weight > 0)
     .sort((a, b) => b.weight - a.weight);
+}
+
+/** a colour this chromatic, in OKLab, counts as an accent */
+const ACCENT_CHROMA = 0.12;
+/** an accent is only one when no centre is nearer than this (OKLab distance) */
+const ACCENT_APART = 0.07;
+/** its pixels are those this near the most chromatic one */
+const ACCENT_REACH = 0.07;
+/** and it is an accent when they are at least this share of the pixels sampled */
+const ACCENT_SHARE = 0.005;
+
+/**
+ * The small, bright colour k-means folds into its neighbours (a fire against a dark forest): the most
+ * chromatic colour that no centre is near, if there are enough of its pixels, takes the place of the
+ * lightest centre. True when it did.
+ */
+function rescue(points: Oklab[], weights: number[], centres: Oklab[], owner: Int32Array): boolean {
+  const total = weights.reduce((a, b) => a + b, 0);
+  const apart = points.map((p) => Math.hypot(p[1], p[2]) > ACCENT_CHROMA && nearest(p, centres).d2 > ACCENT_APART ** 2);
+  const seed = points.reduce((best, p, i) => (apart[i] && (best < 0 || Math.hypot(p[1], p[2]) > Math.hypot(points[best][1], points[best][2])) ? i : best), -1);
+  if (seed < 0) return false;
+  // the accent: the far, chromatic pixels around its most chromatic one
+  const mean = [0, 0, 0, 0];
+  points.forEach((p, i) => {
+    if (!apart[i] || Math.hypot(p[0] - points[seed][0], p[1] - points[seed][1], p[2] - points[seed][2]) > ACCENT_APART / 2) return;
+    for (let d = 0; d < 3; d++) mean[d] += p[d] * weights[i];
+    mean[3] += weights[i];
+  });
+  if (mean[3] / total < ACCENT_SHARE) return false;
+  const mass = centres.map(() => 0);
+  owner.forEach((c, i) => (mass[c] += weights[i]));
+  const least = mass.indexOf(Math.min(...mass));
+  centres[least] = [mean[0] / mean[3], mean[1] / mean[3], mean[2] / mean[3]];
+  return true;
 }
 
 /** every `step`th opaque pixel, merged into distinct colours with their counts */
