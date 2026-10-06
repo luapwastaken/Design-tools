@@ -16,7 +16,6 @@ const SIMULATE: { value: Simulate; label: string }[] = [
   { value: 'deutan', label: 'Deutan' },
   { value: 'tritan', label: 'Tritan' },
   { value: 'achromat', label: 'Achromat' },
-  { value: 'greyscale', label: 'Greyscale value' },
 ];
 
 export function PreviewTab({ v, r }: { v: DesignView; r: Results }) {

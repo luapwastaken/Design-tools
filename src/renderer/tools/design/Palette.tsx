@@ -8,6 +8,7 @@ import type { Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
 import { Button, Icon, IconButton, menu, Select, Tooltip, type MenuAnchor, type MenuItem } from '../../ui/index.ts';
 import { fmtC, fmtH, fmtL } from '../common/names.ts';
+import { GreyscaleButton } from '../common/Greyscale.tsx';
 import { Section } from '../common/Section.tsx';
 import { SURROUNDS, surroundOf } from '../common/surround.ts';
 import { addProposals, addSwatch, armDelete, clickSelect, copyHex, duplicate, select, selection, setRole, toggleLocked, type Doc } from './actions.ts';
@@ -23,7 +24,7 @@ import s from './Palette.module.css';
 /** internal reorders carry this type (spec 9), so OS files dropped here still go to onFiles */
 const REORDER_MIME = 'application/x-designtools-reorder';
 
-const SIM_NAME = { normal: 'Normal', protan: 'Protan', deutan: 'Deutan', tritan: 'Tritan', achromat: 'Achromat', greyscale: 'Greyscale value' } as const;
+const SIM_NAME = { normal: 'Normal', protan: 'Protan', deutan: 'Deutan', tritan: 'Tritan', achromat: 'Achromat' } as const;
 
 const SURROUND_OPTIONS = SURROUNDS.map((o) => ({ value: o.value, label: o.value === 'grey' ? '18% grey' : o.label }));
 const CHIP_DATA: { value: ChipData; label: string }[] = [
@@ -124,6 +125,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
             <>
               <Select label="Surround" options={SURROUND_OPTIONS.map((o) => ({ ...o, swatch: surroundOf(o.value, d.swatches) }))} value={v.surround} onChange={(surround) => patchView({ surround })} className={s.ctl} />
               <Select label="Show" options={CHIP_DATA} value={v.chipData} onChange={(chipData) => patchView({ chipData })} className={s.ctl} />
+              <GreyscaleButton />
             </>
           )}
           {ghosts ? (
@@ -190,7 +192,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
           {ghosts?.items.map((p) => (
             <Ghost key={p.id} p={p} data={v.chipData} shown={simulated(p.oklch, v.sim)} lockable={ghosts.from === 'generate'} onAdd={() => addProposals(doc, [p])} onDiscard={() => dropOne(p)} onLock={() => toggleLock(p.id)} />
           ))}
-          <Tooltip content="Add a colour at the lightness the palette lacks most">
+          <Tooltip content="Add a colour at the value the palette lacks most">
             <button type="button" className={s.add} aria-label="Add a swatch" onClick={() => addSwatch(doc)}>
               <Icon name="add" size={20} />
               <span>Add colour</span>
@@ -270,7 +272,7 @@ function Tile(p: TileProps) {
       onDragStart={p.onDragStart}
       onDragEnd={p.onDragEnd}
     >
-      <div className={s.chip}>
+      <div className={s.chip} data-colour>
         <span className={s.more} onClick={(e) => e.stopPropagation()}>
           <IconButton icon="more_horiz" label="More" size="xs" onContent tabIndex={-1} onClick={(e) => p.onMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
         </span>
@@ -350,7 +352,7 @@ function Ghost({ p, shown, data, lockable, onAdd, onDiscard, onLock }: { p: Prop
   const name = p.name ?? displayName({ name: '', oklch: p.oklch });
   return (
     <div className={cx(s.sw, s.ghost)} style={paint(shown)} data-ghost={p.id}>
-      <div className={s.chip}>
+      <div className={s.chip} data-colour>
         <span className={s.proposed}>Proposed</span>
         {lockable && (
           <Tooltip content={p.locked ? 'Unlock: a re-roll changes it' : 'Lock: a re-roll keeps it'} shortcut="L" side="below">

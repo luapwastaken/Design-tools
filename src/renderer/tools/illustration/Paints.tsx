@@ -97,7 +97,7 @@ function Box({ v }: { v: IllustrationView }) {
                 onClick={() => toggle(p.id)}
               >
                 <Icon name={owned.has(p.id) ? 'check_box' : 'check_box_outline_blank'} size={16} fill={owned.has(p.id)} />
-                <i className={s.pchip} style={{ background: cssColor(p.oklch) }} />
+                <i className={s.pchip} data-colour style={{ background: cssColor(p.oklch) }} />
                 <span className={s.pname}>{p.name}</span>
                 {p.id === onBrush && (
                   <Tooltip content="On the brush">

@@ -13,12 +13,9 @@ test('inkOn picks the ink that reads on the colour', () => {
   assert.equal(on('#221d1a'), on('#000000'));
 });
 
-test('simulated leaves normal alone, drops chroma for greyscale, and moves colour for a deficiency', () => {
+test('simulated leaves normal alone and moves colour for a deficiency (greyscale is the app-wide view, not a simulation)', () => {
   const red: Oklch = hexToOklch('#cc3322');
   assert.equal(simulated(red, 'normal'), red);
-  const grey = simulated(red, 'greyscale');
-  assert.equal(grey[1], 0);
-  assert.equal(grey[0], red[0]);
   assert.notDeepEqual(simulated(red, 'deutan'), red);
 });
 

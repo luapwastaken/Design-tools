@@ -4,6 +4,7 @@
 // 'full' runs the smoke list; 'quiet' is the relaunch: it restores, checks, and quits with no input.
 import { contrast, cssColor, deltaE, parseCss, rgb255, toHex, type Oklch } from '../shared/color/index.ts';
 import { PNG_FORMAT, SVG_FORMAT } from '../shared/clipboard.ts';
+import { greyMatrix, holdValue, LUMA, valueOf } from '../shared/color/value.ts';
 import { PIGMENTS } from '../shared/paint/pigments.ts';
 import { INKS } from '../shared/palette/inks.ts';
 import type { DocController } from '../shared/doc-api.ts';
@@ -318,6 +319,7 @@ async function full(): Promise<void> {
   await dither(dir);
   await postfx(dir);
   await illustration();
+  await greyscale();
 
   // brief §8: nothing loops, and there is no spinner to run: no running animation repeats, and no loaded
   // stylesheet holds an @keyframes rule
@@ -334,6 +336,87 @@ async function full(): Promise<void> {
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
   // pending delete is trashed after it (scripts/smoke.mjs checks both)
   void shell.runBusy(() => new Promise(() => {}));
+}
+
+/**
+ * The greyscale view: the button in each colour tool's palette header and the key G toggle the one
+ * app-wide setting, which puts data-greyscale on the root; every content colour (data-colour) is
+ * greyed by the dt-grey filter, chrome never. Left ON at the end: the quiet relaunch checks it came back.
+ */
+async function greyscale(): Promise<void> {
+  const root = document.documentElement;
+  const on = () => root.dataset.greyscale === 'true';
+  const pref = () => shell.getState().settings?.greyscale === true;
+  const filterOf = (el: Element | null | undefined) => (el ? getComputedStyle(el).filter : '');
+  // the tabs and the tool as they are left: the relaunch restores them (Paint's canvas only loads while its tab shows)
+  const [was, designTabWas, illustrationTabWas] = [shell.getState().active, designView().tab, illustrationView().tab];
+  check('greyscale starts off', !pref() && !on());
+
+  // the filter in the page: a saturated colour through it lands on its value (the luma of its 8-bit channels), to one step
+  const [src, dst] = [0, 1].map(() => document.createElement('canvas').getContext('2d', { willReadFrequently: true })!);
+  const saturated: [string, number[]][] = [['red', [255, 0, 0]], ['yellow', [255, 212, 0]], ['blue', [0, 48, 255]], ['magenta', [255, 0, 204]]];
+  const missed = saturated.flatMap(([name, rgb]) => {
+    src.putImageData(new ImageData(new Uint8ClampedArray([...rgb, 255]), 1, 1), 0, 0);
+    dst.clearRect(0, 0, 1, 1);
+    dst.filter = 'url(#dt-grey)';
+    dst.drawImage(src.canvas, 0, 0);
+    const [r, g, b] = dst.getImageData(0, 0, 1, 1).data;
+    const want = LUMA[0] * rgb[0] + LUMA[1] * rgb[1] + LUMA[2] * rgb[2];
+    return [r, g, b].every((c) => Math.abs(c - want) <= 1) ? [] : [[name, [r, g, b], want]];
+  });
+  check('the dt-grey filter turns red, yellow, blue and magenta into their value (Rec. 709 luma), within one 8-bit step', missed.length === 0, missed);
+  const matrix = document.querySelector('#dt-grey feColorMatrix')?.getAttribute('values');
+  check('and its matrix is the one value.ts builds, in sRGB', matrix === greyMatrix() && document.querySelector('#dt-grey')?.getAttribute('color-interpolation-filters') === 'sRGB', matrix);
+
+  for (const id of ['design', 'illustration'] as const) {
+    shell.setActive(id);
+    patchIllustration({ tab: 'settings' });
+    await sleep(120);
+    const tool = host(id)!;
+    const btn = await until(() => tool.querySelector<HTMLButtonElement>('button[aria-label="Greyscale"]'), 3000);
+    if (!check(`${id}: the palette header has a Greyscale button`, btn && shows(btn) && btn.getAttribute('aria-pressed') === 'false', btn?.outerHTML.slice(0, 120))) continue;
+    const content = [...tool.querySelectorAll<HTMLElement>('[data-colour]')].filter(shows);
+    const chrome = [btn!, tool.querySelector('h2'), ...tool.querySelectorAll('[role="tab"]')].filter((e): e is Element => !!e);
+    btn!.click();
+    check(`${id}: the button turns greyscale on, latched, and puts data-greyscale on the root`, (await until(() => pref() && on())) && btn!.getAttribute('aria-pressed') === 'true', [pref(), root.dataset.greyscale]);
+    check(`${id}: every content colour on show is greyed and no chrome is`, content.length >= 3 && content.every((e) => filterOf(e).includes('dt-grey')) && chrome.every((e) => filterOf(e) === 'none'), [content.length, content.filter((e) => !filterOf(e).includes('dt-grey')).length, chrome.filter((e) => filterOf(e) !== 'none').length]);
+    press('g', { code: 'KeyG' });
+    check(`${id}: G turns it off again`, (await until(() => !pref() && !on())) && btn!.getAttribute('aria-pressed') === 'false' && content.every((e) => filterOf(e) === 'none'), [pref(), root.dataset.greyscale]);
+    press('g', { code: 'KeyG' });
+    check(`${id}: and G turns it on`, !!(await until(() => pref() && on())) && btn!.getAttribute('aria-pressed') === 'true');
+    btn!.click();
+    await until(() => !pref());
+  }
+  // one grey: the Seen as and See as lenses have the colour-vision lenses only
+  const lensOptions = async (id: ToolId, label: string) => {
+    shell.setActive(id);
+    // a Select names itself by aria-label, or by the inspector row it sits in
+    const named = (b: HTMLButtonElement) => b.getAttribute('aria-label')?.startsWith(label) || b.parentElement?.parentElement?.firstElementChild?.textContent === label;
+    const lens = await until(() => [...(host(id)?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((b) => named(b) && shows(b)), 3000);
+    const before = new Set(document.querySelectorAll('[role^="menuitem"], [role="option"]'));
+    lens?.click();
+    const rows = await until(() => {
+      const now = [...document.querySelectorAll('[role^="menuitem"], [role="option"]')].filter((r) => !before.has(r)).map((r) => r.textContent?.trim() ?? '');
+      return now.length ? now : null;
+    });
+    press('Escape');
+    await sleep(80);
+    return rows;
+  };
+  patchIllustration({ tab: 'settings' });
+  const seen = await lensOptions('illustration', 'Seen as');
+  check('Illustration’s Seen as lens offers the colour-vision lenses and no Greyscale', !!seen && seen.some((t) => /Deuteranopia/.test(t)) && !seen.some((t) => /Greyscale/i.test(t)), seen);
+  patchDesign({ tab: 'preview' });
+  const see = await lensOptions('design', 'See as');
+  check('Design’s See as lens offers the colour-vision lenses and no Greyscale', !!see && see.some((t) => /Deutan/.test(t)) && !see.some((t) => /Greyscale/i.test(t)), see);
+  patchDesign({ tab: designTabWas });
+  patchIllustration({ tab: illustrationTabWas });
+  shell.setActive(was);
+
+  // left on: the setting is saved, the quiet relaunch finds it
+  press('g', { code: 'KeyG' });
+  check('greyscale is left on for the relaunch', !!(await until(() => pref() && on())));
+  check('and was saved', (await until(async () => (await api.invoke('settings.get')).greyscale === true)) === true);
 }
 
 /** spec §7.4 "as an image": an SVG at 4096 on its long side, a pattern tiled over a 4096 square */
@@ -404,7 +487,7 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   patchDesign({ tab: 'check' });
   const checkTab = await until(() => (/\d+/.test(designTab('check')?.textContent ?? '') && designPanel()?.textContent?.includes('Protanopia') ? designTab('check') : null));
   const checkText = designPanel()?.textContent ?? '';
-  check('the Check palette tab counts what is left to look at and shows vision, greyscale and print', !!checkTab && ['Typical vision', 'Protanopia', 'Deuteranopia', 'Tritanopia', 'OKLCH lightness', 'Print inks'].every((w) => checkText.includes(w)), [checkTab?.textContent, checkText.slice(0, 120)]);
+  check('the Check palette tab counts what is left to look at and shows vision, value and print', !!checkTab && ['Typical vision', 'Protanopia', 'Deuteranopia', 'Tritanopia', 'Rec. 709 luma', 'Print inks'].every((w) => checkText.includes(w)), [checkTab?.textContent, checkText.slice(0, 120)]);
   patchDesign({ tab: 'contrast' });
 
   const inDesign = (id: string) => dd.get().swatches.find((w) => w.id === id);
@@ -582,17 +665,17 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   const panelText = designPanel()?.textContent ?? '';
   check('colour vision names the closest pair and its ΔE for every simulation, and the names sit over the strips', (panelText.match(/ΔE \d/g)?.length ?? 0) >= 4 && /closest pair|look alike/.test(panelText) && !!designPanel()?.querySelector('[aria-hidden="true"] span'), panelText.slice(0, 200));
   check('the Print inks table shows without a click (P3, all four libraries)', ['P3', 'Riso ΔE', 'RAL ΔE', 'HKS ΔE', 'NCS ΔE'].every((w) => panelText.includes(w)) && ![...(designPanel()?.querySelectorAll('button') ?? [])].some((b) => b.textContent?.trim() === 'Inks'));
-  // two colours of one lightness make the ruler flag them with a Spread fix
+  // two colours of one value make the ruler flag them with a Spread fix
   // (a palette of just those two and a far dark and light, so they are the one collision)
-  const twin = [designSwatch([0.5, 0.1, 10], 'Smoke twin A'), designSwatch([0.52, 0.1, 200], 'Smoke twin B')];
+  const twin = [designSwatch(holdValue(0.45, 0.1, 10), 'Smoke twin A'), designSwatch(holdValue(0.47, 0.1, 200), 'Smoke twin B')];
   const keep = dd.get().swatches;
   dd.transact('Twins', (d) => ({ ...d, swatches: [designSwatch([0.1, 0.02, 40], 'Smoke dark'), ...twin, designSwatch([0.95, 0.02, 90], 'Smoke light')] }));
   const spreadBtn = await until(() => [...(designPanel()?.querySelectorAll('button') ?? [])].find((b) => /^Spread /.test(b.textContent ?? '')));
-  check('the Value ruler pins every colour by L and flags the collision with its gap and a Spread fix', !!spreadBtn && !!designPanel()?.textContent?.includes('OKLCH lightness') && /sit \d+\.\d apart/.test(designPanel()?.textContent ?? ''), designPanel()?.textContent?.match(/Smoke twin A.{0,80}apart/)?.[0]);
+  check('the Value ruler pins every colour by value (V readouts) and flags the collision with its gap and a Spread fix', !!spreadBtn && !!designPanel()?.textContent?.includes('Rec. 709 luma') && /Smoke twin A \d+\.\d/.test(designPanel()?.textContent ?? '') && /sit \d+\.\d apart/.test(designPanel()?.textContent ?? ''), designPanel()?.textContent?.match(/Smoke twin A.{0,80}apart/)?.[0]);
   const spreadDepth = dd.depth();
   spreadBtn?.click();
-  const [ta, tb] = twin.map((w) => dd.get().swatches.find((x) => x.id === w.id)!.oklch[0]);
-  check('Spread apart is one step and parts them in lightness', dd.depth() === spreadDepth + 1 && Math.abs(ta - tb) > 0.05, [ta, tb]);
+  const [ta, tb] = twin.map((w) => valueOf(dd.get().swatches.find((x) => x.id === w.id)!.oklch));
+  check('Spread apart is one step and parts them in value', dd.depth() === spreadDepth + 1 && Math.abs(ta - tb) > 0.05, [ta, tb]);
   ctrlZ();
   ctrlZ();
   check('two undos take the spread and the twins back', dd.get().swatches === keep);
@@ -2543,12 +2626,13 @@ async function restoredUi(): Promise<void> {
   const depth2 = il.depth();
   const bases = il.get().swatches.filter((w) => w.step === 0);
   check('Check values shows the Value ruler and the colour-vision rows (Typical, with pair names and ΔE)', !!ui.querySelector('section[aria-label="Problems"]') && !!ui.querySelector('[role="radiogroup"][aria-label="Simulation"]') && /Typical/.test(ui.textContent ?? '') && /\/.*\d+\.\d/.test(ui.querySelector('[role="radiogroup"][aria-label="Simulation"]')?.textContent ?? ''), bases.length);
-  il.transact('Close in value', (d) => addRamp(recolour(d, bases[1].id, [bases[0].oklch[0] + 0.01, 0.1, 250]), [bases[0].oklch[0] - 0.012, 0.09, 140]).doc);
+  const v0 = valueOf(bases[0].oklch);
+  il.transact('Close in value', (d) => addRamp(recolour(d, bases[1].id, holdValue(v0 + 0.01, 0.1, 250)), holdValue(v0 - 0.012, 0.09, 140)).doc);
   const spread = await until(() => [...ui.querySelectorAll<HTMLButtonElement>('button')].find((b) => /^Spread these 3$/.test(b.textContent?.trim() ?? '') && shows(b)), 2000);
   check('three bases that read as one grey get one flag with Spread these 3', !!spread, [...ui.querySelectorAll('button')].map((b) => b.textContent?.trim()).filter((t) => t?.startsWith('Spread')));
   spread?.click();
   const gap = () => {
-    const l = il.get().swatches.filter((w) => w.step === 0).map((w) => w.oklch[0]).sort((a, b) => a - b);
+    const l = il.get().swatches.filter((w) => w.step === 0).map((w) => valueOf(w.oklch)).sort((a, b) => a - b);
     return Math.min(...l.slice(1).map((x, i) => x - l[i]));
   };
   check('and it spreads them all in one step', await until(() => gap() >= 0.03), gap());
@@ -2773,6 +2857,7 @@ async function quiet(): Promise<void> {
     check(`${t.label}: the document is its file`, Object.keys(body).every((k) => JSON.stringify(body[k]) === JSON.stringify(file[k])));
   }
   const prefs = shell.getState().settings;
+  check('the greyscale view left on in the first pass came back, on the root', prefs?.greyscale === true && document.documentElement.dataset.greyscale === 'true', [prefs?.greyscale, document.documentElement.dataset.greyscale]);
   shell.setActive('design');
   check('the picker style and model chosen in the first pass came back', prefs?.pickerStyle === 'wheel' && prefs.pickerModel === 'rgb' && (await until(() => host('design')?.querySelector('[data-picker="wheel"]'), 5000)), [prefs?.pickerStyle, prefs?.pickerModel]);
   // the GIF comes back from the workspace, as it was left, and every frame dithers again

@@ -20,7 +20,7 @@ export function Toolbox({ tool, onTool, colour }: { tool: PaintTool; onTool(t: P
         <IconButton key={t.value} icon={t.icon} label={t.label} shortcut={t.key} latched={tool === t.value} onClick={() => onTool(t.value)} />
       ))}
       <span className={s.grow} />
-      <i className={s.current} style={colour ? { background: cssColor(colour) } : undefined} role="img" aria-label="The brush's colour" />
+      <i className={s.current} data-colour style={colour ? { background: cssColor(colour) } : undefined} role="img" aria-label="The brush's colour" />
     </div>
   );
 }

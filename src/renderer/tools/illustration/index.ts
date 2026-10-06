@@ -2,6 +2,7 @@
 // recipes and a scratch canvas. Spec: docs/superpowers/specs/2026-09-29-colour-illustration-tool.md; plan unit V.
 import { asSvg, unsupportedImage } from '../../lib/load.ts';
 import type { ToolDefinition } from '../../shell/tool.ts';
+import { toggleGreyscale } from '../common/Greyscale.tsx';
 import { baseName, fetchBlob, isSvg } from '../common/take.ts';
 import { addBase, arm, duplicate, eyedrop, move, newPalette, select, selected } from './actions.ts';
 import { emptyDoc, fromPayload, rampOf, setSpec, toPayload, type IllustrationDoc } from './doc.ts';
@@ -96,7 +97,7 @@ export const tool: ToolDefinition<IllustrationDoc> = {
       { keys: 'ArrowLeft', label: 'Lighter step', run: () => move(doc, -1, 0) },
       { keys: 'ArrowRight', label: 'Darker step', run: () => move(doc, 1, 0) },
       { keys: 'H', label: 'Hero colour', run: hero },
-      { keys: 'G', label: 'Greyscale lens', run: () => (getView().tab === 'settings' || getView().tab === 'light') && patchView({ proof: getView().proof === 'grey' ? 'off' : 'grey' }) },
+      { keys: 'G', label: 'Greyscale', run: () => void toggleGreyscale() },
       // I picks: on the paper in Paint, anywhere on screen otherwise
       { keys: 'I', label: 'Pick', run: () => (inPaint() ? setPaint({ tool: 'pick' }) : void eyedrop(doc)) },
       { keys: 'B', label: 'Brush', run: () => inPaint() && setPaint({ tool: 'paint' }) },

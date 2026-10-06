@@ -110,7 +110,7 @@ function InkRow({ doc, d, ink, n, plate, open, onOpen }: { doc: Doc; d: Halftone
       <span className={s.ch}>{channel}</span>
       <button type="button" className={s.name} aria-expanded={open} onClick={onOpen}>
         <span className={s.a}>
-          <i className={s.chip} style={{ background: cssColor(ink.colour) }} />
+          <i className={s.chip} data-colour style={{ background: cssColor(ink.colour) }} />
           <span className={s.text}>{ink.name}</span>
           {!isIdentity(ink.curve) && <Icon name="show_chart" size={14} className={s.curved} />}
           <Icon name={open ? 'keyboard_arrow_up' : 'keyboard_arrow_down'} size={14} className={s.more} />

@@ -111,6 +111,7 @@ export function Tray(p: {
         type="button"
         role="radio"
         className={cx(s.chip, src.id === p.current && s.on)}
+        data-colour
         style={{ background: cssColor(src.pigment.oklch) }}
         aria-label={src.name}
         aria-checked={src.id === p.current}
@@ -149,7 +150,7 @@ export function Tray(p: {
           <div className={s.tubes}>{set.list.map((x) => chip(x, p.sources.indexOf(x)))}</div>
         </div>
       ))}
-      <span ref={ghost} className={s.ghost} hidden aria-hidden="true" />
+      <span ref={ghost} className={s.ghost} data-colour hidden aria-hidden="true" />
     </div>
   );
 }
@@ -180,6 +181,7 @@ export function Well(p: {
           <button
             type="button"
             className={cx(s.mix, !p.mix && s.mixEmpty, p.loaded && s.on)}
+            data-colour
             style={p.mix ? { background: cssColor(p.mix) } : undefined}
             aria-label={p.mix ? `Well mix ${toHex(p.mix).toUpperCase()}: load the brush` : 'The well is empty'}
             disabled={!p.mix}
@@ -198,7 +200,7 @@ export function Well(p: {
       </div>
       {p.well.map((w) => (
         <span key={w.id} className={s.part}>
-          <i className={s.partChip} style={colour(w.id) ? { background: cssColor(colour(w.id)!) } : undefined} />
+          <i className={s.partChip} data-colour style={colour(w.id) ? { background: cssColor(colour(w.id)!) } : undefined} />
           <span className={s.partName}>{name(w.id)}</span>
           <NumberField
             label={`Parts of ${name(w.id)}`}

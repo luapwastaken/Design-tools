@@ -41,7 +41,7 @@ const ENUMS: Partial<Record<keyof DesignView, readonly string[]>> = {
   surround: ['grey', 'ground', 'plain'],
   chipData: ['hex', 'lch', 'table'],
   cvd: ['protan', 'deutan', 'tritan', 'achromat'],
-  sim: ['normal', 'protan', 'deutan', 'tritan', 'achromat', 'greyscale'],
+  sim: ['normal', 'protan', 'deutan', 'tritan', 'achromat'],
   format: EXPORT_FORMATS,
   space: ['oklch', 'oklab'],
 };

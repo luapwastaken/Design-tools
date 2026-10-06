@@ -43,7 +43,7 @@ export function MenuList({ items, hot = -1, idBase, onHover, onActivate, options
             onPointerMove={(e) => onHover?.(i, e.currentTarget)}
             onClick={(e) => onActivate?.(i, e.currentTarget)}
           >
-            {it.strip ? <SwatchStrip colors={it.strip} height={12} className={s.strip} /> : it.swatch !== undefined ? <span className={s.chip} style={{ background: it.swatch }} /> : it.icon && <Icon name={it.icon} size={16} />}
+            {it.strip ? <SwatchStrip colors={it.strip} height={12} className={s.strip} /> : it.swatch !== undefined ? <span className={s.chip} data-colour style={{ background: it.swatch }} /> : it.icon && <Icon name={it.icon} size={16} />}
             <Tooltip content={it.label} overflowOnly>
               <span className={s.text}>{it.label}</span>
             </Tooltip>

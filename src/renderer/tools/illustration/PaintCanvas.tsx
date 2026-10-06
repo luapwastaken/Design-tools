@@ -291,6 +291,7 @@ export function PaintCanvas(p: PaintCanvasProps) {
           <canvas
             ref={canvas}
             className={s.canvas}
+            data-colour
             tabIndex={0}
             aria-label="Painting. Drag to paint; [ and ] change the brush size; Ctrl+Z undoes a stroke, Ctrl+Y redoes it."
             aria-disabled={!ready || undefined}

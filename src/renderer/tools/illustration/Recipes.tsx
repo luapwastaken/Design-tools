@@ -95,8 +95,8 @@ function RecipeRow({ target, name, r, onTry }: RowProps) {
     <div className={s.recipe}>
       <Tooltip content="Target, then the mix">
         <span className={s.pairChips} aria-label="Target and mix">
-          <i style={{ background: cssColor(target) }} />
-          <i style={{ background: cssColor(r.result) }} />
+          <i data-colour style={{ background: cssColor(target) }} />
+          <i data-colour style={{ background: cssColor(r.result) }} />
         </span>
       </Tooltip>
       <div className={s.parts}>
@@ -104,7 +104,7 @@ function RecipeRow({ target, name, r, onTry }: RowProps) {
         {r.parts.map((p) => (
           <span key={p.pigment.id} className={s.part}>
             <b>{p.parts}</b>
-            <i className={s.pchip} style={{ background: cssColor(p.pigment.oklch) }} />
+            <i className={s.pchip} data-colour style={{ background: cssColor(p.pigment.oklch) }} />
             {p.pigment.name}
           </span>
         ))}
@@ -124,8 +124,8 @@ function FarRow({ target, name, r, more, onTry }: RowProps & { more: boolean }) 
     <div className={s.recipe}>
       <Tooltip content="Target, then the nearest mix">
         <span className={s.pairChips} aria-label="Target and nearest mix">
-          <i style={{ background: cssColor(target) }} />
-          <i style={{ background: cssColor(r.result) }} />
+          <i data-colour style={{ background: cssColor(target) }} />
+          <i data-colour style={{ background: cssColor(r.result) }} />
         </span>
       </Tooltip>
       <div className={s.parts}>

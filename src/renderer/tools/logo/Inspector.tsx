@@ -228,7 +228,7 @@ export function VersionsGroup({ doc, d }: { doc: Doc; d: LogoDoc }) {
           {pal.swatches.map((w) => (
             <Tooltip key={w.id} content={`Use ${displayName(w)}`}>
               <button type="button" className={s.chip} aria-label={`Use ${displayName(w)}`} onClick={() => doc.transact(`Colour from ${displayName(w)}`, (x) => ({ ...x, colour: w.oklch }))}>
-                <i style={{ background: cssColor(w.oklch) }} />
+                <i data-colour style={{ background: cssColor(w.oklch) }} />
               </button>
             </Tooltip>
           ))}

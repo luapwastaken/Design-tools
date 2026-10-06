@@ -172,7 +172,7 @@ export function HalftoneCanvas({ d, v, screened, dots, stats, busy, active, onDr
           const st = sc && stats?.[sc.inks.findIndex((k) => k.id === ink.id)];
           return (
             <div key={ink.id} className={s.plateLabel} style={{ left: t.x + b.x * t.scale, top: t.y + b.y * t.scale }}>
-              <i style={{ background: cssColor(ink.colour) }} />
+              <i data-colour style={{ background: cssColor(ink.colour) }} />
               <b>{ink.process ? ink.process.toUpperCase() : i + 1}</b>
               <span>{ink.name}</span>
               <span className={s.dim}>{d.screen.shape === 'stochastic' ? 'FM' : `${ink.angle}°`}</span>
