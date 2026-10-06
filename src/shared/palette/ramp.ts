@@ -70,6 +70,9 @@ const MIN_STEP = 0.02;
 /** a hue turn fades out as the light (or shadow) colour's hue nears the opposite of the step's: there the short way round flips */
 const FACING = [90, 180];
 
+/** the light and shadow colours a ramp is born with: warm light, cool shadow (Illustration's Daylight preset) */
+export const DAYLIGHT: { light: Oklch; shadow: Oklch } = { light: [0.95, 0.05, 85], shadow: [0.4, 0.08, 275] };
+
 /**
  * A new ramp's settings: a warm light, a cool shadow, cloth, five steps, or the light, shadow,
  * intensity and steps of `like` (the ramp it joins, so one scene keeps one light). `hueShift` and
@@ -78,8 +81,8 @@ const FACING = [90, 180];
 export const newRamp = (base: Oklch, id: string = crypto.randomUUID(), like?: RampSpec | null): RampSpec => ({
   id,
   base,
-  light: like ? [...like.light] : [0.95, 0.05, 85],
-  shadow: like ? [...like.shadow] : [0.4, 0.08, 275],
+  light: [...(like?.light ?? DAYLIGHT.light)],
+  shadow: [...(like?.shadow ?? DAYLIGHT.shadow)],
   material: 'cloth',
   intensity: like?.intensity ?? 'grounded',
   steps: like?.steps ?? 5,

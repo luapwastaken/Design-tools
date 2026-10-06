@@ -8,7 +8,9 @@ import { displayName, stepWord } from '../common/names.ts';
 
 export type { RampSpec };
 export { stepWord };
-export type IllustrationDoc = { swatches: Swatch[]; ramps: RampSpec[]; notes: string };
+/** the scene light: what a ramp is born with when there is no ramp to copy (a preset chosen on an empty palette) */
+export type SceneLight = { light: Oklch; shadow: Oklch };
+export type IllustrationDoc = { swatches: Swatch[]; ramps: RampSpec[]; notes: string; scene?: SceneLight };
 
 export const emptyDoc = (): IllustrationDoc => ({ swatches: [], ramps: [], notes: '' });
 
@@ -122,14 +124,21 @@ export function revertRamp(d: IllustrationDoc, id: string): IllustrationDoc {
   return regen({ ...d, swatches }, id);
 }
 
+/** a ramp born like `like` (the last, or the one it follows); the first of a palette takes the scene light */
+function spawn(d: IllustrationDoc, base: Oklch, like: RampSpec | null | undefined, material?: MaterialId): RampSpec {
+  const spec = newRamp(base, undefined, like);
+  if (!like && d.scene) Object.assign(spec, { light: [...d.scene.light], shadow: [...d.scene.shadow] });
+  return material ? { ...spec, material } : spec;
+}
+
 const baseSwatch = (id: string, oklch: Oklch, name: string): Swatch => ({ id: crypto.randomUUID(), name, role: null, oklch, type: 'process', group: id, step: 0 });
 
 /**
  * A new ramp from a base colour, after `after` (the end when null), lit as that ramp (or the last)
  * is, so a scene keeps one light; returns the base swatch's id too.
  */
-export function addRamp(d: IllustrationDoc, oklch: Oklch, name = '', after: string | null = null): { doc: IllustrationDoc; base: string } {
-  const spec = newRamp(oklch, undefined, rampOf(d, after ?? undefined) ?? d.ramps.at(-1));
+export function addRamp(d: IllustrationDoc, oklch: Oklch, name = '', after: string | null = null, material?: MaterialId): { doc: IllustrationDoc; base: string } {
+  const spec = spawn(d, oklch, rampOf(d, after ?? undefined) ?? d.ramps.at(-1), material);
   const at = d.ramps.findIndex((r) => r.id === after);
   const ramps = at < 0 ? [...d.ramps, spec] : [...d.ramps.slice(0, at + 1), spec, ...d.ramps.slice(at + 1)];
   const base = baseSwatch(spec.id, oklch, name);
@@ -139,7 +148,7 @@ export function addRamp(d: IllustrationDoc, oklch: Oklch, name = '', after: stri
 /** loose swatches become ramp bases, each keeping its id, name and role, lit as the last ramp is (plan: "Make ramps from these") */
 export function makeRamps(d: IllustrationDoc, ids: string[]): IllustrationDoc {
   const taking = looseOf(d).filter((w) => ids.includes(w.id));
-  const specs = taking.map((w) => newRamp(w.oklch, undefined, d.ramps.at(-1)));
+  const specs = taking.map((w) => spawn(d, w.oklch, d.ramps.at(-1)));
   const bases = new Map(taking.map((w, i) => [w.id, specs[i].id]));
   const swatches = d.swatches.map((w) => {
     const group = bases.get(w.id);
@@ -157,11 +166,18 @@ export function lightForAll(d: IllustrationDoc, id: string): IllustrationDoc {
   return regenAll({ ...d, ramps: d.ramps.map((x) => (x === r ? x : { ...x, light: [...r.light], shadow: [...r.shadow] })) });
 }
 
+/** one light for the scene: this light and shadow colour on every ramp (hand-edited steps stay), and on the next one born */
+export const setScene = (d: IllustrationDoc, light: Oklch, shadow: Oklch): IllustrationDoc =>
+  regenAll({ ...d, scene: { light: [...light], shadow: [...shadow] }, ramps: d.ramps.map((r) => ({ ...r, light: [...light], shadow: [...shadow] })) });
+
 /** a colour in no ramp, gone */
 export const removeLoose = (d: IllustrationDoc, id: string): IllustrationDoc => ({ ...d, swatches: d.swatches.filter((w) => w.id !== id || rampOf(d, w.group)) });
 
 export function removeRamp(d: IllustrationDoc, id: string): IllustrationDoc {
-  const next = { ...d, ramps: d.ramps.filter((r) => r.id !== id), swatches: d.swatches.filter((w) => w.group !== id) };
+  const next: IllustrationDoc = { ...d, ramps: d.ramps.filter((r) => r.id !== id), swatches: d.swatches.filter((w) => w.group !== id) };
+  // the last ramp leaves its light behind for the next one
+  const gone = rampOf(d, id);
+  if (gone && !next.ramps.length) next.scene = { light: [...gone.light], shadow: [...gone.shadow] };
   // a hero gone lets the others speak up again
   return rampOf(d, id)?.hero ? regenAll(next) : next;
 }
@@ -190,6 +206,7 @@ export function moveRamp(d: IllustrationDoc, id: string, index: number): Illustr
 // ── from a file ─────────────────────────────────────────────────────────────────────────────────
 
 const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isObjectOf = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
 const triple = (v: unknown): v is Oklch => Array.isArray(v) && v.length === 3 && v.every(num);
 
 /** a ramp spec as a file (maybe hand-edited, maybe from an older build) holds it; null when unusable */
@@ -213,14 +230,14 @@ function specOf(raw: unknown): RampSpec | null {
 }
 
 /** the file's body: each ramp notes its base's name, so the ramp keeps it if another tool deletes the base */
-export function toPayload(d: IllustrationDoc): Pick<PalettePayload, 'swatches' | 'notes' | 'ramps'> {
+export function toPayload(d: IllustrationDoc): Pick<PalettePayload, 'swatches' | 'notes' | 'ramps' | 'scene'> {
   const ramps = d.ramps.map((r) => {
     const base = baseOf(d, r.id);
     if (!base) return r;
     const { name: _, ...rest } = r;
     return base.name.trim() ? { ...rest, name: base.name } : rest;
   });
-  return { swatches: d.swatches, notes: d.notes, ramps };
+  return { swatches: d.swatches, notes: d.notes, ramps, ...(d.scene && { scene: d.scene }) };
 }
 
 /**
@@ -228,7 +245,7 @@ export function toPayload(d: IllustrationDoc): Pick<PalettePayload, 'swatches' |
  * (or a second one at the same step) is loose, a ramp with no swatches left is dropped, and a base
  * recoloured elsewhere is the ramp's base. Nothing regenerates here: opening changes no colour.
  */
-export function fromPayload(p: Pick<PalettePayload, 'swatches' | 'notes' | 'ramps'>): IllustrationDoc {
+export function fromPayload(p: Pick<PalettePayload, 'swatches' | 'notes' | 'ramps' | 'scene'>): IllustrationDoc {
   // a hand-edited file may list a ramp twice: the first one counts
   const specs = (Array.isArray(p.ramps) ? p.ramps : [])
     .map(specOf)
@@ -257,5 +274,6 @@ export function fromPayload(p: Pick<PalettePayload, 'swatches' | 'notes' | 'ramp
       hero ||= one;
       return { ...r, base: base ? base.oklch : r.base, hero: one };
     });
-  return ordered({ swatches, ramps, notes: typeof p.notes === 'string' ? p.notes : '' });
+  const scene = isObjectOf(p.scene) && triple(p.scene.light) && triple(p.scene.shadow) ? { scene: { light: [...p.scene.light] as Oklch, shadow: [...p.scene.shadow] as Oklch } } : {};
+  return ordered({ swatches, ramps, notes: typeof p.notes === 'string' ? p.notes : '', ...scene });
 }
