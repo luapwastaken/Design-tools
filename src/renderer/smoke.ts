@@ -3217,7 +3217,7 @@ async function startUi(): Promise<void> {
   const rampsHead = () => [...ui.querySelectorAll('section')].find((x) => x.querySelector('h2')?.textContent === 'Ramps')?.querySelector('header')?.textContent;
   /** the Light row's two colour fields: the chip that opens the picker, and the hex it types into */
   const chip = (name: string) => ui.querySelector<HTMLButtonElement>(`[role="group"][aria-label="Light"] button[aria-label="Pick ${name}"]`);
-  const hexField = (name: string) => ui.querySelector<HTMLInputElement>(`[role="group"][aria-label="Light"] input[aria-label="${name}, hex"]`);
+  const hexField = (name: string) => ui.querySelector<HTMLInputElement>(`[role="group"][aria-label="Light"] input[aria-label="${name}, colour"]`);
   const DAY: Pair = { light: [0.95, 0.05, 85], shadow: [0.4, 0.08, 275] };
   const picked = () => {
     const a = document.activeElement as HTMLInputElement | null;
