@@ -39,8 +39,13 @@ export type Surface = {
   thin: number;
   /** how far the surface stands toward the viewer, in picture units; only the cloth has one */
   height: Float32Array | null;
+  /** where a ball or a block stands: the ground's soft shadow sits under it (the cloth hangs, so has none) */
+  foot: Foot | null;
   horizons?: Horizons;
 };
+
+/** an ellipse on the ground, in picture units: centre, and half the width and height */
+export type Foot = { x: number; y: number; rx: number; ry: number };
 
 type V3 = [number, number, number];
 /** normal x, y, z, openness, thickness and height of the surface at a point, or false for a miss */
@@ -97,6 +102,11 @@ export type Frame = {
   /** how blurred the horizon a shiny surface reflects is, and how lit the ground is */
   blur: number;
   ground: number;
+  /** metal's soft environment: how soft its horizon is, which way its sky leans (toward the light's side) and how strong and broad the soft box where the light is */
+  mblur: number;
+  sky: V3;
+  box: number;
+  boxPow: number;
   /** how far the bounce takes the surround's colour (0 with no surround to take it from) */
   tint: number;
   /** transmission: how much of the light goes through, and how much of that shows with the light in front */
@@ -130,8 +140,10 @@ export function frame(light: Light, fin: Finish = DEFAULT_FINISH, ground = 0.28,
   const hh = norm(l[0], l[1], l[2] + 1);
   // straight behind the object there is no half vector toward the viewer: the highlight has nowhere to be
   const h: V3 = l[2] < -0.98 ? [0, 0, 1] : hh;
-  const e = 3 + 520 * fin.gloss ** 3;
+  // a metal's highlight is a broad soft glint, not a pin-prick
+  const e = 3 + 520 * fin.gloss ** 3 * (1 - 0.6 * fin.metal);
   const soft = fin.softness;
+  const lh = Math.hypot(l[0], l[1]) || 1;
   return {
     l,
     h,
@@ -142,13 +154,17 @@ export function frame(light: Light, fin: Finish = DEFAULT_FINISH, ground = 0.28,
     hi: 0.22 + 0.2 * soft,
     wrap: 0.5 * soft,
     amb: 2 * fin.ambient,
-    amp: Math.min(1, 2.2 * fin.gloss),
+    amp: Math.min(1, 2.2 * fin.gloss) * (1 - 0.2 * fin.metal),
     lobe: lobe(e),
     streak: lobe(Math.max(2, e * STREAK)),
     axis: fin.across ? [0, 1] : [1, 0],
     fres: fin.gloss * (1 - fin.metal),
     blur: 0.12 + 0.5 * (1 - fin.gloss),
     ground,
+    mblur: 0.7 + 0.6 * (1 - fin.gloss),
+    sky: norm((0.45 * l[0]) / lh, 1 + (0.45 * l[1]) / lh, 0),
+    box: 0.5 * (0.5 + 0.5 * fin.gloss),
+    boxPow: 2 + 14 * fin.gloss ** 2,
     tint,
     through: Math.min(1, 1.8 * fin.translucency),
     back: 0.12 + 0.88 * smooth(0.1, -0.35, l[2]),
@@ -165,15 +181,36 @@ const BOUNCE = 3;
 const SHINE = 4;
 
 /**
+ * What a metal reflects, as how lit it is: a soft studio. The sky over the ground has no hard
+ * horizon (Gloss only narrows it), the sky leans toward the light's side, the horizon glows, and
+ * a broad soft box sits where the light is, so the bright zone follows the sun round the object.
+ * `(rx, ry, rz)` is the direction the surface reflects the viewer into.
+ */
+function environment(rx: number, ry: number, rz: number, f: Frame): number {
+  const t = rx * f.sky[0] + ry * f.sky[1];
+  const sky = smooth(-f.mblur, f.mblur, t);
+  const band = 1 - (2 * sky - 1) ** 2;
+  // a metal is read mid-dark: its body is rich, the light is only where the room is bright
+  const low = f.ground * 0.5;
+  let e = low + (0.66 - low) * sky + 0.14 * band * band;
+  const d = rx * f.l[0] + ry * f.l[1] + rz * f.l[2];
+  if (d > 0) e += f.box * d ** f.boxPow;
+  // the dark card opposite the light: what makes a metal look like one
+  else e -= 0.1 * (-d) ** 2;
+  return e;
+}
+
+/**
  * How lit a point is, 0 (the ramp's deepest shadow) to 1 (its highlight), in the painter's order:
  * lit planes and halftone on the light side, a terminator as soft as the material's, the core
  * shadow just past it, reflected light from sky and ground lifting the far edge, and the highlight.
  * Also in `S`: how much light comes through and how lit that is, how much bounce takes the
  * surround's colour, and how much of the highlight is the light's own colour. `selfF` and `selfB`
  * are how much of the light reaches the surface from the front and from behind (the folds shade
- * each other).
+ * each other). `px` and `py` are where the point is in the picture (-1..1, y up): a flat face
+ * reflects a little more sky at its top than at its bottom.
  */
-function lightPixel(nx: number, ny: number, nz: number, open: number, thick: number, selfF: number, selfB: number, f: Frame): void {
+function lightPixel(nx: number, ny: number, nz: number, open: number, thick: number, selfF: number, selfB: number, f: Frame, px = 0, py = 0): void {
   const { fin } = f;
   const ndl = nx * f.l[0] + ny * f.l[1] + nz * f.l[2];
   const lit = smooth(f.lo, f.hi, ndl) * selfF;
@@ -192,8 +229,11 @@ function lightPixel(nx: number, ny: number, nz: number, open: number, thick: num
   // what a shiny surface reflects: sky over a horizon, the ground under it
   const ry = 2 * nz * ny;
   let env = 0;
-  if (fin.metal > 0 || f.fres > 0.02) env = f.ground + (SKY - f.ground) * smooth(-f.blur, f.blur, ry) + 0.12 * ry;
-  if (fin.metal > 0) v += (env * (0.62 + 0.38 * lit) - v) * 0.9 * fin.metal;
+  if (fin.metal > 0) {
+    env = environment(2 * nz * nx + 0.3 * px, ry + 0.45 * py, 2 * nz * nz - 1, f);
+    // metal has no diffuse light: all it shows is the room
+    v += (env - v) * 0.94 * fin.metal;
+  } else if (f.fres > 0.02) env = f.ground + (SKY - f.ground) * smooth(-f.blur, f.blur, ry) + 0.12 * ry;
   if (f.fres > 0.02) {
     const x = nz > 0 ? 1 - nz : 1;
     const x2 = x * x;
@@ -226,12 +266,15 @@ function lightPixel(nx: number, ny: number, nz: number, open: number, thick: num
   v += (1 - v) * shine;
 
   // light through: a thin sheet with the light behind it glows, and the more the thinner it is
+  const arrives = ndl < 0 ? selfB : selfF;
   let wg = 0;
   let tg = 0;
   if (f.through > 0) {
     const toward = ndl < 0 ? -ndl : 0;
     const trf = ndl < 0 ? 0.4 + 0.6 * toward : 0.5 * (1 - smooth(0, 0.35 + 0.3 * fin.softness, ndl));
-    wg = f.through * trf * (1 - 0.85 * thick) * f.back * (ndl < 0 ? selfB : 1);
+    // a solid body is nearly a silhouette with a rim: the glow dies toward the middle of a ball or a block
+    const sheet = 1 - thick;
+    wg = f.through * trf * sheet * Math.sqrt(sheet) * f.back * arrives;
     tg = 0.38 + 0.55 * (toward * (0.35 + 0.65 * f.back) + 0.22 * (ndl < 0 ? 0 : 1 - smooth(0, 0.5, ndl)));
     v *= 1 - 0.4 * wg;
   }
@@ -239,7 +282,7 @@ function lightPixel(nx: number, ny: number, nz: number, open: number, thick: num
   // skin, leaves and paper scatter light past the terminator: a band of the warm glow along it
   if (f.scatter > 0) {
     const band = smooth(f.lo - 0.1, f.lo + 0.2, ndl) * (1 - smooth(f.hi - 0.1, f.hi + 0.3, ndl));
-    const ws = 0.55 * f.scatter * band * thinner(thick);
+    const ws = 0.55 * f.scatter * band * thinner(thick) * arrives;
     if (ws > wg) {
       wg = ws;
       tg = Math.max(tg, v + 0.1);
@@ -250,7 +293,7 @@ function lightPixel(nx: number, ny: number, nz: number, open: number, thick: num
   S[GLOW] = wg;
   S[GLOW_TONE] = tg > 1 ? 1 : tg;
   S[BOUNCE] = f.tint > 0 ? Math.min(0.7, f.amb * 0.8 * down * (1 - lit)) * f.tint : 0;
-  S[SHINE] = shine * (1 - fin.metal);
+  S[SHINE] = shine * (1 - 0.6 * fin.metal);
 }
 
 /**
@@ -333,18 +376,20 @@ const WARM = 40;
 /** a light colour with less chroma than this has no hue to turn toward */
 const HUED = 0.04;
 
-/** the short way round, `f` of the way from `a` to `b` */
-const turn = (a: number, b: number, f: number): number => wrapHue(a + ((((b - a) % 360) + 540) % 360 - 180) * f);
+/** the short way round, `f` of the way from `a` to `b`, by no more than `most` degrees */
+const turn = (a: number, b: number, f: number, most = 180): number => wrapHue(a + Math.max(-most, Math.min(most, ((((b - a) % 360) + 540) % 360 - 180) * f)));
+/** how far light through a material that does not scatter warm may turn the ramp's hue: it stays the ramp's colour, lighter and richer */
+const KEEP = 12;
 
 export function lookOf(i: LookIn): Look {
   const banded = !!i.banded;
   const sub = MATERIALS.find((m) => m.id === i.material)?.sub ?? 0;
   const finish = finishOf(i.material, i.surface);
-  // light through the material is richer than light off it, and turns toward the warm inside a skin or a leaf, or the light's own colour
+  // light through the material is richer than light off it; inside a skin, a leaf or paper it turns warm, elsewhere it only leans a little toward the light's colour
   const warm = sub >= 0.25;
   const target = warm ? WARM : i.light[1] >= HUED ? i.light[2] : null;
   const amount = warm ? 0.35 + 0.3 * sub : 0.3;
-  const glow = i.steps.map(([l, c, h]): Oklch => fitChroma([l + (1 - l) * 0.16, c * 1.4 + 0.015, target === null ? h : turn(h, target, amount)]));
+  const glow = i.steps.map(([l, c, h]): Oklch => fitChroma([l + (1 - l) * 0.16, c * 1.4 + 0.015, target === null ? h : turn(h, target, amount, warm ? 180 : KEEP)]));
   const s = i.surround ? toOklab(i.surround) : null;
   // light bounced off a surround arrives in its colour: the same lightness, the surround's hue and chroma part of the way
   const bounce = s
@@ -375,7 +420,7 @@ export function plainLook(steps: Oklch[], banded = false): Look {
 // ── self-shadowing: the folds of the cloth shade each other ─────────────────────────────────────
 
 /** per pixel, the angle (degrees above the picture plane) at which the cloth stops hiding the light, from 8 azimuths round */
-export type Horizons = { front: Uint8Array; back: Uint8Array };
+export type Horizons = { front: Uint8Array; back: Uint8Array; /** how many of the 8 azimuths are worked out so far */ ready: number };
 const AZIMUTHS = 8;
 /** degrees either side of a fold's horizon over which its shadow fades: a penumbra */
 const SOFT = 4;
@@ -386,45 +431,45 @@ const REACH = Array.from({ length: 16 }, (_, k) => 1.5 * 1.3 ** k);
  * For each pixel of a height field, how high the cloth around it stands in each of 8 directions: a
  * light lower than that behind the folds is blocked. `front` looks for ridges toward the viewer
  * (light in front of the cloth); `back` for ridges toward the wall (light behind it: the light
- * crosses another layer before it reaches this one).
+ * crosses another layer before it reaches this one). `upTo` works only the first few azimuths, so
+ * an idle callback can do the rest a piece at a time (see `warm`).
  */
-export function horizonsOf(sf: Surface): Horizons {
-  if (sf.horizons) return sf.horizons;
+export function horizonsOf(sf: Surface, upTo = AZIMUTHS): Horizons {
   const { size, cover, height } = sf;
   const n = size * size;
-  const front = new Uint8Array(AZIMUTHS * n);
-  const back = new Uint8Array(AZIMUTHS * n);
-  if (height) {
-    for (let k = 0; k < AZIMUTHS; k++) {
-      const dx = Math.sin((k * 360 * RAD) / AZIMUTHS);
-      const dy = -Math.cos((k * 360 * RAD) / AZIMUTHS);
-      for (let p = 0; p < n; p++) {
-        if (cover[p] < 0.5) continue;
-        const [i, j] = [p % size, (p / size) | 0];
-        const z0 = height[p];
-        let up = 0;
-        let down = 0;
-        for (const r of REACH) {
-          const [x, y] = [Math.round(i + dx * r * (size / 560)), Math.round(j + dy * r * (size / 560))];
-          if (x < 0 || y < 0 || x >= size || y >= size) break;
-          const q = y * size + x;
-          if (cover[q] < 0.5) continue;
-          const slope = (height[q] - z0) / (r * (size / 560) * (2 / size));
-          if (slope > up) up = slope;
-          else if (-slope > down) down = -slope;
-        }
-        front[k * n + p] = Math.min(90, Math.atan(up) / RAD);
-        back[k * n + p] = Math.min(90, Math.atan(down) / RAD);
+  const hz = (sf.horizons ??= { front: new Uint8Array(AZIMUTHS * n), back: new Uint8Array(AZIMUTHS * n), ready: height ? 0 : AZIMUTHS });
+  for (; hz.ready < upTo && height; hz.ready++) {
+    const k = hz.ready;
+    const dx = Math.sin((k * 360 * RAD) / AZIMUTHS);
+    const dy = -Math.cos((k * 360 * RAD) / AZIMUTHS);
+    for (let p = 0; p < n; p++) {
+      if (cover[p] < 0.5) continue;
+      const [i, j] = [p % size, (p / size) | 0];
+      const z0 = height[p];
+      let up = 0;
+      let down = 0;
+      for (const r of REACH) {
+        const [x, y] = [Math.round(i + dx * r * (size / 560)), Math.round(j + dy * r * (size / 560))];
+        if (x < 0 || y < 0 || x >= size || y >= size) break;
+        const q = y * size + x;
+        if (cover[q] < 0.5) continue;
+        const slope = (height[q] - z0) / (r * (size / 560) * (2 / size));
+        if (slope > up) up = slope;
+        else if (-slope > down) down = -slope;
       }
+      hz.front[k * n + p] = Math.min(90, Math.atan(up) / RAD);
+      hz.back[k * n + p] = Math.min(90, Math.atan(down) / RAD);
     }
   }
-  return (sf.horizons = { front, back });
+  return hz;
 }
 
 // ── a frame ─────────────────────────────────────────────────────────────────────────────────────
 
 /** shadow on the backdrop, as opacity over the surround */
 const SHADOW = 0.34;
+/** the ground's shadow right under a ball or a block, as opacity */
+const GROUND = 0.4;
 /** how far behind the shapes the backdrop hangs, in half-widths of the picture */
 const DEPTH = 0.2;
 
@@ -441,7 +486,8 @@ export type Stats = {
   shine: number;
 };
 
-export const newStats = (): Stats => ({ total: 0, steps: new Float64Array(9), glow: new Float64Array(256), bounce: new Float64Array(256), shine: 0 });
+/** `steps`: how many steps the ramp has (hand-edited ones can take it past nine) */
+export const newStats = (steps = 9): Stats => ({ total: 0, steps: new Float64Array(Math.max(steps, 9)), glow: new Float64Array(256), bounce: new Float64Array(256), shine: 0 });
 
 /** the step a tone is nearest to: 0 is the lightest */
 const stepAt = (tone: number, n: number) => Math.max(0, Math.min(n - 1, Math.round((1 - tone) * (n - 1))));
@@ -457,24 +503,33 @@ function slices(az: number): [number, number, number] {
 let reachF = 1;
 let reachB = 1;
 function reach(hz: Horizons, n: number, p: number, s: [number, number, number], elev: number): void {
-  const [k0, k1, w] = s;
-  reachF = reachB = 1;
-  if (elev > 0) {
-    const [a, b] = [hz.front[k0 * n + p], hz.front[k1 * n + p]];
-    reachF = smooth(-SOFT, SOFT, elev - (a + (b - a) * w));
-  } else {
-    const [a, b] = [hz.back[k0 * n + p], hz.back[k1 * n + p]];
-    // the same folds shade a face tipped toward the light as one turned away from it
-    reachB = reachF = smooth(-SOFT, SOFT, -elev - (a + (b - a) * w));
+  // (indexed, not destructured: this runs for every pixel of the cloth)
+  const k0 = s[0] * n + p;
+  const k1 = s[1] * n + p;
+  const w = s[2];
+  // across the picture plane the front and back slices are blended, so the shading does not jump as the sun crosses it
+  const k = smooth(-SOFT, SOFT, elev);
+  let front = 0;
+  let back = 0;
+  if (k > 0) {
+    const a = hz.front[k0];
+    front = smooth(-SOFT, SOFT, elev - (a + (hz.front[k1] - a) * w));
   }
+  if (k < 1) {
+    const a = hz.back[k0];
+    // the same folds shade a face tipped toward the light as one turned away from it
+    back = smooth(-SOFT, SOFT, -elev - (a + (hz.back[k1] - a) * w));
+  }
+  reachF = reachB = back + (front - back) * k;
 }
 
-/** how thick a cast shadow is and the colour it takes: black for an opaque shape, paler and the glow's colour for a thin one */
+/** how thick a cast shadow is and the colour it takes: the ramp's deepest step, darkened, for an opaque shape; paler and the glow's colour for a thin one */
 function shadowOf(look: Look, f: Frame, sf: Surface): { alpha: number; rgb: [number, number, number] } {
   const t = f.through * sf.thin;
   const mid = 128 * 3;
   const [r, g, b] = [look.glow[mid], look.glow[mid + 1], look.glow[mid + 2]];
-  return { alpha: SHADOW * (1 - 0.7 * t), rgb: [r * t, g * t, b * t] };
+  const k = (1 - t) * 0.5;
+  return { alpha: SHADOW * (1 - 0.7 * t), rgb: [look.lut[0] * k + r * t, look.lut[1] * k + g * t, look.lut[2] * k + b * t] };
 }
 
 /**
@@ -487,7 +542,7 @@ export function shade(sf: Surface, look: Look, light: Light, out: Uint8ClampedAr
   const f = frame(light, look.finish, look.ground, look.tinted ? 1 : 0);
   const { size, normal, cover, open, blur, thick } = sf;
   const { lut, glow, bounce, spec, banded } = look;
-  const hz = sf.height && (f.through > 0 || f.elev > 0) ? horizonsOf(sf) : null;
+  const hz = sf.height ? horizonsOf(sf) : null;
   reachF = reachB = 1;
   const sl = slices(f.az);
   const n = size * size;
@@ -500,13 +555,26 @@ export function shade(sf: Surface, look: Look, light: Light, out: Uint8ClampedAr
   const cast = shadowOf(look, f, sf);
   // a light behind the picture plane throws its shadow toward the viewer, where there is no backdrop
   const onWall = smooth(-0.05, 0.12, f.l[2]);
+  // the ground's soft shadow under a ball or a block: an ellipse leaning away from the light, which a low sun stretches
+  const foot = sf.foot;
+  const gx = foot ? foot.rx * (1 + 0.5 * (1 - lz)) : 1;
+  const gOff = foot ? foot.x - f.l[0] * 0.25 * gx : 0;
+  const gStrength = GROUND * (0.5 + 0.5 * onWall);
   const hard = (w: number) => (banded ? (w > 0.5 ? 1 : 0) : w);
   for (let j = 0, p = 0; j < size; j++) {
     const sj = j + dy;
     const row = sj >= 0 && sj < size ? sj * size : -1;
+    const gdy = foot ? (1 - ((j + 0.5) / size) * 2 - foot.y) / foot.ry : 2;
+    const gdy2 = gdy * gdy;
+    const near = gdy2 < 1;
     for (let i = 0; i < size; i++, p++) {
       const si = i + dx;
-      const sh = row >= 0 && si >= 0 && si < size ? cast.alpha * onWall * blur[row + si] * fade[i] * fade[j] : 0;
+      let sh = row >= 0 && si >= 0 && si < size ? cast.alpha * onWall * blur[row + si] * fade[i] * fade[j] : 0;
+      if (near) {
+        const gdx = (((i + 0.5) / size) * 2 - 1 - gOff) / gx;
+        const q = gdx * gdx + gdy2;
+        if (q < 1) sh = Math.min(1, sh + gStrength * (1 - q) * (1 - q));
+      }
       const a = cover[p];
       const o = p * 4;
       if (a === 0) {
@@ -517,7 +585,7 @@ export function shade(sf: Surface, look: Look, light: Light, out: Uint8ClampedAr
         continue;
       }
       if (hz) reach(hz, n, p, sl, f.elev);
-      lightPixel(normal[p * 3], normal[p * 3 + 1], normal[p * 3 + 2], open[p], thick[p], reachF, reachB, f);
+      lightPixel(normal[p * 3], normal[p * 3 + 1], normal[p * 3 + 2], open[p], thick[p], reachF, reachB, f, ((i + 0.5) / size) * 2 - 1, 1 - ((j + 0.5) / size) * 2);
       const x = S[TONE] * 255;
       const k = x >= 254 ? 254 : x | 0;
       const t = x - k;
@@ -539,7 +607,7 @@ export function shade(sf: Surface, look: Look, light: Light, out: Uint8ClampedAr
       }
       const wg = hard(S[GLOW]);
       let gi = 0;
-      if (wg > 0.02) {
+      if (wg > 0.003) {
         const y = S[GLOW_TONE] * 255;
         gi = y >= 254 ? 254 : y | 0;
         const u = y - gi;
@@ -567,7 +635,7 @@ export function shade(sf: Surface, look: Look, light: Light, out: Uint8ClampedAr
 }
 
 /** what one pixel of the picture reads as: a step of the ramp, or a colour light added to it (the glow through the material, a highlight in the light's colour) */
-export type Reading = { kind: 'step'; step: number; of: number } | { kind: 'glow' | 'shine' | 'none' };
+export type Reading = { kind: 'step'; step: number; of: number } | { kind: 'glow' | 'shine'; rgb: [number, number, number] } | { kind: 'none' };
 
 /** Which step of the ramp the pixel (x, y) of `sf` reads, under `light`: the same maths as `shade`. */
 export function read(sf: Surface, look: Look, light: Light, x: number, y: number): Reading {
@@ -575,12 +643,15 @@ export function read(sf: Surface, look: Look, light: Light, x: number, y: number
   const p = Math.floor(y) * sf.size + Math.floor(x);
   if (sf.cover[p] < 0.5) return { kind: 'none' };
   const f = frame(light, look.finish, look.ground, look.tinted ? 1 : 0);
-  const hz = sf.height && (f.through > 0 || f.elev > 0) ? horizonsOf(sf) : null;
+  const hz = sf.height ? horizonsOf(sf) : null;
   if (hz) reach(hz, sf.size * sf.size, p, slices(f.az), f.elev);
   else reachF = reachB = 1;
-  lightPixel(sf.normal[p * 3], sf.normal[p * 3 + 1], sf.normal[p * 3 + 2], sf.open[p], sf.thick[p], reachF, reachB, f);
-  if (S[GLOW] >= 0.5) return { kind: 'glow' };
-  if (S[SHINE] >= 0.5) return { kind: 'shine' };
+  lightPixel(sf.normal[p * 3], sf.normal[p * 3 + 1], sf.normal[p * 3 + 2], sf.open[p], sf.thick[p], reachF, reachB, f, ((Math.floor(x) + 0.5) / sf.size) * 2 - 1, 1 - ((Math.floor(y) + 0.5) / sf.size) * 2);
+  if (S[GLOW] >= 0.5) {
+    const g = Math.min(255, Math.round(S[GLOW_TONE] * 255)) * 3;
+    return { kind: 'glow', rgb: [look.glow[g], look.glow[g + 1], look.glow[g + 2]] };
+  }
+  if (S[SHINE] >= 0.5) return { kind: 'shine', rgb: look.spec };
   return { kind: 'step', step: stepAt(S[TONE], look.steps), of: look.steps };
 }
 
@@ -666,7 +737,7 @@ const CLOTH_TILT = 0.55;
 function clothHit(fold: Fold): Hit {
   const c = CLOTHS[fold];
   return (x, y, out) => {
-    if (x < -c.xmax || x > c.xmax) return false;
+    if (x < -c.xmax || x > c.xmax || (c.half && Math.abs(x) > c.half(y))) return false;
     if (y > c.top(x) - CLOTH_TILT * c.z(x, c.top(x))) return false;
     if (y < c.hem(x) - CLOTH_TILT * c.z(x, c.hem(x))) return false;
     const e = 1e-3;
@@ -733,7 +804,22 @@ function build(hit: Hit, size: number, cloth: boolean): Surface {
     mass += cover[p] * thick[p];
   }
   const thin = area ? 1 - mass / area : 0;
-  return { size, normal, cover, open, thick, thin, height, blur: blurred(cover, size, Math.max(1, Math.round(size * 0.035))) };
+  return { size, normal, cover, open, thick, thin, height, foot: cloth ? null : footOf(cover, size), blur: blurred(cover, size, Math.max(1, Math.round(size * 0.035))) };
+}
+
+/** the ellipse under a shape: at the lowest row it covers, as wide as most of the shape is */
+function footOf(cover: Float32Array, size: number): Foot | null {
+  let [lo, left, right] = [-1, size, -1];
+  for (let p = 0; p < cover.length; p++) {
+    if (cover[p] < 0.5) continue;
+    const [i, j] = [p % size, (p / size) | 0];
+    if (j > lo) lo = j;
+    if (i < left) left = i;
+    if (i > right) right = i;
+  }
+  if (lo < 0) return null;
+  const unit = 2 / size;
+  return { x: ((left + right + 1) / 2) * unit - 1, y: 1 - (lo + 1) * unit + 0.03, rx: 0.4 * (right - left + 1) * unit, ry: 0.1 };
 }
 
 /** three box blurs each way: close to a gaussian */
@@ -776,4 +862,17 @@ export function surface(shape: Shape, size: number, fold: Fold = 'curtain'): Sur
     surfaces.set(key, (sf = build(shape === 'cloth' ? clothHit(fold) : HITS[shape], size, shape === 'cloth')));
   }
   return sf;
+}
+
+/**
+ * Work a cloth's surface and then its horizons up a piece at a time, one call per piece, true once
+ * it is all ready: an idle callback can do it between frames, so the first draw of a heavy cloth
+ * (a fold's horizons take most of a second at full size) is already done when it is asked for.
+ */
+export function warm(fold: Fold, size: number): boolean {
+  const key = `cloth:${fold}:${size}`;
+  const built = surfaces.has(key);
+  const sf = surface('cloth', size, fold);
+  if (!built) return false;
+  return horizonsOf(sf, (sf.horizons?.ready ?? 0) + 1).ready >= AZIMUTHS;
 }

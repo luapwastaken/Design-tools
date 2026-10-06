@@ -2,22 +2,29 @@
    the pointer reads and the share of each step under it, the shape options, and the controls in
    groups on the right (under the stage when the tab is narrow). Only the canvases, the ground and the
    bar of steps carry content colour; everything else is tokens. Nothing animates. */
-.tab { flex: 1; display: flex; flex-direction: column; min-height: 0; container-type: inline-size; }
+.tab { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .layout { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: 12px; min-height: 0; }
 .main { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
 .controls { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
 .controls > * { flex: none; }
 /* three words in a segmented row (Grounded, Expressive, Extreme) need the room */
 .controls [role="radiogroup"] button { padding-inline: 5px; }
-.every { align-self: flex-end; }
+.every { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 6px; }
+.addAll { align-self: flex-end; }
 .hint { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
 .presets { display: flex; flex-direction: column; gap: 4px; }
+/* narrow tab: Direction, Height and Side on one row, the six presets on another */
+.aim { display: flex; flex-direction: column; gap: 6px; }
+.aimRow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.aimRow > :not([role="radiogroup"]) { flex: 1 1 110px; min-width: 0; }
 
 /* above the stage: what it shows, and what the pointer is over */
 .head { display: flex; align-items: baseline; gap: 12px; min-height: 18px; }
 .caption { flex: 1; min-width: 0; overflow: hidden; color: var(--ink-2); font: 400 var(--fs-base)/1.35 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
 .caption b { color: var(--ink); font-weight: 600; }
-.readout { flex: none; max-width: 55%; overflow: hidden; color: var(--ink-2); font: 400 var(--fs-unit)/1.35 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; text-overflow: ellipsis; white-space: nowrap; }
+.readout { display: inline-flex; flex: none; align-items: center; gap: 6px; max-width: 60%; overflow: hidden; color: var(--ink-2); font: 400 var(--fs-unit)/1.35 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; text-overflow: ellipsis; white-space: nowrap; }
+.rchip { flex: none; width: 14px; height: 14px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--edge); }
+.rhex { color: var(--ink); font-weight: 400; }
 
 /* --S: the side the object is drawn in; the sun's ring is a circle just inside it */
 .stage { --S: min(100cqw, 100cqh, 640px); position: relative; flex: 1; min-width: 0; min-height: 240px; overflow: hidden; container-type: size; border-radius: var(--r-ctl); box-shadow: inset 0 0 0 1px var(--edge); }
@@ -25,8 +32,13 @@
 .empty { position: absolute; inset: 0; align-items: center; justify-content: center; text-align: center; background: var(--module); }
 .one { position: absolute; inset: 0; display: grid; place-items: center; }
 .object { display: block; width: var(--S); height: var(--S); }
+.object, .tcanvas { cursor: crosshair; }
 
-.ringbox { position: absolute; left: 50%; top: 50%; z-index: 2; width: calc(var(--S) * 0.94); height: calc(var(--S) * 0.94); transform: translate(-50%, -50%); pointer-events: none; touch-action: none; }
+/* centred with insets, not a transform, so that in a grid of objects the ring can sit under them (a transform would make it a layer of its own) */
+.ringbox { position: absolute; left: calc(50% - var(--S) * 0.47); top: calc(50% - var(--S) * 0.47); z-index: 2; width: calc(var(--S) * 0.94); height: calc(var(--S) * 0.94); pointer-events: none; touch-action: none; }
+/* several objects: the ring is out at the stage's edge and under them; only the small sun is over them */
+.ringbox.multi { --R: min(100cqw, 100cqh); left: calc(50% - var(--R) * 0.49); top: calc(50% - var(--R) * 0.49); z-index: auto; width: calc(var(--R) * 0.98); height: calc(var(--R) * 0.98); }
+.multi svg { position: relative; z-index: 0; }
 .ringbox svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .ring { fill: none; stroke: var(--on-content-ink-2); stroke-width: 1; stroke-dasharray: 5 5; }
 /* the thin track the sun rides on takes a press too, nothing else does */
@@ -46,13 +58,16 @@
   color: var(--on-content-bg);
   cursor: grab;
   pointer-events: auto;
+  z-index: 2;
 }
+.multi .sun { width: 24px; height: 24px; margin: -12px 0 0 -12px; }
 /* light from behind the object: the sun is drawn hollow */
 .sun.behind { background: var(--on-content-bg); box-shadow: inset 0 0 0 2px var(--on-content-ink); color: var(--on-content-ink); }
 .sun:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 
 /* Show: All ramps and Shape: All three */
-.gridWrap { position: absolute; inset: 0; padding: 16px; overflow: auto; }
+.gridWrap { position: absolute; inset: 0; z-index: 1; padding: 16px; overflow: auto; pointer-events: none; }
+.gridWrap :is(.gcell, .tcanvas) { pointer-events: auto; }
 .grid { display: grid; gap: 10px; min-height: 100%; align-content: center; }
 .gcell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; padding: 8px 8px 10px; border-radius: var(--r-ctl); }
 .gcell:hover { background: var(--highlight); }
@@ -78,15 +93,16 @@
 
 /* colours the light needs */
 .needs { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.needs li { display: flex; align-items: center; gap: 8px; }
+.needs li { display: flex; align-items: center; gap: 8px; min-height: var(--btn-xs); }
 .chip { flex: none; width: 24px; height: 24px; border-radius: 5px; box-shadow: inset 0 0 0 1px var(--edge); }
 .needName { flex: 1; min-width: 0; color: var(--ink); font: 400 var(--fs-row)/1.25 var(--font-sans); }
 .needName small { display: block; color: var(--ink-3); font: 400 var(--fs-meta)/1.3 var(--font-sans); }
 .hex { flex: none; color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
 
-/* a narrow tab: the controls go under the stage, and the page scrolls (after the rules it overrides) */
-@container (max-width: 700px) {
-  .layout { flex: none; grid-template-columns: minmax(0, 1fr); }
-  .stage { flex: none; height: 360px; }
-  .controls { overflow: visible; }
-}
+/* a narrow tab (the layout hook sets data-narrow): the controls go under the stage, the page scrolls, and the stage and
+   the aim controls stay pinned at the top of it. The pin is -16px because a sticky box keeps its scroller's padding clear */
+.tab[data-narrow] { --pin: -16px; }
+.tab[data-narrow] .layout { display: flex; flex: none; flex-direction: column; gap: 8px; }
+.tab[data-narrow] .main { position: sticky; top: var(--pin); z-index: 3; padding-top: 6px; background: var(--module); }
+.tab[data-narrow] .stage { flex: none; height: clamp(170px, 21vh, 250px); min-height: 0; }
+.tab[data-narrow] .controls { overflow: visible; }

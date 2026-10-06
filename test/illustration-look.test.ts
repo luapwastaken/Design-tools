@@ -114,7 +114,7 @@ test('back-lit, thin translucent cloth glows, an opaque one goes dark, and a sol
   assert.ok(ring > middle + 25, `rim ${ring} centre ${middle}`);
 });
 
-test('the cast shadow of a translucent surface is paler and tinted; of an opaque one it is black; none falls from behind', () => {
+test('the cast shadow of a translucent surface is paler and tinted by the glow; of an opaque one it is dark, in the ramp’s shadow colour; none falls from behind', () => {
   const size = 120;
   /** the densest partly clear pixel on the lower right: the shadow on the backdrop */
   const densest = (px: Uint8ClampedArray) => {
@@ -130,13 +130,15 @@ test('the cast shadow of a translucent surface is paler and tinted; of an opaque
   const at = (translucency: number) => densest(render('cloth', UPPER_LEFT, size, lookFor('cloth', { surface: { translucency } })));
   const [pale, dense] = [at(0.8), at(0)];
   assert.ok(pale[3] < dense[3] * 0.7, `paler: alpha ${pale[3]} against ${dense[3]}`);
-  assert.deepEqual(dense.slice(0, 3), [0, 0, 0], 'an opaque shadow is black');
+  assert.ok(Math.max(...dense.slice(0, 3)) < 70 && dense[0] > dense[2], `an opaque shadow is dark and warm, as the ramp’s deepest step is: ${dense}`);
   assert.ok(Math.max(...pale.slice(0, 3)) > 20 && pale[0] > pale[2], `tinted by the glow: ${pale}`);
-  assert.deepEqual(rgbaAt(render('sphere', UPPER_LEFT, size, lookFor('stone')), size, size * 0.8, size * 0.8).slice(0, 3), [0, 0, 0]);
+  const stone = rgbaAt(render('sphere', UPPER_LEFT, size, lookFor('stone')), size, size * 0.8, size * 0.8);
+  assert.ok(Math.max(...stone.slice(0, 3)) < 70 && stone[0] > stone[2], `and so is a ball’s: ${stone}`);
   // from behind there is no wall for it to fall on
   const behind = render('sphere', BEHIND, size, lookFor('stone'));
   let alpha = 0;
-  for (let y = size * 0.75; y < size * 0.95; y += 2) for (let x = size * 0.75; x < size * 0.95; x += 2) alpha = Math.max(alpha, rgbaAt(behind, size, x, y)[3]);
+  // (right of the soft shadow on the ground under the ball, which stays)
+  for (let y = size * 0.75; y < size * 0.95; y += 2) for (let x = size * 0.85; x < size * 0.95; x += 2) alpha = Math.max(alpha, rgbaAt(behind, size, x, y)[3]);
   assert.ok(alpha < 12, `no cast shadow from behind (${alpha})`);
   let front = 0;
   const lit = render('sphere', UPPER_LEFT, size, lookFor('stone'));

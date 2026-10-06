@@ -42,6 +42,7 @@ import { ready, screen, shownDots, svgOver, totals } from './tools/halftone/scre
 import { patchView as patchHalftone, status as halftoneStatus } from './tools/halftone/view-state.ts';
 import { eyedrop, rampsFromLoose } from './tools/illustration/actions.ts';
 import { carryLight, addRamp, baseOf, rampName, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
+import { FINISH_PRESETS } from './tools/illustration/finish.ts';
 import type { PaintEngine } from './tools/illustration/paint/index.ts';
 import { liveEngine, liveSaves } from './tools/illustration/paint/live.ts';
 import { paintEngineChecks } from './tools/illustration/paint/smoke-checks.ts';
@@ -3938,6 +3939,95 @@ async function lightUi(): Promise<void> {
   pick('Upper left')?.click();
   check('Upper left puts it back', (await until(() => preview().azimuth === 320 && preview().elevation === 35)) !== null, preview());
 
+  // Direction goes round: 370 is 10, -30 is 330 (typed)
+  const direction = ui.querySelector<HTMLInputElement>('input[aria-label="Direction"]');
+  if (check('Direction is a field to type into', !!direction) && direction) {
+    typeInto(direction, '370');
+    direction.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    check('typing 370 goes round to 10, with no error left in the field', (await until(() => preview().azimuth === 10)) !== null && direction.getAttribute('aria-invalid') !== 'true', preview());
+    typeInto(direction, '-30');
+    direction.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    check('and -30 to 330', (await until(() => preview().azimuth === 330)) !== null, preview());
+  }
+  pick('Upper left')?.click();
+  await until(() => preview().azimuth === 320 && preview().elevation === 35);
+
+  // the sun goes behind the object without Alt: pulled out past its ring and back, or with the Side switch
+  {
+    const rr = ring!.getBoundingClientRect();
+    const [cx, cy, R] = [rr.left + rr.width / 2, rr.top + rr.height / 2, rr.width / 2];
+    const at = (r: number) => [cx + Math.sin(300 * rad) * r * R, cy - Math.cos(300 * rad) * r * R];
+    const send = (type: string, r: number) => {
+      const [px, py] = at(r);
+      ring!.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerup' ? 0 : 1, clientX: px, clientY: py }));
+    };
+    send('pointerdown', 0.6);
+    send('pointermove', 1.3);
+    send('pointermove', 0.7);
+    send('pointerup', 0.7);
+    const out = await until(() => ((preview().elevation ?? 0) < 0 ? preview() : null));
+    check('pulling the sun out past its ring and back puts it behind the object, no Alt', !!out && out.azimuth === 300 && !!sun!.getAttribute('aria-valuetext')?.includes('behind the object'), preview());
+    const side = [...ui.querySelectorAll('[role="radiogroup"]')].find((g) => /^Front\s*Behind$/.test(g.textContent?.trim() ?? ''));
+    const sideBtn = (t: string) => [...(side?.querySelectorAll<HTMLElement>('button[role="radio"]') ?? [])].find((b) => b.textContent?.trim() === t);
+    check('and the Side switch says Behind', sideBtn('Behind')?.getAttribute('aria-checked') === 'true' && sideBtn('Front')?.getAttribute('aria-checked') === 'false', side?.textContent);
+    sideBtn('Front')?.click();
+    check('Front brings it back in front, the direction kept', (await until(() => (preview().elevation ?? 0) > 0)) !== null && preview().azimuth === 300, preview());
+    sideBtn('Behind')?.click();
+    check('and Behind sends it round again', (await until(() => (preview().elevation ?? 0) < 0)) !== null, preview());
+    pick('Upper left')?.click();
+    await until(() => preview().azimuth === 320 && preview().elevation === 35);
+  }
+
+  // with several objects the sun can be hidden, and its ring sits under them
+  {
+    const hide = () => [...ui.querySelectorAll<HTMLElement>('button[role="checkbox"]')].find((b) => b.textContent?.trim() === 'Hide the sun' && shows(b));
+    const sunUp = () => !!ui.querySelector('[role="slider"][aria-label="Light direction"]');
+    check('with one object there is no Hide the sun', !hide());
+    pick('All three')?.click();
+    const h = await until(hide);
+    check('with three there is, and the sun is on show', !!h && sunUp());
+    h?.click();
+    check('Hide the sun takes the sun and its ring away, and keeps the direction', (await until(() => !sunUp())) !== null && preview().azimuth === 320, preview());
+    hide()?.click();
+    check('and it comes back', (await until(sunUp)) !== null);
+    pick('Cloth')?.click();
+    await until(() => canvas() && shows(canvas()));
+  }
+
+  // finishes: Satin, Silk, Linen and Gold set the Surface numbers (Gold a metal), one undo step each
+  {
+    const finishBtn = () => [...ui.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="listbox"]')].find((b) => /^(Material’s own|Satin|Silk|Linen|Gold|Custom)$/.test(b.textContent?.trim() ?? '') && shows(b));
+    const finishNow = () => finishBtn()?.textContent?.trim() ?? '';
+    const choose = async (name: string) => {
+      finishBtn()?.click();
+      const o = await until(() => [...document.querySelectorAll<HTMLElement>('[role="option"],[role="menuitem"],[role="menuitemradio"]')].find((e) => e.textContent?.trim() === name && shows(e)));
+      o?.click();
+    };
+    check('the Look group has a Finish: the material’s own, or Custom when the ramp has Surface numbers of its own', ['Material’s own', 'Custom'].includes(finishNow()), finishNow());
+    const [depth, surfaceBefore] = [il.depth(), JSON.stringify(spec().surface)];
+    await choose('Satin');
+    const satin = FINISH_PRESETS.find((f) => f.id === 'satin')!;
+    check('Satin writes its Gloss, Grain and Sheen to the ramp’s Surface, one undo step', (await until(() => spec().surface?.grain === satin.surface.grain)) !== null && JSON.stringify(spec().surface) === JSON.stringify(satin.surface) && il.depth() === depth + 1 && finishNow() === 'Satin', [spec().surface, il.depth() - depth, finishNow()]);
+    check('and the Surface group says what Grain and Streak are for', /Grain stretches the highlight/.test(ui.textContent ?? ''));
+    await choose('Gold');
+    check('Gold makes it Metal as well', (await until(() => spec().material === 'metal')) !== null && finishNow() === 'Gold', [spec().material, finishNow()]);
+    il.undo();
+    il.undo();
+    check('and both are undone', spec().material === was.material && JSON.stringify(spec().surface) === surfaceBefore && il.depth() === depth, [spec(), il.depth() - depth]);
+  }
+
+  // Apply look to every ramp, beside Use for every ramp
+  if (il.get().ramps.length > 1) {
+    const apply = () => [...ui.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Apply look to every ramp' && shows(b));
+    const others = () => il.get().ramps.slice(1).map((r) => [r.material, JSON.stringify(r.surface ?? null)].join());
+    const [depth, before] = [il.depth(), others()];
+    check('Apply look to every ramp sits next to Use for every ramp, and is on while the ramps differ', !!apply() && !apply()!.disabled && !!button('illustration', 'Use for every ramp'), before);
+    apply()?.click();
+    check('it gives every ramp this one’s material and Surface, as one undo step', (await until(() => others().every((o) => o === [spec().material, JSON.stringify(spec().surface ?? null)].join()))) !== null && il.depth() === depth + 1, [others(), il.depth() - depth]);
+    il.undo();
+    check('and undo gives the others their own back', others().join('|') === before.join('|') && il.depth() === depth, others());
+  }
+
   // Look: Intensity and Push, one undo step each, relighting
   const h1 = hash();
   const other = was.intensity === 'extreme' ? 'grounded' : 'extreme';
@@ -3980,21 +4070,51 @@ async function lightUi(): Promise<void> {
   c.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 4, pointerType: 'mouse', clientX: cr.left + cr.width * 0.5, clientY: cr.top + cr.height * 0.45 }));
   const readout = await until(() => [...ui.querySelectorAll('span')].find((e) => /step \d of \d/.test(e.textContent ?? '') && shows(e)));
   check('hovering the object reads which step the pixel shows', !!readout && /, step \d of 5, L \d/.test(readout.textContent ?? ''), readout?.textContent);
+  check('and its swatch and hex, to copy', !!readout && /#[0-9A-F]{6}/.test(readout.textContent ?? '') && !!readout.querySelector('i[data-colour]'), readout?.textContent);
+  const stepN = Number(/step (\d) of/.exec(readout?.textContent ?? '')?.[1] ?? 0);
+  c.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: cr.left + cr.width * 0.5, clientY: cr.top + cr.height * 0.45 }));
+  check('clicking the object selects that step, for the picker to edit', stepN > 0 && (await until(() => view().selected === stepsOf(il.get(), id)[stepN - 1]?.id)) !== null, [stepN, view().selected]);
+  patchIllustration({ selected: baseOf(il.get(), id)!.id });
   const parts = [...(ui.querySelector('[data-step-use]')?.querySelectorAll('i') ?? [])];
   check('and a bar under the stage shares the object out by step: one part for each step', parts.length >= 5 && parts.every((i) => i.hasAttribute('data-colour')), parts.length);
   const canvases = [...ui.querySelectorAll('canvas[role="img"]')];
   check('the canvases carry data-colour for the greyscale view', canvases.length > 0 && canvases.every((e) => e.hasAttribute('data-colour')), canvases.length);
 
+  // a ramp that kept hand-edited steps past its end has more than nine: Step use counts them all
+  {
+    const extra = Array.from({ length: 6 }, (_, i) => ({ id: crypto.randomUUID(), name: `Extra ${i}`, role: null, oklch: [0.2 - i * 0.02, 0.05, 30] as [number, number, number], type: 'process' as const, group: id, step: 5 + i, edited: true }));
+    il.transact('Long ramp', (d) => ({ ...d, swatches: [...d.swatches, ...extra] }));
+    await settle();
+    const use = ui.querySelector('[data-step-use]');
+    const text = use?.parentElement?.textContent ?? '';
+    check('a ramp of eleven steps shows eleven parts in Step use and no NaN', (use?.querySelectorAll('i').length ?? 0) >= 11 && !/NaN/.test(text) && [...(use?.querySelectorAll('i') ?? [])].every((i) => !/NaN/.test(i.getAttribute('style') ?? '')), text);
+    il.undo();
+  }
+
   // colours the light needs: offered, and added in one step
   patchIllustration({ preview: { ...view().preview, azimuth: 300, elevation: -45 } });
   await settle();
-  const add = await until(() => [...ui.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Add to palette' && shows(b)), 3000);
-  if (check('with the light behind the cloth the tab lists the colours it needs and offers Add to palette', !!add)) {
-    const n0 = il.get().swatches.length;
-    add!.click();
-    check('which adds them as colours of the palette', (await until(() => il.get().swatches.length > n0)) !== null && il.get().swatches.slice(n0).every((w) => w.group === undefined && /glow|bounce|shine/.test(w.name)), il.get().swatches.slice(n0).map((w) => w.name));
+  // the group is folded to begin with: one press opens it
+  const needsHead = await until(() => [...ui.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')].find((b) => /^Colours this light needs/.test(b.textContent?.trim() ?? '') && shows(b)), 3000);
+  check('with the light behind the cloth the tab lists the colours it needs, folded until opened', !!needsHead && needsHead.getAttribute('aria-expanded') === 'false', needsHead?.textContent);
+  if (needsHead?.getAttribute('aria-expanded') === 'false') needsHead.click();
+  const rows = () => [...ui.querySelectorAll<HTMLLIElement>('ul li')].filter((li) => /glow|bounce|shine|cast/.test(li.textContent ?? '') && shows(li));
+  const addAll = () => [...ui.querySelectorAll<HTMLButtonElement>('button')].find((b) => /^Add (all \d+ )?to palette$/.test(b.textContent?.trim() ?? '') && shows(b));
+  if (check('each needed colour has its own Add, with its hex, and Add all is there', (await until(() => rows().length >= 1)) !== null && rows().every((li) => !!li.querySelector('button') && /#[0-9A-F]{6}/.test(li.textContent ?? '')) && !!addAll(), rows().map((li) => li.textContent))) {
+    const [n0, shown] = [il.get().swatches.length, toastStore.get().length];
+    rows()[0].querySelector('button')!.click();
+    check('one Add adds just that colour, as a loose swatch, in one undo step', (await until(() => il.get().swatches.length === n0 + 1)) !== null && il.get().swatches.at(-1)!.group === undefined && /glow|bounce|shine|cast/.test(il.get().swatches.at(-1)!.name), il.get().swatches.slice(n0).map((w) => w.name));
+    check('and a toast says what was added and where', !!(await until(() => toastStore.get().slice(shown).find((t) => /^Added .* to Loose/.test(String(t.message))))), toastStore.get().slice(shown).map((t) => t.message));
+    check('the row stays, marked as in the palette, with its Add off', rows().length >= 1 && rows().some((li) => /In the palette/.test(li.textContent ?? '') && li.querySelector('button')?.disabled === true), rows().map((li) => li.textContent));
+    // with more left to add, Add all takes them in one step
+    const more = rows().filter((li) => !/In the palette/.test(li.textContent ?? '')).length;
+    if (more > 0) {
+      addAll()?.click();
+      check('Add all adds the rest, none twice', (await until(() => rows().every((li) => /In the palette/.test(li.textContent ?? '')))) !== null && il.get().swatches.length === n0 + rows().length, [il.get().swatches.length - n0, rows().length]);
+      il.undo();
+    }
     il.undo();
-    check('in one undo step', il.get().swatches.length === n0, il.get().swatches.length);
+    check('and each is one undo step', il.get().swatches.length === n0, il.get().swatches.length);
   }
   patchIllustration({ preview: { ...view().preview, shape: 'sphere', azimuth: 320, elevation: 35 } });
   while (made-- > 0) il.undo();

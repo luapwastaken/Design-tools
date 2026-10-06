@@ -14,7 +14,8 @@
 .head {
   /* pinned while its module is in view: only bodies scroll, headers stay (brief §5) */
   position: sticky;
-  top: 0;
+  /* a scroller with padding keeps a sticky header clear of it: a page may pull it back (--stick) */
+  top: var(--stick, 0px);
   z-index: 2;
   display: flex;
   flex: none;

@@ -1,22 +1,25 @@
 // The colours a light needs that the ramp doesn't have: the glow of light through thin cloth, light
 // bounced back by the surround, a highlight in the light's own colour. The picture reads them from
 // small tables built from the ramp (shade.ts); this finds the ones the picture really uses, so the
-// tab can offer them to the palette. Pure.
+// tab can offer them to the palette. The shadow the object throws has a colour too. Pure.
 import { toOklch, type Oklch } from '../../../shared/color/index.ts';
 import { toOklab } from '../../../shared/palette/space.ts';
 import type { Look, Stats } from './shade.ts';
 
-export type Needed = { kind: 'glow' | 'bounce' | 'shine'; name: string; why: string; oklch: Oklch };
+export type Needed = { kind: 'glow' | 'bounce' | 'shine' | 'cast'; name: string; why: string; oklch: Oklch };
 
 /** a colour within this OKLab distance of one the palette has is that colour */
 const SAME = 0.04;
 /** what share of the object light must reach before its colour counts as needed */
-const SHARE = { glow: 0.06, bounce: 0.18, shine: 0.004 };
+const SHARE = { glow: 0.06, bounce: 0.1, shine: 0.004 };
 
 const distance = (a: Oklch, b: Oklch) => {
   const [p, q] = [toOklab(a), toOklab(b)];
   return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
 };
+
+/** true when one of `have` is this colour, or near enough to count as it */
+export const nearOne = (c: Oklch, have: Oklch[]): boolean => have.some((h) => distance(h, c) < SAME);
 
 const at = (lut: Uint8ClampedArray, i: number): Oklch => toOklch({ mode: 'rgb', r: lut[i * 3] / 255, g: lut[i * 3 + 1] / 255, b: lut[i * 3 + 2] / 255 });
 
@@ -38,14 +41,14 @@ export function glowColour(stats: Stats, look: Look): Oklch | null {
 }
 
 /**
- * The colours the frame behind `stats` used that none of `have` is near, at most four, named for
+ * The colours the frame behind `stats` used that none of `have` is near, at most five, named for
  * the ramp. `look` is the ramp as it is (not as a vision proof shows it).
  */
 export function neededColours(stats: Stats, look: Look, have: Oklch[], ramp: string): Needed[] {
   const out: Needed[] = [];
   if (stats.total <= 0) return out;
   const add = (kind: Needed['kind'], name: string, why: string, oklch: Oklch) => {
-    if ([...have, ...out.map((o) => o.oklch)].some((c) => distance(c, oklch) < SAME)) return;
+    if (nearOne(oklch, [...have, ...out.map((o) => o.oklch)])) return;
     out.push({ kind, name: `${ramp} ${name}`, why, oklch });
   };
   const [glowMid, glow] = quantile(stats.glow, 0.5);
@@ -63,5 +66,8 @@ export function neededColours(stats: Stats, look: Look, have: Oklch[], ramp: str
     const k = 0.45;
     add('shine', 'shine', 'The highlight in the light’s own colour', toOklch({ mode: 'oklab', l: lab[0] + (to[0] - lab[0]) * k, a: lab[1] + (to[1] - lab[1]) * k, b: lab[2] + (to[2] - lab[2]) * k }, top[2]));
   }
+  // the shadow on the ground: the ramp's deepest step, darkened, as the picture draws it
+  const [r, g, b] = [look.lut[0], look.lut[1], look.lut[2]].map((v) => (v / 255) * 0.5);
+  add('cast', 'cast shadow', 'The shadow the object throws, in the ramp’s shadow colour', toOklch({ mode: 'rgb', r, g, b }));
   return out;
 }
