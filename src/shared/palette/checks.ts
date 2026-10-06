@@ -15,42 +15,80 @@ import {
 } from '../color/index.ts';
 import { valueOf } from '../color/value.ts';
 import { INK_LIBRARIES, nearestInks, type InkMatch } from './inks.ts';
-import { isGround, isInk } from './roles.ts';
+import { isGround, isInk, ROLES } from './roles.ts';
 import { fitChroma } from './space.ts';
 
 // ── contrast ─────────────────────────────────────────────────────────────────────────────────────
 
 export type ContrastFix = { swatchId: string; oklch: Oklch; ratio: number };
-export type ContrastPair = { text: Swatch; ground: Swatch; ratio: number; grade: WcagGrade; target: number; fix: ContrastFix | null };
-
-/** Primary (buttons) and Highlight (chart marks, pills) are fills: WCAG's 3:1 for large text and non-text. */
-export const contrastTarget = (role: string | null): number => (role === 'Primary' || role === 'Highlight' ? 3 : 4.5);
-
-/** text is what has an ink job role or no role; a free role (Border, Disabled) says nothing about carrying text */
-const carriesText = (role: string | null): boolean => role === null || isInk(role);
+/** `blocked`: it fails and every colour a fix could move is locked */
+export type ContrastPair = { text: Swatch; ground: Swatch; ratio: number; grade: WcagGrade; target: number; fix: ContrastFix | null; blocked: boolean };
 
 /**
- * Text on grounds. With ground roles, every swatch that carries text on each of them; without, the
- * darkest and lightest swatches that aren't inks stand in as grounds, and each other swatch is
- * checked on the one it reads best on. A failing text carries one fix for all its grounds: the
- * nearest lightness that passes on every one, `minGap` clear of the other swatches' values
- * where a little more of a move gets there, so the fix doesn't make a value collision. Its fix is
- * null when no lightness of its hue passes on all its grounds.
+ * Primary and Accent are fills (buttons, chart marks): WCAG's 3:1 for large text and non-text. The
+ * Highlight is a marker Text reads on (4.5:1), so it is checked as a ground, not as ink.
  */
-export function contrastPairs(swatches: Swatch[], { minGap = 0 }: { minGap?: number } = {}): ContrastPair[] {
+export const contrastTarget = (role: string | null): number => (role === 'Primary' || role === 'Accent' ? 3 : 4.5);
+
+/**
+ * Text is what has an ink job role, bar the Highlight marker. A swatch with no role has no job: it is
+ * graded as text only when the palette gives no colour a role at all. A free role (Border, Disabled)
+ * says nothing about carrying text.
+ */
+const carriesText = (s: Swatch, marker: boolean, anyRole: boolean): boolean => (s.role === null ? !anyRole : isInk(s.role) && !(marker && s.role === 'Highlight'));
+
+/** how willingly a colour moves to fix a pair: the supporting colours before the brand and the type, the grounds last */
+const MOVE_RANK: Record<string, number> = { Highlight: 0, Accent: 1, Muted: 1, Primary: 2, Text: 2, Surface: 3, Background: 3 };
+export const moveRank = (role: string | null): number => (role === null ? 1 : (MOVE_RANK[role] ?? 1));
+
+/**
+ * Text on grounds. With ground roles, every swatch that carries text on each of them (Primary and
+ * Accent as fills at 3:1), and the Text on the Highlight marker; without, the darkest and lightest
+ * swatches that aren't inks stand in as grounds, and each other swatch is checked on the one it reads
+ * best on. A failing text carries one fix for all its grounds: the nearest lightness that passes on
+ * every one, `minGap` clear of the other swatches' values where a little more of a move gets there,
+ * so the fix doesn't make a value collision. A locked swatch (`locked`, ids) is never the one a fix
+ * moves: the other colour of the pair moves, or the pair is `blocked`. Its fix is null when no
+ * lightness of its hue passes.
+ */
+export function contrastPairs(swatches: Swatch[], { minGap = 0, locked = [] }: { minGap?: number; locked?: readonly string[] } = {}): ContrastPair[] {
   const roled = swatches.filter((s) => isGround(s.role));
   const plain = swatches.filter((s) => !isInk(s.role));
   const grounds = roled.length ? roled : extremes(plain.length ? plain : swatches);
-  const texts = swatches.filter((s) => !grounds.includes(s) && carriesText(s.role));
-  if (!texts.length && grounds.length === 2 && !roled.length) return [pair(grounds[1], grounds[0], null)]; // just a dark and a light
-  return texts.flatMap((text) => {
+  const anyRole = swatches.some((s) => s.role !== null && (ROLES as readonly string[]).includes(s.role));
+  const ink = swatches.find((s) => s.role === 'Text');
+  const marker = !!ink && roled.length > 0;
+  const texts = swatches.filter((s) => !grounds.includes(s) && carriesText(s, marker, anyRole));
+  if (!texts.length && grounds.length === 2 && !roled.length) return [pair(grounds[1], grounds[0], null, false)]; // just a dark and a light
+  const held = (s: Swatch) => locked.includes(s.id);
+  const others = (s: Swatch) => swatches.filter((x) => x !== s).map((x) => valueOf(x.oklch));
+  const out = texts.flatMap((text) => {
     const on = roled.length ? grounds : [grounds.reduce((a, b) => (contrast(text.oklch, b.oklch) > contrast(text.oklch, a.oklch) ? b : a))];
     const target = contrastTarget(text.role);
     const failing = on.some((g) => contrast(text.oklch, g.oklch) < target);
-    const others = swatches.filter((s) => s !== text).map((s) => valueOf(s.oklch));
-    const fix = failing ? fixLightness(text, on.map((g) => g.oklch), target, others, minGap) : null;
-    return on.map((ground) => pair(text, ground, fix));
+    if (!failing) return on.map((ground) => pair(text, ground, null, false));
+    // the text moves, for all its grounds at once; locked, each ground that fails moves instead
+    if (!held(text)) {
+      const fix = fixLightness(text, on.map((g) => g.oklch), target, others(text), minGap);
+      return on.map((ground) => pair(text, ground, fix, false));
+    }
+    return on.map((ground) => {
+      if (contrast(text.oklch, ground.oklch) >= target) return pair(text, ground, null, false);
+      const movable = !held(ground) && roled.length > 0;
+      return pair(text, ground, movable ? fixLightness(ground, [text.oklch], target, others(ground), minGap) : null, !movable);
+    });
   });
+  // the marker: Text reads on the Highlight; the Highlight moves
+  if (marker) {
+    for (const hl of swatches.filter((s) => s.role === 'Highlight')) {
+      const target = contrastTarget('Text');
+      const fails = contrast(ink!.oklch, hl.oklch) < target;
+      const movable = !held(hl);
+      const fix = fails && movable ? fixLightness(hl, [ink!.oklch], target, others(hl), minGap) : null;
+      out.push(pair(ink!, hl, fix, fails && !movable));
+    }
+  }
+  return out;
 }
 
 function extremes(pool: Swatch[]): Swatch[] {
@@ -59,10 +97,12 @@ function extremes(pool: Swatch[]): Swatch[] {
   return [byL[0], byL.at(-1)!];
 }
 
-function pair(text: Swatch, ground: Swatch, fix: ContrastFix | null): ContrastPair {
+function pair(text: Swatch, ground: Swatch, fix: ContrastFix | null, blocked: boolean): ContrastPair {
   const ratio = contrast(text.oklch, ground.oklch);
   const target = contrastTarget(text.role);
-  return { text, ground, ratio, grade: wcagGrade(ratio), target, fix: ratio >= target || !fix ? null : { ...fix, ratio: contrast(fix.oklch, ground.oklch) } };
+  // a fix that moved the ground reads against the text
+  const against = (f: ContrastFix) => contrast(f.oklch, f.swatchId === ground.id ? text.oklch : ground.oklch);
+  return { text, ground, ratio, grade: wcagGrade(ratio), target, fix: ratio >= target || !fix ? null : { ...fix, ratio: against(fix) }, blocked: ratio < target && blocked };
 }
 
 /** how far past the smallest passing move a fix may go to keep clear of the other values */

@@ -27,13 +27,42 @@ const pairName = (p: { text: Swatch; ground: Swatch }) => `${p.text.name} on ${p
 
 // ── contrast ─────────────────────────────────────────────────────────────────────────────────────
 
-test('contrast: every other swatch on each ground role, with ratio, grade and target', () => {
+test('contrast: every colour with a job on each ground role, the Accent as a 3:1 fill, and the Text on the Highlight marker', () => {
   const pairs = contrastPairs(MONOLITH);
-  assert.deepEqual(pairs.map(pairName), ['Bone on Ground', 'Iron on Ground', 'Ember on Ground', 'Moss on Ground', 'Sky on Ground']);
-  assert.deepEqual(pairs.map((p) => p.ratio.toFixed(1)), ['15.0', '3.6', '5.5', '3.0', '8.7']);
-  assert.deepEqual(pairs.map((p) => p.grade), ['AAA', 'AA large · non-text', 'AA', 'Fail', 'AAA']);
-  assert.deepEqual(pairs.map((p) => p.target), [4.5, 4.5, 4.5, 4.5, 3]);
-  assert.deepEqual(pairs.map((p) => p.fix === null), [true, false, true, false, true]);
+  // Moss has no role while the palette gives others one, so it is not graded as text
+  assert.deepEqual(pairs.map(pairName), ['Bone on Ground', 'Iron on Ground', 'Ember on Ground', 'Bone on Sky']);
+  assert.deepEqual(pairs.map((p) => p.ratio.toFixed(1)), ['15.0', '3.6', '5.5', '1.7']);
+  assert.deepEqual(pairs.map((p) => p.grade), ['AAA', 'AA large · non-text', 'AA', 'Fail']);
+  assert.deepEqual(pairs.map((p) => p.target), [4.5, 4.5, 3, 4.5]);
+  assert.deepEqual(pairs.map((p) => p.fix === null), [true, false, true, false]);
+  // the marker's fix moves the Highlight, not the Text
+  assert.equal(pairs[3].fix!.swatchId, 'Sky');
+  assert.ok(contrast(pairs[3].fix!.oklch, pairs[3].text.oklch) >= 4.5);
+});
+
+test('contrast: a colour with no role is graded as text only when no colour has a role', () => {
+  const none = contrastPairs([sw('Page', '#ffffff'), sw('Ink', '#202020'), sw('Mist', '#cccccc')]);
+  assert.ok(none.some((p) => p.text.name === 'Mist'), 'no roles anywhere: the lightest and darkest stand in as grounds, the rest are checked');
+  const some = contrastPairs([sw('Page', '#ffffff', 'Background'), sw('Ink', '#202020', 'Text'), sw('Mist', '#cccccc')]);
+  assert.deepEqual(some.map(pairName), ['Ink on Page']);
+});
+
+test('contrast fixes never move a locked colour: the other one moves, or the pair is blocked', () => {
+  const list = [sw('Page', '#fafafa', 'Background'), sw('Card', '#ffffff', 'Surface'), sw('Pale', '#bbbbbb', 'Muted'), sw('Wash', '#9ad7c0', 'Highlight'), sw('Ink', '#14161a', 'Text')];
+  // Muted locked: it fails on the page, so the page moves (a fix for each ground that fails), never the Muted
+  const held = contrastPairs(list, { locked: ['Pale'] }).filter((p) => p.text.name === 'Pale');
+  for (const p of held) {
+    assert.notEqual(p.fix?.swatchId, 'Pale');
+    if (p.fix) assert.ok(contrast(p.fix.oklch, p.text.oklch) >= 4.5);
+  }
+  // Muted and both grounds locked: nothing can move
+  const stuck = contrastPairs(list, { locked: ['Pale', 'Page', 'Card'] }).filter((p) => p.text.name === 'Pale');
+  assert.ok(stuck.every((p) => p.fix === null && p.blocked));
+  // the marker locked: its Text pair is blocked, the Text is not rewritten to suit it
+  const dark = [sw('Ground', '#14161a', 'Background'), sw('Bone', '#efe9dd', 'Text'), sw('Sky', '#8fb8de', 'Highlight')];
+  const blocked = contrastPairs(dark, { locked: ['Sky'] }).find((p) => p.ground.name === 'Sky')!;
+  assert.deepEqual([blocked.fix, blocked.blocked], [null, true]);
+  assert.equal(contrastPairs(dark).find((p) => p.ground.name === 'Sky')!.fix!.swatchId, 'Sky');
 });
 
 test('contrast: free roles (a border, a disabled grey) are not checked as text', () => {
@@ -65,12 +94,13 @@ test('contrast fix keeps a wide-gamut colour wide', () => {
   assert.equal(p.fix!.oklch[1], 0.32);
 });
 
-test('contrast targets: fills (Primary, Highlight) need 3:1, everything else 4.5:1', () => {
-  assert.deepEqual(['Text', 'Muted', 'Accent', 'Primary', 'Highlight', 'Other', null].map(contrastTarget), [4.5, 4.5, 4.5, 3, 3, 4.5, 4.5]);
+test('contrast targets: fills (Primary, Accent) need 3:1, everything else 4.5:1', () => {
+  assert.deepEqual(['Text', 'Muted', 'Accent', 'Primary', 'Highlight', 'Other', null].map(contrastTarget), [4.5, 4.5, 3, 3, 4.5, 4.5, 4.5]);
 });
 
 test('contrast fix: the smallest lightness move that reaches the target, hue kept', () => {
-  for (const p of contrastPairs(MONOLITH).filter((x) => x.fix)) {
+  // the text pairs (the marker's fix moves the Highlight, tested above)
+  for (const p of contrastPairs(MONOLITH).filter((x) => x.fix && x.ground.role === 'Background')) {
     const { fix, text, ground } = p;
     assert.equal(fix!.swatchId, text.id);
     assert.ok(fix!.ratio >= p.target, `${pairName(p)} reaches ${fix!.ratio}`);
@@ -81,8 +111,8 @@ test('contrast fix: the smallest lightness move that reaches the target, hue kep
     assert.ok(fix!.oklch[0] > text.oklch[0], 'lifted, away from the dark ground');
     assert.equal(fix!.oklch[0], Math.round(fix!.oklch[0] * 1000) / 1000, 'a readable L');
   }
-  const moss = contrastPairs(MONOLITH).find((p) => p.text.name === 'Moss')!;
-  assert.ok(Math.abs(moss.fix!.oklch[0] - 0.58) < 0.02, `the mockup says L 58: ${moss.fix!.oklch[0]}`);
+  const iron = contrastPairs(MONOLITH).find((p) => p.text.name === 'Iron')!;
+  assert.ok(iron.fix!.oklch[0] > iron.text.oklch[0] && iron.fix!.oklch[0] < 0.62, `Iron lifts just enough: ${iron.fix!.oklch[0]}`);
 });
 
 test('contrast fix on a light ground darkens; a saturated colour loses chroma only to stay in sRGB', () => {

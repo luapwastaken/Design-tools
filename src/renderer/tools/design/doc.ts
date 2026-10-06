@@ -9,8 +9,8 @@ import { displayName, named } from '../common/names.ts';
 
 export { displayName, listNames, named, plural } from '../common/names.ts';
 
-/** `ramps`: Illustration's ramp settings, kept so they go back into the file unchanged */
-export type DesignDoc = { swatches: Swatch[]; notes: string; ramps?: RampSpec[] };
+/** `ramps` and `scene`: Illustration's ramp settings and scene light, kept so they go back into the file unchanged */
+export type DesignDoc = { swatches: Swatch[]; notes: string; ramps?: RampSpec[]; scene?: PalettePayload['scene'] };
 
 export type BuildMethod = 'harmony' | 'generate' | 'image' | 'logo' | 'gradient' | 'paste' | 'complete';
 /** the tabs under the palette and picker; the active one is saved in the view */
@@ -19,7 +19,7 @@ export type DesignTab = 'contrast' | 'check' | 'preview' | 'harmonies' | 'notes'
 export type ChipData = 'hex' | 'lch' | 'table';
 /** the view filter over the artboard and the In use page; never written to the document */
 export type Simulate = 'normal' | Cvd;
-export type CheckId = 'contrast' | 'value' | 'vision' | 'print';
+export type CheckId = 'contrast' | 'preview' | 'value' | 'vision' | 'print';
 
 /** Never in history: saved with the workspace through shell.setView (spec §7.1). */
 export type DesignView = {
@@ -67,11 +67,11 @@ export const nameIn = (d: DesignDoc, w: Swatch): string => (w.name.trim() ? w.na
 // a hand-edited or imported file may leave these out
 const tidy = (w: Swatch): Swatch => ({ ...w, role: w.role ?? null, type: w.type ?? 'process' });
 
-/** The palette file's contents. An Illustration palette's ramps and each swatch's group, step and edited go back as they came. */
-export const toPayload = (d: DesignDoc): Pick<PalettePayload, 'swatches' | 'notes' | 'ramps'> => ({ swatches: d.swatches, notes: d.notes, ...(d.ramps && { ramps: d.ramps }) });
+/** The palette file's contents. An Illustration palette's ramps, scene light and each swatch's group, step and edited go back as they came. */
+export const toPayload = (d: DesignDoc): Pick<PalettePayload, 'swatches' | 'notes' | 'ramps' | 'scene'> => ({ swatches: d.swatches, notes: d.notes, ...(d.ramps && { ramps: d.ramps }), ...(d.scene && { scene: d.scene }) });
 
-export function fromPayload(p: Pick<PalettePayload, 'swatches' | 'notes' | 'ramps'>): DesignDoc {
-  return { swatches: p.swatches.map(tidy), notes: p.notes ?? '', ...(p.ramps && { ramps: p.ramps }) };
+export function fromPayload(p: Pick<PalettePayload, 'swatches' | 'notes' | 'ramps' | 'scene'>): DesignDoc {
+  return { swatches: p.swatches.map(tidy), notes: p.notes ?? '', ...(p.ramps && { ramps: p.ramps }), ...(p.scene && { scene: p.scene }) };
 }
 
 export const newSwatch = (oklch: Oklch, name = '', role: string | null = null): Swatch => ({

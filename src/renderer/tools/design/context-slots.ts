@@ -11,7 +11,7 @@ export type Mode = 'light' | 'dark';
 /** A colour on the page: a palette swatch, or one made from them where the palette has no fit. */
 export type Slot = { oklch: Oklch; name: string; swatchId: string | null };
 export type Status = 'success' | 'warning' | 'error';
-export type PairId = 'text' | 'muted' | 'link' | 'button' | 'mark' | 'cardTitle' | 'cardMeta' | Status | 'bars';
+export type PairId = 'text' | 'muted' | 'link' | 'button' | 'mark' | 'cardTitle' | 'cardMeta' | Status | 'bars' | 'accent';
 /** `what` is the smallest thing on the page drawn with this pair, which sets `need`. */
 export type Pair = { fg: Slot; bg: Slot; ratio: number; grade: WcagGrade; need: number; ok: boolean; what: string };
 
@@ -25,7 +25,11 @@ export type Scene = {
   muted: Slot;
   primary: Slot;
   onPrimary: Slot;
+  /** the Primary where it reads 4.5:1 as text on the page and card, else a darker (or lighter) shade of it: links are never the Accent */
+  link: Slot;
+  /** a lively second colour: a fill (marks, bars, outlines), never the colour of text */
   accent: Slot;
+  /** a marker fill that the Text colour reads on */
   highlight: Slot;
   onHighlight: Slot;
   status: Record<Status, { fill: Slot; ink: Slot }>;
@@ -114,7 +118,8 @@ export function scene(swatches: Swatch[], mode: Mode): Scene | null {
   const highlight = highlightSw ? slot(highlightSw) : accent;
 
   const onPrimary = onFill(primary, page, text);
-  const onHighlight = onFill(highlight, page, text);
+  const onHighlight = text;
+  const link = ratio(primary, page) >= 4.5 && ratio(primary, surface) >= 4.5 ? primary : made(deriveLink(primary.oklch, text.oklch, page, surface), 'link (derived)');
   const status = statusColours(swatches, primary.oklch, page, text);
 
   const pair = (fg: Slot, bg: Slot, what: string, need = 4.5): Pair => {
@@ -124,23 +129,42 @@ export function scene(swatches: Swatch[], mode: Mode): Scene | null {
   const pairs: Record<PairId, Pair> = {
     text: pair(text, page, 'Small text'),
     muted: pair(muted, page, 'Body text'),
-    link: pair(accent, page, 'A link'),
+    link: pair(link, page, 'A link'),
     button: pair(onPrimary, primary, 'A button label'),
-    mark: pair(onHighlight, highlight, 'Large text', 3),
+    mark: pair(onHighlight, highlight, 'Text on a marker'),
     cardTitle: pair(text, surface, 'Small text'),
     cardMeta: pair(muted, surface, 'Small text'),
     success: pair(status.success.ink, status.success.fill, 'A pill label'),
     warning: pair(status.warning.ink, status.warning.fill, 'A pill label'),
     error: pair(status.error.ink, status.error.fill, 'A pill label'),
-    bars: pair(highlight, surface, 'A chart bar', 3),
+    bars: pair(accent, surface, 'A chart bar', 3),
+    accent: pair(accent, page, 'An accent mark', 3),
   };
 
-  return { mode, page, surface, line, text, muted, primary, onPrimary, accent, highlight, onHighlight, status, pairs };
+  return { mode, page, surface, line, text, muted, primary, onPrimary, link, accent, highlight, onHighlight, status, pairs };
 }
 
 /** The hover text of a failing pair, e.g. "Iron on Ground: 3.59:1, AA large · non-text. Body text needs 4.5:1." */
 export const describe = (p: Pair): string =>
   `${p.fg.name} on ${p.bg.name}: ${p.ratio.toFixed(2)}:1, ${p.grade}. ${p.what} needs ${p.need}:1.`;
+
+/**
+ * The Primary walked toward the text colour (hue kept) until it only just clears 4.6:1 on the page and
+ * the card: the link-safe shade of a brand colour that is too light, or too dark, to read as a link.
+ */
+function deriveLink(primary: Oklch, text: Oklch, page: Slot, surface: Slot): Oklch {
+  const TARGET = 4.6;
+  const at = (k: number): Oklch => [primary[0] + (text[0] - primary[0]) * k, primary[1] * (1 - k) + text[1] * k, primary[2]];
+  const reads = (o: Oklch) => Math.min(contrast(o, page.oklch), contrast(o, surface.oklch)) >= TARGET;
+  if (!reads(at(1))) return text;
+  let [lo, hi] = [0, 1];
+  for (let i = 0; i < 18; i++) {
+    const mid = (lo + hi) / 2;
+    if (reads(at(mid))) hi = mid;
+    else lo = mid;
+  }
+  return at(hi);
+}
 
 /**
  * Text walked toward the page until it only just clears 4.5:1 on both page and card, found by
@@ -182,3 +206,13 @@ function statusColours(swatches: Swatch[], primary: Oklch, page: Slot, text: Slo
   });
   return Object.fromEntries(fills) as Scene['status'];
 }
+
+/** the ground a palette is built for: its Background role's, else the light page unless it has no light colour */
+export function ownMode(swatches: Swatch[]): Mode {
+  const bg = swatches.find((s) => s.role === 'Background');
+  if (bg) return isLight(bg.oklch) ? 'light' : 'dark';
+  return swatches.some((s) => s.oklch[0] >= 0.85) || !swatches.length ? 'light' : 'dark';
+}
+
+/** the pairs the Check palette list reads from the preview of the palette's own ground: failures, and the ones no role pair already covers */
+export const PREVIEW_ONLY: PairId[] = ['button', 'link', 'success', 'warning', 'error'];

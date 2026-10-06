@@ -1,6 +1,6 @@
 /* The chrome around the website uses tokens; everything inside .site takes the palette through the
    custom properties InContext sets (--pg page, --sf surface, --ln line, --tx text, --mu muted,
-   --pr primary, --on-pr, --ac accent, --hl highlight, --on-hl). */
+   --pr primary, --on-pr, --lk link, --ac accent, --hl highlight, --on-hl). */
 
 .root { height: 100%; min-height: 0; container-type: inline-size; }
 .pair {
@@ -16,6 +16,8 @@
 }
 .frame { min-width: 0; }
 .fail { color: var(--danger); }
+/* the half that is not the palette's ground says so, plainly, above its page */
+.derived { display: flex; align-items: center; gap: 6px; margin: 0 0 var(--space-3); color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.4; }
 /* the site fills its module like a browser viewport, however short the page */
 .fit { min-height: 100%; container-type: inline-size; display: flex; flex-direction: column; }
 
@@ -68,7 +70,7 @@
   text-decoration: underline 1.5px var(--pr);
   text-underline-offset: 6px;
 }
-.signin { position: relative; color: var(--ac); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.signin { position: relative; color: var(--lk); font-size: 12px; font-weight: 600; white-space: nowrap; }
 
 .hero { padding: 34px 22px 28px; }
 .h1 {
@@ -109,7 +111,7 @@
   white-space: nowrap;
 }
 .primary { background: var(--pr); color: var(--on-pr); }
-.secondary { border: 1px solid var(--ac); color: var(--ac); }
+.secondary { border: 2px solid var(--ac); color: var(--tx); }
 
 .cards {
   display: grid;
@@ -162,7 +164,7 @@
   min-height: 64px;
   border-bottom: 1px solid var(--ln);
 }
-.chart i { position: relative; flex: 1; border-radius: 2px 2px 0 0; background: var(--hl); }
+.chart i { position: relative; flex: 1; border-radius: 2px 2px 0 0; background: var(--ac); }
 .days { display: flex; gap: 6px; margin-top: 5px; color: var(--mu); font-size: 10px; line-height: 1; }
 .days span { flex: 1; text-align: center; }
 

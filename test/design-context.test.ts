@@ -113,8 +113,9 @@ test('pairs carry the shared ratio, grade and a hover text for failures', () => 
   assert.equal(p.ok, false); // Iron on Ground is 3.59:1 in the mockup
   assert.equal(p.grade, 'AA large · non-text');
   assert.match(describe(p), /^Iron on Ground: 3\.\d\d:1, AA large · non-text\. Body text needs 4\.5:1\.$/);
-  assert.equal(s.pairs.mark.need, 3);
-  assert.equal(s.pairs.bars.need, 3);
+  assert.equal(s.pairs.mark.need, 4.5, 'the Text on the marker');
+  assert.equal(s.pairs.bars.need, 3, 'a chart bar is a fill');
+  assert.equal(s.pairs.accent.need, 3);
 });
 
 test('an empty palette gives nothing; a single colour still gives a whole page', () => {

@@ -7,6 +7,7 @@ import type { IconName } from '../../shell/tool.ts';
 import { displayName, named, plural } from '../common/names.ts';
 import { VISIONS, type Kind as Vision } from '../common/Vision.tsx';
 import type { CheckId } from './doc.ts';
+import { ownMode, PREVIEW_ONLY, scene, type PairId } from './context-slots.ts';
 
 /** a check's line in the Check tab's list; `ok` unset while the palette is too small to judge */
 export type Verdict = { id: CheckId; label: string; verdict: string; ok?: boolean; icon: IconName };
@@ -22,27 +23,35 @@ export type Results = {
   outOfSrgb: Swatch[];
   /** pairs that merge under some simulation, once each however many merge them */
   merged: number;
+  /** the pairs of the website preview on the palette's OWN ground that fail (the other half is derived and never counts), and how many it grades */
+  preview: { failing: PairId[]; total: number };
   verdicts: Verdict[];
   /** problems, each with its own fix: the Check tab's count and the status bar's */
   toLookAt: number;
 };
 
-let last: { swatches: Swatch[]; flagL: number; flagE: number; out: Results } | null = null;
+let last: { swatches: Swatch[]; flagL: number; flagE: number; locked: readonly string[]; out: Results } | null = null;
 
-export function results(raw: Swatch[], ramps: RampSpec[] | undefined, flagL: number, flagE: number): Results {
-  if (last && last.swatches === raw && last.flagL === flagL && last.flagE === flagE) return last.out;
+/** `locked`: swatch ids a one-click fix must never move */
+export function results(raw: Swatch[], ramps: RampSpec[] | undefined, flagL: number, flagE: number, locked: readonly string[] = []): Results {
+  if (last && last.swatches === raw && last.flagL === flagL && last.flagE === flagE && last.locked === locked) return last.out;
   const swatches = named(raw, ramps);
-  const contrast = contrastPairs(swatches, { minGap: flagL / 100 });
+  const contrast = contrastPairs(swatches, { minGap: flagL / 100, locked });
   const failing = contrast.filter((p) => p.ratio < p.target);
   const collisions = valueCollisions(swatches, flagL / 100);
   const vision = Object.fromEntries(VISIONS.map((k) => [k, cvdClosest(swatches, k, { flagBelow: flagE })])) as Results['vision'];
   const outOfSrgb = swatches.filter((w) => !inSrgb(w.oklch));
   // one pair merging under several simulations is one problem with one fix (as Vision shows it)
   const merged = new Set(VISIONS.filter((k) => k !== 'typical' && vision[k]?.flag).map((k) => [vision[k]!.a.id, vision[k]!.b.id].sort().join())).size;
-  const r = { shown: swatches, contrast, failing, collisions, vision, outOfSrgb, merged };
-  const verdicts = [contrastVerdict(r), valueVerdict(r), visionVerdict(r), printVerdict(r)];
-  const out = { ...r, verdicts, toLookAt: failing.length + collisions.length + merged + outOfSrgb.length };
-  last = { swatches: raw, flagL, flagE, out };
+  const page = swatches.length ? scene(swatches, ownMode(swatches)) : null;
+  const pairs = page ? (Object.entries(page.pairs) as [PairId, { ok: boolean }][]) : [];
+  const preview = { failing: pairs.filter(([, p]) => !p.ok).map(([id]) => id), total: pairs.length };
+  const r = { shown: swatches, contrast, failing, collisions, vision, outOfSrgb, merged, preview };
+  const verdicts = [contrastVerdict(r), previewVerdict(r), valueVerdict(r), visionVerdict(r), printVerdict(r)];
+  // a role pair that fails shows on the page too: only what no role pair covers (the button, the link, the pills) adds to the count
+  const onlyPreview = preview.failing.filter((id) => PREVIEW_ONLY.includes(id)).length;
+  const out = { ...r, verdicts, toLookAt: failing.length + collisions.length + merged + outOfSrgb.length + onlyPreview };
+  last = { swatches: raw, flagL, flagE, locked, out };
   return out;
 }
 
@@ -54,6 +63,14 @@ function contrastVerdict({ shown, contrast, failing }: Raw): Verdict {
   const n = contrast.length;
   if (!failing.length) return { ...v, ok: true, verdict: n === 1 ? 'The text pair passes' : `All ${n} text pairs pass` };
   return { ...v, ok: false, verdict: `${failing.length} of ${n} text pairs ${failing.length === 1 ? 'is' : 'are'} too faint` };
+}
+
+/** the website preview, graded on the palette's own ground: the same count the Preview in use tab wears */
+function previewVerdict({ shown, preview }: Raw): Verdict {
+  const v = { id: 'preview', label: 'In use', icon: 'web_asset' } as const;
+  if (shown.length < 2) return { ...v, verdict: 'Needs two or more colours' };
+  if (!preview.failing.length) return { ...v, ok: true, verdict: `All ${preview.total} pairs on the page pass` };
+  return { ...v, ok: false, verdict: `${preview.failing.length} of ${preview.total} pairs on the page fail, on the palette's own ground` };
 }
 
 function valueVerdict({ shown, collisions }: Raw): Verdict {
