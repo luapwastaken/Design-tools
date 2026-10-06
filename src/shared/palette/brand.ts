@@ -4,6 +4,7 @@
 // brand colour. A colour in `locked` (the user's own) is never touched; the rest is derived from it.
 // Pure and seeded: the same options always give the same palette.
 import { contrast, type Oklch } from '../color/index.ts';
+import { valueOf } from '../color/value.ts';
 import { harmony } from './harmony.ts';
 import { random } from './random.ts';
 import { ROLES, type Role } from './roles.ts';
@@ -56,7 +57,7 @@ export const MUTED_RATIO = 4.5;
 const MARGIN = 0.3;
 /** Primary and Highlight are fills (3:1); Accent is a link (4.5:1) */
 const FILL_RATIO = 3;
-/** the value check flags lightnesses closer than 0.06: aim a little wider */
+/** the value check flags values (Rec. 709 luma, color/value.ts) closer than 0.06: aim a little wider */
 const GAP = 0.075;
 
 export type BuildOptions = {
@@ -106,16 +107,16 @@ export function buildRoles(o: BuildOptions): RoleColours {
   const grounds = [bg, surface];
 
   const primary = lock.Primary ?? randomPrimary(grounds, light, base, st, r);
-  const pL = primary[0];
+  const pV = valueOf(primary);
 
-  const text = lock.Text ?? readable(grounds, light, TEXT_RATIO + MARGIN, hue, st.chroma * 1.5, light ? 0.15 + 0.08 * r[4] : 0.92 + 0.05 * r[4], [pL], light ? 0.08 : 0.985);
+  const text = lock.Text ?? readable(grounds, light, TEXT_RATIO + MARGIN, hue, st.chroma * 1.5, light ? 0.15 + 0.08 * r[4] : 0.92 + 0.05 * r[4], [pV], light ? 0.08 : 0.985);
   const { accent: accentHue, highlight: highlightHue } = hues(base, o.accent, turns, pick, side);
-  // Muted first, at the top of its band (a grey far enough from Text to tell apart), then Highlight and Accent in the room that is left: all keep their lightness apart
-  const muted = lock.Muted ?? readable(grounds, light, MUTED_RATIO + MARGIN, hue, st.chroma * 1.3, NaN, [pL, text[0]], light ? text[0] + 0.075 : text[0] - 0.075);
+  // Muted first, at the top of its band (a grey far enough from Text to tell apart), then Highlight and Accent in the room that is left: all keep their value apart
+  const muted = lock.Muted ?? readable(grounds, light, MUTED_RATIO + MARGIN, hue, st.chroma * 1.3, NaN, [pV, valueOf(text)], light ? text[0] + 0.075 : text[0] - 0.075);
   const highlightC = clamp(0.05 + 0.12 * st.bold * (0.8 + 0.4 * r[6]), 0.06, 0.2);
-  const highlight = lock.Highlight ?? readable(grounds, light, FILL_RATIO + MARGIN, highlightHue, highlightC, NaN, [pL, text[0], muted[0]], light ? 0.4 : 0.9);
+  const highlight = lock.Highlight ?? readable(grounds, light, FILL_RATIO + MARGIN, highlightHue, highlightC, NaN, [pV, valueOf(text), valueOf(muted)], light ? 0.25 : 0.95);
   const accentC = clamp(0.045 + 0.13 * st.bold * (0.8 + 0.4 * r[5]), 0.07, 0.2);
-  const accent = lock.Accent ?? readable(grounds, light, MUTED_RATIO + MARGIN, accentHue, accentC, NaN, [pL, text[0], muted[0], highlight[0]], light ? 0.28 : 0.88);
+  const accent = lock.Accent ?? readable(grounds, light, MUTED_RATIO + MARGIN, accentHue, accentC, NaN, [pV, valueOf(text), valueOf(muted), valueOf(highlight)], light ? 0.12 : 0.97);
 
   const made: RoleColours = { Background: bg, Surface: surface, Text: text, Muted: muted, Primary: primary, Accent: accent, Highlight: highlight };
   return Object.fromEntries(ROLES.map((role) => [role, [...(lock[role] ?? made[role])]])) as RoleColours;
@@ -151,7 +152,7 @@ function randomPrimary(grounds: Oklch[], light: boolean, hue: number, st: Style,
 /**
  * A colour at `hue` and `chroma` that reads at `target` on every ground. Its lightness is the one
  * nearest `prefer` (the passing edge when NaN) in the band that passes, from `edge` to the limit,
- * that stays GAP clear of the lightnesses in `avoid` where the band has room. Chroma is cut to fit sRGB.
+ * that stays GAP clear, in value, of the values in `avoid` where the band has room. Chroma is cut to fit sRGB.
  */
 function readable(grounds: Oklch[], light: boolean, target: number, hue: number, chroma: number, prefer: number, avoid: number[], edge: number): Oklch {
   const at = (l: number): Oklch => fitChroma([l, chroma, hue]);
@@ -168,8 +169,9 @@ function readable(grounds: Oklch[], light: boolean, target: number, hue: number,
   const [lo, hi] = light ? [Math.min(edge, limit), limit] : [limit, Math.max(edge, limit)];
   const want = Number.isNaN(prefer) ? (light ? limit - 0.015 : limit + 0.015) : prefer;
   let [best, apartBest, nearBest] = [limit, -1, -Infinity];
-  for (let l = lo; l <= hi + 1e-9; l += 0.005) {
-    const apart = Math.min(GAP, ...avoid.map((a) => Math.abs(a - l)));
+  for (let l = lo; l <= hi + 1e-9; l += 0.0025) {
+    const v = valueOf(at(l));
+    const apart = Math.min(GAP, ...avoid.map((a) => Math.abs(a - v)));
     const near = -Math.abs(l - want);
     if (apart > apartBest || (apart === apartBest && near > nearBest)) [best, apartBest, nearBest] = [l, apart, near];
   }
