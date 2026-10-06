@@ -2,11 +2,12 @@
 import { hexToOklch, type Oklch } from '../../../shared/color/index.ts';
 import type { DocController } from '../../../shared/doc-api.ts';
 import { fitChroma, wrapHue } from '../../../shared/palette/space.ts';
-import type { Swatch } from '../../../shared/types.ts';
+import type { MaterialId, Swatch } from '../../../shared/types.ts';
 import { shell } from '../../shell/core/index.ts';
 import { pickFromScreen, toast } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
-import { addRamp, baseOf, duplicateRamp, lightForAll, looseOf, makeRamps, moveRamp, nameOf, rampName, rampOf, recolour, removeLoose, removeRamp, stepsOf, type IllustrationDoc } from './doc.ts';
+import { addRamp, baseOf, duplicateRamp, lightForAll, looseOf, makeRamps, moveRamp, nameOf, rampName, rampOf, removeLoose, removeRamp, stepsOf, type IllustrationDoc } from './doc.ts';
+import { MAX_RAMPS } from './scene.ts';
 import { clearProposals, dropProposals, proposals, restoreProposals, type Proposal } from './proposals.ts';
 import { armed, getView, patchView } from './view-state.ts';
 
@@ -58,32 +59,49 @@ function freeL(ls: number[]): number {
 }
 
 /** a golden-angle step in hue from the last base, at a lightness the others leave free */
-const nextBase = (d: IllustrationDoc): Oklch => {
+export const nextBase = (d: IllustrationDoc): Oklch => {
   const last = d.ramps.at(-1);
   if (!last) return fitChroma([0.62, 0.12, 40]);
   return fitChroma([freeL(d.ramps.map((r) => r.base[0])), Math.max(0.08, last.base[1]), wrapHue(last.base[2] + 137.5)]);
 };
 
-/** a new ramp after the selected one; the colour: given, or a hue well away from the last */
-export function addBase(doc: Doc, oklch: Oklch = nextBase(doc.get()), name = ''): void {
+/**
+ * the picker's colour field takes focus, so making a colour exactly yours is: Add, type, Enter.
+ * Only after an add from the button, a menu row or the hex field: Shift+A, repeated, keeps the keys.
+ */
+export function focusPickerColour(): void {
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      const section = [...document.querySelectorAll('[data-tool="illustration"] section')].find((x) => x.querySelector('h2')?.textContent === 'Colour picker');
+      section?.querySelector<HTMLInputElement>('input[aria-label$="hex" i]')?.focus({ preventScroll: true });
+    }),
+  );
+}
+
+/** a new ramp after the selected one; the colour: given, or a hue well away from the last. Lit as the others are; `material`, `focus`: see the sources */
+export function addBase(doc: Doc, oklch: Oklch = nextBase(doc.get()), name = '', opts: { material?: MaterialId; focus?: boolean } = {}): void {
   const after = selected(doc.get())?.group ?? null;
   let base = '';
   doc.transact('Add base colour', (d) => {
-    const r = addRamp(d, oklch, name, rampOf(d, after ?? undefined) ? after : null);
+    const r = addRamp(d, oklch, name, rampOf(d, after ?? undefined) ? after : null, opts.material);
     base = r.base;
     return r.doc;
   });
   select(base);
+  if (opts.focus) focusPickerColour();
 }
 
-export function addProposals(doc: Doc, items: Proposal[]): void {
+export function addProposals(doc: Doc, all: Proposal[]): void {
+  const room = MAX_RAMPS - doc.get().ramps.length;
+  const items = all.slice(0, Math.max(0, room));
+  if (items.length < all.length) toast.show({ kind: 'error', message: room > 0 ? `A palette holds ${MAX_RAMPS} ramps: ${plural(items.length, 'colour')} added, ${all.length - items.length} left out.` : `This palette already holds ${MAX_RAMPS} ramps. Delete one to add more.` });
   if (!items.length) return;
-  const label = proposals.get()?.label ?? '';
+  const was = proposals.get();
   const before = doc.get();
   let first = '';
   doc.transact(items.length === 1 ? 'Add base colour' : `Add ${plural(items.length, 'base colour')}`, (d) =>
     items.reduce((x, p, i) => {
-      const r = addRamp(x, p.oklch, p.name ?? '');
+      const r = addRamp(x, p.oklch, p.name ?? '', null, p.material);
       if (!i) first = r.base;
       return r.doc;
     }, d),
@@ -96,7 +114,7 @@ export function addProposals(doc: Doc, items: Proposal[]): void {
     const now = doc.get();
     if (now === after) return;
     off();
-    if (now === before) restoreProposals(label, items);
+    if (now === before) restoreProposals(was?.label ?? '', items, was?.from);
   });
 }
 
@@ -112,8 +130,6 @@ export function lightEveryRamp(doc: Doc, id: string): void {
   const r = rampOf(doc.get(), id);
   if (r) doc.transact(`Light every ramp as ${rampName(doc.get(), r)}`, (d) => lightForAll(d, id));
 }
-
-export const setColour = (doc: Doc, label: string, id: string, oklch: Oklch): void => doc.transact(label, (d) => recolour(d, id, oklch));
 
 export function duplicate(doc: Doc, id = selected(doc.get())?.group): void {
   if (!id || !rampOf(doc.get(), id)) return;
@@ -202,12 +218,8 @@ export async function newPalette(name?: string): Promise<void> {
   await shell.newDoc('illustration', name);
 }
 
-/** any pixel on screen (native EyeDropper): into the selected step, or a new base */
-export async function eyedrop(doc: Doc): Promise<void> {
-  const hex = await pickFromScreen();
-  if (!hex) return;
-  const o = hexToOklch(hex);
-  const w = selected(doc.get());
-  if (w) setColour(doc, 'Pick colour from screen', w.id, o);
-  else addBase(doc, o);
+/** any pixel on screen (native EyeDropper): always a new base, never over the selected colour (the picker's own eyedropper does that) */
+export async function eyedrop(doc: Doc, pick: () => Promise<string | null> = pickFromScreen): Promise<void> {
+  const hex = await pick();
+  if (hex) addBase(doc, hexToOklch(hex), '', { focus: true });
 }

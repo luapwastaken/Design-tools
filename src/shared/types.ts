@@ -66,6 +66,8 @@ export type PalettePayload = {
   notes: string;
   /** Illustration's ramp settings; tools that don't use them must write them back unchanged */
   ramps?: RampSpec[];
+  /** Illustration's scene light: what the next ramp is born with while there is none to copy */
+  scene?: { light: [number, number, number]; shadow: [number, number, number] };
 };
 export type PatternPayload = {
   kind: 'pattern';

@@ -37,6 +37,7 @@ import { lookOf, Painter } from './tools/halftone/draw.ts';
 import { platesFor, pngBlob, svgFor } from './tools/halftone/exports.ts';
 import { ready, screen, shownDots, svgOver, totals } from './tools/halftone/screening.ts';
 import { patchView as patchHalftone, status as halftoneStatus } from './tools/halftone/view-state.ts';
+import { eyedrop } from './tools/illustration/actions.ts';
 import { addRamp, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
 import type { PaintEngine } from './tools/illustration/paint/index.ts';
 import { liveEngine, liveSaves } from './tools/illustration/paint/live.ts';
@@ -49,7 +50,7 @@ import { partFromImage, partFromSvg } from './tools/logo/intake.ts';
 import { pngSize } from './tools/logo/geometry.ts';
 import { drawSvg } from './tools/logo/raster.ts';
 import { getView as logoView, patchView as patchLogo } from './tools/logo/view-state.ts';
-import { clearProposals as clearBases, proposals as bases } from './tools/illustration/proposals.ts';
+import { clearProposals as clearBases, proposals as bases, sourcePop } from './tools/illustration/proposals.ts';
 import { getView as illustrationView, patchView as patchIllustration } from './tools/illustration/view-state.ts';
 import { PX_PER, toPayload, withUnit, type PatternDoc } from './tools/pattern/doc.ts';
 import { patchView as patchPattern } from './tools/pattern/view-state.ts';
@@ -2260,6 +2261,9 @@ async function illustration(): Promise<void> {
   shell.setActive('illustration');
   await shell.newDoc('illustration');
   await emptyUi();
+  await startUi();
+  shell.setActive('illustration');
+  await shell.newDoc('illustration');
   il.transact('Add base colours', (d) => addRamp(d, [0.62, 0.12, 40]).doc);
   const last = await until(() => (il.state().t === 'saved' ? il.source() : null));
   if (!check('a new Illustration palette for the last painting', last && last.itemId !== id && last.itemId !== fork?.itemId, il.state())) return;
@@ -2328,25 +2332,254 @@ async function v1Painting(): Promise<Blob> {
   return c.convertToBlob({ type: 'image/png' });
 }
 
-/** the empty palette: the start in the Ramps section, Light and Check held back, and a starter chip that makes the first ramp */
+/** the empty palette: one plain sentence, the Light row and Add colour above it, Light and Check held back */
 async function emptyUi(): Promise<void> {
   const il = illustrationDoc();
   patchIllustration({ tab: 'settings' });
   const start = await until(() => host('illustration')?.querySelector('section[aria-label="Start"]'), 3000);
   check('an empty palette shows the start in the Ramps section', shows(start) && !!start?.parentElement?.closest('section')?.textContent?.startsWith('Ramps'), start?.textContent?.slice(0, 40));
+  check('it is one plain sentence and a hex field: no sample chips, no starter chips', start?.querySelector('p')?.textContent === 'No ramps yet. Pick a light, then add colours.' && !start?.querySelector('i, img, svg') && !button('illustration', 'Skin') && !button('illustration', 'Night sky'), start?.textContent);
+  check('the New button has a text label', !!button('illustration', 'New'));
   const off = (id: string) => illusTab(id)?.disabled;
   check('and holds Light and Check back until there is a colour, but not Ramp settings or Paint', off('light') === true && off('check') === true && off('settings') === false && off('paint') === false, [off('light'), off('check'), off('settings'), off('paint')]);
   patchIllustration({ tab: 'light' });
   await sleep(100);
   check('a saved Light tab on an empty palette still shows the start and a usable tab, not an empty lit pane', shows(host('illustration')?.querySelector('section[aria-label="Start"]')));
-  const skin = await until(() => button('illustration', 'Skin'), 2000);
-  skin?.click();
-  const made = await until(() => (il.get().ramps.length === 1 ? il.get().ramps[0] : null));
-  check('a starter chip makes the first ramp with its material and light', made?.material === 'skin' && il.get().swatches.length === 5, made);
-  check('and the start artboard is gone', await until(() => !host('illustration')?.querySelector('section[aria-label="Start"]'), 2000));
-  il.undo();
-  check('the starter is one undo step', il.get().ramps.length === 0, il.get().ramps.length);
   patchIllustration({ tab: 'paint' });
+  check('the palette is still empty', il.get().ramps.length === 0);
+}
+
+/**
+ * Starting a palette, light first (Colour > Illustration): the Light row in every state, Add colour and
+ * every source it opens, the popovers, and Ctrl+V. Leaves a palette of ramps; the caller starts a new one.
+ */
+async function startUi(): Promise<void> {
+  const il = illustrationDoc();
+  const ui = host('illustration')!;
+  patchIllustration({ tab: 'settings' });
+  const ramps = () => il.get().ramps;
+  const lightBtn = () => ui.querySelector<HTMLButtonElement>('[role="group"][aria-label="Light"] button[aria-haspopup="listbox"]');
+  const caret = () => ui.querySelector<HTMLButtonElement>('button[aria-label^="Add colours from"]');
+  // the open menu is the last of its kind in the page (a Select's list is a listbox, the Library's own lists are earlier)
+  const openMenu = () => [...document.querySelectorAll<HTMLElement>('[role="menu"],[role="listbox"]')].filter(shows).at(-1);
+  const rows = () => [...(openMenu()?.querySelectorAll<HTMLElement>('[role="menuitem"],[role="option"]') ?? [])];
+  const row = (text: string) => rows().find((r) => r.textContent?.trim().startsWith(text));
+  const dialog = (name: string) => document.querySelector<HTMLElement>(`[role="dialog"][aria-label="${name}"]`);
+  const chips = (name: string) => [...(dialog(name)?.querySelectorAll<HTMLElement>('[data-candidate]') ?? [])];
+  const makeBtn = (name: string) => [...(dialog(name)?.querySelectorAll('button') ?? [])].find((b) => /^Make \d+ ramps?$/.test(b.textContent?.trim() ?? ''));
+  type Pair = { light: Oklch; shadow: Oklch };
+  const lit = (r: Pair, l: Pair) => JSON.stringify([r.light, r.shadow]) === JSON.stringify([l.light, l.shadow]);
+  const GOLDEN: Pair = { light: [0.94, 0.1, 72], shadow: [0.4, 0.09, 290] };
+  const MOON: Pair = { light: [0.82, 0.05, 250], shadow: [0.25, 0.07, 285] };
+  const DAY: Pair = { light: [0.95, 0.05, 85], shadow: [0.4, 0.08, 275] };
+  const picked = () => {
+    const a = document.activeElement as HTMLInputElement | null;
+    return !!a && a.tagName === 'INPUT' && /hex$/i.test(a.getAttribute('aria-label') ?? '') && !!a.closest('section')?.querySelector('h2')?.textContent?.startsWith('Colour picker');
+  };
+  const addVia = async (label: string) => {
+    await sleep(300); // a new ramp scrolls into view a frame or two later, and a scroll closes a menu
+    caret()?.click();
+    (await until(() => row(label), 2000))?.click();
+  };
+  const pasteText = (text: string) => {
+    (document.activeElement as HTMLElement | null)?.blur();
+    const data = new DataTransfer();
+    data.setData('text/plain', text);
+    document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  };
+  const sorted = (hexes: string[]) => hexes.map(hexValue).every((v, i, all) => !i || all[i - 1] >= v);
+  clearBases();
+
+  // the light row, with nothing to light yet
+  check('the Light row shows with no ramp: Daylight, today’s pair', /Daylight/.test(lightBtn()?.textContent ?? ''), lightBtn()?.textContent);
+  check('and Edit waits for a ramp', button('illustration', 'Edit')?.disabled === true);
+  const d00 = il.depth();
+  lightBtn()?.click();
+  const names = await until(() => (row('Golden hour') ? rows().map((r) => r.textContent?.trim()) : null), 2000);
+  check('its menu lists the six lights', JSON.stringify(names) === JSON.stringify(['Daylight', 'Golden hour', 'Overcast', 'Moonlight', 'Warm interior', 'Studio neutral']), names);
+  row('Golden hour')?.click();
+  await until(() => /Golden hour/.test(lightBtn()?.textContent ?? ''), 2000);
+  const scene = il.get().scene;
+  check('a light chosen with no ramp is stored in the document, one step', !!scene && lit(scene, GOLDEN) && il.depth() === d00 + 1, [scene, il.depth() - d00]);
+
+  const kept = await until(() => (il.state().t === 'saved' ? il.source() : null), 5000);
+  const file = kept && (await api.invoke('library.read', kept.itemId).catch(() => null));
+  check('and the file keeps it, so it survives a reload', file?.kind === 'palette' && !!file.payload.scene && lit(file.payload.scene as Pair, GOLDEN), file?.kind === 'palette' ? file.payload.scene : file);
+
+  // one colour: its ramp at once, lit by the row, selected, the picker's field focused
+  (await until(() => button('illustration', 'Add colour')))?.click();
+  const first = await until(() => (ramps().length === 1 ? ramps()[0] : null), 2000);
+  check('Add colour makes a ramp lit by the light chosen', !!first && lit(first, GOLDEN), first);
+  check('selected, with the picker’s colour field taking focus', !!first && illustrationView().selected === il.get().swatches.find((w) => w.group === first.id && w.step === 0)?.id && !!(await until(picked, 2000)), [illustrationView().selected, document.activeElement?.getAttribute('aria-label')]);
+  check('the Light row is still there, and Edit is open now', !!lightBtn() && button('illustration', 'Edit')?.disabled === false);
+  const key = il.depth();
+  (document.activeElement as HTMLElement | null)?.blur();
+  press('A', { shiftKey: true });
+  await until(() => ramps().length === 2, 2000);
+  await sleep(150);
+  check('Shift+A adds a ramp and leaves the keys where they were', ramps().length === 2 && !picked(), [ramps().length, document.activeElement?.tagName]);
+  il.undo();
+  check('and is one step', ramps().length === 1 && il.depth() === key, il.depth());
+
+  // a subject: named, its material, the scene's light
+  await addVia('Skin');
+  const skin = await until(() => (ramps().length === 2 ? ramps()[1] : null), 2000);
+  const skinBase = skin && il.get().swatches.find((w) => w.group === skin.id && w.step === 0);
+  check('Subject > Skin makes a ramp named Skin of the skin material, lit by the scene', skin?.material === 'skin' && skinBase?.name === 'Skin' && lit(skin, GOLDEN), [skin?.material, skinBase?.name]);
+  check('with the picker’s field focused', !!(await until(picked, 2000)));
+  for (const label of ['Foliage', 'Sky', 'Cloth']) await addVia(label);
+  await until(() => ramps().length === 5, 2000);
+  check('five subjects make a scene of five ramps in one light', ramps().length === 5 && ramps().every((r) => lit(r, GOLDEN)) && ramps().map((r) => r.material).join() === 'cloth,skin,foliage,paper,cloth', ramps().map((r) => r.material));
+  patchIllustration({ tab: 'settings' });
+
+  // a preset goes to every ramp in one step
+  const before = il.depth();
+  lightBtn()?.click();
+  (await until(() => row('Moonlight'), 2000))?.click();
+  await until(() => /Moonlight/.test(lightBtn()?.textContent ?? ''), 2000);
+  check('a light chosen goes to every ramp as one undo step', ramps().every((r) => lit(r, MOON)) && il.depth() === before + 1 && !!il.undoLabel()?.includes('Moonlight'), [il.depth() - before, il.undoLabel()]);
+  il.undo();
+  await until(() => /Golden hour/.test(lightBtn()?.textContent ?? ''), 2000);
+  check('and one undo gives every ramp the old light back', ramps().every((r) => lit(r, GOLDEN)) && /Golden hour/.test(lightBtn()?.textContent ?? ''), lightBtn()?.textContent);
+  il.transact('One ramp in its own light', (d) => setSpec(d, d.ramps[1].id, { light: [0.9, 0.06, 150] }));
+  await until(() => /Mixed/.test(lightBtn()?.textContent ?? ''), 2000);
+  check('ramps lit differently read as Mixed', /Mixed/.test(lightBtn()?.textContent ?? ''), lightBtn()?.textContent);
+  lightBtn()?.click();
+  (await until(() => row('Daylight'), 2000))?.click();
+  await until(() => /Daylight/.test(lightBtn()?.textContent ?? ''), 2000);
+  check('a preset puts them all back in one light', ramps().every((r) => lit(r, DAY)), ramps().map((r) => r.light));
+  il.transact('A light of its own', (d) => ({ ...d, ramps: d.ramps.map((r) => ({ ...r, light: [0.9, 0.06, 150], shadow: [0.3, 0.05, 20] })) }));
+  await until(() => /Custom/.test(lightBtn()?.textContent ?? ''), 2000);
+  check('one light that is no preset reads as Custom', /Custom/.test(lightBtn()?.textContent ?? ''), lightBtn()?.textContent);
+  button('illustration', 'Edit')?.click();
+  check('Edit opens Light & preview', !!(await until(() => illustrationView().tab === 'light', 2000)));
+  patchIllustration({ tab: 'settings' });
+  il.transact('Back to golden hour', (d) => ({ ...d, ramps: d.ramps.map((r) => ({ ...r, light: [...GOLDEN.light], shadow: [...GOLDEN.shadow] })) }));
+
+  // ctrl+V: one code makes its ramp, several open the popover
+  const n = ramps().length;
+  pasteText('8844AA');
+  check('Ctrl+V with one code makes its ramp at once', !!(await until(() => ramps().length === n + 1, 2000)));
+  pasteText('nothing to read here');
+  await sleep(150);
+  check('and with no code makes nothing', ramps().length === n + 1);
+  const d0 = il.depth();
+  pasteText('E8643C\n3C7DE8\nink: 2F2F2F\nnonsense');
+  const PASTE = 'Type or paste codes';
+  const pop = await until(() => dialog(PASTE), 2000);
+  const found = pop?.querySelector('[data-found]')?.textContent;
+  check('Ctrl+V with several opens the paste popover with its live count', !!pop && found === '3 colours found, 1 skipped.' && chips(PASTE).length === 3, [found, sourcePop.get(), bases.get()?.items.length, document.querySelectorAll('[role="dialog"]').length]);
+  check('the candidates sit light to dark', sorted(chips(PASTE).map((c) => c.dataset.candidate!)), chips(PASTE).map((c) => c.dataset.candidate));
+  check('the light’s swatches and the candidate chips are marked as colour content, for the greyscale view', ui.querySelectorAll('[role="group"][aria-label="Light"] [data-colour]').length === 2 && chips(PASTE).every((c) => c.querySelectorAll('[data-colour]').length === 2));
+  check('the primary button reads Make 3 ramps', makeBtn(PASTE)?.textContent?.trim() === 'Make 3 ramps', makeBtn(PASTE)?.textContent);
+  check('and the same colours wait in the Ramps list', document.querySelectorAll('[data-tool="illustration"] [data-ghost]').length === 3);
+  makeBtn(PASTE)?.click();
+  await until(() => ramps().length === n + 4, 2000);
+  check('Make adds them to this palette, lit by the Light row, as one undo step', ramps().length === n + 4 && ramps().slice(n + 1).every((r) => lit(r, GOLDEN)) && il.depth() === d0 + 1, [ramps().length, il.depth() - d0]);
+  check('the popover closes and the proposals are used up', !dialog(PASTE) && !bases.get());
+  il.undo();
+  check('undo takes the ramps back and offers the colours again', ramps().length === n + 1 && bases.get()?.items.length === 3 && bases.get()?.from === 'paste', [ramps().length, bases.get()?.items.length]);
+  clearBases();
+  const typed = n + 1;
+
+  // the popover's own text field
+  await addVia('Type or paste codes…');
+  const box = await until(() => dialog(PASTE)?.querySelector<HTMLTextAreaElement>('textarea'), 2000);
+  check('Type or paste codes opens the popover with nothing to make', !!box && makeBtn(PASTE)?.disabled === true);
+  if (box) type(box, 'tomato, teal');
+  await until(() => chips(PASTE).length === 2, 2000);
+  check('its text is read as it is typed: colour names too', chips(PASTE).length === 2 && makeBtn(PASTE)?.textContent?.trim() === 'Make 2 ramps', chips(PASTE).length);
+  press('Escape');
+  await until(() => !dialog(PASTE), 2000);
+  check('Esc closes it, leaving the colours in the Ramps list', !dialog(PASTE) && bases.get()?.items.length === 2);
+  clearBases();
+
+  // an image: the popover, a Colours field that re-extracts, then the ramps
+  const IMAGE = 'From an image';
+  await addVia('From an image…');
+  check('From an image… opens its popover', !!(await until(() => dialog(IMAGE), 2000)));
+  const png = new File([await pngRgba(24, 24, (x, y) => [x * 10, y * 10, (x + y) * 5, 255])], 'Smoke picture.png', { type: 'image/png' });
+  const input = dialog(IMAGE)?.querySelector<HTMLInputElement>('input[type="file"]');
+  if (input) {
+    const files = new DataTransfer();
+    files.items.add(png);
+    input.files = files.files;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  check('a chosen image shows six colours, the default', !!(await until(() => chips(IMAGE).length === 6, 4000)), chips(IMAGE).length);
+  const k = dialog(IMAGE)?.querySelector<HTMLInputElement>('input[aria-label="Colours"]');
+  if (k) {
+    typeInto(k, '3');
+    press('Enter');
+  }
+  check('the Colours field re-extracts live, and the button says so', !!(await until(() => chips(IMAGE).length === 3 && makeBtn(IMAGE)?.textContent?.trim() === 'Make 3 ramps', 4000)), [chips(IMAGE).length, makeBtn(IMAGE)?.textContent]);
+  check('light to dark', sorted(chips(IMAGE).map((c) => c.dataset.candidate!)), chips(IMAGE).map((c) => c.dataset.candidate));
+  makeBtn(IMAGE)?.click();
+  await until(() => ramps().length === typed + 3, 2000);
+  check('Make 3 ramps adds three ramps in the light', ramps().length === typed + 3 && ramps().slice(typed).every((r) => lit(r, GOLDEN)), ramps().length);
+  clearBases();
+
+  // a Library palette adds into this palette
+  const LIB = 'From a Library palette';
+  const flats = [0.7, 0.5, 0.3].map((l, i) => ({ id: `lib-${i}`, name: `Lib ${i}`, role: null, oklch: [l, 0.1, 40 + i * 90] as Oklch, type: 'process' as const }));
+  const { ref } = await api.invoke('library.create', 'Scratch', 'Smoke start', { kind: 'palette', id: '', version: 1, swatches: flats, notes: '' });
+  check('the Library lists it', !!(await until(() => shell.getState().library?.collections.some((c) => c.items.some((i) => i.id === ref.id)), 8000)));
+  const source = il.source()?.itemId;
+  const m = ramps().length;
+  const choose = async () => {
+    const sel = await until(() => dialog(LIB)?.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]'), 2000);
+    await until(() => !sel?.disabled, 3000);
+    sel?.click();
+    (await until(() => rows().find((r) => r.textContent?.includes(ref.name)), 3000))?.click();
+    return until(() => chips(LIB).length === 3, 3000);
+  };
+  await addVia('From a Library palette…');
+  check('a chosen Library palette stages its colours', !!(await choose()), chips(LIB).length);
+  makeBtn(LIB)?.click();
+  await until(() => ramps().length === m + 3, 2000);
+  const ids = il.get().swatches.map((w) => w.id);
+  check('it adds into this palette: new ids, this palette still open', ramps().length === m + 3 && new Set(ids).size === ids.length && !ids.some((x) => x.startsWith('lib-')) && il.source()?.itemId === source, [ramps().length, il.source()?.itemId === source]);
+  check('with the names it had', ['Lib 0', 'Lib 1', 'Lib 2'].every((nm) => il.get().swatches.some((w) => w.name === nm)));
+
+  // a limited set
+  const SET = 'Limited set';
+  const before2 = ramps().length;
+  await addVia('Complementary pair');
+  check('a limited set opens a popover of its bases, lightest first', !!(await until(() => chips(SET).length === 2, 2000)) && !!dialog(SET)?.querySelector('input[aria-label="Hue"]'), chips(SET).length);
+  makeBtn(SET)?.click();
+  await until(() => ramps().length === before2 + 2, 2000);
+  const pair = ramps().slice(before2).map((r) => hexValue(toHex(r.base)));
+  check('Make 2 ramps adds the pair, spaced in value', ramps().length === before2 + 2 && Math.abs(pair[0] - pair[1]) > 0.08, pair);
+  await addVia('Earth four');
+  check('Earth four has four bases and no hue', !!(await until(() => chips(SET).length === 4, 2000)) && !dialog(SET)?.querySelector('input[aria-label="Hue"]'), [chips(SET).length, !!dialog(SET), bases.get()?.label, bases.get()?.from]);
+  press('Escape');
+  clearBases();
+
+  // the screen: always a new ramp, never over the selected colour
+  const keep = illustrationView().selected;
+  const keepColour = il.get().swatches.find((w) => w.id === keep)?.oklch;
+  const o = ramps().length;
+  await eyedrop(il, async () => toHex([0.7, 0.15, 150]));
+  check('From the screen adds a ramp and leaves the selected colour as it was', ramps().length === o + 1 && JSON.stringify(il.get().swatches.find((w) => w.id === keep)?.oklch) === JSON.stringify(keepColour) && illustrationView().selected !== keep, [ramps().length - o]);
+
+  // the cap
+  il.transact('Fill the palette', (d) => Array.from({ length: 22 - ramps().length }).reduce<IllustrationDoc>((x, _, i) => addRamp(x, [0.5, 0.05, i * 15]).doc, d));
+  await addVia('From a Library palette…');
+  await choose();
+  const cap = dialog(LIB)?.textContent ?? '';
+  check('a palette with room for two more ramps says so and offers two', /a palette holds 24 ramps, so the first 2 are offered/.test(cap) && makeBtn(LIB)?.textContent?.trim() === 'Make 2 ramps', cap);
+  makeBtn(LIB)?.click();
+  await until(() => ramps().length === 24, 2000);
+  check('and the palette stops at 24 ramps', ramps().length === 24);
+  clearBases();
+  patchIllustration({ tab: 'paint' });
+}
+
+/** a hex colour's value (Rec. 709 luma), for sorting checks */
+function hexValue(hex: string): number {
+  const h = hex.replace('#', '');
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 /**

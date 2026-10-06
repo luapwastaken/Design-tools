@@ -5,13 +5,14 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
-import { Button, IconButton, toast } from '../../ui/index.ts';
+import { isTextField } from '../../shell/core/keys.ts';
+import { Button } from '../../ui/index.ts';
 import { DocBar } from '../common/DocBar.tsx';
 import { ExportPalette } from '../common/ExportPalette.tsx';
 import { NotesModule } from '../common/Notes.tsx';
 import { plural } from '../common/names.ts';
 import { TabbedSection, type SectionTab } from '../common/Section.tsx';
-import { addBase, newPalette, type Doc } from './actions.ts';
+import { newPalette, type Doc } from './actions.ts';
 import { CheckTab } from './Check.tsx';
 import { useChecks, type Checks } from './CheckPane.tsx';
 import { named, type IllustrationDoc } from './doc.ts';
@@ -19,10 +20,10 @@ import { LightTab } from './Light.tsx';
 import { Palette } from './Palette.tsx';
 import { PaintPane } from './PaintPane.tsx';
 import { PickerSection } from './PickerSection.tsx';
-import { takeImage } from './proposals.ts';
+import { sourcePop } from './proposals.ts';
 import { SelectedRamp } from './Ramps.tsx';
 import { RampSettings } from './RampSettings.tsx';
-import { pickImage } from './starts.ts';
+import { pasteColours } from './starts.ts';
 import { hot, patchView, SIZES, useView, type IllustrationView } from './view-state.ts';
 import s from './View.module.css';
 
@@ -50,8 +51,27 @@ function PaintSlot({ host }: { host: HTMLElement }) {
   return <div ref={slot} className={s.slot} />;
 }
 
+/** Ctrl+V with no text field focused: codes become ramps (one at once, several under the Add colour popover); images go through onFiles */
+function usePaste(doc: Doc, active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    const onPaste = (e: ClipboardEvent) => {
+      if (e.defaultPrevented || isTextField(document.activeElement as HTMLElement | null) || e.clipboardData?.files.length) return;
+      const text = e.clipboardData?.getData('text/plain') ?? '';
+      if (!text.trim()) return;
+      e.preventDefault();
+      pasteColours(doc, text);
+    };
+    addEventListener('paste', onPaste);
+    return () => removeEventListener('paste', onPaste);
+  }, [doc, active]);
+}
+
 export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const d = useSyncExternalStore(doc.subscribe, doc.get);
+  usePaste(doc, active);
+  // a popover belongs to the tool that opened it
+  useEffect(() => void (!active && sourcePop.set(null)), [active]);
   const v = useView();
   const checks = useChecks(doc, v);
   const [paint] = useState(() => Object.assign(document.createElement('div'), { className: s.host }));
@@ -65,7 +85,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
     id: t.id,
     label: t.label,
     badge: !empty && t.badge ? t.badge(ctx) : undefined,
-    disabled: empty && t.needsColour ? 'Add a base colour first' : undefined,
+    disabled: empty && t.needsColour ? 'Add a colour first' : undefined,
     render: () => t.render(ctx),
   }));
   const tab = (tabs.find((t) => t.id === v.tab && !t.disabled) ?? tabs[0]).id as Tab;
@@ -77,17 +97,11 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         switcher={{ kind: 'palette' }}
         meta={plural(d.ramps.length, 'ramp')}
         actions={
-          <>
-            <Button variant="primary" icon="add" shortcut="Shift+A" onClick={() => addBase(doc)}>
-              Add base colour
-            </Button>
-            <Button icon="add_photo_alternate" onClick={pickImage}>
-              From image
-            </Button>
-            <IconButton icon="note_add" label="New palette" shortcut="Ctrl+N" size="sm" onClick={() => void newPalette()} />
-          </>
+          <Button icon="note_add" shortcut="Ctrl+N" tooltip="New palette" onClick={() => void newPalette()}>
+            New
+          </Button>
         }
-        send={{ empty: 'Add a base colour first: an empty palette has nothing to send' }}
+        send={{ empty: 'Add a colour first: an empty palette has nothing to send' }}
         exportButton={<ExportPalette tool="illustration" swatches={d.swatches} named={() => named(doc.get())} format={v.format} onFormat={(format) => patchView({ format })} />}
       />
       <div className={s.main} style={{ '--ramps-w': `${v.rampsWidth}px`, '--ramp-h': `${v.rampHeight}px`, '--picker-w': `${v.pickerWidth}px` } as CSSProperties}>
@@ -110,18 +124,6 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         </div>
       </div>
       {createPortal(<PaintPane doc={doc} d={d} v={v} hidden={!active || tab !== 'paint'} />, paint)}
-      {/* "From image" and the empty state's "From an image" */}
-      <input
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/avif"
-        hidden
-        data-illustration-image=""
-        onChange={(e) => {
-          const file = e.currentTarget.files?.[0];
-          e.currentTarget.value = '';
-          if (file) void takeImage(file, file.name.replace(/\.[^.]*$/, '') || 'The image').catch((err: unknown) => toast.show({ kind: 'error', message: err instanceof Error ? err.message : String(err) }));
-        }}
-      />
     </div>
   );
 }

@@ -1,19 +1,19 @@
-// Ways to get a first (or next) base colour: the Palette panel's "+" menu and the empty state share
-// them. Nothing here is a new document operation: each is addRamp / makeRamps / a proposal.
+// Ways to get colours into a palette: the Add colour menu, the empty state and Ctrl+V share them. A
+// source that makes one colour adds its ramp at once (lit by the Light row); one that makes several
+// stages them as proposals under a popover first. Nothing here is a new document operation: each is
+// addRamp (through addBase / addProposals).
 import { hexToOklch, parseHex, type Oklch } from '../../../shared/color/index.ts';
-import { fitChroma } from '../../../shared/palette/space.ts';
-import type { LibraryItemRef, MaterialId } from '../../../shared/types.ts';
+import { parseColours } from '../../../shared/palette/paste.ts';
+import type { LibraryItemRef } from '../../../shared/types.ts';
 import { shell } from '../../shell/core/index.ts';
 import { ipc } from '../../shell/core/ipc.ts';
-import { menu, toast, type MenuItem } from '../../ui/index.ts';
-import { addBase, eyedrop, newPalette, select, type Doc } from './actions.ts';
-import { addRamp, fromPayload, looseOf, makeRamps, setSpec } from './doc.ts';
-import { propose } from './proposals.ts';
+import { menu, toast } from '../../ui/index.ts';
+import { addBase, eyedrop, newPalette, select, selected, type Doc } from './actions.ts';
+import { fromPayload, looseOf, makeRamps, type IllustrationDoc } from './doc.ts';
+import { extract, picture, propose, sourcePop, type Source } from './proposals.ts';
+import { MAX_RAMPS, paletteBases, SETS, SUBJECTS, type Subject } from './scene.ts';
 
 export const CAN_PICK = 'EyeDropper' in globalThis;
-
-/** the hidden file input View keeps for "Pick from an image" */
-export const pickImage = (): void => document.querySelector<HTMLInputElement>('[data-illustration-image]')?.click();
 
 /** a base colour typed or pasted as hex; null when it isn't one */
 export const baseFromHex = (text: string): Oklch | null => {
@@ -21,44 +21,81 @@ export const baseFromHex = (text: string): Oklch | null => {
   return hex ? hexToOklch(hex) : null;
 };
 
-/** every hex code in the clipboard offered as new bases (the proposals row, nothing added yet) */
-export async function pasteHexList(): Promise<void> {
-  const text = await navigator.clipboard.readText().catch(() => '');
-  const colours = [...text.matchAll(/#?\b([0-9a-f]{6}|[0-9a-f]{3})\b/gi)].map((m) => baseFromHex(m[1])).filter((c): c is Oklch => !!c);
-  if (!colours.length) return void toast.show({ kind: 'error', message: 'The clipboard has no hex codes to take.' });
-  propose('From the clipboard', colours);
+// ── one colour: its ramp is added at once ───────────────────────────────────────────────────────
+
+/** the Add colour button: a colour well away from the last, and the picker's field ready to take the one you meant */
+export const addColour = (doc: Doc): void => addBase(doc, undefined, '', { focus: true });
+
+/** a subject: its name, its material and a base that suits it */
+export const addSubject = (doc: Doc, s: Subject): void => addBase(doc, s.base, s.label, { material: s.material, focus: true });
+
+/** the empty state's hex field: false when the text isn't a hex colour (the field shows why) */
+export function addTyped(doc: Doc, text: string): boolean {
+  const o = baseFromHex(text);
+  if (o) addBase(doc, o, '', { focus: true });
+  return !!o;
 }
 
-/** the starter chips of the empty state: a hue, a light and a shadow colour and a material, pre-set */
-export const STARTERS: { id: string; label: string; base: Oklch; light: Oklch; shadow: Oklch; material: MaterialId; dot: Oklch }[] = [
-  { id: 'skin', label: 'Skin', base: [0.74, 0.075, 55], light: [0.96, 0.035, 85], shadow: [0.45, 0.09, 15], material: 'skin', dot: [0.74, 0.075, 55] },
-  { id: 'foliage', label: 'Foliage', base: [0.6, 0.12, 140], light: [0.95, 0.09, 105], shadow: [0.35, 0.07, 250], material: 'foliage', dot: [0.6, 0.12, 140] },
-  { id: 'night', label: 'Night sky', base: [0.4, 0.1, 265], light: [0.8, 0.08, 230], shadow: [0.2, 0.07, 285], material: 'cloth', dot: [0.4, 0.1, 265] },
-  { id: 'warm', label: 'Warm light', base: [0.82, 0.13, 75], light: [0.98, 0.05, 95], shadow: [0.5, 0.12, 35], material: 'paper', dot: [0.82, 0.13, 75] },
-];
+// ── several colours: staged under a popover ─────────────────────────────────────────────────────
 
-export function addStarter(doc: Doc, s: (typeof STARTERS)[number]): void {
-  let base = '';
-  doc.transact(`Add ${s.label.toLowerCase()} base`, (d) => {
-    const r = addRamp(d, fitChroma(s.base));
-    base = r.base;
-    const group = r.doc.swatches.find((w) => w.id === r.base)?.group;
-    return group ? setSpec(r.doc, group, { light: s.light, shadow: s.shadow, material: s.material }) : r.doc;
-  });
-  select(base);
+/** what ctrl+V (or the pasted text of the popover) holds: nothing, one colour (its ramp at once) or a list (staged, sorted light to dark) */
+export function pasteColours(doc: Doc, text: string): void {
+  const r = parseColours(text);
+  if (!r.colours.length) return void toast.show({ icon: 'content_paste', message: 'The clipboard holds no colour codes this can read.' });
+  if (r.colours.length === 1) return addBase(doc, r.colours[0], r.names[0] ?? '', { focus: true });
+  openSource(doc, 'paste', { text });
 }
 
-/**
- * A palette from the Library, made into ramps as a new palette in Scratch ("<name> ramps"): the
- * source stays as it is for every tool that uses it. One that is already all ramps just opens.
- */
-export async function openPalette(doc: Doc, ref: LibraryItemRef): Promise<void> {
+/** the pasted text as proposals, as it is typed; none when it holds no colour */
+export function stagePaste(text: string): void {
+  const r = parseColours(text);
+  propose('Pasted colours', r.colours, r.names, { from: 'paste', sort: true });
+}
+
+/** a limited set built around `hue`, as proposals */
+export function stageSet(id: string, hue: number): void {
+  const set = SETS.find((x) => x.id === id) ?? SETS[0];
+  propose(set.label, set.make(hue), [], { from: 'set', sort: true });
+}
+
+/** the hue a limited set starts from: the selected colour's, else a warm one */
+export const startHue = (d: IllustrationDoc, id: string | null): number => Math.round(d.swatches.find((w) => w.id === id)?.oklch[2] ?? 55);
+
+/** a Library palette's colours as proposals: each ramp's base with its material, then the loose colours; cut to what this palette has room for */
+export function stagePalette(d: IllustrationDoc, from: IllustrationDoc, name: string): void {
+  const { list, total } = paletteBases(from, MAX_RAMPS - d.ramps.length);
+  const note = list.length < total ? `${name} has ${total} colours; a palette holds ${MAX_RAMPS} ramps, so the first ${list.length} are offered.` : undefined;
+  propose(`From ${name}`, list.map((c) => c.oklch), list.map((c) => c.name), { from: 'library', sort: true, materials: list.map((c) => c.material), note });
+}
+
+/** the popover for a source; the staged colours it shows are the proposals */
+export function openSource(doc: Doc, source: Source, more: { text?: string; set?: string } = {}): void {
+  if (source === 'paste' && more.text) stagePaste(more.text);
+  if (source === 'set') {
+    const set = more.set ?? SETS[0].id;
+    stageSet(set, startHue(doc.get(), selected(doc.get())?.id ?? null));
+    return sourcePop.set({ source, set });
+  }
+  if (source === 'image' && picture.get()) extract();
+  sourcePop.set({ source, ...more });
+}
+
+/** a Library palette read for the popover; null (and a message) when it can't be */
+export async function readPalette(ref: LibraryItemRef): Promise<IllustrationDoc | null> {
   const item = await ipc.invoke('library.read', ref.id).catch((e: unknown) => {
     toast.show({ kind: 'error', message: `${ref.name} couldn't be read: ${e instanceof Error ? e.message : String(e)}` });
     return null;
   });
-  if (item?.kind !== 'palette') return;
-  const from = fromPayload(item.payload);
+  return item?.kind === 'palette' ? fromPayload(item.payload) : null;
+}
+
+/**
+ * A palette from the Library, made into ramps as a palette of its own in Scratch ("<name> ramps"): the
+ * source stays as it is for every tool that uses it. One that is already all ramps just opens.
+ */
+export async function openPalette(doc: Doc, ref: LibraryItemRef): Promise<void> {
+  const from = await readPalette(ref);
+  if (!from) return;
   const ids = looseOf(from).map((w) => w.id);
   if (!ids.length) return void shell.openItem(ref);
   await newPalette(`${ref.name} ramps`);
@@ -66,33 +103,19 @@ export async function openPalette(doc: Doc, ref: LibraryItemRef): Promise<void> 
   select(ids[0]);
 }
 
-/** the Library's palettes as menu rows, under a header (the "Make ramps from a palette" job) */
-export function libraryPalettes(doc: Doc): MenuItem[] {
-  const library = shell.getState().library;
-  const rows: MenuItem[] = (library?.collections ?? []).flatMap((c) => {
-    const palettes = c.items.filter((i) => i.kind === 'palette');
-    return palettes.length ? [{ header: c.name || 'Library root' }, ...palettes.map((ref) => ({ label: ref.name, icon: 'palette' as const, onSelect: () => void openPalette(doc, ref) }))] : [];
-  });
-  return rows.length ? rows : [{ label: 'The Library has no palettes yet', disabled: true }];
-}
-
-/** the "Make ramps from a palette" menu on its own (the empty state's button) */
-export function fromPaletteMenu(doc: Doc, anchor: DOMRect, owner: Element, fromKey: boolean): void {
-  menu.open(anchor, libraryPalettes(doc), { owner, initial: fromKey ? 0 : undefined });
-}
-
-/** the Palette panel's "+" */
+/** the Add colour menu, ordered as Design's + Add colours: the sources, then a ramp for a subject, then a limited set */
 export function addMenu(doc: Doc, anchor: DOMRect, owner: Element, fromKey: boolean): void {
   menu.open(
     anchor,
     [
-      { label: 'New base colour', icon: 'add', shortcut: 'Shift+A', onSelect: () => addBase(doc) },
-      { label: 'From an image', icon: 'add_photo_alternate', onSelect: pickImage },
+      { label: 'Type or paste codes…', icon: 'content_paste', shortcut: 'Ctrl+V', onSelect: () => openSource(doc, 'paste') },
+      { label: 'From an image…', icon: 'image', onSelect: () => openSource(doc, 'image') },
       ...(CAN_PICK ? [{ label: 'From the screen', icon: 'colorize' as const, shortcut: 'I', onSelect: () => void eyedrop(doc) }] : []),
-      { label: 'Paste a hex list', icon: 'content_paste', onSelect: () => void pasteHexList() },
-      'separator',
-      { header: 'Make ramps from a palette' },
-      ...libraryPalettes(doc),
+      { label: 'From a Library palette…', icon: 'folder_open', onSelect: () => openSource(doc, 'library') },
+      { header: 'Subject' },
+      ...SUBJECTS.map((s) => ({ label: s.label, onSelect: () => addSubject(doc, s) })),
+      { header: 'Limited set' },
+      ...SETS.map((s) => ({ label: s.label, onSelect: () => openSource(doc, 'set', { set: s.id }) })),
     ],
     { owner, initial: fromKey ? 0 : undefined },
   );
