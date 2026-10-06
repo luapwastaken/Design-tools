@@ -15,6 +15,12 @@ export type NumberGesture = {
 export type Range = { min: number; max: number; step: number; precision: number };
 
 export const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
+/** a circular value (a hue) past either end comes round the other side: 361 is 1, -10 is 350; 0 to 360 as they are */
+export const wrapTo = (v: number, min: number, max: number) => {
+  if (v >= min && v <= max) return v;
+  const span = max - min;
+  return min + ((((v - min) % span) + span) % span);
+};
 export const roundTo = (v: number, precision: number) => {
   const f = 10 ** precision;
   return Math.round(v * f) / f || 0; // no -0

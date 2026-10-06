@@ -1,6 +1,8 @@
 /* The picker (plan unit F; styles from the colour UX pass, docs/rewrite/ux-pass/pickers.png). */
 .picker { display: flex; flex-direction: column; min-width: 0; }
 .styles { align-self: flex-start; margin-bottom: 10px; }
+/* the style switch and the value lock, along the top of a popover picker */
+.top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 /* the style switch is four icons, tighter than a labelled segment */
 div.icons button { padding: 0 5px; }
 
@@ -31,13 +33,14 @@ div.icons button { padding: 0 5px; }
   cursor: crosshair;
   touch-action: none;
 }
-.plane[data-lock] { cursor: ew-resize; }
+.plane[data-lock], .sb[data-lock] { cursor: ew-resize; }
 /* the plane is colour being judged, so its focus ring is neutral and clear of it (brief §4) */
 .plane:focus-visible { outline: 1px solid var(--tick-strong); outline-offset: 2px; }
 .canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 
-.edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
-.edges path { fill: none; stroke: var(--tick-strong); stroke-width: 1; }
+.edges { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+/* the paths are in the canvas's device pixels, scaled by the viewBox: the line stays one CSS pixel */
+.edges path { fill: none; stroke: var(--tick-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .edges .p3Edge { stroke-dasharray: 3 3; }
 
 .vline, .hline { position: absolute; left: 0; top: 0; background: var(--cross); opacity: .55; pointer-events: none; }
@@ -53,11 +56,24 @@ div.icons button { padding: 0 5px; }
 .xAxis span:first-child { transform: none; }
 .xAxis span:last-child { transform: translateX(-100%); }
 
-.caption { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 0 0 30px; }
+.caption { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; margin: 4px 0 0 30px; }
+div.planes button { padding: 0 8px; }
+/* what the plane shows and what is held, a line under its switch */
+.what { margin: 6px 0 0 30px; color: var(--ink-3); }
+/* a plane with no colour in it says so, rather than sitting blank */
+.none { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 0 12px; color: var(--ink-3); font-size: var(--fs-meta); text-align: center; pointer-events: none; }
 .legend { display: flex; gap: 12px; }
 .legend > span { display: flex; align-items: center; gap: 5px; }
 .legend i { width: 12px; border-top: 1px solid var(--tick-strong); }
 .legend i.dash { border-top-style: dashed; }
+.legend i.iso { height: 2px; border-top: 0; background: var(--cross); }
+
+/* the value lock's iso-value line: the same ring colours as the marker, drawn once, over the colours */
+.contour { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.contour path { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+/* what the lock holds, under the picker */
+.held { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 0; color: var(--ink-3); font-size: var(--fs-meta); }
+.held b { color: var(--ink); font: 400 var(--fs-ctl)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
 
 /* ── Square and Wheel: the saturation-by-brightness area ── */
 .sb {
@@ -121,6 +137,10 @@ div.icons button { padding: 0 5px; }
   background-repeat: no-repeat;
   box-shadow: inset 0 0 0 1px var(--edge);
 }
+.painted { box-shadow: none; }
+/* the strip painted as a canvas: the colours are under the edge ring */
+.painted canvas { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; }
+.painted::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--edge); pointer-events: none; }
 .lim { position: absolute; top: 0; width: 1px; height: 16px; background: var(--ink-3); pointer-events: none; }
 .ndl {
   position: absolute;
@@ -157,9 +177,12 @@ div.icons button { padding: 0 5px; }
 /* ── hex and gamut ── */
 .hexRow { display: flex; align-items: flex-start; gap: 6px; margin-top: 6px; }
 .hex { flex: 1; }
+/* Copy and its format caret, one control */
+.copyAs { display: inline-flex; align-items: center; gap: 0; }
+.copyAs > :last-child { margin-left: -4px; }
 
 .gam { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
-.gam > div { display: flex; flex-direction: column; gap: 6px; padding: 8px 9px; border-radius: var(--r-ctl); background: var(--well); }
+.gam > div:not(.fix) { display: flex; flex-direction: column; gap: 6px; padding: 8px 9px; border-radius: var(--r-ctl); background: var(--well); }
 .gv {
   display: flex;
   align-items: center;
@@ -168,4 +191,7 @@ div.icons button { padding: 0 5px; }
   font: 400 var(--fs-ctl)/1 var(--font-mono);
   font-variant-numeric: tabular-nums slashed-zero;
 }
+.swatch { flex: none; width: 28px; height: 18px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--edge); }
+.gam > .use { grid-column: 1 / -1; margin-top: 0; }
+.fix { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; padding: 8px 9px; border-radius: var(--r-ctl); background: var(--well); }
 .gv > :global(.ico) { color: var(--ink-2); }

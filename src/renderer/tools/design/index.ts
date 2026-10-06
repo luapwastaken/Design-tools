@@ -3,6 +3,7 @@
 import { asSvg, unsupportedImage } from '../../lib/load.ts';
 import type { ToolDefinition } from '../../shell/tool.ts';
 import { toggleGreyscale } from '../common/Greyscale.tsx';
+import { toggleValueLock } from '../../ui/PickerStyles.tsx';
 import { baseName, fetchBlob, isSvg } from '../common/take.ts';
 import { ROLES } from '../../../shared/palette/roles.ts';
 import { armDelete, copySelected, duplicate, escape, eyedrop, keepAll, newPalette, nudge, roleSelected, spaceNow, step, toggleLocked } from './actions.ts';
@@ -70,6 +71,7 @@ export const tool: ToolDefinition<DesignDoc> = {
   shortcuts: (doc) => [
     { keys: 'Space', label: 'Reroll the unlocked colours (build a palette when empty)', run: () => spaceNow(doc) },
     { keys: 'L', label: 'Lock or unlock the selected swatches: a locked colour stays through Space and Delete', run: () => toggleLocked(doc) },
+    { keys: 'V', label: 'Value lock', run: toggleValueLock },
     { keys: 'Delete', label: 'Delete swatches', run: () => armDelete(doc) },
     { keys: 'Ctrl+D', label: 'Duplicate', run: () => duplicate(doc) },
     { keys: 'Ctrl+N', label: 'New palette', run: () => void newPalette() },

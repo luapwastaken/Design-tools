@@ -18,7 +18,14 @@ const pure = (h: number) => cssColor(fromHsb([h, 100, 100]));
 /** the pure hues 60° apart: between them the hue runs linearly in sRGB */
 export const HUES = [0, 60, 120, 180, 240, 300, 360].map(pure).join(', ');
 
-export type HsbProps = { hsb: Hsb; onHsb(v: Hsb): void } & Gesture;
+export type HsbProps = {
+  hsb: Hsb;
+  onHsb(v: Hsb): void;
+  /** the value lock's iso-value line, as an SVG path in a 0-100 box: the drag rides it (x picks saturation, brightness is solved) */
+  contour?: string | null;
+  /** the hue bar's colours at the held value (Square only) */
+  hueTrack?: string | null;
+} & Gesture;
 
 /** the ring marking a place on a colour area */
 export function Mark({ className, style }: { className?: string; style: CSSProperties }) {
@@ -55,12 +62,13 @@ export const focusThen = (down: (e: PointerEvent<HTMLElement>) => void) => (e: P
 };
 
 /** The saturation-by-brightness area at the hue (the Square's, and the one inside the Wheel). */
-export function SbArea({ hsb, onHsb, className, ...g }: HsbProps & { className?: string }) {
+export function SbArea({ hsb, onHsb, contour, className, ...g }: HsbProps & { className?: string }) {
   const [h, sat, b] = hsb;
   const drag = useDrag({
     onBegin: g.onBegin,
     onMove({ x, y }) {
-      const next: Hsb = [h, roundTo(x * 100, 1), roundTo((1 - y) * 100, 1)];
+      // held to a value, the pointer picks the saturation only and brightness follows the line
+      const next: Hsb = [h, roundTo(x * 100, 1), contour ? b : roundTo((1 - y) * 100, 1)];
       if (next[1] !== sat || next[2] !== b) onHsb(next);
     },
     onCommit: g.onCommit,
@@ -69,7 +77,8 @@ export function SbArea({ hsb, onHsb, className, ...g }: HsbProps & { className?:
   const onKeyDown = (e: KeyboardEvent) => {
     const d = arrow(e);
     if (!d) return;
-    const next: Hsb = [h, clamp(Math.round(sat) + d[0], 0, 100), clamp(Math.round(b) + d[1], 0, 100)];
+    // held to a value, Up and Down are the way to change it: they move brightness; Left and Right leave it to the line
+    const next: Hsb = [h, clamp(Math.round(sat) + d[0], 0, 100), contour && !d[1] ? b : clamp(Math.round(b) + d[1], 0, 100)];
     if (next[1] !== sat || next[2] !== b) keyStep(g, () => onHsb(next));
   };
 
@@ -78,6 +87,8 @@ export function SbArea({ hsb, onHsb, className, ...g }: HsbProps & { className?:
       className={cx(s.sb, className)}
       style={{ backgroundImage: `linear-gradient(0deg in srgb, ${BLACK}, ${WHITE}), linear-gradient(90deg in srgb, ${WHITE}, ${pure(h)})` }}
       data-plane=""
+      data-colour=""
+      data-lock={contour ? '' : undefined}
       tabIndex={0}
       role="slider"
       aria-label="Saturation and brightness"
@@ -89,17 +100,23 @@ export function SbArea({ hsb, onHsb, className, ...g }: HsbProps & { className?:
       onPointerDown={focusThen(drag.handlers.onPointerDown)}
       onKeyDown={onKeyDown}
     >
+      {contour && (
+        <svg className={s.contour} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path className={s.halo} d={contour} />
+          <path className={s.mark} d={contour} />
+        </svg>
+      )}
       <Mark style={{ left: `${sat}%`, top: `${100 - b}%` }} />
     </div>
   );
 }
 
 /** The Square style: the area, then the hue bar (its value is typed in the number row below). */
-export function PickerSquare({ hsb, onHsb, ...g }: HsbProps) {
+export function PickerSquare({ hsb, onHsb, contour, hueTrack, ...g }: HsbProps) {
   const [h, sat, b] = hsb;
   return (
     <>
-      <SbArea hsb={hsb} onHsb={onHsb} {...g} />
+      <SbArea hsb={hsb} onHsb={onHsb} contour={contour} {...g} />
       <PickerChannel
         bare
         label="H"
@@ -107,7 +124,7 @@ export function PickerSquare({ hsb, onHsb, ...g }: HsbProps) {
         min={0}
         max={360}
         step={1}
-        track={`linear-gradient(90deg in srgb, ${HUES})`}
+        track={hueTrack ?? `linear-gradient(90deg in srgb, ${HUES})`}
         className={s.hueBar}
         {...g}
         onChange={(x) => onHsb([x, sat, b])}

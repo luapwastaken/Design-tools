@@ -3,6 +3,7 @@
 import { asSvg, unsupportedImage } from '../../lib/load.ts';
 import type { ToolDefinition } from '../../shell/tool.ts';
 import { toggleGreyscale } from '../common/Greyscale.tsx';
+import { toggleValueLock } from '../../ui/PickerStyles.tsx';
 import { baseName, fetchBlob, isSvg } from '../common/take.ts';
 import { addBase, arm, duplicate, eyedrop, move, newPalette, select, selected } from './actions.ts';
 import { emptyDoc, fromPayload, rampOf, setSpec, toPayload, type IllustrationDoc } from './doc.ts';
@@ -98,6 +99,7 @@ export const tool: ToolDefinition<IllustrationDoc> = {
       { keys: 'ArrowRight', label: 'Darker step', run: () => move(doc, 1, 0) },
       { keys: 'H', label: 'Hero colour', run: hero },
       { keys: 'G', label: 'Greyscale', run: () => void toggleGreyscale() },
+      { keys: 'V', label: 'Value lock', run: toggleValueLock },
       // I picks: on the paper in Paint, anywhere on screen otherwise
       { keys: 'I', label: 'Pick', run: () => (inPaint() ? setPaint({ tool: 'pick' }) : void eyedrop(doc)) },
       { keys: 'B', label: 'Brush', run: () => inPaint() && setPaint({ tool: 'paint' }) },

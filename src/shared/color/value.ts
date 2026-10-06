@@ -3,11 +3,11 @@
 // the gamma-encoded sRGB the screen shows, 0..1 (CSS grayscale(), Krita's Luminosity BT.709 and
 // v1's value lock). Not OKLCH L: at one L a saturated magenta and yellow sit up to a quarter of the
 // scale apart in grey.
+import { heldEdge, LUMA } from './fast.ts';
 import { displayRgb, toOklch, type Oklch } from './index.ts';
 import { maxChroma } from './picker.ts';
 
-/** the luma weights, in one place so the measure can change */
-export const LUMA = [0.2126, 0.7152, 0.0722] as const;
+export { LUMA };
 
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 const luma = (r: number, g: number, b: number) => LUMA[0] * r + LUMA[1] * g + LUMA[2] * b;
@@ -49,16 +49,14 @@ export function holdValue(target: number, c: number, h: number): Oklch {
     }
     return (lo + hi) / 2;
   };
-  let cc = Math.max(0, c);
-  let l = solve(cc);
-  for (let i = 0; i < 8; i++) {
-    const edge = maxChroma(l, h, 'srgb');
-    if (cc <= edge) break;
-    cc = edge;
-    l = solve(cc);
-  }
+  const cc = Math.max(0, c);
+  const l = solve(cc);
+  if (cc <= maxChroma(l, h, 'srgb')) return [l, cc, h];
+  // past the most chroma sRGB has at this value, chroma gives way: to that edge, which bisection finds exactly
+  const edge = heldEdge(t, h).c;
+  const le = solve(edge);
   // the last solve may leave a hair outside; trimming it moves the value by far less than a hex step
-  return [l, Math.min(cc, maxChroma(l, h, 'srgb')), h];
+  return [le, Math.min(edge, maxChroma(le, h, 'srgb')), h];
 }
 
 /** Rec. 709 luma of the pure HSB hue `h` (S and B 100%), 0..1 */
@@ -80,4 +78,31 @@ export function hsbHold(target: number, h: number, s: number): [number, number] 
   const b = t / (1 - sat * (1 - p));
   if (b <= 1) return [sat * 100, b * 100];
   return [p >= 1 ? 0 : clamp01((1 - t) / (1 - p)) * 100, 100];
+}
+
+/** Rec. 709 luma of the HSL colour (h 0-360, s and l 0-1) */
+const hslLuma = (h: number, s: number, l: number) => {
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  };
+  return luma(f(0), f(8), f(4));
+};
+
+/**
+ * HSL lightness (0-100) at HSL hue `h` and saturation `s` (0-100) with this value. Value runs from
+ * 0 at L 0 to 1 at L 100 and never falls between, so every value is reachable and saturation never
+ * gives way (unlike HSB).
+ */
+export function hslHold(target: number, h: number, s: number): number {
+  const t = clamp01(target);
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 32; i++) {
+    const m = (lo + hi) / 2;
+    if (hslLuma(h, s / 100, m) < t) lo = m;
+    else hi = m;
+  }
+  return ((lo + hi) / 2) * 100;
 }

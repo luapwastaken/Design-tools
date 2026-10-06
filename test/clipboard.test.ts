@@ -65,3 +65,7 @@ test('when every set is refused it says so in plain words', async () => {
   );
   assert.equal(tries, 2);
 });
+
+test('a colour code goes on as plain text, and only that', () => {
+  assert.deepEqual(entriesFor({ kind: 'text', data: 'oklch(0.628 0.258 29.2)' }), [{ 'text/plain': 'oklch(0.628 0.258 29.2)' }]);
+});

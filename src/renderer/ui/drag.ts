@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { clamp } from './scrub.ts';
 
 /** Where the pointer is on the element, 0..1 on each axis; `free` runs on past its edges (a ring's angle). */
-export type At = { x: number; y: number; shift: boolean; free: { x: number; y: number } };
+export type At = { x: number; y: number; shift: boolean; alt: boolean; free: { x: number; y: number } };
 
 type Drag = { id: number; el: Element; rect: DOMRect; onKey(e: KeyboardEvent): void };
 
@@ -24,7 +24,7 @@ export function useDrag(o: {
 
   const at = (d: Drag, e: PointerEvent<Element>): At => {
     const free = { x: (e.clientX - d.rect.left) / d.rect.width, y: (e.clientY - d.rect.top) / d.rect.height };
-    return { x: clamp(free.x, 0, 1), y: clamp(free.y, 0, 1), shift: e.shiftKey, free };
+    return { x: clamp(free.x, 0, 1), y: clamp(free.y, 0, 1), shift: e.shiftKey, alt: e.altKey, free };
   };
 
   const end = (commit: boolean) => {

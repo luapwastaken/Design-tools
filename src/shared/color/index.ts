@@ -39,8 +39,11 @@ const EPS = 1e-6;
 const HEX = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 const culoriOf = ([l, c, h]: Oklch): CuloriOklch => ({ mode: 'oklch', l, c, h });
-const within = ({ r, g, b }: { r: number; g: number; b: number }) =>
-  [r, g, b].every((v) => v >= -EPS && v <= 1 + EPS);
+const within = ({ r, g, b }: { r: number; g: number; b: number }, eps = EPS) =>
+  [r, g, b].every((v) => v >= -eps && v <= 1 + eps);
+
+/** the slack the pickers' readouts allow: a colour rounded to 4 decimals (oklch.com's red) is still sRGB */
+export const READOUT_TOL = 1e-4;
 
 /** Any culori colour to an OKLCH triple, L held to 0..1; achromatic colours (no hue) take `hue`. */
 export function toOklch(color: Color, hue = 0): Oklch {
@@ -94,8 +97,9 @@ export function hsb(o: Oklch): [number, number, number] {
   const { h = 0, s, v } = hsvOf(toHex(o))!;
   return [h, s, v];
 }
-export const inSrgb = (o: Oklch): boolean => within(rgbOf(culoriOf(o)));
-export const inP3 = (o: Oklch): boolean => within(p3Of(culoriOf(o)));
+/** `tol`: how far past 0 and 1 a channel may go and still be in gamut (the fix tools keep the strict default) */
+export const inSrgb = (o: Oklch, tol = EPS): boolean => within(rgbOf(culoriOf(o)), tol);
+export const inP3 = (o: Oklch, tol = EPS): boolean => within(p3Of(culoriOf(o)), tol);
 
 export function toSrgbGamut(o: Oklch): Oklch {
   return inSrgb(o) ? [...o] : toOklch(srgb(o), o[2]);

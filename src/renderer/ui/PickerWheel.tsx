@@ -8,7 +8,7 @@ import s from './Picker.module.css';
 const wrap = (h: number) => ((h % 360) + 360) % 360;
 
 /** The Wheel style: the hue round a ring, red at the top and clockwise, the square inside (Krita, Clip Studio). */
-export function PickerWheel({ hsb, onHsb, ...g }: HsbProps) {
+export function PickerWheel({ hsb, onHsb, contour, ...g }: Omit<HsbProps, 'hueTrack'>) {
   const [h, sat, b] = hsb;
   const drag = useDrag({
     onBegin: g.onBegin,
@@ -32,6 +32,7 @@ export function PickerWheel({ hsb, onHsb, ...g }: HsbProps) {
       <div
         className={s.hueRing}
         style={{ backgroundImage: `conic-gradient(in srgb, ${HUES})` }}
+        data-colour=""
         tabIndex={0}
         role="slider"
         aria-label="Hue"
@@ -45,7 +46,7 @@ export function PickerWheel({ hsb, onHsb, ...g }: HsbProps) {
       />
       {/* the hole: a press between the ring and the square does nothing */}
       <i className={s.hole} />
-      <SbArea hsb={hsb} onHsb={onHsb} className={s.wheelSb} {...g} />
+      <SbArea hsb={hsb} onHsb={onHsb} contour={contour} className={s.wheelSb} {...g} />
       <Mark className={s.hueMark} style={{ transform: `rotate(${h}deg) translateY(calc((var(--ring) - var(--wheel)) / 2))` }} />
     </div>
   );
