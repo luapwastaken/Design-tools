@@ -1,7 +1,7 @@
 // userData/settings.json, held in memory. Read once at start-up; written only when something changes.
 import { readFileSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
-import { PICKER_MODELS, PICKER_STYLES, type Settings } from '../shared/types.ts';
+import { PICKER_MODELS, PICKER_PLANES, PICKER_STYLES, type Settings } from '../shared/types.ts';
 import { inOrder, isMissing, writeAtomic } from './fsx.ts';
 import { errorText, log } from './log.ts';
 
@@ -22,6 +22,8 @@ export function createSettings(userData: string, defaultRoot: string) {
         if (patch.exportFolders) next.exportFolders = { ...current.exportFolders, ...patch.exportFolders };
         if (oneOf(PICKER_STYLES, patch.pickerStyle)) next.pickerStyle = patch.pickerStyle;
         if (oneOf(PICKER_MODELS, patch.pickerModel)) next.pickerModel = patch.pickerModel;
+        if (oneOf(PICKER_PLANES, patch.pickerPlane)) next.pickerPlane = patch.pickerPlane;
+        for (const k of ['valueLock', 'hueLock', 'greyscale'] as const) if (typeof patch[k] === 'boolean') next[k] = patch[k];
         await writeAtomic(file, JSON.stringify(next, null, 2));
         return (current = next);
       });
@@ -42,6 +44,10 @@ function read(file: string, defaultRoot: string): Settings {
     exportFolders: raw.exportFolders && typeof raw.exportFolders === 'object' ? raw.exportFolders : {},
     pickerStyle: oneOf(PICKER_STYLES, raw.pickerStyle) ? raw.pickerStyle : 'square',
     pickerModel: oneOf(PICKER_MODELS, raw.pickerModel) ? raw.pickerModel : 'hsb',
+    pickerPlane: oneOf(PICKER_PLANES, raw.pickerPlane) ? raw.pickerPlane : 'lc',
+    valueLock: raw.valueLock === true,
+    hueLock: raw.hueLock === true,
+    greyscale: raw.greyscale === true,
   };
 }
 

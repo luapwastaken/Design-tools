@@ -1,14 +1,14 @@
-import type { Settings } from '../../../shared/types.ts';
+import type { PickerPrefs } from '../../../shared/types.ts';
 import { toast } from '../../ui/toast.ts';
 import { ipc } from './ipc.ts';
 import { getState, setState } from './store.ts';
 
-export type PickerPrefs = Partial<Pick<Settings, 'pickerStyle' | 'pickerModel'>>;
+export type { PickerPrefs };
 
 let latest = 0;
 
 /**
- * The picker style and model, app-wide: every picker follows at once, before main has saved it.
+ * The picker style, model, plane and locks and the greyscale view, app-wide: every picker follows at once, before main has saved it.
  * Only the newest call's answer is applied, so quick switching never shows an older choice.
  */
 export async function setPicker(patch: PickerPrefs): Promise<void> {
@@ -21,6 +21,6 @@ export async function setPicker(patch: PickerPrefs): Promise<void> {
   } catch (e) {
     toast.show({ kind: 'error', message: `Couldn't save the picker setting: ${e instanceof Error ? e.message : String(e)}` });
     const now = getState().settings;
-    if (mine === latest && before && now) setState({ settings: { ...now, pickerStyle: before.pickerStyle, pickerModel: before.pickerModel } });
+    if (mine === latest && before && now) setState({ settings: { ...now, ...Object.fromEntries(Object.keys(patch).map((k) => [k, before[k as keyof PickerPrefs]])) } });
   }
 }

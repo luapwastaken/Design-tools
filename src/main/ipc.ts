@@ -29,8 +29,8 @@ export function registerIpc({ settings, workspace: ws, library: lib, exporter, c
   let applied = settings.get();
   const setSettings = (patch: Parameters<Api['settings.set']>[0]): Promise<Settings> =>
     inOrder('settings.set', async () => {
-      const { theme, libraryRoot, pickerStyle, pickerModel } = patch;
-      const next = await settings.update({ theme, libraryRoot, pickerStyle, pickerModel });
+      const { theme, libraryRoot, pickerStyle, pickerModel, pickerPlane, valueLock, hueLock, greyscale } = patch;
+      const next = await settings.update({ theme, libraryRoot, pickerStyle, pickerModel, pickerPlane, valueLock, hueLock, greyscale });
       if (next.theme !== applied.theme) applyTheme(next.theme);
       if (next.libraryRoot !== applied.libraryRoot) await lib.setRoot(next.libraryRoot);
       applied = next;

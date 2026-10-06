@@ -153,6 +153,9 @@ export type PickerStyle = (typeof PICKER_STYLES)[number];
 /** The numbers the Square, Wheel and Sliders show. */
 export const PICKER_MODELS = ['hsb', 'rgb', 'hsl', 'cmyk', 'oklch'] as const;
 export type PickerModel = (typeof PICKER_MODELS)[number];
+/** the OKLCH style's plane: L by C at the hue, C by H at the lightness, H by L at the chroma */
+export const PICKER_PLANES = ['lc', 'ch', 'hl'] as const;
+export type PickerPlane = (typeof PICKER_PLANES)[number];
 
 export type Settings = {
   theme: Theme;
@@ -161,7 +164,16 @@ export type Settings = {
   exportFolders: Record<string, string>;
   pickerStyle: PickerStyle;
   pickerModel: PickerModel;
+  pickerPlane: PickerPlane;
+  /** every picker holds the value (grey) of the colour being edited while hue and chroma move */
+  valueLock: boolean;
+  /** every picker keeps the hue */
+  hueLock: boolean;
+  /** colour content (never the chrome) is shown as its value, in both colour tools */
+  greyscale: boolean;
 };
+/** the app-wide picker and greyscale settings, which every picker follows at once */
+export type PickerPrefs = Partial<Pick<Settings, 'pickerStyle' | 'pickerModel' | 'pickerPlane' | 'valueLock' | 'hueLock' | 'greyscale'>>;
 
 /** Per-tool workspace file (renderer-owned JSON, main just stores it). */
 export type WorkspaceState = {

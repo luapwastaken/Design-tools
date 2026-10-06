@@ -1,5 +1,5 @@
 import type { DocController, DocState } from '../../shared/doc-api.ts';
-import type { ItemKind, LibraryIndex, LibraryItemRef, Settings, Theme, ToolId } from '../../shared/types.ts';
+import type { ItemKind, LibraryIndex, LibraryItemRef, PickerPrefs, Settings, Theme, ToolId } from '../../shared/types.ts';
 import type { ToolDefinition, Use } from './tool.ts';
 
 /**
@@ -57,8 +57,8 @@ export interface Shell {
   toggleLibrary(open?: boolean): void;
   openSettings(open?: boolean): void;
   setTheme(theme: Theme): Promise<void>;
-  /** the app-wide colour picker style and model (every picker follows at once) */
-  setPicker(patch: Partial<Pick<Settings, 'pickerStyle' | 'pickerModel'>>): Promise<void>;
+  /** the app-wide colour picker style, model, plane and locks, and the greyscale view (every picker follows at once) */
+  setPicker(patch: PickerPrefs): Promise<void>;
   chooseLibraryRoot(): Promise<void>;
 
   // ── items ──
