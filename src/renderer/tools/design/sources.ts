@@ -18,12 +18,13 @@ export async function takeImage(blob: Blob, name: string): Promise<void> {
   extract();
 }
 
-/** k-means in OKLab (shared/palette/extract), most common first */
+/** k-means in OKLab (shared/palette/extract), laid out lightest first */
 export function extract(k = getView().k): void {
   const p = picture.get();
   if (!p) return;
-  const found = extractColours(p.pixels.data, p.pixels.width, p.pixels.height, k);
-  propose('image', `From ${p.name}`, found.map((f) => f.oklch));
+  // lightest first, the order the roles read in (Background to Text); each keeps its share for Keep all's Primary
+  const found = extractColours(p.pixels.data, p.pixels.width, p.pixels.height, k).sort((a, b) => b.oklch[0] - a.oklch[0]);
+  propose('image', `From ${p.name}`, found.map((f) => f.oklch), [], [], found.map((f) => ({ share: f.weight })));
 }
 
 /** a logo's or SVG's fill and stroke colours become proposals; throws when it has none */

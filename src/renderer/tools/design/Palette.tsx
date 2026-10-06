@@ -10,10 +10,10 @@ import { Button, Icon, IconButton, menu, Select, Tooltip, type MenuAnchor, type 
 import { fmtC, fmtH, fmtL } from '../common/names.ts';
 import { Section } from '../common/Section.tsx';
 import { SURROUNDS, surroundOf } from '../common/surround.ts';
-import { addProposals, addSwatch, armDelete, clickSelect, copyHex, duplicate, select, selection, setRole, toggleLocked, type Doc } from './actions.ts';
+import { addProposals, addSwatch, armDelete, clickSelect, completeNow, copyHex, duplicate, missingRoles, select, selection, setRole, toggleLocked, type Doc } from './actions.ts';
 import { inkOn, simulated } from './artboard.ts';
 import { DeleteConfirm } from './DeleteConfirm.tsx';
-import { displayName, moveIds, namesOf, plural, type ChipData, type DesignDoc, type DesignView, mapSwatch } from './doc.ts';
+import { displayName, listNames, moveIds, namesOf, plural, type ChipData, type DesignDoc, type DesignView, mapSwatch } from './doc.ts';
 import { Empty } from './Empty.tsx';
 import type { OpenPop } from './Popovers.tsx';
 import { clearProposals, proposals, toggleLock, type Proposal } from './proposals.ts';
@@ -105,6 +105,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
 
   const empty = d.swatches.length === 0 && !ghosts;
   const locked = d.swatches.filter((w) => v.locked.includes(w.id)).length;
+  const missing = missingRoles(d.swatches);
   const sub = empty ? undefined : (
     <>
       {plural(d.swatches.length, 'colour')} · click one to edit it · drag to reorder
@@ -131,7 +132,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
             <span className={s.from}>
               <b>{plural(ghosts.items.length, 'colour')} proposed</b> {ghosts.label}
             </span>
-            <Button size="xs" variant="primary" icon="add" shortcut="A" onClick={() => addProposals(doc, ghosts.items)}>
+            <Button size="xs" variant="primary" icon="add" shortcut="A" onClick={() => addProposals(doc, ghosts.items, true)}>
               Keep all
             </Button>
             <Button size="xs" shortcut="Escape" onClick={clearProposals}>
@@ -145,7 +146,12 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
                 Stop simulating
               </Button>
             )}
-            {!empty && <span className={s.hint}>{locked ? `${plural(locked, 'colour')} locked: ` : ''}Locked colours stay when you generate</span>}
+            {missing.length > 0 && (
+              <Button size="xs" icon="star_shine" onClick={() => completeNow(doc)} tooltip={`Propose the missing roles, ${listNames(missing)}, made to suit the colours you have`}>
+                Complete the palette: {missing.length > 3 ? `${missing.length} roles missing` : listNames(missing)}
+              </Button>
+            )}
+            {!empty && <span className={s.hint}>{locked ? `${plural(locked, 'colour')} locked: ` : ''}Locked colours stay when you reroll</span>}
           </>
         )}
         </>
@@ -351,7 +357,10 @@ function Ghost({ p, shown, data, lockable, onAdd, onDiscard, onLock }: { p: Prop
   return (
     <div className={cx(s.sw, s.ghost)} style={paint(shown)} data-ghost={p.id}>
       <div className={s.chip}>
-        <span className={s.proposed}>Proposed</span>
+        <span className={s.tags}>
+          <span className={s.proposed}>Proposed</span>
+          {p.role && <span className={s.proposed}>{p.role}</span>}
+        </span>
         {lockable && (
           <Tooltip content={p.locked ? 'Unlock: a re-roll changes it' : 'Lock: a re-roll keeps it'} shortcut="L" side="below">
             <button type="button" className={cx(s.lock, p.locked && s.on)} aria-label={p.locked ? 'Unlock' : 'Lock'} aria-pressed={p.locked} onClick={onLock}>

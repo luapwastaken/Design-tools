@@ -1,6 +1,7 @@
 // The "+ Add" sources as popovers under the control that opened them (SPEC 3): From image, From
-// logo, Paste codes, Start from one colour, Insert gradient. Each one only proposes: the colours
-// land on the artboard as proposals, never in the document until kept.
+// logo, Paste codes, Harmony from a colour, Insert gradient, Suggest more colours; and the style and
+// accent that rerolls the palette. Each source only proposes: the colours land in the row as
+// proposals, never in the document until kept.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { gradientStops } from '../../../shared/palette/gradient.ts';
@@ -12,16 +13,17 @@ import { useShell } from '../../shell/core/index.ts';
 import { ipc } from '../../shell/core/ipc.ts';
 import { cx } from '../../ui/cx.ts';
 import { HexField } from '../../ui/HexField.tsx';
-import { Button, IconButton, InfoTip, NumberField, Popover, Segmented, Select, SwatchStrip, toast } from '../../ui/index.ts';
+import { Button, IconButton, NumberField, Popover, Segmented, Select, SwatchStrip, toast } from '../../ui/index.ts';
 import { HARMONIES, runGradient, runHarmony } from './build.ts';
 import { displayName, type DesignDoc, type DesignView } from './doc.ts';
 import { proposals } from './proposals.ts';
 import { extract, picture, takeImage, takeSvg, takeText } from './sources.ts';
-import { activeSwatch, regenerate, selection, type Doc } from './actions.ts';
+import { activeSwatch, regenerate, restyle, selection, suggestMore, type Doc } from './actions.ts';
+import { StyleFields } from './StyleFields.tsx';
 import { patchView } from './view-state.ts';
 import s from './Popovers.module.css';
 
-export type PopKind = 'image' | 'logo' | 'paste' | 'colour' | 'gradient' | 'generate';
+export type PopKind = 'image' | 'logo' | 'paste' | 'colour' | 'gradient' | 'style' | 'suggest';
 export type OpenPop = (kind: PopKind, anchor: HTMLElement, ends?: { from: string; to: string }) => void;
 
 export type PopState = { kind: PopKind; anchor: HTMLElement; ends?: { from: string; to: string } };
@@ -32,7 +34,8 @@ const TITLES: Record<PopKind, string> = {
   paste: 'Paste codes',
   colour: 'Harmony from a colour',
   gradient: 'Gradient between two',
-  generate: 'Generate settings',
+  style: 'Style and accent',
+  suggest: 'Suggest more colours',
 };
 
 const failed = (what: string) => (e: unknown) => toast.show({ kind: 'error', message: `${what}: ${e instanceof Error ? e.message : String(e)}` });
@@ -48,8 +51,9 @@ export function DesignPopover({ doc, pop, d, v, onClose }: { doc: Doc; pop: PopS
     <Popover anchor={pop.anchor} label={TITLES[pop.kind]} onClose={onClose} className={s.pop}>
       <div className={s.body}>
         <span className={s.head}>{TITLES[pop.kind]}</span>
-        {pop.kind === 'generate' && <GenerateBody doc={doc} v={v} />}
-        {pop.kind === 'image' && <ImageBody v={v} />}
+        {pop.kind === 'style' && <StyleBody doc={doc} v={v} />}
+        {pop.kind === 'suggest' && <SuggestBody doc={doc} v={v} onDone={() => onClose(true)} />}
+        {pop.kind === 'image' && <ImageBody v={v} onDone={() => onClose(true)} />}
         {pop.kind === 'logo' && <LogoBody onDone={() => onClose(true)} />}
         {pop.kind === 'paste' && <PasteBody onDone={() => onClose(true)} />}
         {pop.kind === 'colour' && <ColourBody d={d} v={v} onDone={() => onClose(true)} />}
@@ -63,28 +67,50 @@ function Row({ children }: { children: ReactNode }) {
   return <div className={s.row}>{children}</div>;
 }
 
-/** Style, Colours and Seed: a change redoes what Generate last made, in place (regenerate) */
-function GenerateBody({ doc, v }: { doc: Doc; v: DesignView }) {
-  const preset = PRESETS.find((p) => p.id === v.preset);
+/** Style, Accent and Seed: a change rerolls the unlocked colours in place (the same seed only changes what the style or accent changes) */
+function StyleBody({ doc, v }: { doc: Doc; v: DesignView }) {
   return (
     <>
       <Row>
-        <Select label="Style" options={PRESETS.map((p) => ({ value: p.id, label: p.label }))} value={v.preset} onChange={(p) => regenerate(doc, { preset: p })} className={s.grow} />
-        {preset && <InfoTip text={preset.describe} />}
+        <StyleFields doc={doc} v={v} className={s.grow} />
       </Row>
+      <Row>
+        <NumberField label="Seed" value={v.seed} min={0} max={99999} step={1} onChange={(seed) => restyle(doc, { seed })} className={s.grow} />
+        <IconButton icon="casino" label="Reroll: a new seed" shortcut="Space" onClick={() => restyle(doc, { seed: 1 + Math.floor(Math.random() * 99999) })} />
+      </Row>
+      <p className={s.dim}>These rebuild every colour that has a role and is not locked. Press L on a colour to keep it.</p>
+    </>
+  );
+}
+
+/** the generator's ramp-shaped colours, proposed beside the palette: Colours and Seed redo them while they are up */
+function SuggestBody({ doc, v, onDone }: { doc: Doc; v: DesignView; onDone(): void }) {
+  const preset = PRESETS.find((p) => p.id === v.preset);
+  return (
+    <>
       <Row>
         <NumberField label="Colours" value={v.count} min={2} max={12} step={1} onChange={(count) => regenerate(doc, { count })} className={s.grow} />
       </Row>
       <Row>
         <NumberField label="Seed" value={v.seed} min={0} max={99999} step={1} onChange={(seed) => regenerate(doc, { seed })} className={s.grow} />
-        <IconButton icon="casino" label="Reroll: a new seed" onClick={() => regenerate(doc, { seed: 1 + Math.floor(Math.random() * 99999) })} />
+        <IconButton icon="casino" label="Another seed" onClick={() => regenerate(doc, { seed: 1 + Math.floor(Math.random() * 99999) })} />
       </Row>
-      <p className={s.dim}>Generate (Space) adds new colours as proposals beside the palette. Locked colours stay.</p>
+      <p className={s.dim}>{preset ? `${preset.label}: ${preset.describe} ` : ''}Pick the style with the caret beside Reroll. They arrive as proposals; locked colours of the palette keep their place.</p>
+      <Button
+        icon="add"
+        variant="primary"
+        onClick={() => {
+          suggestMore(doc);
+          onDone();
+        }}
+      >
+        Propose {v.count} colours
+      </Button>
     </>
   );
 }
 
-function ImageBody({ v }: { v: DesignView }) {
+function ImageBody({ v, onDone }: { v: DesignView; onDone(): void }) {
   const pic = picture.use();
   const canvas = useRef<HTMLCanvasElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -130,7 +156,7 @@ function ImageBody({ v }: { v: DesignView }) {
         onChange={(e) => {
           const file = e.currentTarget.files?.[0];
           e.currentTarget.value = '';
-          if (file) void takeFile(file).catch(failed(`Couldn't take colours from ${file.name}`));
+          if (file) void takeFile(file).then(onDone, failed(`Couldn't take colours from ${file.name}`));
         }}
       />
     </>
@@ -196,8 +222,8 @@ function PasteBody({ onDone }: { onDone(): void }) {
               ? `${read.colours.length === 1 ? 'One colour' : `${read.colours.length} colours`} found${read.rejected.length ? `, ${read.rejected.length} skipped` : ''}.`
               : 'No colours found.'}
         </span>
-        <Button icon="content_paste" variant="primary" onClick={add} disabled={!read.colours.length} shortcut="Ctrl+Enter">
-          Add
+        <Button icon="content_paste" variant="primary" onClick={add} disabled={!read.colours.length} shortcut="Ctrl+Enter" tooltip="Show them in the palette row as proposals; Keep all adds them">
+          Propose colours
         </Button>
       </Row>
     </>

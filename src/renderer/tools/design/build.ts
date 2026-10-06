@@ -1,9 +1,11 @@
 // Build's proposal makers that work from the palette itself (spec §3).
+import type { RoleColours } from '../../../shared/palette/brand.ts';
 import { generate, PRESETS } from '../../../shared/palette/generate.ts';
 import { gradientStops } from '../../../shared/palette/gradient.ts';
 import { harmony, type HarmonyKind } from '../../../shared/palette/harmony.ts';
+import type { Role } from '../../../shared/palette/roles.ts';
 import type { Swatch } from '../../../shared/types.ts';
-import { displayName, type DesignView } from './doc.ts';
+import { displayName, listNames, type DesignView } from './doc.ts';
 import { propose, proposalsFrom } from './proposals.ts';
 import { getView } from './view-state.ts';
 
@@ -33,6 +35,11 @@ export function runGenerate(palette: Swatch[], v: DesignView = getView()): void 
   const made = generate({ seed: v.seed, count: own.length + v.count, preset: v.preset, locked: [...own, ...locked] }).slice(own.length);
   const preset = PRESETS.find((p) => p.id === v.preset)?.label ?? 'Palette';
   propose('generate', `${preset} · seed ${v.seed}`, made, [], locked.map(Boolean));
+}
+
+/** the jobs the palette lacks, derived round its own colours, each proposed for its role (Keep gives it) */
+export function runComplete(missing: Role[], colours: RoleColours): void {
+  propose('complete', `${listNames(missing)} to complete the palette`, missing.map((r) => colours[r]), [], [], missing.map((role) => ({ role })));
 }
 
 export function runGradient(a: Swatch, b: Swatch, v: DesignView = getView()): void {
