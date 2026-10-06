@@ -118,7 +118,7 @@ function crumpleZ(x: number, y: number): number {
       // reaching no further than the cells searched, so a facet drops out at nothing
       const w = 1 / (d2 * d2 * d2) - REACH6;
       if (w <= 0) continue;
-      const height = 0.05 * (hash(ix, iy, 5) - 0.5) + (0.5 * (hash(ix, iy, 3) - 0.5) * dx + 0.5 * (hash(ix, iy, 4) - 0.5) * dy) / FACETS;
+      const height = 0.04 * (hash(ix, iy, 5) - 0.5) + (0.34 * (hash(ix, iy, 3) - 0.5) * dx + 0.34 * (hash(ix, iy, 4) - 0.5) * dy) / FACETS;
       sum += w * height;
       weight += w;
     }

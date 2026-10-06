@@ -36,7 +36,7 @@ import { lookOf, Painter } from './tools/halftone/draw.ts';
 import { platesFor, pngBlob, svgFor } from './tools/halftone/exports.ts';
 import { ready, screen, shownDots, svgOver, totals } from './tools/halftone/screening.ts';
 import { patchView as patchHalftone, status as halftoneStatus } from './tools/halftone/view-state.ts';
-import { addRamp, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
+import { addRamp, baseOf, rampName, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
 import type { PaintEngine } from './tools/illustration/paint/index.ts';
 import { liveEngine, liveSaves } from './tools/illustration/paint/live.ts';
 import { paintEngineChecks } from './tools/illustration/paint/smoke-checks.ts';
@@ -2160,6 +2160,7 @@ async function illustration(): Promise<void> {
   check('a tab switch keeps the painting: Paint, Ramp settings, Light, Check, Paint', painted(), liveEngine.get()?.state);
   await modesUi();
   await restoredUi();
+  await lightUi();
   await paintUi(id);
 
   // an edit while Design holds the palette forks it: the painting stays on screen and goes with the fork
@@ -2351,7 +2352,7 @@ async function modesUi(): Promise<void> {
   hero()?.click();
   check('and unticking ends it', await until(() => il.get().ramps[0].hero === false), il.get().ramps.map((r) => r.hero));
 
-  // the sun: dragged on its ring to the left of the object, then nudged with an arrow
+  // the sun: dragged on its ring to the left of the object, then nudged with the arrows
   const depth1 = il.depth();
   chord('2');
   const sun = await until(() => host('illustration')?.querySelector<HTMLElement>('[role="slider"][aria-label="Light direction"]'), 2000);
@@ -2365,11 +2366,31 @@ async function modesUi(): Promise<void> {
     fire('pointerup');
     const light = () => illustrationView().preview as { azimuth?: number; elevation?: number };
     const dragged = await until(() => (light().azimuth === 270 ? light() : null));
-    check('dragging the sun sets azimuth and elevation from where it was dropped', dragged && dragged.elevation === 60, light());
+    check('dragging the sun sets direction and height from where it was dropped', dragged && dragged.elevation === 60, light());
+    // the sun is drawn where the light is: on a circle, cos(height) from the centre, at the direction
+    const at = () => {
+      const [rr, sr] = [ring.getBoundingClientRect(), sun.getBoundingClientRect()];
+      return { x: ((sr.left + sr.width / 2 - rr.left) / rr.width - 0.5) * 2, y: (0.5 - (sr.top + sr.height / 2 - rr.top) / rr.height) * 2, round: rr.width / rr.height };
+    };
+    const drawn = at();
+    check('and it is drawn there, on a circle: the direction round it, cos(height) from the centre', Math.abs(drawn.round - 1) < 0.01 && Math.abs(Math.hypot(drawn.x, drawn.y) - 0.5) < 0.03 && drawn.x < -0.45 && Math.abs(drawn.y) < 0.05, drawn);
+    // arrow keys move it the way they point on the screen: Right moves a sun on the left in toward the centre, Up moves it up
     sun.focus();
+    const x0 = centre(sun)[0];
     press('ArrowRight');
-    check('an arrow key nudges the sun by one degree', await until(() => light().azimuth === 271), light());
+    check('Right moves a sun on the left toward the centre, and rightward on the screen', (await until(() => light().elevation === 61)) !== null && light().azimuth === 270 && centre(sun)[0] > x0, light());
+    const y0 = centre(sun)[1];
+    press('ArrowUp');
+    check('Up moves it up the screen, along the ring', (await until(() => light().azimuth !== 270)) !== null && (light().azimuth ?? 0) > 270 && centre(sun)[1] < y0, light());
+    press('ArrowUp', { shiftKey: true });
+    check('Shift moves it ten times as far', (await until(() => (light().azimuth ?? 0) > 280)) !== null, light());
     check('and moving the light leaves the palette alone', il.depth() === depth1 && illustrationView().selected === step.id, il.depth() - depth1);
+    // a press on the object, away from the sun and its ring, moves nothing
+    const [ox, oy] = centre(ring);
+    const before = JSON.stringify(light());
+    for (const type of ['pointerdown', 'pointerup']) host('illustration')?.querySelector('canvas[role="img"]')?.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 2, pointerType: 'mouse', isPrimary: true, button: 0, buttons: type === 'pointerup' ? 0 : 1, clientX: ox, clientY: oy }));
+    await sleep(60);
+    check('pressing the object does not teleport the sun to it', JSON.stringify(light()) === before, light());
   }
   chord('4');
   await until(() => tab() === 'paint', 1000);
@@ -2497,7 +2518,7 @@ async function restoredUi(): Promise<void> {
   const hero0 = il.get().ramps[0].hero;
   patchIllustration({ tab: 'light', preview: { ...view().preview, shape: 'sphere', all: false } });
   await sleep(60);
-  const allShapes = () => [...ui.querySelectorAll<HTMLElement>('button[role="radio"]')].find((b) => b.textContent?.trim() === 'All' && shows(b));
+  const allShapes = () => [...ui.querySelectorAll<HTMLElement>('button[role="radio"]')].find((b) => b.textContent?.trim() === 'All three' && shows(b));
   allShapes()?.click();
   const three = await until(() => ui.querySelector('[data-three]'), 1500);
   check('Shape: All shows a sphere, a cube and a cloth fold together', !!three && ['sphere', 'cube', 'cloth'].every((n) => three!.querySelector(`canvas[aria-label$="a ${n}"], canvas[aria-label$="a cloth fold"]`)) && three!.querySelectorAll('canvas').length === 3, three?.innerHTML.length);
@@ -2511,11 +2532,12 @@ async function restoredUi(): Promise<void> {
   check('All ramps puts the hero star on the hero ramp’s sphere only', !!cells && !!cells[0].querySelector('[data-icon="star"]') && !cells[1].querySelector('[data-icon="star"]'), cells?.map((c) => c.textContent));
   if (cells) {
     const sel0 = view().selected;
+    check('the selected ramp’s cell is a background, not a ring', cells.filter((c) => c.getAttribute('aria-checked') === 'true').length === 1 && getComputedStyle(cells.find((c) => c.getAttribute('aria-checked') === 'true')!).boxShadow === 'none' && getComputedStyle(cells.find((c) => c.getAttribute('aria-checked') === 'true')!).backgroundColor !== getComputedStyle(cells.find((c) => c.getAttribute('aria-checked') !== 'true')!).backgroundColor, cells.map((c) => getComputedStyle(c).boxShadow));
     cells.find((c) => c.tabIndex === 0)?.focus();
     press('ArrowRight');
-    check('and an arrow key moves to the next ramp', await until(() => view().selected !== sel0 && il.get().swatches.find((w) => w.id === view().selected)?.group === il.get().ramps[1].id), [sel0, view().selected]);
-    press('ArrowLeft');
-    await until(() => il.get().swatches.find((w) => w.id === view().selected)?.group === ramp0);
+    const lookTitle = () => [...ui.querySelectorAll('h2, [role="heading"], button')].map((e) => e.textContent ?? '').find((t) => t.startsWith('Look of ')) ?? '';
+    check('and an arrow key picks the next ramp for the controls (Look of its name) without moving the picker', (await until(() => (view().preview as { ramp?: string }).ramp === il.get().ramps[1].id)) !== null && view().selected === sel0 && lookTitle().includes(rampName(il.get(), il.get().ramps[1])), [sel0, view().selected, lookTitle()]);
+    check('clicking a cell does the same, and the picker stays on its colour', (() => { cells[0].click(); return true; })() && (await until(() => (view().preview as { ramp?: string }).ramp === il.get().ramps[0].id)) !== null && view().selected === sel0, [sel0, view().selected]);
   }
   il.transact('Hero', (d) => setSpec(d, ramp0, { hero: hero0 }));
   patchIllustration({ preview: { ...view().preview, shape: 'sphere', all: false } });
@@ -2592,6 +2614,160 @@ async function restoredUi(): Promise<void> {
   await until(() => paperCanvas(), 1500);
 }
 const patchView0 = (selected: string) => patchIllustration({ selected });
+
+/**
+ * Light & preview's own: the sun behind translucent cloth makes it glow, Material in the tab relights
+ * the object, the presets, the Look rows (one undo step each), Surface (saved with the ramp, Reset
+ * to material), what the pointer reads, the step bar, and the colours the light needs.
+ */
+async function lightUi(): Promise<void> {
+  const il = illustrationDoc();
+  const ui = host('illustration')!;
+  const view = () => illustrationView();
+  const preview = () => view().preview as { azimuth?: number; elevation?: number; shape?: string; ramp?: string };
+  const id = il.get().ramps[0].id;
+  const spec = () => il.get().ramps[0];
+  // the steps this leaves in the history, to take back at the end (the history is bounded, so its depth cannot be counted on)
+  let made = 0;
+  patchIllustration({ tab: 'light', selected: baseOf(il.get(), id)!.id, preview: { ...view().preview, shape: 'cloth', all: false, banded: false, azimuth: 320, elevation: 35, ramp: '', rampFor: '' } });
+  il.transact('Cloth, a little translucent', (d) => setSpec(d, id, { material: 'cloth', surface: { translucency: 0.5 } }));
+  made++;
+  const canvas = () => ui.querySelector<HTMLCanvasElement>('canvas[role="img"][aria-label$="a cloth fold"]');
+  await until(() => canvas() && shows(canvas()));
+  const pixels = () => {
+    const c = canvas()!;
+    return c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+  };
+  /** the mean of red + green + blue over the opaque pixels */
+  const lum = () => {
+    const px = pixels();
+    let [t, n] = [0, 0];
+    for (let i = 0; i < px.length; i += 4) if (px[i + 3] === 255) [t, n] = [t + px[i] + px[i + 1] + px[i + 2], n + 1];
+    return n ? t / n : 0;
+  };
+  const hash = () => {
+    const px = pixels();
+    let t = 0;
+    for (let i = 0; i < px.length; i += 4) t = (t * 31 + px[i] + px[i + 1] * 3 + px[i + 2] * 7) | 0;
+    return t;
+  };
+  const settle = async () => {
+    await frame();
+    await frame();
+    await sleep(80);
+  };
+  await settle();
+  const sun = ui.querySelector<HTMLElement>('[role="slider"][aria-label="Light direction"]');
+  const ring = sun?.parentElement;
+  if (!check('Light & preview draws the cloth with its ring and sun', !!canvas() && !!ring && !!sun && shows(ring))) return;
+  const lit = lum();
+
+  // the sun dragged behind the cloth with Alt held: hollow, and the cloth glows where it faces the light
+  const rad = Math.PI / 180;
+  const r = ring!.getBoundingClientRect();
+  const [x, y] = [r.left + r.width * (0.5 + (Math.sin(300 * rad) * Math.cos(45 * rad)) / 2), r.top + r.height * (0.5 - (Math.cos(300 * rad) * Math.cos(45 * rad)) / 2)];
+  const fire = (type: string, alt: boolean) => ring!.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerup' ? 0 : 1, clientX: x, clientY: y, altKey: alt }));
+  fire('pointerdown', true);
+  fire('pointermove', true);
+  fire('pointerup', false);
+  const behind = await until(() => ((preview().elevation ?? 0) < 0 ? preview() : null));
+  check('Alt-dragging the sun puts the light behind the object (negative height)', !!behind && behind.azimuth === 300 && behind.elevation === -45, preview());
+  check('and the sun says so: its value reads "behind the object"', /behind the object/.test(sun!.getAttribute('aria-valuetext') ?? ''), sun!.getAttribute('aria-valuetext'));
+  await settle();
+  const glowing = lum();
+  il.transact('Opaque', (d) => setSpec(d, id, { surface: { translucency: 0 } }));
+  await settle();
+  const opaque = lum();
+  check('with the light behind it a translucent cloth glows: its pixels brighten, and go dark again when it is opaque', glowing > opaque + 20 && glowing > lit * 0.6, [lit, glowing, opaque]);
+  il.undo();
+  await settle();
+  check('and Translucency is one undo step', Math.abs(lum() - glowing) < 1 && spec().surface?.translucency === 0.5, [lum(), glowing]);
+
+  // Material in the tab relights the object, and is one undo step
+  const before = hash();
+  const was = spec();
+  const material = [...ui.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="listbox"]')].find((b) => b.textContent?.trim() === 'Cloth' && shows(b));
+  material?.click();
+  const row = await until(() => [...document.querySelectorAll<HTMLElement>('[role="option"],[role="menuitem"],[role="menuitemradio"]')].find((e) => e.textContent?.trim() === 'Velvet' && shows(e)));
+  row?.click();
+  check('choosing Velvet in the Look group changes the ramp’s material', (await until(() => spec().material === 'velvet')) !== null, spec().material);
+  await settle();
+  check('and the canvas relights at once', hash() !== before, [before, hash()]);
+  check('a new material starts from its own finish: the Surface numbers of the old one are gone', spec().surface === undefined, spec().surface);
+  il.undo();
+  check('and it was one undo step', spec().material === was.material && spec().surface?.translucency === 0.5, spec());
+
+  // presets
+  const pick = (name: string) => [...ui.querySelectorAll<HTMLElement>('button[role="radio"]')].find((b) => b.textContent?.trim() === name && shows(b));
+  pick('Side')?.click();
+  check('the Side preset sets a raking light from the left', (await until(() => preview().azimuth === 270 && preview().elevation === 12)) !== null && pick('Side')?.getAttribute('aria-checked') === 'true', preview());
+  pick('Back')?.click();
+  check('Back puts the light behind, and is the one that shows as chosen', (await until(() => preview().elevation === -70)) !== null && pick('Back')?.getAttribute('aria-checked') === 'true' && pick('Side')?.getAttribute('aria-checked') === 'false', preview());
+  pick('Upper left')?.click();
+  check('Upper left puts it back', (await until(() => preview().azimuth === 320 && preview().elevation === 35)) !== null, preview());
+
+  // Look: Intensity and Push, one undo step each, relighting
+  const h1 = hash();
+  const other = was.intensity === 'extreme' ? 'grounded' : 'extreme';
+  pick(other === 'extreme' ? 'Extreme' : 'Grounded')?.click();
+  check('Intensity in the Look group sets the ramp’s intensity', (await until(() => spec().intensity === other)) !== null, [spec().intensity, other]);
+  await settle();
+  check('and the cloth relights', hash() !== h1);
+  const pushField = ui.querySelector<HTMLInputElement>('input[aria-label="Push"]');
+  if (check('Push has a field to type into', !!pushField) && pushField) {
+    typeInto(pushField, '130');
+    pushField.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    check('typing a Push sets it between the intensities', (await until(() => spec().push === 1.3)) !== null && spec().intensity === 'expressive', [spec().push, spec().intensity]);
+    il.undo();
+    check('and that was one undo step', spec().push === undefined && spec().intensity === other, spec());
+  }
+  il.undo();
+  check('and so was the intensity', spec().intensity === was.intensity && spec().push === undefined, spec());
+
+  // Surface: a slider moves a number saved with the ramp; Reset to material clears it
+  const gloss = ui.querySelector<HTMLInputElement>('input[aria-label="Gloss"]');
+  if (check('Surface has Gloss, Softness, Translucency and Sheen', !!gloss && ['Softness', 'Translucency', 'Sheen'].every((n) => !!ui.querySelector(`input[aria-label="${n}"]`))) && gloss) {
+    typeInto(gloss, '90');
+    gloss.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    check('typing a Gloss saves it with the ramp', (await until(() => spec().surface?.gloss === 0.9)) !== null, spec().surface);
+    const reset = [...ui.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Reset to material');
+    check('and Reset to material is there to use', !!reset && !reset.disabled);
+    reset?.click();
+    check('which clears the overrides', (await until(() => spec().surface === undefined)) !== null, spec().surface);
+    il.undo();
+    check('in one step', spec().surface?.gloss === 0.9 && spec().surface?.translucency === 0.5, spec().surface);
+    il.undo();
+    check('and the Gloss was one step', spec().surface?.gloss === undefined && spec().surface?.translucency === 0.5, spec().surface);
+  }
+
+  // what the pointer reads, and the step bar
+  patchIllustration({ preview: { ...view().preview, azimuth: 320, elevation: 35 } });
+  await settle();
+  const c = canvas()!;
+  const cr = c.getBoundingClientRect();
+  c.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 4, pointerType: 'mouse', clientX: cr.left + cr.width * 0.5, clientY: cr.top + cr.height * 0.45 }));
+  const readout = await until(() => [...ui.querySelectorAll('span')].find((e) => /step \d of \d/.test(e.textContent ?? '') && shows(e)));
+  check('hovering the object reads which step the pixel shows', !!readout && /, step \d of 5, L \d/.test(readout.textContent ?? ''), readout?.textContent);
+  const parts = [...(ui.querySelector('[data-step-use]')?.querySelectorAll('i') ?? [])];
+  check('and a bar under the stage shares the object out by step: one part for each step', parts.length >= 5 && parts.every((i) => i.hasAttribute('data-colour')), parts.length);
+  check('the canvases carry data-colour for the greyscale view', [...ui.querySelectorAll('canvas[role="img"]')].every((e) => e.hasAttribute('data-colour')));
+
+  // colours the light needs: offered, and added in one step
+  patchIllustration({ preview: { ...view().preview, azimuth: 300, elevation: -45 } });
+  await settle();
+  const add = await until(() => [...ui.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Add to palette' && shows(b)), 3000);
+  if (check('with the light behind the cloth the tab lists the colours it needs and offers Add to palette', !!add)) {
+    const n0 = il.get().swatches.length;
+    add!.click();
+    check('which adds them as colours of the palette', (await until(() => il.get().swatches.length > n0)) !== null && il.get().swatches.slice(n0).every((w) => w.group === undefined && /glow|bounce|shine/.test(w.name)), il.get().swatches.slice(n0).map((w) => w.name));
+    il.undo();
+    check('in one undo step', il.get().swatches.length === n0, il.get().swatches.length);
+  }
+  patchIllustration({ preview: { ...view().preview, shape: 'sphere', azimuth: 320, elevation: 35 } });
+  while (made-- > 0) il.undo();
+  patchIllustration({ tab: 'paint' });
+  await until(() => paperCanvas(), 1500);
+}
 
 
 /**

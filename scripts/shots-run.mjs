@@ -129,7 +129,7 @@ export async function illustrationShots({ page, ev, shot, clickText, rail, key, 
   for (let i = 0; i < 4; i++) { await click('~Add base colour'); await sleep(400); }
   await shot('02-illustration-ramp-settings');
   await tab('Light & preview'); await shot('02-illustration-light');
-  await click('All ramps'); await sleep(900); await shot('02-illustration-light-all-ramps'); await click('This ramp'); await click('Cube'); await sleep(600); await shot('02-illustration-light-cube'); await click('All'); await sleep(600); await shot('02-illustration-light-all-shapes'); await click('Sphere');
+  await click('All ramps'); await sleep(900); await shot('02-illustration-light-all-ramps'); await click('This ramp'); await click('Cube'); await sleep(600); await shot('02-illustration-light-cube'); await click('All three'); await sleep(600); await shot('02-illustration-light-all-shapes'); await click('Sphere');
   await tab('Check values'); await shot('02-illustration-check');
   await tab('Paint'); await sleep(1500); await shot('02-illustration-paint');
   const r = await ev(() => document.querySelector('[data-tool="illustration"] canvas[aria-label^="Painting"]')?.getBoundingClientRect().toJSON());

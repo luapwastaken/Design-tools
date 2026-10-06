@@ -111,6 +111,7 @@
   --on-content-bg: oklch(0 0 0 / 0.38);
   --on-content-ink: oklch(1 0 0 / 0.92);
   --on-content-ink-2: oklch(1 0 0 / 0.72);
+  --on-content-select: oklch(1 0 0 / 0.16);
   --cross: oklch(1 0 0);
   --cross-halo: oklch(0 0 0 / 0.55);
 }
@@ -163,6 +164,7 @@
   --on-content-bg: oklch(0 0 0 / 0.38);
   --on-content-ink: oklch(1 0 0 / 0.92);
   --on-content-ink-2: oklch(1 0 0 / 0.72);
+  --on-content-select: oklch(1 0 0 / 0.16);
   --cross: oklch(1 0 0);
   --cross-halo: oklch(0 0 0 / 0.55);
 }

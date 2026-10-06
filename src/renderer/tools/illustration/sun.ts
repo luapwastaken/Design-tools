@@ -62,3 +62,15 @@ export function nudge(l: Light, arrow: Arrow, k = 1): Light {
   const turn = Math.abs(along) < 0.2 ? 0 : Math.sign(along) * Math.max(1, Math.round((Math.abs(along) * k) / Math.max(0.25, Math.cos(e * RAD))));
   return { azimuth: wrap(a + turn), elevation: height === 0 ? 0 : side * height };
 }
+
+const SECTORS = ['above', 'the upper right', 'the right', 'the lower right', 'below', 'the lower left', 'the left', 'the upper left'];
+
+/** where the light is, in words: "from the upper left", "raking from the left", "from behind and the right", "straight on" */
+export function lightWords({ azimuth, elevation }: Light): string {
+  const side = SECTORS[Math.round((((azimuth % 360) + 360) % 360) / 45) % 8];
+  if (elevation >= 75) return 'straight on, from where you stand';
+  if (elevation <= -75) return 'from straight behind';
+  if (elevation < -10) return `from behind and ${side}`;
+  if (elevation <= 10) return `raking from ${side}`;
+  return `from ${side}`;
+}

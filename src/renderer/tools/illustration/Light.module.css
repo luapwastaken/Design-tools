@@ -1,59 +1,88 @@
-/* Light mode: the object on the neutral surround, the sun on its ring, a filmstrip under it. Only the
-   canvases carry content colour; everything else is tokens. Nothing animates. */
-.tab { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 300px); gap: 16px; min-height: 0; }
-.controls { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; overflow: auto; }
+/* Light & preview: the stage (the object on the neutral surround, the sun on its ring over it), what
+   the pointer reads and the share of each step under it, the shape options, and the controls in
+   groups on the right (under the stage when the tab is narrow). Only the canvases, the ground and the
+   bar of steps carry content colour; everything else is tokens. Nothing animates. */
+.tab { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: 12px; min-height: 0; container-type: inline-size; }
+@container (max-width: 700px) {
+  .tab { grid-template-columns: minmax(0, 1fr); align-content: start; }
+  .stage { flex: none; height: 360px; }
+}
+.main { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
+.controls { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
+.controls > * { flex: none; }
+/* three words in a segmented row (Grounded, Expressive, Extreme) need the room */
+.controls [role="radiogroup"] button { padding-inline: 5px; }
 .every { align-self: flex-end; }
-.stage { position: relative; min-width: 0; min-height: 280px; overflow: hidden; container-type: size; border-radius: var(--r-ctl); box-shadow: inset 0 0 0 1px var(--edge); }
-.empty { height: 100%; align-items: center; justify-content: center; text-align: center; background: var(--module); }
-.one { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
-.caption { position: absolute; top: 14px; left: 18px; z-index: 1; color: var(--on-content-ink-2); font: 400 var(--fs-base)/1.35 var(--font-sans); }
-.caption b { color: var(--on-content-ink); font-weight: 600; }
+.hint { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
+.presets { display: flex; flex-direction: column; gap: 4px; }
 
-/* the canvas the object is drawn in is the square S; the ring around it is wider than tall */
-.rig { --S: min(560px, 100cqh, calc(100cqw / 1.2)); position: relative; width: var(--S); height: var(--S); }
-.object { display: block; width: 100%; height: 100%; }
-.ring { position: absolute; left: 50%; top: 50%; width: calc(var(--S) * 2 * var(--rx)); height: calc(var(--S) * 2 * var(--ry)); transform: translate(-50%, -50%); cursor: crosshair; touch-action: none; }
-.ring svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.ellipse { fill: none; stroke: var(--on-content-ink-2); stroke-width: 1; stroke-dasharray: 5 5; }
+/* above the stage: what it shows, and what the pointer is over */
+.head { display: flex; align-items: baseline; gap: 12px; min-height: 18px; }
+.caption { flex: 1; min-width: 0; overflow: hidden; color: var(--ink-2); font: 400 var(--fs-base)/1.35 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
+.caption b { color: var(--ink); font-weight: 600; }
+.readout { flex: none; max-width: 55%; overflow: hidden; color: var(--ink-2); font: 400 var(--fs-unit)/1.35 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --S: the side the object is drawn in; the sun's ring is a circle just inside it */
+.stage { --S: min(100cqw, 100cqh, 640px); position: relative; flex: 1; min-width: 0; min-height: 240px; overflow: hidden; container-type: size; border-radius: var(--r-ctl); box-shadow: inset 0 0 0 1px var(--edge); }
+.ground { position: absolute; inset: 0; }
+.empty { position: absolute; inset: 0; align-items: center; justify-content: center; text-align: center; background: var(--module); }
+.one { position: absolute; inset: 0; display: grid; place-items: center; }
+.object { display: block; width: var(--S); height: var(--S); }
+
+.ringbox { position: absolute; left: 50%; top: 50%; z-index: 2; width: calc(var(--S) * 0.94); height: calc(var(--S) * 0.94); transform: translate(-50%, -50%); pointer-events: none; touch-action: none; }
+.ringbox svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.ring { fill: none; stroke: var(--on-content-ink-2); stroke-width: 1; stroke-dasharray: 5 5; }
+/* the thin track the sun rides on takes a press too, nothing else does */
+.track { fill: none; stroke: transparent; stroke-width: 16; pointer-events: stroke; cursor: grab; }
+.dragging .track, .dragging .sun { cursor: grabbing; }
 .ray { stroke: var(--on-content-ink-2); stroke-width: 1; }
 .sun {
   position: absolute;
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  margin: -18px 0 0 -18px;
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
   border-radius: 50%;
   background: var(--on-content-ink);
   box-shadow: 0 0 0 1px var(--on-content-bg), 0 4px 12px var(--shadow);
   color: var(--on-content-bg);
   cursor: grab;
+  pointer-events: auto;
 }
-.dragging .sun { cursor: grabbing; }
+/* light from behind the object: the sun is drawn hollow */
+.sun.behind { background: var(--on-content-bg); box-shadow: inset 0 0 0 2px var(--on-content-ink); color: var(--on-content-ink); }
 .sun:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 
-/* Show: All ramps */
-.gridWrap { position: relative; height: 100%; padding: 16px; overflow: auto; }
+/* Show: All ramps and Shape: All three */
+.gridWrap { position: absolute; inset: 0; padding: 16px; overflow: auto; }
 .grid { display: grid; gap: 10px; min-height: 100%; align-content: center; }
 .gcell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; padding: 8px 8px 10px; border-radius: var(--r-ctl); }
 .gcell:hover { background: var(--highlight); }
-.gcell.on { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.gcell.on, .gcell.on:hover { background: var(--on-content-select); }
 .gcell:focus-visible { outline: 2px solid var(--signal); outline-offset: -2px; }
-.gcanvas { display: block; width: 100%; max-width: 280px; height: auto; aspect-ratio: 1; }
-.gname { color: var(--on-content-ink); font: 500 var(--fs-row)/1.2 var(--font-sans); }
-
-.dial { position: absolute; right: 14px; bottom: 14px; width: 64px; height: 64px; border-radius: 50%; cursor: crosshair; touch-action: none; }
-.dial svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.disc { fill: var(--well); stroke: var(--tick); }
-.dial:hover .disc, .dialDrag .disc { fill: var(--well-hover); }
-.dring { fill: none; stroke: var(--line); stroke-dasharray: 2 2; }
-.dray { stroke: var(--tick-strong); }
-.knob { fill: var(--ink); stroke: var(--module); stroke-width: 2; }
-.dial:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
-
-.gname { display: inline-flex; align-items: center; gap: 4px; }
+/* as big as the stage has room for: every row of the grid fits without scrolling */
+.gcanvas { display: block; width: min(100%, 280px, calc((100cqh - 32px - var(--rows, 1) * 52px) / var(--rows, 1))); min-width: 72px; height: auto; aspect-ratio: 1; }
+.gname { display: inline-flex; align-items: center; gap: 4px; color: var(--on-content-ink); font: 500 var(--fs-row)/1.2 var(--font-sans); }
 .hero { color: var(--on-content-ink-2); }
-/* Shape: All: the three shapes side by side; a tall narrow stage stacks two over one */
-.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-content: center; min-height: 100%; padding-top: 24px; }
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-content: center; min-height: 100%; }
 .tcanvas { display: block; width: 100%; height: auto; aspect-ratio: 1; }
 @container (max-width: 520px) { .three { grid-template-columns: repeat(2, minmax(0, 1fr)); } .three > :last-child { grid-column: 1 / -1; justify-self: center; width: 50%; } }
+
+/* under the stage: how much of the object each step has */
+.use { display: flex; align-items: center; gap: 10px; min-height: 22px; }
+.useTitle { flex: none; width: 70px; color: var(--ink-2); font: 400 var(--fs-label)/1 var(--font-sans); }
+.useBar { display: flex; flex: 1; min-width: 0; height: 14px; overflow: hidden; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--edge); }
+.useBar > i { flex: 1 1 0; min-width: 0; }
+.usePercent { flex: none; color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
+
+.options { display: flex; flex-wrap: wrap; gap: 2px 16px; }
+.options > * { flex: 1 1 250px; min-width: 0; }
+
+/* colours the light needs */
+.needs { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.needs li { display: flex; align-items: center; gap: 8px; }
+.chip { flex: none; width: 24px; height: 24px; border-radius: 5px; box-shadow: inset 0 0 0 1px var(--edge); }
+.needName { flex: 1; min-width: 0; color: var(--ink); font: 400 var(--fs-row)/1.25 var(--font-sans); }
+.needName small { display: block; color: var(--ink-3); font: 400 var(--fs-meta)/1.3 var(--font-sans); }
+.hex { flex: none; color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }

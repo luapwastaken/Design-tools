@@ -298,22 +298,30 @@ test('hovering reads the step a pixel shows: a lighter one on the lit side, noth
 
 test('a drag costs little: a frame of one shape at full size, and three at drag size', () => {
   const look = lookFor('cloth');
+  // the quickest of several: a busy machine (every test file runs at once) slows a frame, never speeds it
+  const quickest = (n: number, frame: (i: number) => void) => {
+    let best = Infinity;
+    for (let i = 0; i < n; i++) {
+      const t = performance.now();
+      frame(i);
+      best = Math.min(best, performance.now() - t);
+    }
+    return best;
+  };
   for (const shape of ['sphere', 'cube', 'cloth'] as Shape[]) {
     const sf = surface(shape, 560);
     const px = new Uint8ClampedArray(560 * 560 * 4);
     shade(sf, look, UPPER_LEFT, px);
-    const t = performance.now();
-    for (let a = 0; a < 6; a++) shade(sf, look, { azimuth: a * 60, elevation: a % 2 ? -30 : 30 }, px);
-    const ms = (performance.now() - t) / 6;
-    assert.ok(ms < budget(26), `${shape} at 560: ${ms.toFixed(1)}ms`);
+    shade(sf, look, { azimuth: 120, elevation: -30 }, px);
+    const ms = quickest(6, (i) => shade(sf, look, { azimuth: i * 60, elevation: i % 2 ? -30 : 30 }, px));
+    assert.ok(ms < budget(22), `${shape} at 560: ${ms.toFixed(1)}ms`);
   }
   const px = new Uint8ClampedArray(280 * 280 * 4);
   const shapes: Shape[] = ['sphere', 'cube', 'cloth'];
   shapes.forEach((s) => shade(surface(s, 280), look, UPPER_LEFT, px));
-  const t = performance.now();
-  for (let a = 0; a < 10; a++) shapes.forEach((s) => shade(surface(s, 280), look, { azimuth: a * 36, elevation: -30 + a * 6 }, px));
-  const ms = (performance.now() - t) / 10;
-  assert.ok(ms < budget(10), `three shapes at drag size: ${ms.toFixed(1)}ms`);
+  shapes.forEach((s) => shade(surface(s, 280), look, { azimuth: 120, elevation: -30 }, px));
+  const ms = quickest(10, (i) => shapes.forEach((s) => shade(surface(s, 280), look, { azimuth: i * 36, elevation: -30 + i * 6 }, px)));
+  assert.ok(ms < budget(9), `three shapes at drag size: ${ms.toFixed(1)}ms`);
 });
 
 test('every material has a finish, kept to 0..1, and a ramp’s own numbers win over it', () => {

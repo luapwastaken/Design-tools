@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { direction, type Light } from '../src/renderer/tools/illustration/shade.ts';
-import { lightAt, nudge, PRESETS, presetOf, sunAt, type Arrow } from '../src/renderer/tools/illustration/sun.ts';
+import { lightAt, lightWords, nudge, PRESETS, presetOf, sunAt, type Arrow } from '../src/renderer/tools/illustration/sun.ts';
 
 const near = (a: number, b: number, e = 1e-9) => Math.abs(a - b) < e;
 const ARROWS: [Arrow, number, number][] = [['left', -1, 0], ['right', 1, 0], ['up', 0, 1], ['down', 0, -1]];
@@ -92,4 +92,16 @@ test('the presets: classic set-ups as the directions they say', () => {
   assert.equal(presetOf({ azimuth: 0, elevation: -70 }), 'back');
   assert.equal(presetOf({ azimuth: 360, elevation: 90 }), 'front');
   assert.equal(presetOf({ azimuth: 1, elevation: -70 }), null);
+});
+
+test('the light in words', () => {
+  assert.equal(lightWords({ azimuth: 320, elevation: 35 }), 'from the upper left');
+  assert.equal(lightWords({ azimuth: 270, elevation: 12 }), 'from the left');
+  assert.equal(lightWords({ azimuth: 270, elevation: 6 }), 'raking from the left');
+  assert.equal(lightWords({ azimuth: 0, elevation: 35 }), 'from above');
+  assert.equal(lightWords({ azimuth: 300, elevation: -30 }), 'from behind and the upper left');
+  assert.equal(lightWords({ azimuth: 0, elevation: -70 }), 'from behind and above');
+  assert.equal(lightWords({ azimuth: 0, elevation: -80 }), 'from straight behind');
+  assert.equal(lightWords({ azimuth: 0, elevation: 90 }), 'straight on, from where you stand');
+  assert.equal(lightWords({ azimuth: 359, elevation: 30 }), 'from above');
 });

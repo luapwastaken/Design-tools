@@ -547,8 +547,8 @@ export function shade(sf: Surface, look: Look, light: Light, out: Uint8ClampedAr
   }
 }
 
-/** what one pixel of the picture reads as: a step of the ramp, a colour light added, or the cast shadow */
-export type Reading = { kind: 'step'; step: number; of: number } | { kind: 'glow' | 'bounce' | 'shine' | 'shadow' | 'none' };
+/** what one pixel of the picture reads as: a step of the ramp, or a colour light added to it (the glow through the material, a highlight in the light's colour) */
+export type Reading = { kind: 'step'; step: number; of: number } | { kind: 'glow' | 'shine' | 'none' };
 
 /** Which step of the ramp the pixel (x, y) of `sf` reads, under `light`: the same maths as `shade`. */
 export function read(sf: Surface, look: Look, light: Light, x: number, y: number): Reading {
