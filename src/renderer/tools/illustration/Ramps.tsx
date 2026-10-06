@@ -70,7 +70,7 @@ export function SelectedRamp({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: I
       {!list.length ? (
         <EmptyState icon="layers" title="No ramp yet" detail="Add a colour, and its steps show here, from highlight to deep shadow." className={s.none} />
       ) : (
-        <div className={cx(s.steps, !plain && s.mat)} style={{ '--cols': list.length, '--surround': surround } as CSSProperties} role="listbox" aria-label="Swatch board" onKeyDown={onKeyDown}>
+        <div className={cx(s.steps, !plain && s.mat)} data-colour={plain ? undefined : ''} style={{ '--cols': list.length, '--surround': surround } as CSSProperties} role="listbox" aria-label="Swatch board" onKeyDown={onKeyDown}>
           {list.map((w) => (
             <Step key={w.id} d={d} v={v} w={w} word={r ? cap(stepWord(w.step ?? 0, lo, hi)) : null} on={sel?.id === w.id} lit={lit.includes(w.id)} broken={broken.has(w.id)} plain={plain} />
           ))}
