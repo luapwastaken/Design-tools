@@ -2,16 +2,17 @@
 // source that makes one colour adds its ramp at once (lit by the Light row); one that makes several
 // stages them as proposals under a popover first. Nothing here is a new document operation: each is
 // addRamp (through addBase / addProposals).
-import { hexToOklch, parseHex, type Oklch } from '../../../shared/color/index.ts';
+import { cssColor, hexToOklch, parseHex, type Oklch } from '../../../shared/color/index.ts';
 import { parseColours } from '../../../shared/palette/paste.ts';
 import type { LibraryItemRef } from '../../../shared/types.ts';
 import { shell } from '../../shell/core/index.ts';
 import { ipc } from '../../shell/core/ipc.ts';
 import { menu, toast } from '../../ui/index.ts';
+import { plural } from '../common/names.ts';
 import { addBase, eyedrop, newPalette, select, selected, type Doc } from './actions.ts';
-import { fromPayload, looseOf, makeRamps, type IllustrationDoc } from './doc.ts';
+import { fromPayload, looseOf, makeRamps, MAX_RAMPS, type IllustrationDoc } from './doc.ts';
 import { extract, picture, propose, sourcePop, type Source } from './proposals.ts';
-import { MAX_RAMPS, paletteBases, SETS, SUBJECTS, type Subject } from './scene.ts';
+import { paletteBases, SETS, SUBJECTS, type Subject } from './scene.ts';
 
 export const CAN_PICK = 'EyeDropper' in globalThis;
 
@@ -96,24 +97,31 @@ export async function readPalette(ref: LibraryItemRef): Promise<IllustrationDoc 
 export async function openPalette(doc: Doc, ref: LibraryItemRef): Promise<void> {
   const from = await readPalette(ref);
   if (!from) return;
-  const ids = looseOf(from).map((w) => w.id);
-  if (!ids.length) return void shell.openItem(ref);
-  await newPalette(`${ref.name} ramps`);
+  const all = looseOf(from).map((w) => w.id);
+  if (!all.length) return void shell.openItem(ref);
+  // a palette of its own holds as many ramps as any other
+  const ids = all.slice(0, MAX_RAMPS);
+  if (ids.length < all.length) toast.show({ icon: 'info', message: `A palette holds ${MAX_RAMPS} ramps: ${plural(ids.length, 'colour')} made, ${all.length - ids.length} left as they are.` });
+  await newPalette(doc, `${ref.name} ramps`);
   doc.transact(`Make ramps from ${ref.name}`, () => makeRamps(from, ids));
   select(ids[0]);
 }
 
-/** the Add colour menu, ordered as Design's + Add colours: the sources, then a ramp for a subject, then a limited set */
+/**
+ * The sources menu (From…), worded and ordered as Design's + Add colours: the sources, then a ramp for a
+ * subject, then a limited set. Design's Open from Library opens the Library; here a palette's colours are
+ * added to this one, so it reads From Library.
+ */
 export function addMenu(doc: Doc, anchor: DOMRect, owner: Element, fromKey: boolean): void {
   menu.open(
     anchor,
     [
-      { label: 'Type or paste codes…', icon: 'content_paste', shortcut: 'Ctrl+V', onSelect: () => openSource(doc, 'paste') },
-      { label: 'From an image…', icon: 'image', onSelect: () => openSource(doc, 'image') },
-      ...(CAN_PICK ? [{ label: 'From the screen', icon: 'colorize' as const, shortcut: 'I', onSelect: () => void eyedrop(doc) }] : []),
-      { label: 'From a Library palette…', icon: 'folder_open', onSelect: () => openSource(doc, 'library') },
+      { label: 'From image…', icon: 'image', onSelect: () => openSource(doc, 'image') },
+      { label: 'Paste codes…', icon: 'content_paste', shortcut: 'Ctrl+V', onSelect: () => openSource(doc, 'paste') },
+      ...(CAN_PICK ? [{ label: 'Pick from screen', icon: 'colorize' as const, shortcut: 'I', onSelect: () => void eyedrop(doc) }] : []),
+      { label: 'From Library…', icon: 'folder_open', onSelect: () => openSource(doc, 'library') },
       { header: 'Subject' },
-      ...SUBJECTS.map((s) => ({ label: s.label, onSelect: () => addSubject(doc, s) })),
+      ...SUBJECTS.map((s) => ({ label: s.label, swatch: cssColor(s.base), onSelect: () => addSubject(doc, s) })),
       { header: 'Limited set' },
       ...SETS.map((s) => ({ label: s.label, onSelect: () => openSource(doc, 'set', { set: s.id }) })),
     ],

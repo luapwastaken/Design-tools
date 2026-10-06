@@ -97,7 +97,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         switcher={{ kind: 'palette' }}
         meta={plural(d.ramps.length, 'ramp')}
         actions={
-          <Button icon="note_add" shortcut="Ctrl+N" tooltip="New palette" onClick={() => void newPalette()}>
+          <Button icon="note_add" shortcut="Ctrl+N" tooltip="New palette" onClick={() => void newPalette(doc)}>
             New
           </Button>
         }

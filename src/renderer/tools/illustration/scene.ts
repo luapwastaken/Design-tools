@@ -5,19 +5,25 @@ import type { Oklch } from '../../../shared/color/index.ts';
 import { DAYLIGHT } from '../../../shared/palette/ramp.ts';
 import { fitChroma, wrapHue } from '../../../shared/palette/space.ts';
 import type { MaterialId, RampSpec } from '../../../shared/types.ts';
-import { baseOf, looseOf, type IllustrationDoc } from './doc.ts';
+import { baseOf, looseOf, MAX_RAMPS, type IllustrationDoc } from './doc.ts';
 
 export type LightPair = { light: Oklch; shadow: Oklch };
 export type LightPreset = LightPair & { id: string; label: string };
 
-/** the scene lights: the colour the lit side leans to, and the colour its shadow does (warm light, cool shadow; or the other way round indoors) */
+/**
+ * The scene lights: the colour the lit side leans to, and the colour its shadow does (warm light, cool
+ * shadow out of doors; the other way round indoors). Each pair sits clear of the others in hue or in
+ * how dark it goes, so choosing one visibly moves the ramps (test/illustration-scene.test.ts).
+ */
 export const LIGHTS: LightPreset[] = [
   { id: 'daylight', label: 'Daylight', ...DAYLIGHT },
-  { id: 'golden', label: 'Golden hour', light: [0.94, 0.1, 72], shadow: [0.4, 0.09, 290] },
-  { id: 'overcast', label: 'Overcast', light: [0.92, 0.012, 240], shadow: [0.45, 0.02, 260] },
-  { id: 'moon', label: 'Moonlight', light: [0.82, 0.05, 250], shadow: [0.25, 0.07, 285] },
-  { id: 'interior', label: 'Warm interior', light: [0.95, 0.09, 68], shadow: [0.35, 0.07, 20] },
-  { id: 'studio', label: 'Studio neutral', light: [0.97, 0.005, 90], shadow: [0.35, 0.01, 270] },
+  { id: 'golden', label: 'Golden hour', light: [0.87, 0.09, 65], shadow: [0.36, 0.105, 333] },
+  { id: 'dusk', label: 'Dusk', light: [0.675, 0.16, 1.5], shadow: [0.306, 0.121, 292] },
+  { id: 'twilight', label: 'Twilight', light: [0.64, 0.07, 300], shadow: [0.287, 0.065, 250] },
+  { id: 'moon', label: 'Moonlight', light: [0.777, 0.065, 215], shadow: [0.25, 0.067, 261] },
+  { id: 'overcast', label: 'Overcast', light: [0.84, 0.028, 233], shadow: [0.48, 0.039, 240] },
+  { id: 'interior', label: 'Warm interior', light: [0.91, 0.09, 95], shadow: [0.37, 0.083, 27] },
+  { id: 'studio', label: 'Studio neutral', light: [0.978, 0.008, 90], shadow: [0.293, 0.006, 270] },
 ];
 
 const near = (a: Oklch, b: Oklch) => a.every((v, i) => Math.abs(v - b[i]) < 1e-6);
@@ -78,8 +84,7 @@ export const SETS: LimitedSet[] = [
 
 // ── a Library palette's colours ──────────────────────────────────────────────────────────────────
 
-/** a palette holds this many ramps; a source that would pass it is cut short and says so */
-export const MAX_RAMPS = 24;
+export { MAX_RAMPS };
 
 export type Candidate = { oklch: Oklch; name: string | null; material?: MaterialId };
 
