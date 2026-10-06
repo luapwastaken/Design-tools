@@ -2,6 +2,7 @@
 // Spec: docs/superpowers/specs/2026-09-28-colour-design-tool.md; plan unit V.
 import { asSvg, unsupportedImage } from '../../lib/load.ts';
 import type { ToolDefinition } from '../../shell/tool.ts';
+import { toggleValueLock } from '../../ui/PickerStyles.tsx';
 import { baseName, fetchBlob, isSvg } from '../common/take.ts';
 import { ROLES } from '../../../shared/palette/roles.ts';
 import { armDelete, copySelected, duplicate, escape, eyedrop, generateNow, keepAll, newPalette, nudge, roleSelected, step, toggleLocked } from './actions.ts';
@@ -69,6 +70,7 @@ export const tool: ToolDefinition<DesignDoc> = {
   shortcuts: (doc) => [
     { keys: 'Space', label: 'Generate', run: () => generateNow(doc) },
     { keys: 'L', label: 'Lock or unlock the selected swatches', run: () => toggleLocked(doc) },
+    { keys: 'V', label: 'Value lock', run: toggleValueLock },
     { keys: 'Delete', label: 'Delete swatches', run: () => armDelete(doc) },
     { keys: 'Ctrl+D', label: 'Duplicate', run: () => duplicate(doc) },
     { keys: 'Ctrl+N', label: 'New palette', run: () => void newPalette() },

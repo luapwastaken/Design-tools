@@ -85,6 +85,7 @@ export function HexField(p: HexFieldProps) {
               ref={chipRef}
               type="button"
               className={s.chip}
+              data-colour=""
               style={colour}
               aria-label={name ? `Pick ${name}` : 'Open picker'}
               aria-haspopup="dialog"
@@ -94,7 +95,7 @@ export function HexField(p: HexFieldProps) {
             />
           </Tooltip>
         ) : (
-          <span className={s.chip} style={colour} />
+          <span className={s.chip} data-colour="" style={colour} />
         )}
         <input
           type="text"

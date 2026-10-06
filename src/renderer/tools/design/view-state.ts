@@ -23,8 +23,6 @@ export const DEFAULT_VIEW: DesignView = {
   chipData: 'hex',
   paletteH: PALETTE_H.reset,
   pickerW: PICKER_W.reset,
-  lockL: false,
-  lockH: false,
   flagL: 6,
   flagE: 10,
   format: 'ase',

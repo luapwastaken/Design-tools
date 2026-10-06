@@ -37,9 +37,6 @@ export type DesignView = {
   /** the Palette section's height and the Colour picker section's width, dragged on their seams */
   paletteH: number;
   pickerW: number;
-  /** Value and Hue lock: the OKLCH picker's drags keep L or H; typed values still change them (spec §5) */
-  lockL: boolean;
-  lockH: boolean;
   /** Value check: flag pairs closer than this, in L × 100 */
   flagL: number;
   /** Colour vision check: flag pairs closer than this ΔE */

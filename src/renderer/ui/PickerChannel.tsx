@@ -22,6 +22,8 @@ export type PickerChannelProps = {
   limit?: number;
   /** a Value or Hue lock: the track doesn't drag; the field still takes typing */
   locked?: boolean;
+  /** what a number typed into the field does, where it differs from a drag */
+  onType?(v: number): void;
   /** between the track and the field: a lock button, or a blank keeping the rows aligned */
   aside?: ReactNode;
   /** the track alone: its value is typed elsewhere (the Square's hue bar, in the number row) */
@@ -52,7 +54,7 @@ export function PickerChannel(p: PickerChannelProps) {
   const size = limit === undefined ? undefined : `${limit * 100}% 100%`;
   const trk = (
     <div className={cx(s.trk, locked && s.locked, bare && className)} data-track={label} {...drag.handlers}>
-      <i className={s.grad} style={{ backgroundImage: track, backgroundSize: size }} />
+      <i className={s.grad} data-colour="" style={{ backgroundImage: track, backgroundSize: size }} />
       {limit !== undefined && <i className={s.lim} style={{ left: `${limit * 100}%` }} />}
       <i className={s.ndl} style={{ left: `${at * 100}%` }} />
       <Ticks className={s.tk} />
@@ -75,7 +77,7 @@ export function PickerChannel(p: PickerChannelProps) {
         width={92}
         dragging={drag.active}
         onBegin={p.onBegin}
-        onChange={p.onChange}
+        onChange={p.onType ?? p.onChange}
         onCommit={p.onCommit}
         onCancel={p.onCancel}
       />

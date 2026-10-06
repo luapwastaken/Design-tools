@@ -1,6 +1,8 @@
 /* The picker (plan unit F; styles from the colour UX pass, docs/rewrite/ux-pass/pickers.png). */
 .picker { display: flex; flex-direction: column; min-width: 0; }
 .styles { align-self: flex-start; margin-bottom: 10px; }
+/* the style switch and the value lock, along the top of a popover picker */
+.top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 /* the style switch is four icons, tighter than a labelled segment */
 div.icons button { padding: 0 5px; }
 
@@ -31,7 +33,7 @@ div.icons button { padding: 0 5px; }
   cursor: crosshair;
   touch-action: none;
 }
-.plane[data-lock] { cursor: ew-resize; }
+.plane[data-lock], .sb[data-lock] { cursor: ew-resize; }
 /* the plane is colour being judged, so its focus ring is neutral and clear of it (brief §4) */
 .plane:focus-visible { outline: 1px solid var(--tick-strong); outline-offset: 2px; }
 .canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -58,6 +60,14 @@ div.icons button { padding: 0 5px; }
 .legend > span { display: flex; align-items: center; gap: 5px; }
 .legend i { width: 12px; border-top: 1px solid var(--tick-strong); }
 .legend i.dash { border-top-style: dashed; }
+.legend i.iso { height: 2px; border-top: 0; background: var(--cross); }
+
+/* the value lock's iso-value line: the same ring colours as the marker, drawn once, over the colours */
+.contour { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.contour path { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+/* what the lock holds, under the picker */
+.held { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 0; color: var(--ink-3); font-size: var(--fs-meta); }
+.held b { color: var(--ink); font: 400 var(--fs-ctl)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
 
 /* ── Square and Wheel: the saturation-by-brightness area ── */
 .sb {

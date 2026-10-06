@@ -24,7 +24,7 @@ export function PickerNumbers({ model, channels, ...g }: Props) {
     <div className={s.nums} data-n={channels.length}>
       <Select options={MODELS} value={model} onChange={setPickerModel} menuWidth={112} />
       {channels.map((ch) => (
-        <NumberField key={ch.label} label={ch.label} value={ch.value} min={ch.min} max={ch.max} step={ch.step} precision={ch.precision} unit={ch.unit} {...g} onChange={ch.set} />
+        <NumberField key={ch.label} label={ch.label} value={ch.value} min={ch.min} max={ch.max} step={ch.step} precision={ch.precision} unit={ch.unit} {...g} onChange={ch.type ?? ch.set} />
       ))}
     </div>
   );
@@ -57,8 +57,10 @@ export function PickerSliders({ model, channels, ...g }: Props) {
             span={ch.span}
             limit={ch.limit}
             track={ch.track()}
+            locked={ch.carrier}
             {...g}
             onChange={ch.set}
+            onType={ch.type}
           />
         ))}
       </div>

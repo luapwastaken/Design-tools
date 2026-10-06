@@ -1,24 +1,31 @@
 import { inP3, inSrgb, type Oklch } from '../../shared/color/index.ts';
 import { maxChroma } from '../../shared/color/picker.ts';
+import { holdValue } from '../../shared/color/value.ts';
 import { Icon } from './Icon.tsx';
 import { IconButton } from './IconButton.tsx';
-import type { Gesture, PickerProps } from './Picker.tsx';
+import type { Gesture } from './Picker.tsx';
 import { PickerChannel } from './PickerChannel.tsx';
 import type { Channel } from './pickerModels.ts';
 import { PickerPlane } from './PickerPlane.tsx';
+import { toggleHueLock, useHueLock } from './PickerStyles.tsx';
 import s from './Picker.module.css';
 
-type Props = { value: Oklch; channels: Channel[]; onChange(v: Oklch): void } & Pick<PickerProps, 'lockL' | 'lockH' | 'onLock'> & Gesture;
+type Props = {
+  value: Oklch;
+  channels: Channel[];
+  /** the value held while the value lock is on (see PickerPlane) */
+  target: number | null;
+  onSlide(o: Oklch): void;
+  onChange(v: Oklch): void;
+} & Gesture;
 
-/** The OKLCH style: lightness by chroma at the hue, then L, C and H, with the value and hue locks on L and H. */
-export function PickerOklch({ value, channels, lockL, lockH, onLock, onChange, ...g }: Props) {
-  const lock = (which: 'L' | 'H', on: boolean | undefined, label: string) =>
-    onLock && <IconButton icon={on ? 'lock' : 'lock_open'} label={label} size="xs" latched={on} onClick={() => onLock(which, !on)} />;
-  const aside = [lock('L', lockL, 'Value lock: picker drags keep L'), onLock && <span />, lock('H', lockH, 'Hue lock: picker drags keep H')];
-  const locked = [lockL, false, lockH];
+/** The OKLCH style: lightness by chroma at the hue, then L, C and H, with the hue lock on the H row (the value lock is the picker's own switch). */
+export function PickerOklch({ value, channels, target, onSlide, onChange, ...g }: Props) {
+  const hueLock = useHueLock();
+  const aside = [<span />, <span />, <IconButton icon={hueLock ? 'lock' : 'lock_open'} label="Hue lock: drags keep the hue" size="xs" latched={hueLock} onClick={toggleHueLock} />];
   return (
     <>
-      <PickerPlane value={value} lockL={lockL} {...g} onChange={onChange} />
+      <PickerPlane value={value} target={target} onSlide={onSlide} {...g} onChange={onChange} />
       <div className={s.chans}>
         {channels.map((ch, i) => (
           <PickerChannel
@@ -33,7 +40,7 @@ export function PickerOklch({ value, channels, lockL, lockH, onLock, onChange, .
             span={ch.span}
             limit={ch.limit}
             track={ch.track()}
-            locked={locked[i]}
+            locked={ch.carrier || (i === 2 && hueLock)}
             aside={aside[i]}
             {...g}
             onChange={ch.set}
@@ -47,7 +54,7 @@ export function PickerOklch({ value, channels, lockL, lockH, onLock, onChange, .
 const signed = (v: number) => `${v < -5e-4 ? '-' : '+'}${Math.abs(v).toFixed(3)}`;
 
 /** sRGB and P3 membership, and how much chroma sRGB still has room for at this L and hue. */
-export function Gamut({ value }: { value: Oklch }) {
+export function Gamut({ value, target }: { value: Oklch; target?: number | null }) {
   const [l, c, h] = value;
   return (
     <div className={s.gam}>
@@ -58,10 +65,17 @@ export function Gamut({ value }: { value: Oklch }) {
           {inSrgb(value) ? 'In gamut' : inP3(value) ? 'Outside · in P3' : 'Outside P3'}
         </span>
       </div>
-      <div>
-        <span className="lbl">Chroma headroom</span>
-        <span className={s.gv}>{signed(maxChroma(l, h, 'srgb') - c)}</span>
-      </div>
+      {target != null ? (
+        <div>
+          <span className="lbl">Most chroma at this value</span>
+          <span className={s.gv}>{holdValue(target, 0.5, h)[1].toFixed(3)}</span>
+        </div>
+      ) : (
+        <div>
+          <span className="lbl">Chroma headroom</span>
+          <span className={s.gv}>{signed(maxChroma(l, h, 'srgb') - c)}</span>
+        </div>
+      )}
     </div>
   );
 }

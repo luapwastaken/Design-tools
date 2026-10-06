@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import type { Oklch } from '../../shared/color/index.ts';
 import { gamutEdges, planeAxis, planePixels, type Edges } from '../../shared/color/picker.ts';
+import { holdValue } from '../../shared/color/value.ts';
 import { useDrag } from './drag.ts';
 import type { ColourGesture } from './Picker.tsx';
 import { clamp, roundTo } from './scrub.ts';
@@ -54,9 +55,28 @@ function useSize(ref: RefObject<HTMLElement | null>) {
   return size;
 }
 
+/** the value lock's iso-value line over the plane: from the grey axis out to the most chroma sRGB has at this value */
+const contourPath = (target: number, hue: number, w: number, rows: number, axis: number) => {
+  const top = holdValue(target, 0.5, hue)[1];
+  const pts = Array.from({ length: 49 }, (_, i) => {
+    const c = (top * i) / 48;
+    return `${((c / axis) * w).toFixed(1)} ${((1 - holdValue(target, c, hue)[0]) * rows).toFixed(1)}`;
+  });
+  return `M${pts.join('L')}`;
+};
+const contours = new Map<string, string>();
+
 const tick = (v: number) => (v === 0 ? '0' : v.toFixed(2).replace(/^0/, ''));
 
-export function PickerPlane({ value, lockL, onBegin, onChange, onCommit, onCancel }: { value: Oklch; lockL?: boolean } & ColourGesture) {
+type PlaneProps = {
+  value: Oklch;
+  /** the value held (0..1) when the lock is on: a drag picks the chroma and L follows the iso-value line; `onChange` is then the way to change the value */
+  target?: number | null;
+  /** a chroma move that keeps the value */
+  onSlide?(o: Oklch): void;
+} & ColourGesture;
+
+export function PickerPlane({ value, target = null, onSlide, onBegin, onChange, onCommit, onCancel }: PlaneProps) {
   const [l, c, h] = value;
   const box = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -84,11 +104,18 @@ export function PickerPlane({ value, lockL, onBegin, onChange, onCommit, onCance
     if (plane) canvas.current?.getContext('2d')!.putImageData(plane.image, 0, 0);
   }, [plane]);
 
+  const contour = target !== null && w && rows ? memo(contours, `${hue}|${target.toFixed(4)}|${w}|${rows}|${axis}`, () => contourPath(target, hue, w, rows, axis)) : null;
+
   const drag = useDrag({
     onBegin,
     onMove({ x, y }) {
       const [l0, c0, h0] = live.current;
-      const next: Oklch = [lockL ? l0 : roundTo(1 - y, 3), roundTo(x * axis, 3), h0];
+      if (target !== null) {
+        const c = roundTo(x * axis, 3);
+        if (c !== c0) onSlide?.([l0, c, h0]);
+        return;
+      }
+      const next: Oklch = [roundTo(1 - y, 3), roundTo(x * axis, 3), h0];
       if (next[0] !== l0 || next[1] !== c0) onChange(next);
     },
     onCommit,
@@ -102,10 +129,11 @@ export function PickerPlane({ value, lockL, onBegin, onChange, onCommit, onCance
     if (!dl && !dc) return;
     e.preventDefault();
     const k = e.shiftKey ? 10 : 1;
-    const next: Oklch = [lockL ? l : clamp(roundTo(l + dl * k, 3), 0, 1), clamp(roundTo(c + dc * k, 3), 0, 0.4), h];
+    // held to a value, Left and Right slide along the line; Up and Down change the value
+    const next: Oklch = [clamp(roundTo(l + dl * k, 3), 0, 1), clamp(roundTo(c + dc * k, 3), 0, 0.4), h];
     if (next[0] === l && next[1] === c) return;
     onBegin?.();
-    onChange(next);
+    (target !== null && dc ? onSlide : onChange)?.(next);
     onCommit?.(true);
   };
 
@@ -126,7 +154,7 @@ export function PickerPlane({ value, lockL, onBegin, onChange, onCommit, onCance
         <div
           ref={box}
           className={s.plane}
-          data-lock={lockL ? '' : undefined}
+          data-lock={target !== null ? '' : undefined}
           data-plane=""
           tabIndex={0}
           role="slider"
@@ -142,15 +170,21 @@ export function PickerPlane({ value, lockL, onBegin, onChange, onCommit, onCance
           }}
           onKeyDown={onKeyDown}
         >
-          <canvas ref={canvas} className={s.canvas} width={w} height={rows} />
+          <canvas ref={canvas} className={s.canvas} width={w} height={rows} data-colour="" />
           {plane && (
             <svg className={s.edges} width={w} height={rows} aria-hidden="true">
               <path className={s.p3Edge} d={plane.p3} />
               <path d={plane.srgb} />
             </svg>
           )}
+          {contour && (
+            <svg className={s.contour} width={w} height={rows} aria-hidden="true">
+              <path className={s.halo} d={contour} />
+              <path className={s.mark} d={contour} />
+            </svg>
+          )}
           <i className={s.vline} style={{ transform: `translateX(${Math.floor(x)}px)` }} />
-          <i className={s.hline} style={{ transform: `translateY(${Math.floor(y)}px)` }} />
+          {target === null && <i className={s.hline} style={{ transform: `translateY(${Math.floor(y)}px)` }} />}
           <svg className={s.ring} style={{ transform: `translate(${x}px, ${y}px)` }} viewBox="-10 -10 20 20" aria-hidden="true">
             <circle className={s.halo} r="7" />
             <circle className={s.mark} r="7" />
@@ -167,6 +201,12 @@ export function PickerPlane({ value, lockL, onBegin, onChange, onCommit, onCance
       <div className={s.caption}>
         <span className="lbl">Lightness by chroma at H {h.toFixed(1)}</span>
         <span className={s.legend} aria-hidden="true">
+          {contour && (
+            <span className="lbl">
+              <i className={s.iso} />
+              Value
+            </span>
+          )}
           <span className="lbl">
             <i />
             sRGB
