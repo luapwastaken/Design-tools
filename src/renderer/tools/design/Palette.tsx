@@ -276,7 +276,7 @@ function Tile(p: TileProps) {
       onDragStart={p.onDragStart}
       onDragEnd={p.onDragEnd}
     >
-      <div className={s.chip}>
+      <div className={s.chip} data-colour>
         <span className={s.more} onClick={(e) => e.stopPropagation()}>
           <IconButton icon="more_horiz" label="More" size="xs" onContent tabIndex={-1} onClick={(e) => p.onMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
         </span>
@@ -356,7 +356,7 @@ function Ghost({ p, shown, data, lockable, onAdd, onDiscard, onLock }: { p: Prop
   const name = p.name ?? displayName({ name: '', oklch: p.oklch });
   return (
     <div className={cx(s.sw, s.ghost)} style={paint(shown)} data-ghost={p.id}>
-      <div className={s.chip}>
+      <div className={s.chip} data-colour>
         <span className={s.tags}>
           <span className={s.proposed}>Proposed</span>
           {p.role && <span className={s.proposed}>{p.role}</span>}

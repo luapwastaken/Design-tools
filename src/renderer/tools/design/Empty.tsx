@@ -53,7 +53,7 @@ export function Empty({ doc, v, onPop }: { doc: Doc; v: DesignView; onPop: OpenP
           placeholder="E8643C"
           onChange={(t) => (setText(t), setTried(false))}
           onCommit={() => {}}
-          end={brand ? <i className={s.chip} style={{ background: cssColor(brand.oklch) }} /> : undefined}
+          end={brand ? <i className={s.chip} data-colour style={{ background: cssColor(brand.oklch) }} /> : undefined}
           error={shown}
           className={s.field}
         />
