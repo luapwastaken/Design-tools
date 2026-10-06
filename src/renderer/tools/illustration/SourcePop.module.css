@@ -17,7 +17,7 @@
 
 .drop { padding: 14px 12px; border-radius: 4px; outline: 1px dashed var(--tick); outline-offset: -1px; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
 .pic { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.thumb { flex: none; width: 96px; height: 64px; object-fit: contain; border-radius: 4px; background: var(--well); box-shadow: inset 0 0 0 1px var(--edge); }
+.thumb { flex: none; width: 160px; height: 107px; object-fit: contain; border-radius: 4px; background: var(--well); box-shadow: inset 0 0 0 1px var(--edge); cursor: crosshair; }
 .picName { min-width: 0; overflow: hidden; color: var(--ink); font-size: var(--fs-ctl); text-overflow: ellipsis; white-space: nowrap; }
 
 .paste { min-height: 96px; padding: 8px 9px; resize: vertical; border-radius: var(--r-ctl); background: var(--well); color: var(--ink); font: 400 var(--fs-ctl)/1.5 var(--font-mono); }

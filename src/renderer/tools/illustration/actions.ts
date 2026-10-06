@@ -6,8 +6,8 @@ import type { MaterialId, Swatch } from '../../../shared/types.ts';
 import { shell } from '../../shell/core/index.ts';
 import { pickFromScreen, toast } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
-import { addRamp, baseOf, duplicateRamp, lightForAll, looseOf, makeRamps, moveRamp, nameOf, rampName, rampOf, removeLoose, removeRamp, stepsOf, type IllustrationDoc } from './doc.ts';
-import { MAX_RAMPS } from './scene.ts';
+import { addRamp, baseOf, carryLight, duplicateRamp, lightForAll, looseOf, makeRamps, MAX_RAMPS, moveRamp, nameOf, rampName, rampOf, removeLoose, removeRamp, stepsOf, type IllustrationDoc } from './doc.ts';
+import { sceneLight } from './scene.ts';
 import { clearProposals, dropProposals, proposals, restoreProposals, type Proposal } from './proposals.ts';
 import { armed, getView, patchView } from './view-state.ts';
 
@@ -78,8 +78,16 @@ export function focusPickerColour(): void {
   );
 }
 
+/** true (and says why) when the palette has no room for another ramp: every way of adding one asks first */
+export function paletteFull(d: IllustrationDoc): boolean {
+  if (d.ramps.length < MAX_RAMPS) return false;
+  toast.show({ icon: 'info', message: `This palette already holds ${MAX_RAMPS} ramps. Delete one to add more.` });
+  return true;
+}
+
 /** a new ramp after the selected one; the colour: given, or a hue well away from the last. Lit as the others are; `material`, `focus`: see the sources */
 export function addBase(doc: Doc, oklch: Oklch = nextBase(doc.get()), name = '', opts: { material?: MaterialId; focus?: boolean } = {}): void {
+  if (paletteFull(doc.get())) return;
   const after = selected(doc.get())?.group ?? null;
   let base = '';
   doc.transact('Add base colour', (d) => {
@@ -120,7 +128,12 @@ export function addProposals(doc: Doc, all: Proposal[]): void {
 
 /** a flat palette's colours (or the loose ones of this; `ids`: just those) each become a ramp's base */
 export function rampsFromLoose(doc: Doc, ids = looseOf(doc.get()).map((w) => w.id)): void {
-  if (!ids.length) return;
+  if (!ids.length || paletteFull(doc.get())) return;
+  const room = MAX_RAMPS - doc.get().ramps.length;
+  if (ids.length > room) {
+    toast.show({ icon: 'info', message: `A palette holds ${MAX_RAMPS} ramps: ${plural(room, 'colour')} made, ${ids.length - room} left as they are.` });
+    ids = ids.slice(0, room);
+  }
   doc.transact(ids.length === 1 ? 'Make a ramp' : `Make ${ids.length} ramps`, (d) => makeRamps(d, ids));
   select(ids[0]);
 }
@@ -132,7 +145,7 @@ export function lightEveryRamp(doc: Doc, id: string): void {
 }
 
 export function duplicate(doc: Doc, id = selected(doc.get())?.group): void {
-  if (!id || !rampOf(doc.get(), id)) return;
+  if (!id || !rampOf(doc.get(), id) || paletteFull(doc.get())) return;
   let copy = '';
   doc.transact(`Duplicate ${rampName(doc.get(), rampOf(doc.get(), id)!)}`, (d) => {
     const r = duplicateRamp(d, id);
@@ -210,8 +223,13 @@ export function deleteRamp(doc: Doc, id: string): void {
   });
 }
 
-/** an empty palette in place of this one: one undoable step; the first edit makes Scratch/Untitled palette N (or `name`) */
-export async function newPalette(name?: string): Promise<void> {
+/**
+ * an empty palette in place of this one: one undoable step; the first edit makes Scratch/Untitled palette N (or `name`).
+ * It starts in the light this one is in (unless its ramps disagree): a scene is often several palettes.
+ */
+export async function newPalette(doc: Doc, name?: string): Promise<void> {
+  const { pair, mixed } = sceneLight(doc.get());
+  if (!mixed) carryLight(pair);
   armed.set(null);
   clearProposals();
   select(null);

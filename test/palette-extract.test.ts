@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toHex } from '../src/shared/color/index.ts';
+import { deltaE, toHex } from '../src/shared/color/index.ts';
 import { extractColours } from '../src/shared/palette/extract.ts';
 
 /** a w×h RGBA image painted in horizontal bands: [hex, rows, alpha?] */
@@ -52,4 +52,18 @@ test('large images are subsampled, and the result is seeded', () => {
   assert.ok(performance.now() - t < 2000, 'a megapixel stays quick');
   assert.deepEqual(a, extractColours(px, w, h, 5, 9));
   assert.deepEqual(a.map((c) => toHex(c.oklch)), ['#14161a', '#e8643c', '#8fb8de']);
+});
+
+test('a small bright accent beside a dull neighbour is kept, as the default count finds it', () => {
+  // a dusk forest: murky bands, a tan sky, and a campfire that is 1% of the picture
+  const dull = ['#bf8c5e', '#5b4976', '#456c33', '#264c2a', '#1e2e27', '#835b7f'];
+  const { px, w, h } = bands(100, [...dull.map((hex, i): [string, number] => [hex, i ? 16 : 20]), ['#f89e45', 1]]);
+  for (const k of [3, 4, 6]) {
+    const out = extractColours(px, w, h, k);
+    assert.ok(out.length <= k);
+    assert.ok(out.some((c) => deltaE(c.oklch, '#f89e45') < 4), `${k} colours: ${out.map((c) => toHex(c.oklch))}`);
+  }
+  // an image with nothing bright in it gets what it always got
+  const plain = bands(100, dull.map((hex): [string, number] => [hex, 16]));
+  assert.ok(extractColours(plain.px, plain.w, plain.h, 6).every((c) => c.oklch[1] < 0.12));
 });

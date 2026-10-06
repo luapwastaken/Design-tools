@@ -306,6 +306,17 @@ test('KPL: ramps come back as groups, light to dark along a row, loose colours i
   assert.deepEqual(k.own.entries.map((e) => [e.name, e.row, e.column]), Array.from({ length: 20 }, (_, i) => [`Loose ${i}`, Math.floor(i / 16), i % 16]));
 });
 
+test('KPL: a scene’s light and shadow are a group after the ramps, and without one nothing is added', () => {
+  const k = readKpl(writeKpl('Study', ramp('a', 'Skin', 3), { light: [0.94, 0.1, 72], shadow: [0.4, 0.09, 290] }));
+  assert.deepEqual(k.groups.map((g) => g.name), ['Skin', 'Scene light']);
+  assert.deepEqual(k.groups[1].entries.map((e) => [e.name, e.row, e.column]), [['Light', 0, 0], ['Shadow', 0, 1]]);
+  assert.equal(k.columns, 3);
+  const bare = readKpl(writeKpl('Study', ramp('a', 'Skin', 3), null));
+  assert.deepEqual(bare.groups.map((g) => g.name), ['Skin']);
+  // a lone Scene light group still gets the two columns it needs
+  assert.equal(readKpl(writeKpl('Study', [], { light: [0.9, 0.05, 80], shadow: [0.3, 0.05, 280] })).columns, 2);
+});
+
 test('KPL: a palette of ramps alone is as wide as its longest ramp, and its own group is empty', () => {
   const k = readKpl(writeKpl('Study', [...ramp('a', 'Skin', 5), ...ramp('b', 'Cloth', 7)]));
   assert.equal(k.columns, 7);

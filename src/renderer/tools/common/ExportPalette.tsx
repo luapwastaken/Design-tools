@@ -1,7 +1,7 @@
 // Export (Design spec §4, Illustration spec §2): every format through the shared export path
 // (lib/export saveFile), in a popover under the doc bar's Export button.
 import { useRef, useState } from 'react';
-import { writeAco, writeAse, writeCss, writeGpl, writeJson, writeKpl, writeProcreate, writeSheetSvg, writeTailwind } from '../../../shared/palette/writers.ts';
+import { writeAco, writeAse, writeCss, writeGpl, writeJson, writeKpl, writeProcreate, writeSheetSvg, writeTailwind, type SceneLight } from '../../../shared/palette/writers.ts';
 import type { Swatch, ToolId } from '../../../shared/types.ts';
 import { exporting, leaf, saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
@@ -12,7 +12,7 @@ import s from './ExportPalette.module.css';
 
 export type ExportFormat = 'ase' | 'aco' | 'gpl' | 'css' | 'tailwind' | 'procreate' | 'kpl' | 'json' | 'svg' | 'png';
 
-type Format = { label: string; ext: string; filter: string; desc: string; write(name: string, list: Swatch[]): string | Uint8Array | Promise<Uint8Array> };
+type Format = { label: string; ext: string; filter: string; desc: string; write(name: string, list: Swatch[], scene?: SceneLight | null): string | Uint8Array | Promise<Uint8Array> };
 
 const FORMATS: Record<ExportFormat, Format> = {
   ase: { label: 'ASE', ext: 'ase', filter: 'Adobe swatch exchange', desc: 'Illustrator, InDesign and After Effects swatches, named, global and spot flags kept.', write: writeAse },
@@ -52,6 +52,8 @@ export type ExportPaletteProps = {
   swatches: Swatch[];
   /** the swatches as the file gets them: blank names filled in (asked only when exporting) */
   named(list: Swatch[]): Swatch[];
+  /** an Illustration scene's light and shadow: Krita keeps them as a group of their own */
+  scene?: SceneLight | null;
   format: ExportFormat;
   onFormat(f: ExportFormat): void;
 };
@@ -78,7 +80,7 @@ export function ExportPalette(p: ExportPaletteProps) {
   );
 }
 
-function ExportBody({ tool, swatches, named, format, onFormat, name, onName, onDone }: ExportPaletteProps & { name: string | null; onName(n: string | null): void; onDone(): void }) {
+function ExportBody({ tool, swatches, named, scene, format, onFormat, name, onName, onDone }: ExportPaletteProps & { name: string | null; onName(n: string | null): void; onDone(): void }) {
   const docName = useShell((st) => st.docNames[tool]) ?? 'Palette';
   const file = name ?? docName;
   const f = FORMATS[format];
@@ -87,7 +89,7 @@ function ExportBody({ tool, swatches, named, format, onFormat, name, onName, onD
   // counted as running work from the first byte made (the quit check), the sheet's drawing included
   const save = () =>
     exporting(async () => {
-      const out = await Promise.resolve(f.write(file, list())).catch((e: unknown) => {
+      const out = await Promise.resolve(f.write(file, list(), scene)).catch((e: unknown) => {
         toast.show({ kind: 'error', message: `Couldn't write the ${f.label} file: ${e instanceof Error ? e.message : String(e)}` });
         return null;
       });

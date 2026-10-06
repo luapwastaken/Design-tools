@@ -94,7 +94,7 @@ export const tool: ToolDefinition<IllustrationDoc> = {
       { keys: 'Shift+A', label: 'Add a colour', run: () => addBase(doc) },
       { keys: 'Delete', label: 'Delete ramp', run: () => arm(doc) },
       { keys: 'Ctrl+D', label: 'Duplicate ramp', run: () => duplicate(doc) },
-      { keys: 'Ctrl+N', label: 'New palette', run: () => void newPalette() },
+      { keys: 'Ctrl+N', label: 'New palette', run: () => void newPalette(doc) },
       { keys: 'ArrowLeft', label: 'Lighter step', run: () => move(doc, -1, 0) },
       { keys: 'ArrowRight', label: 'Darker step', run: () => move(doc, 1, 0) },
       { keys: 'H', label: 'Hero colour', run: hero },

@@ -40,8 +40,8 @@ import { lookOf, Painter } from './tools/halftone/draw.ts';
 import { platesFor, pngBlob, svgFor } from './tools/halftone/exports.ts';
 import { ready, screen, shownDots, svgOver, totals } from './tools/halftone/screening.ts';
 import { patchView as patchHalftone, status as halftoneStatus } from './tools/halftone/view-state.ts';
-import { eyedrop } from './tools/illustration/actions.ts';
-import { addRamp, baseOf, rampName, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
+import { eyedrop, rampsFromLoose } from './tools/illustration/actions.ts';
+import { carryLight, addRamp, baseOf, rampName, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
 import type { PaintEngine } from './tools/illustration/paint/index.ts';
 import { liveEngine, liveSaves } from './tools/illustration/paint/live.ts';
 import { paintEngineChecks } from './tools/illustration/paint/smoke-checks.ts';
@@ -2903,6 +2903,9 @@ async function emptyUi(): Promise<void> {
   const start = await until(() => host('illustration')?.querySelector('section[aria-label="Start"]'), 3000);
   check('an empty palette shows the start in the Ramps section', shows(start) && !!start?.parentElement?.closest('section')?.textContent?.startsWith('Ramps'), start?.textContent?.slice(0, 40));
   check('it is one plain sentence and a hex field: no sample chips, no starter chips', start?.querySelector('p')?.textContent === 'No ramps yet. Pick a light, then add colours.' && !start?.querySelector('i, img, svg') && !button('illustration', 'Skin') && !button('illustration', 'Night sky'), start?.textContent);
+  check('and it points at the labelled From… button beside Add colour, not a hidden arrow', /use From… to add several colours/.test(start?.textContent ?? '') && !!button('illustration', 'From…') && !!button('illustration', 'Add colour'), start?.textContent);
+  const [addBtn, fromBtn] = [button('illustration', 'Add colour'), button('illustration', 'From…')];
+  check('Add colour and From… are two full-size buttons side by side, both at least 24px tall', !!addBtn && !!fromBtn && addBtn.getBoundingClientRect().height >= 24 && fromBtn.getBoundingClientRect().height >= 24 && fromBtn.getBoundingClientRect().left >= addBtn.getBoundingClientRect().right && !document.querySelector('[data-tool="illustration"] [aria-label^="Add colours from"]'), [addBtn?.getBoundingClientRect().height, fromBtn?.getBoundingClientRect().left]);
   check('the New button has a text label', !!button('illustration', 'New'));
   const off = (id: string) => illusTab(id)?.disabled;
   check('and holds Light and Check back until there is a colour, but not Ramp settings or Paint', off('light') === true && off('check') === true && off('settings') === false && off('paint') === false, [off('light'), off('check'), off('settings'), off('paint')]);
@@ -2923,7 +2926,7 @@ async function startUi(): Promise<void> {
   patchIllustration({ tab: 'settings' });
   const ramps = () => il.get().ramps;
   const lightBtn = () => ui.querySelector<HTMLButtonElement>('[role="group"][aria-label="Light"] button[aria-haspopup="listbox"]');
-  const caret = () => ui.querySelector<HTMLButtonElement>('button[aria-label^="Add colours from"]');
+  const caret = () => button('illustration', 'From…');
   // the open menu is the last of its kind in the page (a Select's list is a listbox, the Library's own lists are earlier)
   const openMenu = () => [...document.querySelectorAll<HTMLElement>('[role="menu"],[role="listbox"]')].filter(shows).at(-1);
   const rows = () => [...(openMenu()?.querySelectorAll<HTMLElement>('[role="menuitem"],[role="option"]') ?? [])];
@@ -2933,8 +2936,12 @@ async function startUi(): Promise<void> {
   const makeBtn = (name: string) => [...(dialog(name)?.querySelectorAll('button') ?? [])].find((b) => /^Make \d+ ramps?$/.test(b.textContent?.trim() ?? ''));
   type Pair = { light: Oklch; shadow: Oklch };
   const lit = (r: Pair, l: Pair) => JSON.stringify([r.light, r.shadow]) === JSON.stringify([l.light, l.shadow]);
-  const GOLDEN: Pair = { light: [0.94, 0.1, 72], shadow: [0.4, 0.09, 290] };
-  const MOON: Pair = { light: [0.82, 0.05, 250], shadow: [0.25, 0.07, 285] };
+  const GOLDEN: Pair = { light: [0.87, 0.09, 65], shadow: [0.36, 0.105, 333] };
+  const MOON: Pair = { light: [0.777, 0.065, 215], shadow: [0.25, 0.067, 261] };
+  const rampsHead = () => [...ui.querySelectorAll('section')].find((x) => x.querySelector('h2')?.textContent === 'Ramps')?.querySelector('header')?.textContent;
+  /** the Light row's two colour fields: the chip that opens the picker, and the hex it types into */
+  const chip = (name: string) => ui.querySelector<HTMLButtonElement>(`[role="group"][aria-label="Light"] button[aria-label="Pick ${name}"]`);
+  const hexField = (name: string) => ui.querySelector<HTMLInputElement>(`[role="group"][aria-label="Light"] input[aria-label="${name}, hex"]`);
   const DAY: Pair = { light: [0.95, 0.05, 85], shadow: [0.4, 0.08, 275] };
   const picked = () => {
     const a = document.activeElement as HTMLInputElement | null;
@@ -2956,11 +2963,12 @@ async function startUi(): Promise<void> {
 
   // the light row, with nothing to light yet
   check('the Light row shows with no ramp: Daylight, today’s pair', /Daylight/.test(lightBtn()?.textContent ?? ''), lightBtn()?.textContent);
-  check('and Edit waits for a ramp', button('illustration', 'Edit')?.disabled === true);
+  check('its light and shadow are colour fields with a chip that opens the picker, and there is no Edit button', !!chip('Light') && !!chip('Shadow') && !!hexField('Light') && !!hexField('Shadow') && !button('illustration', 'Edit'), [!!chip('Light'), !!chip('Shadow')]);
+  check('each chip is at least 24px, so it is a button and not a dot', [chip('Light'), chip('Shadow')].every((c) => !!c && c.getBoundingClientRect().height >= 20 && c.parentElement!.getBoundingClientRect().height >= 24));
   const d00 = il.depth();
   lightBtn()?.click();
   const names = await until(() => (row('Golden hour') ? rows().map((r) => r.textContent?.trim()) : null), 2000);
-  check('its menu lists the six lights', JSON.stringify(names) === JSON.stringify(['Daylight', 'Golden hour', 'Overcast', 'Moonlight', 'Warm interior', 'Studio neutral']), names);
+  check('its menu lists the eight lights, Dusk and Twilight among them', JSON.stringify(names) === JSON.stringify(['Daylight', 'Golden hour', 'Dusk', 'Twilight', 'Moonlight', 'Overcast', 'Warm interior', 'Studio neutral']), names);
   row('Golden hour')?.click();
   await until(() => /Golden hour/.test(lightBtn()?.textContent ?? ''), 2000);
   const scene = il.get().scene;
@@ -2970,12 +2978,20 @@ async function startUi(): Promise<void> {
   const file = kept && (await api.invoke('library.read', kept.itemId).catch(() => null));
   check('and the file keeps it, so it survives a reload', file?.kind === 'palette' && !!file.payload.scene && lit(file.payload.scene as Pair, GOLDEN), file?.kind === 'palette' ? file.payload.scene : file);
 
+  // the sources menu: worded and ordered as Design's + Add colours, subjects with their colour
+  caret()?.click();
+  const labels = await until(() => (row('Skin') ? rows().map((r) => r.textContent?.trim() ?? '') : null), 2000);
+  check('From… opens the sources in Design’s words and order, then the subjects and the limited sets', !!labels && ['From image…', 'Paste codes…', 'Pick from screen', 'From Library…'].every((t, i) => labels[i]?.startsWith(t)) && labels.some((l) => l.startsWith('Atmospheric triad')), labels);
+  check('each subject shows its colour, which the greyscale view takes over', rows().filter((r) => ['Skin', 'Hair', 'Foliage', 'Sky', 'Cloth', 'Metal', 'Stone', 'Wood', 'Water'].includes(r.textContent?.trim() ?? '')).every((r) => !!r.querySelector('[data-colour]')));
+  press('Escape');
+  await until(() => !openMenu(), 2000);
+
   // one colour: its ramp at once, lit by the row, selected, the picker's field focused
   (await until(() => button('illustration', 'Add colour')))?.click();
   const first = await until(() => (ramps().length === 1 ? ramps()[0] : null), 2000);
   check('Add colour makes a ramp lit by the light chosen', !!first && lit(first, GOLDEN), first);
   check('selected, with the picker’s colour field taking focus', !!first && illustrationView().selected === il.get().swatches.find((w) => w.group === first.id && w.step === 0)?.id && !!(await until(picked, 2000)), [illustrationView().selected, document.activeElement?.getAttribute('aria-label')]);
-  check('the Light row is still there, and Edit is open now', !!lightBtn() && button('illustration', 'Edit')?.disabled === false);
+  check('the Light row is still there, with its colour fields', !!lightBtn() && !!chip('Light') && !!chip('Shadow'));
   const key = il.depth();
   (document.activeElement as HTMLElement | null)?.blur();
   press('A', { shiftKey: true });
@@ -2995,6 +3011,8 @@ async function startUi(): Promise<void> {
   await until(() => ramps().length === 5, 2000);
   check('five subjects make a scene of five ramps in one light', ramps().length === 5 && ramps().every((r) => lit(r, GOLDEN)) && ramps().map((r) => r.material).join() === 'cloth,skin,foliage,paper,cloth', ramps().map((r) => r.material));
   patchIllustration({ tab: 'settings' });
+  const small = [...ui.querySelectorAll<HTMLButtonElement>('[data-row] button[aria-label="More"], [data-row] button[aria-label*="ero colour"]')].filter(shows);
+  check('each ramp’s hero star and More button are at least 24px, so a pen can hit them', small.length >= 10 && small.every((b) => b.getBoundingClientRect().width >= 24 && b.getBoundingClientRect().height >= 24), small.map((b) => [b.getAttribute('aria-label'), b.getBoundingClientRect().width]));
 
   // a preset goes to every ramp in one step
   const before = il.depth();
@@ -3008,6 +3026,11 @@ async function startUi(): Promise<void> {
   il.transact('One ramp in its own light', (d) => setSpec(d, d.ramps[1].id, { light: [0.9, 0.06, 150] }));
   await until(() => /Mixed/.test(lightBtn()?.textContent ?? ''), 2000);
   check('ramps lit differently read as Mixed', /Mixed/.test(lightBtn()?.textContent ?? ''), lightBtn()?.textContent);
+  const mixedTip = lightBtn()?.parentElement;
+  mixedTip?.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+  const mixedSays = await until(() => document.querySelector('[role="tooltip"]')?.textContent ?? null, 2000);
+  mixedTip?.dispatchEvent(new PointerEvent('pointerout', { bubbles: true, pointerType: 'mouse' }));
+  check('and Mixed explains itself in a tooltip', /not all lit the same/.test(mixedSays ?? ''), mixedSays);
   lightBtn()?.click();
   (await until(() => row('Daylight'), 2000))?.click();
   await until(() => /Daylight/.test(lightBtn()?.textContent ?? ''), 2000);
@@ -3015,10 +3038,34 @@ async function startUi(): Promise<void> {
   il.transact('A light of its own', (d) => ({ ...d, ramps: d.ramps.map((r) => ({ ...r, light: [0.9, 0.06, 150], shadow: [0.3, 0.05, 20] })) }));
   await until(() => /Custom/.test(lightBtn()?.textContent ?? ''), 2000);
   check('one light that is no preset reads as Custom', /Custom/.test(lightBtn()?.textContent ?? ''), lightBtn()?.textContent);
-  button('illustration', 'Edit')?.click();
-  check('Edit opens Light & preview', !!(await until(() => illustrationView().tab === 'light', 2000)));
-  patchIllustration({ tab: 'settings' });
+  // the chips act: a colour typed into one lights every ramp with it, as one undo step, the other colour staying
+  const dChip = il.depth();
+  const lightField = hexField('Light');
+  if (lightField) {
+    typeInto(lightField, 'tomato');
+    press('Enter');
+  }
+  await until(() => il.depth() === dChip + 1, 2000);
+  check('typing into the Light field lights every ramp with that colour as one undo step', ramps().every((r) => toHex(r.light) === toHex(parseCss('tomato')!) && JSON.stringify(r.shadow) === JSON.stringify([0.3, 0.05, 20])) && il.depth() === dChip + 1 && !!il.undoLabel()?.includes('light colour'), [ramps().map((r) => toHex(r.light)), il.undoLabel()]);
+  il.undo();
+  check('and one undo gives every ramp the old light back', ramps().every((r) => JSON.stringify(r.light) === JSON.stringify([0.9, 0.06, 150])), ramps().map((r) => r.light));
+  chip('Shadow')?.click();
+  const picker = await until(() => document.querySelector('[role="dialog"][aria-label="Colour picker"]'), 2000);
+  check('a chip opens the shared picker under the row', !!picker && !!picker.querySelector('input'), !!picker);
+  press('Escape');
+  await until(() => !document.querySelector('[role="dialog"][aria-label="Colour picker"]'), 2000);
   il.transact('Back to golden hour', (d) => ({ ...d, ramps: d.ramps.map((r) => ({ ...r, light: [...GOLDEN.light], shadow: [...GOLDEN.shadow] })) }));
+
+  // a new palette keeps the last light (one scene is often several palettes); undo brings this one back
+  const keptRamps = ramps().length;
+  button('illustration', 'New')?.click();
+  await until(() => ramps().length === 0, 3000);
+  const fresh = il.get();
+  check('New keeps the last light: the empty palette reads Golden hour, not Daylight', fresh.ramps.length === 0 && !!fresh.scene && lit(fresh.scene, GOLDEN) && /Golden hour/.test(lightBtn()?.textContent ?? ''), [fresh.scene, lightBtn()?.textContent]);
+  il.undo();
+  await until(() => ramps().length === keptRamps, 3000);
+  carryLight(null);
+  check('and undoing the New brings the ramps back', ramps().length === keptRamps && ramps().every((r) => lit(r, GOLDEN)), ramps().length);
 
   // ctrl+V: one code makes its ramp, several open the popover
   const n = ramps().length;
@@ -3029,7 +3076,7 @@ async function startUi(): Promise<void> {
   check('and with no code makes nothing', ramps().length === n + 1);
   const d0 = il.depth();
   pasteText('E8643C\n3C7DE8\nink: 2F2F2F\nnonsense');
-  const PASTE = 'Type or paste codes';
+  const PASTE = 'Paste codes';
   const pop = await until(() => dialog(PASTE), 2000);
   const found = pop?.querySelector('[data-found]')?.textContent;
   check('Ctrl+V with several opens the paste popover with its live count', !!pop && found === '3 colours found, 1 skipped.' && chips(PASTE).length === 3, [found, sourcePop.get(), bases.get()?.items.length, document.querySelectorAll('[role="dialog"]').length]);
@@ -3047,21 +3094,22 @@ async function startUi(): Promise<void> {
   const typed = n + 1;
 
   // the popover's own text field
-  await addVia('Type or paste codes…');
+  await addVia('Paste codes…');
   const box = await until(() => dialog(PASTE)?.querySelector<HTMLTextAreaElement>('textarea'), 2000);
-  check('Type or paste codes opens the popover with nothing to make', !!box && makeBtn(PASTE)?.disabled === true);
+  check('Paste codes opens the popover with nothing to make', !!box && makeBtn(PASTE)?.disabled === true);
   if (box) type(box, 'tomato, teal');
   await until(() => chips(PASTE).length === 2, 2000);
   check('its text is read as it is typed: colour names too', chips(PASTE).length === 2 && makeBtn(PASTE)?.textContent?.trim() === 'Make 2 ramps', chips(PASTE).length);
   press('Escape');
   await until(() => !dialog(PASTE), 2000);
   check('Esc closes it, leaving the colours in the Ramps list', !dialog(PASTE) && bases.get()?.items.length === 2);
+  check('where Keep all and Discard all are Design’s words for those two buttons, and the header counts them', !!button('illustration', 'Keep all') && !!button('illustration', 'Discard all') && !button('illustration', 'Add all') && /2 proposed/.test(rampsHead() ?? ''), rampsHead());
   clearBases();
 
   // an image: the popover, a Colours field that re-extracts, then the ramps
-  const IMAGE = 'From an image';
-  await addVia('From an image…');
-  check('From an image… opens its popover', !!(await until(() => dialog(IMAGE), 2000)));
+  const IMAGE = 'From image';
+  await addVia('From image…');
+  check('From image… opens its popover', !!(await until(() => dialog(IMAGE), 2000)));
   const png = new File([await pngRgba(24, 24, (x, y) => [x * 10, y * 10, (x + y) * 5, 255])], 'Smoke picture.png', { type: 'image/png' });
   const input = dialog(IMAGE)?.querySelector<HTMLInputElement>('input[type="file"]');
   if (input) {
@@ -3071,7 +3119,18 @@ async function startUi(): Promise<void> {
     input.dispatchEvent(new Event('change', { bubbles: true }));
   }
   check('a chosen image shows six colours, the default', !!(await until(() => chips(IMAGE).length === 6, 4000)), chips(IMAGE).length);
+  // the picture is clickable: the pixel under the pointer joins the staged colours
+  const thumb = dialog(IMAGE)?.querySelector<HTMLCanvasElement>('canvas');
+  const tr = thumb?.getBoundingClientRect();
+  check('the picture is large enough to point at: at least 128px wide', !!tr && tr.width >= 128, tr?.width);
+  thumb?.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: tr!.left + tr!.width / 2, clientY: tr!.top + tr!.height / 2 }));
+  check('clicking it adds that pixel as a seventh staged colour', !!(await until(() => chips(IMAGE).length === 7, 2000)), chips(IMAGE).length);
   const k = dialog(IMAGE)?.querySelector<HTMLInputElement>('input[aria-label="Colours"]');
+  if (k) {
+    typeInto(k, '12');
+    press('Enter');
+  }
+  check('the Colours field goes up to 12, and the field shows what was made', !!(await until(() => chips(IMAGE).length === 12, 4000)) && k?.value === '12', [chips(IMAGE).length, k?.value]);
   if (k) {
     typeInto(k, '3');
     press('Enter');
@@ -3084,7 +3143,7 @@ async function startUi(): Promise<void> {
   clearBases();
 
   // a Library palette adds into this palette
-  const LIB = 'From a Library palette';
+  const LIB = 'From Library';
   const flats = [0.7, 0.5, 0.3].map((l, i) => ({ id: `lib-${i}`, name: `Lib ${i}`, role: null, oklch: [l, 0.1, 40 + i * 90] as Oklch, type: 'process' as const }));
   const { ref } = await api.invoke('library.create', 'Scratch', 'Smoke start', { kind: 'palette', id: '', version: 1, swatches: flats, notes: '' });
   check('the Library lists it', !!(await until(() => shell.getState().library?.collections.some((c) => c.items.some((i) => i.id === ref.id)), 8000)));
@@ -3097,7 +3156,7 @@ async function startUi(): Promise<void> {
     (await until(() => rows().find((r) => r.textContent?.includes(ref.name)), 3000))?.click();
     return until(() => chips(LIB).length === 3, 3000);
   };
-  await addVia('From a Library palette…');
+  await addVia('From Library…');
   check('a chosen Library palette stages its colours', !!(await choose()), chips(LIB).length);
   makeBtn(LIB)?.click();
   await until(() => ramps().length === m + 3, 2000);
@@ -3124,17 +3183,34 @@ async function startUi(): Promise<void> {
   const keepColour = il.get().swatches.find((w) => w.id === keep)?.oklch;
   const o = ramps().length;
   await eyedrop(il, async () => toHex([0.7, 0.15, 150]));
-  check('From the screen adds a ramp and leaves the selected colour as it was', ramps().length === o + 1 && JSON.stringify(il.get().swatches.find((w) => w.id === keep)?.oklch) === JSON.stringify(keepColour) && illustrationView().selected !== keep, [ramps().length - o]);
+  check('Pick from screen adds a ramp and leaves the selected colour as it was', ramps().length === o + 1 && JSON.stringify(il.get().swatches.find((w) => w.id === keep)?.oklch) === JSON.stringify(keepColour) && illustrationView().selected !== keep, [ramps().length - o]);
 
   // the cap
   il.transact('Fill the palette', (d) => Array.from({ length: 22 - ramps().length }).reduce<IllustrationDoc>((x, _, i) => addRamp(x, [0.5, 0.05, i * 15]).doc, d));
-  await addVia('From a Library palette…');
+  await addVia('From Library…');
   await choose();
   const cap = dialog(LIB)?.textContent ?? '';
   check('a palette with room for two more ramps says so and offers two', /a palette holds 24 ramps, so the first 2 are offered/.test(cap) && makeBtn(LIB)?.textContent?.trim() === 'Make 2 ramps', cap);
   makeBtn(LIB)?.click();
   await until(() => ramps().length === 24, 2000);
   check('and the palette stops at 24 ramps', ramps().length === 24);
+  // every way of adding one stops there, and says so
+  const full = il.depth();
+  (await until(() => button('illustration', 'Add colour')))?.click();
+  await sleep(100);
+  check('Add colour at 24 ramps adds nothing and says why', ramps().length === 24 && il.depth() === full && !!toastSays('already holds 24 ramps'), [ramps().length, il.depth() - full]);
+  (document.activeElement as HTMLElement | null)?.blur();
+  press('A', { shiftKey: true });
+  press('d', { ctrlKey: true, code: 'KeyD' });
+  pasteText('8844AA');
+  await eyedrop(il, async () => toHex([0.7, 0.15, 150]));
+  await sleep(150);
+  check('and so do Shift+A, Duplicate, a pasted code and Pick from screen', ramps().length === 24 && il.depth() === full, [ramps().length, il.depth() - full]);
+  const loose = il.get().swatches.length;
+  il.transact('A loose colour', (d) => ({ ...d, swatches: [...d.swatches, { id: 'cap-loose', name: '', role: null, oklch: [0.5, 0.1, 10] as Oklch, type: 'process' as const }] }));
+  rampsFromLoose(il, ['cap-loose']);
+  await sleep(100);
+  check('a loose colour is not made into a 25th ramp', ramps().length === 24 && il.get().swatches.length === loose + 1, [ramps().length, il.get().swatches.length]);
   clearBases();
   patchIllustration({ tab: 'paint' });
 }
@@ -3630,7 +3706,8 @@ async function lightUi(): Promise<void> {
   check('hovering the object reads which step the pixel shows', !!readout && /, step \d of 5, L \d/.test(readout.textContent ?? ''), readout?.textContent);
   const parts = [...(ui.querySelector('[data-step-use]')?.querySelectorAll('i') ?? [])];
   check('and a bar under the stage shares the object out by step: one part for each step', parts.length >= 5 && parts.every((i) => i.hasAttribute('data-colour')), parts.length);
-  check('the canvases carry data-colour for the greyscale view', [...ui.querySelectorAll('canvas[role="img"]')].every((e) => e.hasAttribute('data-colour')));
+  const canvases = [...ui.querySelectorAll('canvas[role="img"]')];
+  check('the canvases carry data-colour for the greyscale view', canvases.length > 0 && canvases.every((e) => e.hasAttribute('data-colour')), canvases.length);
 
   // colours the light needs: offered, and added in one step
   patchIllustration({ preview: { ...view().preview, azimuth: 300, elevation: -45 } });

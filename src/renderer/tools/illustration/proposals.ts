@@ -1,7 +1,7 @@
 // Colours offered as new base colours (plan unit V): from an image, a logo or SVG, or picked off the
 // paint canvas. Never in the document until added; a module-level store so `receive` and the canvas
 // can hand them to the view.
-import type { Oklch } from '../../../shared/color/index.ts';
+import { toOklch, type Oklch } from '../../../shared/color/index.ts';
 import { valueOf } from '../../../shared/color/value.ts';
 import { extractColours } from '../../../shared/palette/extract.ts';
 import type { MaterialId } from '../../../shared/types.ts';
@@ -24,7 +24,7 @@ export const sourcePop = createStore<SourcePop | null>(null);
 
 /** the last picture an image popover took colours from, kept small so a new count re-runs at once */
 export const picture = createStore<{ name: string; pixels: ImageData; k: number } | null>(null);
-export const COLOURS = { min: 3, max: 10, start: 6 };
+export const COLOURS = { min: 3, max: 12, start: 6 };
 /** picks off the canvas gather in one set; past this the oldest goes */
 const MAX_PICKS = 12;
 export const CANVAS_LABEL = 'Picked from the canvas';
@@ -80,6 +80,20 @@ export function extract(k = picture.get()?.k ?? COLOURS.start): void {
   picture.set({ ...p, k: count });
   const found = extractColours(p.pixels.data, p.pixels.width, p.pixels.height, count);
   propose(`From ${p.name}`, found.map((f) => f.oklch), [], { from: 'image', sort: true });
+}
+
+/** the colour of the picture's pixel (x, y), staged with the others (light to dark); false over a clear pixel or with no picture */
+export function pickPixel(x: number, y: number): boolean {
+  const p = picture.get();
+  const cur = proposals.get();
+  if (!p || cur?.from !== 'image' || x < 0 || y < 0 || x >= p.pixels.width || y >= p.pixels.height) return false;
+  const i = (Math.floor(y) * p.pixels.width + Math.floor(x)) * 4;
+  const [r, g, b, a] = p.pixels.data.slice(i, i + 4);
+  if (a < 128) return false;
+  const oklch = toOklch({ mode: 'rgb', r: r / 255, g: g / 255, b: b / 255 });
+  const items = [...cur.items, { id: crypto.randomUUID(), oklch, name: null }].sort((m, n) => valueOf(n.oklch) - valueOf(m.oklch));
+  proposals.set({ ...cur, items });
+  return true;
 }
 
 /** a logo's or SVG's fill and stroke colours; throws when it has none */

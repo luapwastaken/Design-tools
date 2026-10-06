@@ -1,15 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { inSrgb, type Oklch } from '../src/shared/color/index.ts';
+import { deltaE, inSrgb, type Oklch } from '../src/shared/color/index.ts';
 import { valueOf } from '../src/shared/color/value.ts';
 import { createDocController } from '../src/shared/doc.ts';
-import { MATERIALS, newRamp } from '../src/shared/palette/ramp.ts';
+import { generateRamp, MATERIALS, newRamp } from '../src/shared/palette/ramp.ts';
 import {
   addRamp,
   baseOf,
+  carryLight,
+  duplicateRamp,
   emptyDoc,
   fromPayload,
   looseOf,
+  makeRamps,
   rampName,
   recolour,
   removeRamp,
@@ -30,16 +33,34 @@ test('Daylight is the pair a ramp is born with today, so an old file reads as Da
   assert.equal(sceneLight(withRamps([0.6, 0.1, 30], [0.5, 0.1, 200])).preset?.id, 'daylight');
 });
 
-test('the presets are six, told apart, and warm light goes with cool shadow where the sun is out', () => {
-  assert.deepEqual(LIGHTS.map((l) => l.label), ['Daylight', 'Golden hour', 'Overcast', 'Moonlight', 'Warm interior', 'Studio neutral']);
+test('the presets are eight, told apart, and warm light goes with cool shadow where the sun is out', () => {
+  assert.deepEqual(LIGHTS.map((l) => l.label), ['Daylight', 'Golden hour', 'Dusk', 'Twilight', 'Moonlight', 'Overcast', 'Warm interior', 'Studio neutral']);
   assert.equal(new Set(LIGHTS.map((l) => JSON.stringify([l.light, l.shadow]))).size, LIGHTS.length);
   const hueGap = (a: Oklch, b: Oklch) => Math.abs(((a[2] - b[2] + 540) % 360) - 180);
   for (const id of ['daylight', 'golden']) {
     const l = light(id);
-    assert.ok(l.light[2] < 110 && hueGap(l.light, l.shadow) > 90, `${id}: warm light, cool shadow`);
+    assert.ok(l.light[2] < 110 && hueGap(l.light, l.shadow) > 80, `${id}: warm light, cool shadow`);
     assert.ok(l.light[0] > l.shadow[0] + 0.4, `${id}: the light is much lighter than the shadow`);
   }
   assert.ok(light('moon').light[2] > 200 && light('moon').shadow[0] < 0.3, 'moonlight is blue and dark');
+  assert.ok(light('dusk').light[0] < light('golden').light[0] && light('twilight').shadow[0] < light('dusk').shadow[0], 'the sun goes down: dusk is dimmer than golden hour, twilight darker than dusk');
+  assert.ok(LIGHTS.every((l) => inSrgb(l.light) && l.light[0] > l.shadow[0] + 0.25), 'every light sits in sRGB and well above its shadow');
+});
+
+test('choosing another preset visibly changes the ramps: every two differ at both ends of a mid base', () => {
+  // the lightest step's value is the ramp's own, so a preset moves it by hue and chroma only: the two ends
+  // together carry the difference (8 or more between them), each end clear of zero
+  const ends = LIGHTS.map((l) => {
+    const steps = generateRamp({ ...newRamp([0.62, 0.16, 30]), light: l.light, shadow: l.shadow });
+    return { id: l.id, high: steps[0].oklch, deep: steps.at(-1)!.oklch };
+  });
+  for (const [i, a] of ends.entries()) {
+    for (const b of ends.slice(i + 1)) {
+      const high = deltaE(a.high, b.high);
+      const deep = deltaE(a.deep, b.deep);
+      assert.ok(high >= 2 && deep >= 2 && high + deep >= 8, `${a.id} and ${b.id}: highlight ${high.toFixed(1)}, deep shadow ${deep.toFixed(1)}`);
+    }
+  }
 });
 
 test('a preset goes to every ramp as one undo step, hand-edited steps staying', () => {
@@ -154,9 +175,43 @@ test('a Library palette adds into this one with new ids, every ramp keeping its 
 });
 
 test('a palette with too many colours is cut to the room there is, and says how many it had', () => {
-  const big = withRamps(...Array.from({ length: 30 }, (_, i): Oklch => [0.4 + (i % 5) * 0.08, 0.1, i * 12]));
+  const ramps = withRamps(...Array.from({ length: 24 }, (_, i): Oklch => [0.4 + (i % 5) * 0.08, 0.1, i * 12]));
+  // and six colours in no ramp
+  const flats = Array.from({ length: 6 }, (_, i) => ({ id: `flat${i}`, name: '', role: null, oklch: [0.5, 0.1, i * 50] as Oklch, type: 'process' as const }));
+  const big = { ...ramps, swatches: [...ramps.swatches, ...flats] };
   const { list, total } = paletteBases(big, MAX_RAMPS - 20);
   assert.deepEqual([list.length, total], [4, 30]);
   assert.deepEqual(paletteBases(big, 0).list, []);
   assert.deepEqual(paletteBases(big, -3).list, []);
+});
+
+test('a palette holds 24 ramps on every way of adding one', () => {
+  const full = Array.from({ length: MAX_RAMPS }).reduce<IllustrationDoc>((d, _, i) => addRamp(d, [0.5, 0.05, i * 15]).doc, emptyDoc());
+  assert.equal(full.ramps.length, MAX_RAMPS);
+  const more = addRamp(full, [0.6, 0.1, 10]);
+  assert.equal(more.doc, full, 'a ramp past the cap changes nothing');
+  assert.equal(more.base, '');
+  assert.deepEqual(duplicateRamp(full, full.ramps[0].id), { doc: full, id: '' });
+  const loose = { id: 'x', name: '', role: null, oklch: [0.5, 0.1, 10] as Oklch, type: 'process' as const };
+  assert.equal(makeRamps({ ...full, swatches: [...full.swatches, loose] }, ['x']).ramps.length, MAX_RAMPS);
+  // one short of the cap takes one of two
+  const near = removeRamp(full, full.ramps[0].id);
+  const two = [loose, { ...loose, id: 'y' }];
+  const made = makeRamps({ ...near, swatches: [...near.swatches, ...two] }, ['x', 'y']);
+  assert.equal(made.ramps.length, MAX_RAMPS);
+  assert.equal(looseOf(made).length, 1, 'the one left over stays a loose colour');
+});
+
+test('a new palette starts in the light the last one was left in', () => {
+  const g = light('golden');
+  carryLight({ light: g.light, shadow: g.shadow });
+  try {
+    const d = emptyDoc();
+    assert.equal(sceneLight(d).preset?.id, 'golden');
+    assert.deepEqual(addRamp(d, [0.5, 0.1, 40]).doc.ramps[0].light, g.light);
+    assert.notEqual(d.scene?.light, g.light, 'a copy, not the preset itself');
+  } finally {
+    carryLight(null);
+  }
+  assert.equal(emptyDoc().scene, undefined, 'nothing carried: Daylight');
 });

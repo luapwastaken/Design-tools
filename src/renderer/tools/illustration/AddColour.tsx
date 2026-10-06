@@ -1,7 +1,7 @@
-// The one Add colour button of the Ramps section: a click adds a colour, the caret opens the sources
-// (the menu), and a source that stages several colours opens its popover under the button.
+// The Add colour row of the Ramps section: Add colour adds one at once (Add, type, Enter), From… opens
+// the sources (the menu), and a source that stages several colours opens its popover under the row.
 import { useState } from 'react';
-import { Button, IconButton } from '../../ui/index.ts';
+import { Button } from '../../ui/index.ts';
 import { type Doc } from './actions.ts';
 import type { IllustrationDoc } from './doc.ts';
 import { sourcePop } from './proposals.ts';
@@ -15,7 +15,7 @@ export function AddColour({ doc, d }: { doc: Doc; d: IllustrationDoc }) {
   const [group, setGroup] = useState<HTMLElement | null>(null);
   const close = (refocus: boolean) => {
     sourcePop.set(null);
-    if (refocus && group?.isConnected) group.querySelector('button')?.focus({ preventScroll: true });
+    if (refocus && group?.isConnected) [...group.querySelectorAll('button')].at(-1)?.focus({ preventScroll: true });
   };
   return (
     <div className={s.row}>
@@ -23,12 +23,13 @@ export function AddColour({ doc, d }: { doc: Doc; d: IllustrationDoc }) {
         <Button variant="primary" icon="add" shortcut="Shift+A" onClick={() => addColour(doc)}>
           Add colour
         </Button>
-        <IconButton
-          icon="keyboard_arrow_down"
-          label="Add colours from: codes, an image, the screen, a Library palette, a subject or a limited set"
-          size="sm"
+        <Button
+          iconEnd="keyboard_arrow_down"
+          tooltip="Add several colours from codes, an image, the screen or a Library palette, or start from a subject or a limited set"
           onClick={(e) => group && addMenu(doc, group.getBoundingClientRect(), e.currentTarget, e.detail === 0)}
-        />
+        >
+          From…
+        </Button>
       </span>
       {pop && group && <SourcePopover doc={doc} d={d} pop={pop} anchor={group} onClose={close} />}
     </div>

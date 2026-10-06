@@ -13,7 +13,18 @@ export { stepWord };
 export type SceneLight = { light: Oklch; shadow: Oklch };
 export type IllustrationDoc = { swatches: Swatch[]; ramps: RampSpec[]; notes: string; scene?: SceneLight };
 
-export const emptyDoc = (): IllustrationDoc => ({ swatches: [], ramps: [], notes: '' });
+/** a palette holds this many ramps; every way of adding one stops here */
+export const MAX_RAMPS = 24;
+
+/** the light the last palette was left in: a new palette starts in it (see carryLight) */
+let carried: SceneLight | undefined;
+
+/** remember `scene` for the next new palette; null forgets it */
+export const carryLight = (scene: SceneLight | null): void => {
+  carried = scene ? { light: [...scene.light], shadow: [...scene.shadow] } : undefined;
+};
+
+export const emptyDoc = (): IllustrationDoc => ({ swatches: [], ramps: [], notes: '', ...(carried && { scene: { light: [...carried.light], shadow: [...carried.shadow] } }) });
 
 // ── reading ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -137,9 +148,11 @@ const baseSwatch = (id: string, oklch: Oklch, name: string): Swatch => ({ id: cr
 
 /**
  * A new ramp from a base colour, after `after` (the end when null), lit as that ramp (or the last)
- * is, so a scene keeps one light; returns the base swatch's id too.
+ * is, so a scene keeps one light; returns the base swatch's id too. A full palette comes back as it
+ * was, with no base.
  */
 export function addRamp(d: IllustrationDoc, oklch: Oklch, name = '', after: string | null = null, material?: MaterialId): { doc: IllustrationDoc; base: string } {
+  if (d.ramps.length >= MAX_RAMPS) return { doc: d, base: '' };
   const spec = spawn(d, oklch, rampOf(d, after ?? undefined) ?? d.ramps.at(-1), material);
   const at = d.ramps.findIndex((r) => r.id === after);
   const ramps = at < 0 ? [...d.ramps, spec] : [...d.ramps.slice(0, at + 1), spec, ...d.ramps.slice(at + 1)];
@@ -147,9 +160,9 @@ export function addRamp(d: IllustrationDoc, oklch: Oklch, name = '', after: stri
   return { doc: ordered(regen({ ...d, ramps, swatches: [...d.swatches, base] }, spec.id)), base: base.id };
 }
 
-/** loose swatches become ramp bases, each keeping its id, name and role, lit as the last ramp is (plan: "Make ramps from these") */
+/** loose swatches become ramp bases, each keeping its id, name and role, lit as the last ramp is (plan: "Make ramps from these"); as many as the palette has room for */
 export function makeRamps(d: IllustrationDoc, ids: string[]): IllustrationDoc {
-  const taking = looseOf(d).filter((w) => ids.includes(w.id));
+  const taking = looseOf(d).filter((w) => ids.includes(w.id)).slice(0, Math.max(0, MAX_RAMPS - d.ramps.length));
   const specs = taking.map((w) => spawn(d, w.oklch, d.ramps.at(-1)));
   const bases = new Map(taking.map((w, i) => [w.id, specs[i].id]));
   const swatches = d.swatches.map((w) => {
@@ -187,7 +200,7 @@ export function removeRamp(d: IllustrationDoc, id: string): IllustrationDoc {
 /** a copy of the ramp after it, edited steps and all (a copy of the hero isn't one, so it quietens); returns the copy's id */
 export function duplicateRamp(d: IllustrationDoc, id: string): { doc: IllustrationDoc; id: string } {
   const r = rampOf(d, id);
-  if (!r) return { doc: d, id };
+  if (!r || d.ramps.length >= MAX_RAMPS) return { doc: d, id: '' };
   const { name: _, ...spec } = r;
   const copy: RampSpec = { ...spec, id: crypto.randomUUID(), hero: false };
   const steps = stepsOf(d, id).map((w) => ({ ...w, id: crypto.randomUUID(), group: copy.id, name: w.name && `${w.name} copy` }));

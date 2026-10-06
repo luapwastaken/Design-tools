@@ -19,7 +19,7 @@ export function Start({ doc }: { doc: Doc }) {
       <div className={s.row} onKeyDown={(e) => e.key === 'Enter' && (e.target as Element).tagName === 'INPUT' && add()}>
         <TextInput label="Hex" mono value="" placeholder="C26B4C" className={s.hex} onChange={(t) => (typed.current = t)} validate={(t) => (!t.trim() || baseFromHex(t) ? null : 'Type a hex colour: 3 or 6 digits, # optional.')} onCommit={() => {}} />
       </div>
-      <p className={s.fine}>Type a hex and press Enter to make its ramp, or choose a source from Add colour.</p>
+      <p className={s.fine}>Type a hex and press Enter to make its ramp, or use From… to add several colours at once.</p>
     </section>
   );
 }
