@@ -60,7 +60,7 @@ export const DEFAULT_VIEW: IllustrationView = {
   proof: 'off',
   surround: 'grey',
   board: 'grey',
-  format: 'ase',
+  format: 'kpl',
   // lower than Design's 6 and 10: a painting's bases often sit close in value (skin and cloth mid-tones),
   // and its steps pack twenty colours or more
   flagL: 3,
