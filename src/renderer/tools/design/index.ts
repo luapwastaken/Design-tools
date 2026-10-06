@@ -5,7 +5,7 @@ import type { ToolDefinition } from '../../shell/tool.ts';
 import { toggleGreyscale } from '../common/Greyscale.tsx';
 import { baseName, fetchBlob, isSvg } from '../common/take.ts';
 import { ROLES } from '../../../shared/palette/roles.ts';
-import { armDelete, copySelected, duplicate, escape, eyedrop, generateNow, keepAll, newPalette, nudge, roleSelected, step, toggleLocked } from './actions.ts';
+import { armDelete, copySelected, duplicate, escape, eyedrop, keepAll, newPalette, nudge, roleSelected, spaceNow, step, toggleLocked } from './actions.ts';
 import { emptyDoc, fromPayload, toPayload, type DesignDoc } from './doc.ts';
 import { clearProposals } from './proposals.ts';
 import { takeImage, takeSvg } from './sources.ts';
@@ -68,8 +68,8 @@ export const tool: ToolDefinition<DesignDoc> = {
 
   // the shell leaves bare keys to a focused text field (foundation 9), so none of these needs to look
   shortcuts: (doc) => [
-    { keys: 'Space', label: 'Generate', run: () => generateNow(doc) },
-    { keys: 'L', label: 'Lock or unlock the selected swatches', run: () => toggleLocked(doc) },
+    { keys: 'Space', label: 'Reroll the unlocked colours (build a palette when empty)', run: () => spaceNow(doc) },
+    { keys: 'L', label: 'Lock or unlock the selected swatches: a locked colour stays through Space and Delete', run: () => toggleLocked(doc) },
     { keys: 'Delete', label: 'Delete swatches', run: () => armDelete(doc) },
     { keys: 'Ctrl+D', label: 'Duplicate', run: () => duplicate(doc) },
     { keys: 'Ctrl+N', label: 'New palette', run: () => void newPalette() },

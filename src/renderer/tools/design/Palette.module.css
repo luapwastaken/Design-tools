@@ -31,6 +31,8 @@
 .none { opacity: 0; }
 .sw:hover .none, .sw:focus-within .none, .sel .none { opacity: 1; }
 .proposed { color: var(--agent-ink); }
+.tags { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.tags .proposed { max-width: 100%; }
 .lock { display: none; width: 22px; height: 22px; flex: none; align-items: center; justify-content: center; border-radius: 6px; background: var(--on-content-bg); color: var(--on-content-ink); cursor: pointer; }
 .lock:hover { color: var(--cross); }
 .sw:hover .lock, .sw:focus-within .lock, .sel .lock, .lock.on { display: inline-flex; }

@@ -10,7 +10,7 @@ import { DocBar } from '../common/DocBar.tsx';
 import { ExportPalette } from '../common/ExportPalette.tsx';
 import { TabbedSection, type SectionTab } from '../common/Section.tsx';
 import { useSettled } from '../common/settled.ts';
-import { eyedrop, generateNow, newPalette, type Doc } from './actions.ts';
+import { eyedrop, newPalette, spaceNow, type Doc } from './actions.ts';
 import { CheckTab } from './CheckTab.tsx';
 import { ContrastTab } from './ContrastTab.tsx';
 import { plural, type DesignDoc, type DesignTab, type DesignView } from './doc.ts';
@@ -92,7 +92,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
           <PickerSection doc={doc} d={d} v={v} />
           <ResizeHandle edge="right" label="Colour picker width" value={v.pickerW} min={PICKER_W.min} max={PICKER_W.max} reset={PICKER_W.reset} onChange={(pickerW) => patchView({ pickerW })} />
         </div>
-        <TabbedSection tabs={tabs} value={v.tab} onChange={(tab) => patchView({ tab: tab as DesignTab })} bodyClassName={s.tabBody} />
+        <TabbedSection tabs={tabs} value={v.tab} onChange={(tab) => patchView({ tab: tab as DesignTab, tabChosen: true })} bodyClassName={s.tabBody} />
       </div>
       {pop && (
         <DesignPopover
@@ -110,7 +110,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   );
 }
 
-/** the doc bar's tool actions: Generate (its settings one click away on the caret), + Add colours, New */
+/** the doc bar's tool actions: Reroll (Surprise me while the palette is empty; style and accent on the caret), + Add colours, New */
 function DesignActions({ doc, d, onPop }: { doc: Doc; d: DesignDoc; onPop: OpenPop }) {
   const add = useRef<HTMLButtonElement>(null);
   const open = (e: { currentTarget: HTMLButtonElement; detail: number }) => {
@@ -124,6 +124,7 @@ function DesignActions({ doc, d, onPop }: { doc: Doc; d: DesignDoc; onPop: OpenP
         { label: 'Paste codes…', icon: 'content_paste', shortcut: 'Ctrl+V', onSelect: pop('paste') },
         ...(CAN_PICK ? [{ label: 'Pick from screen', icon: 'colorize', shortcut: 'I', onSelect: () => void eyedrop(doc) } as const] : []),
         'separator',
+        { label: 'Suggest more colours…', icon: 'star_shine', onSelect: pop('suggest') },
         { label: 'Harmony from a colour…', icon: 'join', onSelect: pop('colour') },
         { label: 'Gradient between two…', icon: 'gradient', disabled: d.swatches.length < 2, onSelect: pop('gradient') },
         'separator',
@@ -136,11 +137,16 @@ function DesignActions({ doc, d, onPop }: { doc: Doc; d: DesignDoc; onPop: OpenP
   return (
     <>
       <span className={s.gen}>
-        <Button variant="primary" onClick={() => generateNow(doc)} shortcut="Space" tooltip="Generate a new palette: unlocked colours change, locked ones stay">
-          Generate
+        <Button
+          variant="primary"
+          onClick={() => spaceNow(doc)}
+          shortcut="Space"
+          tooltip={d.swatches.length ? 'New colours for every colour with a role that is not locked' : 'A palette from a random colour'}
+        >
+          {d.swatches.length ? 'Reroll' : 'Surprise me'}
           <Kbd>Space</Kbd>
         </Button>
-        <IconButton ref={settings} icon="keyboard_arrow_down" label="Generate settings: style, colours, seed" size="sm" onClick={() => settings.current && onPop('generate', settings.current)} />
+        <IconButton ref={settings} icon="keyboard_arrow_down" label="Style and accent" size="sm" onClick={() => settings.current && onPop('style', settings.current)} />
       </span>
       <Button ref={add} iconEnd="keyboard_arrow_down" onClick={open}>
         + Add colours

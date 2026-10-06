@@ -5,14 +5,15 @@ import type { Oklch } from '../../../shared/color/index.ts';
 import { createStore } from '../common/store.ts';
 import type { BuildMethod } from './doc.ts';
 
-export type Proposal = { id: string; oklch: Oklch; name: string | null; locked: boolean };
+/** `role`: the job it is proposed for (Complete the palette); `share`: its part of an image's pixels */
+export type Proposal = { id: string; oklch: Oklch; name: string | null; locked: boolean; role?: string; share?: number };
 export type Proposals = { from: BuildMethod; label: string; items: Proposal[] };
 
 export const proposals = createStore<Proposals | null>(null);
 
 /** one set at a time: the newest Build result replaces the last */
-export function propose(from: BuildMethod, label: string, colours: Oklch[], names: (string | null)[] = [], locked: boolean[] = []): void {
-  const items = colours.map((oklch, i) => ({ id: crypto.randomUUID(), oklch, name: names[i] ?? null, locked: !!locked[i] }));
+export function propose(from: BuildMethod, label: string, colours: Oklch[], names: (string | null)[] = [], locked: boolean[] = [], extra: Pick<Proposal, 'role' | 'share'>[] = []): void {
+  const items = colours.map((oklch, i) => ({ id: crypto.randomUUID(), oklch, name: names[i] ?? null, locked: !!locked[i], ...extra[i] }));
   proposals.set(items.length ? { from, label, items } : null);
 }
 

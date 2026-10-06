@@ -1,5 +1,6 @@
 // The Design tool's document and view state (plan: Document and view).
 import type { Cvd, Oklch } from '../../../shared/color/index.ts';
+import type { Accent } from '../../../shared/palette/brand.ts';
 import type { PalettePayload, RampSpec, Swatch } from '../../../shared/types.ts';
 import type { ExportFormat } from '../common/ExportPalette.tsx';
 
@@ -11,7 +12,7 @@ export { displayName, listNames, named, plural } from '../common/names.ts';
 /** `ramps`: Illustration's ramp settings, kept so they go back into the file unchanged */
 export type DesignDoc = { swatches: Swatch[]; notes: string; ramps?: RampSpec[] };
 
-export type BuildMethod = 'harmony' | 'generate' | 'image' | 'logo' | 'gradient' | 'paste';
+export type BuildMethod = 'harmony' | 'generate' | 'image' | 'logo' | 'gradient' | 'paste' | 'complete';
 /** the tabs under the palette and picker; the active one is saved in the view */
 export type DesignTab = 'contrast' | 'check' | 'preview' | 'harmonies' | 'notes';
 /** what each palette chip says: Hex; Hex and L C H; the Table adds RGB and ≈CMYK */
@@ -25,11 +26,13 @@ export type DesignView = {
   /** swatch ids; the first is the active one (inspector) */
   selected: string[];
   tab: DesignTab;
+  /** the user has picked a tab themselves; until then a first build shows Preview in use */
+  tabChosen: boolean;
   /** the Colour vision card's chosen simulation */
   cvd: Cvd;
   /** the view filter on the palette row and the Preview tab */
   sim: Simulate;
-  /** swatch ids pinned with L: a re-roll keeps them, Delete leaves them */
+  /** swatch ids pinned with L: Space (a reroll) and Delete leave them */
   locked: string[];
   /** the surround the palette is judged on */
   surround: Surround;
@@ -45,7 +48,11 @@ export type DesignView = {
   /** Colour vision check: flag pairs closer than this ΔE */
   flagE: number;
   format: ExportFormat;
+  /** Style: a role palette's neutral lean, chroma and accent boldness (shared/palette/brand); also Suggest more colours' preset */
   preset: string;
+  /** the harmony the Accent and Highlight follow */
+  accent: Accent;
+  /** Suggest more colours: how many */
   count: number;
   seed: number;
   /** Image: how many colours to pull */

@@ -124,13 +124,17 @@ function problemPane(): { rows: number; fixes: number; badge: number } | null {
     badge: Number(illusTab('check')?.textContent?.match(/\d+/)?.[0] ?? 0),
   };
 }
-/** Design's doc-bar Generate (its label carries the Space key hint after it) */
-const generateButton = () => [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Generate') && shows(b));
+/** Design's doc-bar Reroll, or Surprise me while the palette is empty (its label carries the Space key hint after it) */
+const rerollButton = () => [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => /^(Reroll|Surprise me)/.test(b.textContent?.trim() ?? '') && shows(b));
 /** one of Design's tabs (the strip under the palette), and the panel it shows */
 const designTab = (id: string) => host('design')?.querySelector<HTMLElement>(`[role="tab"][data-tab="${id}"]`);
 const designPanel = () => host('design')?.querySelector<HTMLElement>('[role="tabpanel"]');
 /** Design's Colour picker section */
 const pickerSection = () => [...(host('design')?.querySelectorAll('section') ?? [])].find((sec) => sec.querySelector('h2')?.textContent === 'Colour picker');
+/** Design's Palette header button that offers the missing roles (its label goes on with the roles) */
+const completeButton = () => [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Complete the palette') && shows(b));
+/** a Select's option that shows, by its text */
+const optionRow = (text: string) => [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((r) => r.textContent?.includes(text) && shows(r));
 /** a menu row that shows, by its text */
 const menuRow = (text: string) => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((r) => r.textContent?.includes(text) && shows(r));
 /** a textarea's text as typing leaves it (React hears the input event) */
@@ -198,7 +202,7 @@ async function full(): Promise<void> {
   const dp = designDoc();
   shell.setActive('design');
   check('Design starts new', dp.state().t === 'new' && dp.depth() === 0, dp.state());
-  check('an empty Design palette shows the start screen with Generate in the doc bar', (await until(() => generateButton())) && !!host('design')?.textContent?.includes('Start a palette'), designView().tab);
+  check('an empty Design palette shows the start screen with Surprise me in the doc bar', (await until(() => rerollButton())) && !!host('design')?.textContent?.includes('Start a palette'), designView().tab);
   addSwatch(dp, 'Smoke 1');
   const first = await until(() => (dp.state().t === 'saved' ? dp.source() : null));
   if (!check('the first commit creates a palette in Scratch', first?.collection === 'Scratch', first ?? dp.state())) return;
@@ -550,9 +554,9 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     const box = await until(() => document.querySelector<HTMLTextAreaElement>('[role="dialog"][aria-label="Paste codes"] textarea[aria-label="Colours to parse"]'));
     if (check('Paste codes opens a popover with its field', box)) {
       type(box!, 'Smoke Ember: E8643C');
-      const addPasted = await until(() => [...(box!.closest('[role="dialog"]')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Add') && !b.disabled));
+      const addPasted = await until(() => [...(box!.closest('[role="dialog"]')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Propose colours') && !b.disabled));
       addPasted?.click();
-      check('Add in the popover proposes the pasted colour in the palette row and closes the popover', (await until(() => proposals.get()?.items.length === 1)) && (await until(() => !document.querySelector('[role="dialog"][aria-label="Paste codes"]'))) && !!host('design')?.querySelector('[data-ghost]'), proposals.get()?.items.length);
+      check('Propose colours in the popover proposes the pasted colour in the palette row and closes the popover', (await until(() => proposals.get()?.items.length === 1)) && (await until(() => !document.querySelector('[role="dialog"][aria-label="Paste codes"]'))) && !!host('design')?.querySelector('[data-ghost]'), proposals.get()?.items.length);
     }
   }
   clearProposals();
@@ -710,13 +714,6 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   patchDesign({ space: 'oklch' });
   clearProposals();
 
-  // Generate's settings are one click away on the caret beside it: Style, Colours and Seed in a popover
-  host('design')?.querySelector<HTMLElement>('button[aria-label^="Generate settings"]')?.click();
-  const genPop = await until(() => document.querySelector<HTMLElement>('[role="dialog"][aria-label="Generate settings"]'));
-  check('the caret beside Generate opens Style, Colours and Seed', !!genPop && ['Style', 'Colours', 'Seed'].every((w) => [...genPop.querySelectorAll('button, input')].some((e) => (e.getAttribute('aria-label') ?? e.textContent ?? '').includes(w))), genPop?.textContent);
-  press('Escape');
-  await until(() => !document.querySelector('[role="dialog"][aria-label="Generate settings"]'));
-
   // the document switcher: a caret after the title lists the recent palettes and opens one as the Library does
   const caret = () => host('design')?.querySelector<HTMLElement>('button[aria-label^="Switch palette"]');
   caret()?.click();
@@ -772,7 +769,7 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   patchDesign({ tab: 'preview' });
   const newWithSwatch = async (name: string) => {
     await shell.newDoc('design');
-    const fresh = dd.get().swatches.length === 0 && !dd.source() && dd.undoLabel() === 'New palette' && !!(await until(() => generateButton() && host('design')?.textContent?.includes('Start a palette')));
+    const fresh = dd.get().swatches.length === 0 && !dd.source() && dd.undoLabel() === 'New palette' && !!(await until(() => rerollButton() && host('design')?.textContent?.includes('Start a palette')));
     dd.transact('Add swatch', (d) => ({ ...d, swatches: [designSwatch([0.5, 0.1, 200], name)] }));
     const made = await until(() => dd.state().t === 'saved' && dd.source()?.collection === 'Scratch' && dd.source());
     return { fresh, id: made ? made.itemId : null };
@@ -785,42 +782,134 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   check('Undo goes back to the palette that was open', await until(() => dd.source()?.itemId === held?.itemId && dd.state().t === 'saved'), dd.source());
   patchDesign({ tab: 'contrast' });
 
-  // Space generates (never while a text field has focus); an empty palette is made in one step, roles
-  // suggested; on a palette with colours Space adds proposals beside it and moves nothing
-  await shell.newDoc('design');
-  clearProposals();
-  (document.activeElement as HTMLElement | null)?.blur?.();
-  patchDesign({ count: 5, locked: [] });
-  const typing = document.createElement('input');
-  typing.type = 'text';
-  host('design')?.appendChild(typing);
-  typing.focus();
-  press(' ', { code: 'Space' });
-  const idle = dd.get().swatches.length === 0 && !proposals.get();
-  typing.remove();
-  check('Space is ignored while a text field has focus', idle);
-  (document.activeElement as HTMLElement | null)?.blur?.();
-  press(' ', { code: 'Space' });
-  const made = (await until(() => dd.get().swatches.length === 5 && dd.get().swatches)) || null;
-  check('Space on an empty palette makes the palette in one step, with roles suggested', made && dd.undoLabel() === 'Generate palette' && made.some((w) => w.role === 'Background') && made.some((w) => w.role === 'Text'), dd.undoLabel());
-  const pin = made ? made[1] : null;
-  if (pin) {
-    selectInDesign([pin.id]);
-    press('l', { code: 'KeyL' });
-    check('L locks the selected column (its lock stays visible)', designView().locked.includes(pin.id) && !!(await until(() => host("design")?.querySelector(`[data-swatch="${pin.id}"] button[aria-pressed="true"]`))), designView().locked);
-    const steps = dd.depth();
-    const frame = () => ['[role="listbox"]', '[role="tablist"]'].map((q) => host('design')?.querySelector(q)?.getBoundingClientRect()).map((r) => [r?.top, r?.height]);
-    const before = JSON.stringify(frame());
-    press(' ', { code: 'Space' });
-    check('Space on a palette with colours adds proposals in the row and leaves the palette alone', (await until(() => host('design')?.querySelector('[data-ghost]'))) && (proposals.get()?.items.length ?? 0) === 5 && dd.depth() === steps && JSON.stringify(dd.get().swatches) === JSON.stringify(made), [dd.depth() - steps, proposals.get()?.items.length]);
-    check('and nothing around the row moves', JSON.stringify(frame()) === before, [before, JSON.stringify(frame())]);
-    const first = proposals.get()?.items.map((p) => p.oklch.join());
-    press(' ', { code: 'Space' });
-    check('Space again replaces the proposals with a new set', (await until(() => proposals.get()?.items.map((p) => p.oklch.join()).join('|') !== first?.join('|'))) && dd.depth() === steps, dd.depth() - steps);
-    press('Delete', { code: 'Delete' });
-    check('Delete leaves a locked column alone (no confirm arms)', !!dd.get().swatches.find((w) => w.id === pin.id) && !armedInDesign.get());
+  // Start a palette: a typed brand colour builds the seven roles in one step; Space rerolls what is not locked
+  {
+    await shell.newDoc('design');
     clearProposals();
-    patchDesign({ locked: [] });
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    patchDesign({ preset: 'quiet', accent: 'analogous', tab: 'contrast', tabChosen: false, locked: [] });
+    const field = () => [...(host('design')?.querySelectorAll('label') ?? [])].find((l) => l.textContent?.includes('Brand colour'))?.querySelector('input') ?? null;
+    const panelButtons = () => ['Build palette', 'Surprise me', 'From image', 'From logo', 'Paste codes', 'Open from Library'].map((t) => !!button('design', t));
+    const brandField = await until(() => field());
+    check('the start panel has a Brand colour field, Build palette, Style, Accent and the other ways in', !!brandField && panelButtons().every(Boolean) && !!host('design')?.querySelector('button[aria-label^="Style:"]') && !!host('design')?.querySelector('button[aria-label^="Accent:"]') && !button('design', 'Generate a palette'), panelButtons());
+    typeInto(brandField!, 'not a colour');
+    press('Enter');
+    check('an unreadable brand colour says so and builds nothing', !!(await until(() => host('design')?.textContent?.includes('Type a colour'))) && dd.get().swatches.length === 0);
+    typeInto(brandField!, ' ');
+    press(' ', { code: 'Space' });
+    check('Space is ignored while the brand colour field has focus', dd.get().swatches.length === 0 && !proposals.get());
+    const before = dd.depth();
+    typeInto(brandField!, 'E8643C');
+    press('Enter');
+    const built = (await until(() => dd.get().swatches.length === 7 && dd.get().swatches)) || null;
+    const roleOf = (r: string) => built?.find((w) => w.role === r);
+    check('a typed hex and Enter build seven swatches in the stable role order, in one undo step', !!built && built.map((w) => w.role).join() === 'Background,Surface,Text,Muted,Primary,Accent,Highlight' && dd.undoLabel() === 'Build palette' && dd.depth() === before + 1, built?.map((w) => w.role));
+    check('the Primary is the typed colour exactly, selected, and starts locked', !!built && toHex(roleOf('Primary')!.oklch).slice(1).toLowerCase() === 'e8643c' && designView().selected[0] === roleOf('Primary')!.id && designView().locked.includes(roleOf('Primary')!.id), designView().locked);
+    const read = designResults(dd.get().swatches, undefined, designView().flagL, designView().flagE);
+    check('every role pair of the built palette passes contrast (Text 7:1, Muted 4.5:1 on both grounds)', read.failing.length === 0 && contrast(roleOf('Text')!.oklch, roleOf('Background')!.oklch) >= 7 && contrast(roleOf('Muted')!.oklch, roleOf('Surface')!.oklch) >= 4.5, read.failing.map((p) => [p.text.role, p.ground.role, p.ratio]));
+    check('the first build opens Preview in use when no tab was chosen', designView().tab === 'preview' && !!(await until(() => host('design')?.querySelector('[role="img"][aria-label*="website preview"]'))), designView().tab);
+    check('a built palette has no Complete the palette (every role is there) and the start panel is gone', !completeButton() && !host('design')?.textContent?.includes('Start a palette'));
+
+    // Space rerolls the unlocked colours in place: the locked Primary stays, one undo step, undo restores
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    const steps = dd.depth();
+    press(' ', { code: 'Space' });
+    const rerolled = (await until(() => dd.depth() === steps + 1 && dd.get().swatches)) || null;
+    const same = (a: Swatch | undefined, b: Swatch | undefined) => !!a && !!b && a.oklch.join() === b.oklch.join();
+    check('Space rerolls in place: same swatches and roles, the locked Primary byte-exact, most of the others new, no proposals', !!built && !!rerolled && rerolled.map((w) => w.id).join() === built.map((w) => w.id).join() && same(rerolled.find((w) => w.role === 'Primary'), roleOf('Primary')) && ['Text', 'Muted', 'Accent', 'Highlight'].filter((r) => !same(rerolled.find((w) => w.role === r), roleOf(r))).length >= 2 && !proposals.get() && dd.undoLabel() === 'Reroll palette', dd.undoLabel());
+    check('and a reroll still reads: no role pair fails', designResults(dd.get().swatches, undefined, 6, 10).failing.length === 0);
+    ctrlZ();
+    check('Ctrl+Z puts the unrerolled palette back', await until(() => dd.get().swatches === built));
+    // a swatch lock (L) keeps a colour through Space as well
+    const accent = roleOf('Accent')!;
+    selectInDesign([accent.id]);
+    press('l', { code: 'KeyL' });
+    check('L locks the selected swatch', designView().locked.includes(accent.id) && !!(await until(() => host('design')?.querySelector(`[data-swatch="${accent.id}"] button[aria-pressed="true"]`))), designView().locked);
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    press(' ', { code: 'Space' });
+    const second = (await until(() => dd.depth() === steps + 1 && dd.get().swatches)) || null;
+    check('a locked Accent stays through Space, and the neutrals are rebuilt round the locked colours', !!second && same(second.find((w) => w.role === 'Accent'), accent) && same(second.find((w) => w.role === 'Primary'), roleOf('Primary')) && ['Text', 'Muted', 'Highlight'].some((r) => !same(second.find((w) => w.role === r), roleOf(r))), [!!second, dd.depth() - steps, designView().locked.length]);
+    press('Delete', { code: 'Delete' });
+    check('Delete leaves a locked swatch alone (no confirm arms)', !!dd.get().swatches.find((w) => w.id === accent.id) && !armedInDesign.get());
+    ctrlZ();
+    await until(() => dd.get().swatches === built);
+    patchDesign({ locked: [roleOf('Primary')!.id] });
+
+    // Style and Accent: on the caret beside Reroll; a change rerolls the unlocked colours in place
+    host('design')?.querySelector<HTMLElement>('button[aria-label="Style and accent"]')?.click();
+    const stylePop = await until(() => document.querySelector<HTMLElement>('[role="dialog"][aria-label="Style and accent"]'));
+    check('the caret beside Reroll opens Style, Accent and Seed', !!stylePop && ['Style', 'Accent', 'Seed'].every((w) => [...stylePop.querySelectorAll('button, input')].some((e) => (e.getAttribute('aria-label') ?? e.textContent ?? '').includes(w))), stylePop?.textContent);
+    stylePop?.querySelector<HTMLElement>('button[aria-label^="Style:"]')?.click();
+    (await until(() => optionRow('Tech')))?.click();
+    check('choosing the Tech style rerolls the unlocked colours in place onto a dark ground', !!(await until(() => designView().preset === 'tech' && dd.get().swatches !== built && dd.undoLabel() === 'Reroll palette'))  && (dd.get().swatches.find((w) => w.role === 'Background')?.oklch[0] ?? 1) < 0.4 && same(dd.get().swatches.find((w) => w.role === 'Primary'), roleOf('Primary')), designView().preset);
+    press('Escape');
+    await until(() => !document.querySelector('[role="dialog"][aria-label="Style and accent"]'));
+    ctrlZ();
+    patchDesign({ preset: 'quiet' });
+
+    // a chosen tab is never taken: after the user picks Contrast a new build leaves it
+    designTab('contrast')?.click();
+    await until(() => designView().tab === 'contrast' && designView().tabChosen);
+    await shell.newDoc('design');
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    button('design', 'Surprise me')?.click();
+    const surprise = (await until(() => dd.get().swatches.length === 7 && dd.get().swatches)) || null;
+    check('Surprise me builds a role palette from a random colour (nothing locked) and leaves the chosen tab alone', !!surprise && surprise.map((w) => w.role).join() === 'Background,Surface,Text,Muted,Primary,Accent,Highlight' && designView().tab === 'contrast' && designView().locked.length === 0 && dd.undoLabel() === 'Build palette' && designResults(dd.get().swatches, undefined, 6, 10).failing.length === 0, [designView().tab, dd.undoLabel()]);
+    await shell.newDoc('design');
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    press(' ', { code: 'Space' });
+    check('Space on an empty palette is the same build', !!(await until(() => dd.get().swatches.length === 7)) && dd.undoLabel() === 'Build palette');
+    // a brand colour outside sRGB is kept exactly (the gamut warning shows on its chip) and the rest is built to read
+    await shell.newDoc('design');
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    const wideField = await until(() => field());
+    typeInto(wideField!, ['oklch', '(0.7 0.33 150)'].join(''));
+    press('Enter');
+    const wide = (await until(() => dd.get().swatches.length === 7 && dd.get().swatches)) || null;
+    const widePrimary = wide?.find((w) => w.role === 'Primary');
+    check('a wide-gamut brand colour stays exactly as typed, shows the gamut warning, and the roles still read', !!widePrimary && widePrimary.oklch.every((v, i) => Math.abs(v - [0.7, 0.33, 150][i]) < 0.002) && !!(await until(() => host('design')?.querySelector(`[data-swatch="${widePrimary.id}"] [data-icon="warning"]`))) && designResults(dd.get().swatches, undefined, 6, 10).failing.filter((p) => p.text.role !== 'Primary').length === 0, widePrimary?.oklch);
+
+    // Suggest more colours keeps the old path: ramp-shaped proposals beside the palette, which Space re-draws
+    button('design', 'Add colours')?.click();
+    (await until(() => menuRow('Suggest more colours')))?.click();
+    const suggestPop = await until(() => document.querySelector<HTMLElement>('[role="dialog"][aria-label="Suggest more colours"]'));
+    [...(suggestPop?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Propose'))?.click();
+    const kept = dd.get().swatches;
+    const ghostCount = (await until(() => proposals.get()?.from === 'generate' && proposals.get()?.items.length)) || 0;
+    const firstSet = proposals.get()?.items.map((p) => p.oklch.join()).join('|');
+    press(' ', { code: 'Space' });
+    check('Suggest more colours proposes beside the palette; Space with them up redraws them and moves nothing', ghostCount > 0 && (await until(() => proposals.get()?.items.map((p) => p.oklch.join()).join('|') !== firstSet)) && dd.get().swatches === kept, [ghostCount]);
+    clearProposals();
+
+    // From image: the popover closes once an image is chosen; proposals come lightest first; Keep all suggests roles
+    // (Primary the most vivid colour with a real share); Complete the palette proposes what is missing
+    await shell.newDoc('design');
+    const picture = await pngFrom(100, 100, (x, y) => (y >= 98 && x < 100 ? [224, 24, 45] : y < 40 ? [243, 236, 220] : y < 66 ? [43, 43, 46] : [15, 138, 138]));
+    button('design', 'From image')?.click();
+    const imagePop = await until(() => document.querySelector<HTMLElement>('[role="dialog"][aria-label="From image"]'));
+    const file = imagePop?.querySelector<HTMLInputElement>('input[type="file"]');
+    if (check('From image opens its popover with a file field', file)) {
+      const picked = new DataTransfer();
+      picked.items.add(new File([picture], 'smoke-photo.png', { type: 'image/png' }));
+      file!.files = picked.files;
+      file!.dispatchEvent(new Event('change', { bubbles: true }));
+      check('choosing an image closes the popover and proposes its colours, lightest first', !!(await until(() => proposals.get()?.from === 'image' && proposals.get()?.items.length === 4)) && !!(await until(() => !document.querySelector('[role="dialog"][aria-label="From image"]'))) && proposals.get()!.items.every((p, i, all) => i === 0 || all[i - 1].oklch[0] >= p.oklch[0]), proposals.get()?.items.map((p) => p.oklch[0]));
+    }
+    button('design', 'Keep all')?.click();
+    const roled = (await until(() => dd.get().swatches.length === 4 && dd.get().swatches)) || null;
+    const hueOf = (r: string) => roled?.find((w) => w.role === r)?.oklch;
+    check('Keep all gives suggested roles: lightest quiet colour Background, darkest Text, Primary the vivid colour with a real share (teal, not the 2% red)', !!roled && (hueOf('Background')?.[0] ?? 0) > 0.9 && (hueOf('Text')?.[0] ?? 1) < 0.35 && (hueOf('Primary')?.[2] ?? 0) > 150 && (hueOf('Primary')?.[2] ?? 360) < 230, roled?.map((w) => [w.role, w.oklch.map((v) => +v.toFixed(2))]));
+    const complete = await until(() => completeButton());
+    check('the Palette header offers Complete the palette naming the missing roles', !!complete && ['Surface', 'Muted', 'Highlight'].every((r) => complete.textContent?.includes(r)), complete?.textContent);
+    complete?.click();
+    check('one click proposes the missing roles, each for its role, the palette untouched', !!(await until(() => proposals.get()?.from === 'complete' && proposals.get()?.items.map((p) => p.role).join() === 'Surface,Muted,Highlight')) && dd.get().swatches === roled && !!host('design')?.querySelector('[data-ghost]'), proposals.get()?.items.map((p) => p.role));
+    button('design', 'Keep all')?.click();
+    const whole = (await until(() => dd.get().swatches.length === 7 && dd.get().swatches)) || null;
+    check('Keep all gives them their roles: seven distinct roles, no Complete button left', !!whole && new Set(whole.map((w) => w.role)).size === 7 && !(await until(() => completeButton(), 400)), whole?.map((w) => w.role));
+    const complete7 = designResults(dd.get().swatches, undefined, 6, 10);
+    check('the completed palette reads: the derived Muted and Highlight pass on both grounds (the image’s own Accent is its own)', complete7.failing.filter((p) => p.text.role === 'Muted' || p.text.role === 'Highlight').length === 0, complete7.failing.map((p) => [p.text.role, p.ground.role, p.ratio]));
+    patchDesign({ tab: 'contrast', tabChosen: true, locked: [] });
+    clearProposals();
   }
 
   // Send to Design from Dither: the dithered colours as proposals, the document untouched (the CGA

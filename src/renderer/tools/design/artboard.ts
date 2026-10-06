@@ -16,12 +16,18 @@ export const inkOn = (o: Oklch): string => cssColor(contrast(o, DARK) >= contras
 /** the colour the stage shows under a Simulate filter; the file's colour is never touched */
 export const simulated = (o: Oklch, sim: Simulate): Oklch => (sim === 'normal' ? o : simulateCvd(o, sim));
 
+/** an image colour with less of the picture than this is a speck, not a brand colour */
+const REAL_SHARE = 0.05;
+/** below this chroma a colour reads as a neutral */
+const NEUTRAL_C = 0.06;
+
 /**
- * Roles the generator hands out, so the contrast badges work from the first press: lightest
- * Background, darkest Text, then the most colourful as Primary and Accent. A role in `taken` (a
- * locked swatch holds it) or a slot in `skip` is left as it is.
+ * Roles Keep all hands out, so the contrast badges work from the first press: the lightest low-chroma
+ * (and not dark) colour is Background, the darkest Text, then the most colourful as Primary and Accent. With
+ * `shares` (an image's), Primary is the most vivid colour that has a real share of the picture.
+ * A role in `taken` (the palette already uses it) or a slot in `skip` is left as it is.
  */
-export function suggestRoles(list: Oklch[], taken: ReadonlySet<string> = new Set(), skip: ReadonlySet<number> = new Set()): (string | null)[] {
+export function suggestRoles(list: Oklch[], taken: ReadonlySet<string> = new Set(), skip: ReadonlySet<number> = new Set(), shares: (number | undefined)[] = []): (string | null)[] {
   const out: (string | null)[] = list.map(() => null);
   const free = new Set(list.map((_, i) => i).filter((i) => !skip.has(i)));
   const give = (role: string, pool: number[], by: (i: number) => number) => {
@@ -31,10 +37,12 @@ export function suggestRoles(list: Oklch[], taken: ReadonlySet<string> = new Set
     free.delete(i);
   };
   const all = [...free];
-  const colourful = all.filter((i) => list[i][1] >= 0.06);
-  give('Background', all, (i) => list[i][0]);
+  const colourful = all.filter((i) => list[i][1] >= NEUTRAL_C);
+  const pale = all.filter((i) => list[i][1] < NEUTRAL_C && list[i][0] >= 0.5);
+  const real = colourful.filter((i) => (shares[i] ?? 1) >= REAL_SHARE);
+  give('Background', pale.length ? pale : all, (i) => list[i][0]);
   give('Text', all, (i) => -list[i][0]);
-  give('Primary', colourful, (i) => list[i][1]);
+  give('Primary', real.length ? real : colourful, (i) => list[i][1]);
   give('Accent', colourful, (i) => list[i][1]);
   return out;
 }

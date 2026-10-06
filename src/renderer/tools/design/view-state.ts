@@ -1,5 +1,6 @@
 // View state (spec §7.1: never in history) and the small bits of UI state several parts share.
 import { useSyncExternalStore } from 'react';
+import { ACCENTS } from '../../../shared/palette/brand.ts';
 import { PRESETS } from '../../../shared/palette/generate.ts';
 import { shell } from '../../shell/core/index.ts';
 import { EXPORT_FORMATS } from '../common/ExportPalette.tsx';
@@ -16,6 +17,7 @@ const clamp = (v: number, r: { min: number; max: number }) => Math.round(Math.mi
 export const DEFAULT_VIEW: DesignView = {
   selected: [],
   tab: 'contrast',
+  tabChosen: false,
   cvd: 'deutan',
   sim: 'normal',
   locked: [],
@@ -29,6 +31,7 @@ export const DEFAULT_VIEW: DesignView = {
   flagE: 10,
   format: 'ase',
   preset: PRESETS[0]?.id ?? '',
+  accent: 'analogous',
   count: 6,
   seed: 1,
   k: 6,
@@ -38,6 +41,7 @@ export const DEFAULT_VIEW: DesignView = {
 
 const ENUMS: Partial<Record<keyof DesignView, readonly string[]>> = {
   tab: ['contrast', 'check', 'preview', 'harmonies', 'notes'],
+  accent: ACCENTS.map((a) => a.value),
   surround: ['grey', 'ground', 'plain'],
   chipData: ['hex', 'lch', 'table'],
   cvd: ['protan', 'deutan', 'tritan', 'achromat'],

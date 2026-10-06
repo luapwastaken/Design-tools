@@ -56,3 +56,21 @@ test('suggestRoles leaves a held role and a skipped slot alone', () => {
   assert.deepEqual(suggestRoles(list, new Set(['Background'])), ['Text', 'Primary', null]);
   assert.deepEqual(suggestRoles(list, new Set(), new Set([2])), ['Text', 'Background', null]);
 });
+
+test('suggestRoles: Background is the lightest quiet colour, never a vivid one', () => {
+  const list: Oklch[] = [[0.2, 0.01, 60], [0.97, 0.12, 100], [0.9, 0.01, 90], [0.55, 0.15, 30]];
+  assert.deepEqual(suggestRoles(list), ['Text', 'Accent', 'Background', 'Primary']);
+});
+
+test('suggestRoles: Primary is the most vivid colour with a real share of the picture, not a speck', () => {
+  // a photo: a big grey, a big sky, a little red that is the most vivid but is 2% of the pixels
+  const list: Oklch[] = [[0.9, 0.01, 90], [0.3, 0.01, 60], [0.6, 0.1, 240], [0.55, 0.22, 25]];
+  const shares = [0.4, 0.3, 0.28, 0.02];
+  assert.deepEqual(suggestRoles(list, new Set(), new Set(), shares), ['Background', 'Text', 'Primary', 'Accent']);
+  assert.deepEqual(suggestRoles(list), ['Background', 'Text', 'Accent', 'Primary'], 'without shares the most vivid wins');
+});
+
+test('suggestRoles never takes a role the palette uses', () => {
+  const list: Oklch[] = [[0.9, 0.01, 90], [0.3, 0.01, 60], [0.6, 0.1, 240]];
+  assert.deepEqual(suggestRoles(list, new Set(['Primary', 'Text'])), ['Background', null, 'Accent']);
+});

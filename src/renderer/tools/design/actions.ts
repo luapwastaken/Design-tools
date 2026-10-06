@@ -2,15 +2,16 @@
 import { hexToOklch, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { holdValue, valueOf } from '../../../shared/color/value.ts';
 import type { DocController } from '../../../shared/doc-api.ts';
-import { generate } from '../../../shared/palette/generate.ts';
+import { buildRoles, completeRoles } from '../../../shared/palette/brand.ts';
 import { gradientStops } from '../../../shared/palette/gradient.ts';
-import { ROLES } from '../../../shared/palette/roles.ts';
+import { ROLES, type Role } from '../../../shared/palette/roles.ts';
+import { fitChroma } from '../../../shared/palette/space.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { shell } from '../../shell/core/index.ts';
 import { pickFromScreen, toast } from '../../ui/index.ts';
 import { nextV } from './adjust.ts';
 import { suggestRoles } from './artboard.ts';
-import { runGenerate } from './build.ts';
+import { runComplete, runGenerate } from './build.ts';
 import { displayName, insertAfter, listNames, moveIds, newSwatch, plural, recolour, removeIds, type DesignDoc, type DesignView } from './doc.ts';
 import { clearProposals, dropProposals, proposals, proposalsFrom, type Proposal } from './proposals.ts';
 import { armed, getView, patchView } from './view-state.ts';
@@ -99,13 +100,33 @@ export function deleteSelected(doc: Doc): void {
   });
 }
 
-export function addProposals(doc: Doc, items: Proposal[]): void {
+/**
+ * Proposals into the palette, one step. A proposal made for a role (Complete the palette) takes it;
+ * with `assign` (Keep all) the rest are given the roles the palette lacks (suggestRoles), and a role
+ * the palette already uses is never taken from its owner.
+ */
+export function addProposals(doc: Doc, items: Proposal[], assign = false): void {
   if (!items.length) return;
-  const add = items.map((p) => newSwatch(p.oklch, p.name ?? ''));
+  const used = new Set(doc.get().swatches.flatMap((w) => (w.role ? [w.role] : [])));
+  const given = items.map((p) => (p.role && !used.has(p.role) ? p.role : null));
+  const suggested = assign
+    ? suggestRoles(items.map((p) => p.oklch), new Set([...used, ...given.filter((r): r is string => !!r)]), new Set(given.flatMap((r, i) => (r ? [i] : []))), items.map((p) => p.share))
+    : [];
+  const roles = given.map((r, i) => r ?? suggested[i] ?? null);
+  const add = items.map((p, i) => newSwatch(p.oklch, p.name ?? '', roles[i]));
   doc.transact(items.length === 1 ? 'Add colour' : `Add ${plural(items.length, 'colour')}`, (d) => insertAfter(d, null, add));
   dropProposals(items.map((p) => p.id));
   // the first one, in the inspector: selecting all would read as editing all of them
   select([add[0].id]);
+  const guessed = add.filter((_, i) => roles[i] && !given[i]);
+  if (!guessed.length) return;
+  const after = doc.get();
+  toast.show({
+    icon: 'info',
+    message: `Roles suggested: ${listNames(guessed.map((w) => w.role!))}.`,
+    when: () => doc.get() === after,
+    undo: () => void (doc.get() === after && doc.undo()),
+  });
 }
 
 /** an empty palette in place of this one: one undoable step; the first edit makes Scratch/Untitled palette N (spec §7.1) */
@@ -120,18 +141,14 @@ export function setColours(doc: Doc, label: string, changes: Record<string, Oklc
   doc.transact(label, (d) => recolour(d, changes));
 }
 
-/** any pixel on screen (native EyeDropper): into the active swatch, or a new one */
+/** any pixel on screen (native EyeDropper): into the active swatch, or the brand colour of a new palette */
 export async function eyedrop(doc: Doc): Promise<void> {
   const hex = await pickFromScreen();
   if (!hex) return;
   const o = hexToOklch(hex);
   const active = activeSwatch(doc.get());
   if (active) setColours(doc, 'Pick colour from screen', { [active.id]: o });
-  else {
-    const w = newSwatch(o);
-    doc.transact('Add swatch', (d) => insertAfter(d, null, [w]));
-    select([w.id]);
-  }
+  else buildNow(doc, { oklch: o });
 }
 
 /** a pinned (L) swatch is left alone: the toast says how to free it */
@@ -207,10 +224,10 @@ export function copySelected(doc: Doc): void {
   if (w) copyHex(w);
 }
 
-/** A: every proposal on the board joins the palette */
+/** A: every proposal on the board joins the palette, with the roles it lacks suggested */
 export function keepAll(doc: Doc): void {
   const p = proposals.get();
-  if (p) addProposals(doc, p.items);
+  if (p) addProposals(doc, p.items, true);
 }
 
 /** Esc: the armed Delete first, then the proposals, then the selection */
@@ -226,26 +243,80 @@ export function roleSelected(doc: Doc, role: string | null): void {
   if (w) setRole(doc, w.id, role);
 }
 
-/** a changed Style, Colours or Seed redoes the proposals Generate last made (and only those) */
+/** a changed Colours or Seed redoes the suggestions Suggest more colours last made (and only those) */
 export function regenerate(doc: Doc, patch: Partial<DesignView>): void {
   patchView(patch);
   if (proposalsFrom('generate')) runGenerate(doc.get().swatches, getView());
 }
 
+const newSeed = () => 1 + Math.floor(Math.random() * 99999);
+
+/** Suggest more colours: the generator's ramp-shaped colours, as proposals beside the palette's own */
+export function suggestMore(doc: Doc, seed = newSeed()): void {
+  patchView({ seed });
+  runGenerate(doc.get().swatches, getView());
+}
+
 /**
- * Generate (Space), always with a new seed. On a palette that has colours the new ones land as
- * proposals beside its own (a locked proposal is kept through a reroll); an empty palette is made
- * in one step, roles suggested. Locks are view-state (L): the palette's own colours already count as
- * locked slots, so there is nothing to reroll in place.
+ * Build palette: the seven jobs as swatches with their roles, in the empty palette, one step. The brand
+ * colour (typed, picked or pasted) is the Primary exactly as given and starts locked; with none, the
+ * seed makes one. The first build shows Preview in use unless the user has chosen a tab themselves.
  */
-export function generateNow(doc: Doc, seed = 1 + Math.floor(Math.random() * 99999)): void {
+export function buildNow(doc: Doc, brand?: { oklch: Oklch; name?: string | null }, seed = newSeed()): void {
+  if (doc.get().swatches.length) return;
   patchView({ seed });
   const v = getView();
-  const d = doc.get();
-  if (proposalsFrom('generate') || d.swatches.length) return runGenerate(d.swatches, v);
-  const made = generate({ seed, count: v.count, preset: v.preset, locked: Array.from({ length: v.count }, () => null) });
-  const roles = suggestRoles(made, new Set(), new Set());
-  const next = made.map((o, i) => newSwatch(o, '', roles[i]));
-  doc.transact('Generate palette', (x) => ({ ...x, swatches: next }));
-  select([next[0].id]);
+  const made = buildRoles({ seed, style: v.preset, accent: v.accent, locked: brand ? { Primary: brand.oklch } : {} });
+  const swatches = ROLES.map((role) => newSwatch(made[role], role === 'Primary' ? (brand?.name ?? '') : '', role));
+  const primary = swatches.find((w) => w.role === 'Primary')!;
+  doc.transact('Build palette', (d) => ({ ...d, swatches }));
+  patchView({ selected: [primary.id], locked: brand ? [primary.id] : [], ...(v.tabChosen ? {} : { tab: 'preview' as const }) });
+}
+
+/** the swatch that holds each of the seven jobs (the first, should an import give two the same one) */
+const jobHolders = (swatches: Swatch[]): [Role, Swatch][] =>
+  ROLES.flatMap((role) => swatches.filter((w) => w.role === role).slice(0, 1).map((w): [Role, Swatch] => [role, w]));
+
+/**
+ * Reroll: every unlocked colour that has a job is made again from the locked ones (a new Accent and
+ * neutrals round a locked Primary), in one step. A colour without a role has no job and stays.
+ * `patch` is a changed Style, Accent or Seed, which rerolls in place the same way.
+ */
+export function rerollNow(doc: Doc, patch: Partial<DesignView> = {}): void {
+  patchView(patch);
+  const v = getView();
+  const jobs = jobHolders(doc.get().swatches);
+  if (!jobs.length) return void toast.show({ icon: 'info', message: 'Nothing to reroll yet: no colour has a role. Give colours roles, or use Suggest more colours.' });
+  const free = jobs.filter(([, w]) => !v.locked.includes(w.id));
+  if (!free.length) return void toast.show({ icon: 'lock', message: 'Every colour with a role is locked. Press L on one to let it change.' });
+  const locked = Object.fromEntries(jobs.filter(([, w]) => v.locked.includes(w.id)).map(([role, w]) => [role, w.oklch]));
+  const made = buildRoles({ seed: v.seed, style: v.preset, accent: v.accent, locked });
+  doc.transact('Reroll palette', (d) => recolour(d, Object.fromEntries(free.map(([role, w]) => [w.id, made[role]]))));
+}
+
+/** a changed Style, Accent or Seed: rerolls the palette in place, or only sets what the next build uses while it is empty */
+export const restyle = (doc: Doc, patch: Partial<DesignView>): void => (doc.get().swatches.length ? rerollNow(doc, patch) : patchView(patch));
+
+/** the jobs no swatch holds yet; none when the palette holds no job at all (nothing to complete from) */
+export function missingRoles(swatches: Swatch[]): Role[] {
+  const held = jobHolders(swatches).map(([role]) => role);
+  return held.length ? ROLES.filter((role) => !held.includes(role)) : [];
+}
+
+/** Complete the palette: the missing jobs, made round the colours that are there, as proposals */
+export function completeNow(doc: Doc): void {
+  const v = getView();
+  const have = Object.fromEntries(jobHolders(doc.get().swatches).map(([role, w]) => [role, w.oklch]));
+  const { missing, colours } = completeRoles(have, { seed: v.seed, style: v.preset, accent: v.accent });
+  if (missing.length) runComplete(missing, colours);
+}
+
+/**
+ * Space. With suggestions from Suggest more colours up, a new set of those; an empty palette is built
+ * from a random colour; otherwise the unlocked colours are rerolled in place (a locked one stays).
+ */
+export function spaceNow(doc: Doc, seed = newSeed()): void {
+  if (proposalsFrom('generate')) return suggestMore(doc, seed);
+  if (!doc.get().swatches.length) return buildNow(doc, undefined, seed);
+  rerollNow(doc, { seed });
 }
