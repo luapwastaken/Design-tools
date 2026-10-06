@@ -75,3 +75,30 @@ export function hsbHold(target: number, h: number, s: number): [number, number] 
   if (b <= 1) return [sat * 100, b * 100];
   return [p >= 1 ? 0 : clamp01((1 - t) / (1 - p)) * 100, 100];
 }
+
+/** Rec. 709 luma of the HSL colour (h 0-360, s and l 0-1) */
+const hslLuma = (h: number, s: number, l: number) => {
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  };
+  return luma(f(0), f(8), f(4));
+};
+
+/**
+ * HSL lightness (0-100) at HSL hue `h` and saturation `s` (0-100) with this value. Value runs from
+ * 0 at L 0 to 1 at L 100 and never falls between, so every value is reachable and saturation never
+ * gives way (unlike HSB).
+ */
+export function hslHold(target: number, h: number, s: number): number {
+  const t = clamp01(target);
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 32; i++) {
+    const m = (lo + hi) / 2;
+    if (hslLuma(h, s / 100, m) < t) lo = m;
+    else hi = m;
+  }
+  return ((lo + hi) / 2) * 100;
+}
