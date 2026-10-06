@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { rgb255, type Oklch } from '../src/shared/color/index.ts';
 import { fromOklab, toOklab } from '../src/shared/palette/space.ts';
-import { direction, frame, rampLut, shade, surface, tone, type Light, type Shape } from '../src/renderer/tools/illustration/shade.ts';
+import { DEFAULT_FINISH, finishOf, type Finish } from '../src/renderer/tools/illustration/finish.ts';
+import { direction, frame, lookOf, plainLook, rampLut, read, shade, surface, tone, transmission, type Light, type Look, type Shape } from '../src/renderer/tools/illustration/shade.ts';
 import { budget } from './perf.ts';
 
 // highlight, light, base, shadow, deep shadow: a warm-lit terracotta
@@ -17,9 +18,9 @@ const UPPER_LEFT: Light = { azimuth: 320, elevation: 35 };
 const SIZE = 96;
 const at = (lut: Uint8ClampedArray, i: number) => [...lut.subarray(i * 3, i * 3 + 3)];
 
-function render(shape: Shape, light: Light, banded = false, size = SIZE) {
+function render(shape: Shape, light: Light, banded = false, size = SIZE, look: Look = plainLook(RAMP, banded)) {
   const px = new Uint8ClampedArray(size * size * 4);
-  shade(surface(shape, size), rampLut(RAMP, banded), light, px);
+  shade(surface(shape, size), look, light, px);
   return px;
 }
 
@@ -52,25 +53,50 @@ test('banded: every entry is a step, but for one blended entry at each edge', ()
   assert.deepEqual(rampLut([RAMP[2]], true).subarray(0, 3), new Uint8ClampedArray(rgb255(RAMP[2])));
 });
 
+/** the normal turned from the light toward the viewer by `deg`: always a visible one, through the highlight's half vector */
+const arc = (l: [number, number, number], deg: number): [number, number, number] => {
+  const dot = l[2];
+  const s = [-l[0] * dot, -l[1] * dot, 1 - l[2] * dot];
+  const k = Math.hypot(...s);
+  const side = s.map((v) => v / k);
+  const [c, n] = [Math.cos((deg * Math.PI) / 180), Math.sin((deg * Math.PI) / 180)];
+  return l.map((v, i) => v * c + side[i] * n) as [number, number, number];
+};
+const MATTE: Finish = { ...DEFAULT_FINISH, gloss: 0 };
+
 test('tone: the painter’s order from the light round to the far side', () => {
-  const f = frame(UPPER_LEFT);
+  const f = frame(UPPER_LEFT, MATTE);
   const [lx, ly, lz] = f.l;
   const facing = tone(lx, ly, lz, 1, f);
-  // the normal turned away from the light about an axis in the picture plane, never through the specular spot
-  const a = [-ly, lx, 0].map((v) => v / Math.hypot(lx, ly));
-  const side = [a[1] * lz, -a[0] * lz, a[0] * ly - a[1] * lx]; // a × L
-  const turned = (deg: number) => f.l.map((v, k) => v * Math.cos((deg * Math.PI) / 180) + side[k] * Math.sin((deg * Math.PI) / 180)) as [number, number, number];
-  const along = [0, 20, 40, 60, 80].map((d) => tone(...turned(d), 1, f));
-  assert.ok(along.every((v, i) => i === 0 || v < along[i - 1]), `darkens toward the terminator: ${along}`);
+  const along = [0, 20, 40, 60, 80, 90].map((d) => tone(...arc(f.l, d), 1, f));
+  assert.ok(along.every((v, i) => i === 0 || v < along[i - 1] + 1e-9), `darkens toward the terminator: ${along}`);
   assert.ok(facing > 0.625 && facing < 0.875, `facing the light: the light step (${facing})`);
-  const [hx, hy, hz] = f.h;
-  assert.ok(tone(hx, hy, hz, 1, f) > 0.875, 'halfway between the light and the viewer: the highlight');
-  const core = tone(...turned(100), 1, f);
-  assert.ok(core < 0.125, `just past the terminator: the deepest shadow (${core})`);
-  // the far edge, turned from the light and lit back by the room: lighter than the core
-  const b = f.b;
-  assert.ok(tone(b[0], b[1], b[2], 1, f) > core + 0.1);
+  const core = along[5];
+  assert.ok(core < 0.125, `at the terminator: the deepest shadow (${core})`);
+  assert.ok(tone(...arc(f.l, 100), 1, f) > core, 'and reflected light lifts it again past the core');
+  // the far edge, turned from the light and lit back by the ground: lighter than the core
+  assert.ok(tone(0, -1, 0, 1, f) > core + 0.1, 'reflected light from below lifts the shadow side');
   assert.ok(tone(lx, ly, lz, 0.6, f) < facing, 'less open, less light');
+  const [hx, hy, hz] = frame(UPPER_LEFT).h;
+  assert.ok(tone(hx, hy, hz, 1, frame(UPPER_LEFT)) > 0.875, 'halfway between the light and the viewer: the highlight');
+});
+
+/** how fast the tone falls round the terminator, per degree, at the steepest: a wide terminator is a gentle one */
+function steepest(f: Finish): number {
+  const fr = frame(UPPER_LEFT, { ...f, gloss: 0, sheen: 0, metal: 0, translucency: 0 });
+  const at = (d: number) => tone(...arc(fr.l, d), 1, fr);
+  let worst = 0;
+  for (let d = 60; d < 110; d += 0.5) worst = Math.max(worst, (at(d) - at(d + 0.5)) / 0.5);
+  return worst;
+}
+
+test('the terminator is wider for skin and wax than for stone, and the material’s softness is the cause', () => {
+  const [skin, stone, paper] = [steepest(finishOf('skin')), steepest(finishOf('stone')), steepest(finishOf('paper'))];
+  assert.ok(skin < stone * 0.6, `skin ${skin} stone ${stone}`);
+  assert.ok(paper < stone && paper > skin, `paper ${paper}`);
+  // the same material with its Softness slider moved
+  assert.ok(steepest(finishOf('stone', { softness: 1 })) < stone * 0.6);
+  assert.ok(steepest(finishOf('skin', { softness: 0 })) > skin * 1.6);
 });
 
 test('a sphere lit from the upper left is lighter there and throws its shadow lower right', () => {
@@ -118,12 +144,12 @@ test('shapes cover what they should, edges antialiased', () => {
 });
 
 test('a light drag stays well inside a frame: three shapes at full size', () => {
-  const lut = rampLut(RAMP);
+  const look = lookOf({ steps: RAMP, material: 'cloth', light: [0.95, 0.05, 85], surround: [0.5, 0.01, 90] });
   const px = new Uint8ClampedArray(288 * 288 * 4);
   const shapes: Shape[] = ['sphere', 'cube', 'cloth'];
-  shapes.forEach((s) => shade(surface(s, 288), lut, UPPER_LEFT, px)); // built and warmed
+  shapes.forEach((s) => shade(surface(s, 288), look, UPPER_LEFT, px)); // built and warmed
   const t = performance.now();
-  for (let a = 0; a < 10; a++) shapes.forEach((s) => shade(surface(s, 288), lut, { azimuth: a * 36, elevation: 30 }, px));
+  for (let a = 0; a < 10; a++) shapes.forEach((s) => shade(surface(s, 288), look, { azimuth: a * 36, elevation: 30 }, px));
   const frameMs = (performance.now() - t) / 10;
   assert.ok(frameMs < budget(12), `${frameMs.toFixed(1)}ms per frame`);
 });
