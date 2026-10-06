@@ -1,5 +1,5 @@
-// CSS checks: `content:`, colour literals, motion and the token blocks (brief §2 rules 1, 2, 4).
-import { MOVE, cssColour, durationProblems, transitionProblems } from './values.mjs';
+// CSS checks: `content:`, colour literals, motion, edge stripes and the token blocks (brief §2 rules 1, 2, 4, 7).
+import { MOVE, cssColour, durationProblems, splitTop, transitionProblems } from './values.mjs';
 
 /**
  * Every declaration in a stylesheet as { prop, value, line, ctx }, where ctx lists the enclosing
@@ -73,6 +73,54 @@ export function checkCss(decls, vars, isTokens) {
     if (prop === 'transition-duration' || prop === 'animation-duration') for (const m of durationProblems(prop, value, vars)) add(d, 4, m);
     if (prop === 'scroll-behavior' && value === 'smooth') add(d, 4, 'smooth scrolling animates the view');
     if (prop === 'view-transition-name') add(d, 4, 'view transitions are not allowed');
+  }
+  out.push(...edgeStripeProblems(decls));
+  return out;
+}
+
+const LEN = /^(-?\d*\.?\d+)(px)?$/i;
+const ACCENT = /var\(--(signal|agent|danger|ok|cross)(?![\w])[\w-]*\)/;
+const SIDE = /^border-(top|right|bottom|left|block|inline)(-start|-end)?(-width|-color)?$/;
+// positions and keyboard focus are not states: drop lines, insert markers, the focus bar
+const POSITION_MARKS = /\[data-(insert|drop)|:focus-visible|\.(before|after)\b/;
+
+/**
+ * Rule 7: nothing marks a state (selected, active, proposed, failing) with a coloured bar on one
+ * edge of a box; the state is a background change. Catches offset-only shadows of 2px or in an
+ * accent, one-sided borders of 2px or in an accent, and absolutely placed ::before/::after bars of
+ * 2-4px along an edge. Neutral 1px dividers, full rings and position marks pass.
+ */
+export function edgeStripeProblems(decls) {
+  const out = [];
+  const add = (d, msg) => out.push({ line: d.line, rule: 7, msg });
+  const rules = new Map();
+  for (const d of decls) {
+    const sel = d.ctx.at(-1) ?? '';
+    if (sel.startsWith('@') || d.prop.startsWith('--')) continue;
+    if (d.prop === 'box-shadow') for (const layer of splitTop(d.value, ',')) {
+      const n = splitTop(layer.replace(/^inset\s+|\s+inset$/i, ''), ' ').filter((x) => LEN.test(x)).map(parseFloat);
+      const [x = 0, y = 0, blur = 0, spread = 0] = n;
+      if (n.length >= 2 && !blur && !spread && (x === 0) !== (y === 0) && (Math.abs(x || y) >= 2 || ACCENT.test(layer)))
+        add(d, `box-shadow ${layer.trim()} draws a stripe on one edge; mark the state with a background change`);
+    }
+    if (SIDE.test(d.prop)) {
+      const w = splitTop(d.value, ' ').find((x) => LEN.test(x));
+      if ((w && parseFloat(w) >= 2) || ACCENT.test(d.value)) add(d, `${d.prop}: ${d.value} is a stripe on one edge; mark the state with a background change`);
+    }
+    const key = d.ctx.join('|');
+    (rules.get(key) ?? rules.set(key, []).get(key)).push(d);
+  }
+  for (const ds of rules.values()) {
+    const sel = ds[0].ctx.at(-1) ?? '';
+    if (!/::?(before|after)\b/.test(sel) || POSITION_MARKS.test(sel)) continue;
+    const get = (p) => ds.find((d) => d.prop === p)?.value;
+    if (get('position') !== 'absolute' || !(get('background') ?? get('background-color'))) continue;
+    const px = (v) => (v && LEN.test(v) ? parseFloat(v) : null);
+    const thin = (v) => px(v) !== null && px(v) >= 2 && px(v) <= 4;
+    const both = (a, b) => get(a) !== undefined && get(b) !== undefined;
+    const tall = both('top', 'bottom') || /^(100%|calc)/.test(get('height') ?? '');
+    const wide = both('left', 'right') || /^(100%|calc)/.test(get('width') ?? '');
+    if ((thin(get('width')) && tall) || (thin(get('height')) && wide)) add(ds[0], `${sel} is a bar on one edge; mark the state with a background change`);
   }
   return out;
 }

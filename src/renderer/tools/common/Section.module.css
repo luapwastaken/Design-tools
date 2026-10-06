@@ -7,10 +7,9 @@
 
 .tabsHead { padding: 0 10px; align-items: stretch; }
 .tabs { display: flex; align-items: stretch; gap: 4px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-.tab { position: relative; display: flex; align-items: center; gap: 8px; padding: 0 14px; border: 0; background: none; color: var(--ink-2); font: 400 13.5px/1 var(--font-sans); white-space: nowrap; cursor: pointer; }
-.tab:hover:not(:disabled) { color: var(--ink); }
-.tab.on { color: var(--ink); font-weight: 500; }
-.tab.on::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--signal); }
+.tab { position: relative; display: flex; align-items: center; gap: 8px; margin: 8px 0; padding: 0 12px; border: 0; border-radius: var(--r-ctl); background: none; color: var(--ink-2); font: 400 13.5px/1 var(--font-sans); white-space: nowrap; cursor: pointer; }
+.tab:hover:not(:disabled) { background: var(--well-hover); color: var(--ink); }
+.tab.on, .tab.on:hover { background: var(--raise); color: var(--ink); font-weight: 500; }
 .tab:disabled { color: var(--ink-4); cursor: default; }
 .tab:focus-visible { outline: 1px solid var(--signal); outline-offset: -4px; border-radius: 6px; }
 .badge { min-width: 18px; height: 17px; padding: 0 6px; border-radius: var(--r-pill); background: var(--danger-soft); color: var(--danger); font: 500 var(--fs-unit)/17px var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; text-align: center; }

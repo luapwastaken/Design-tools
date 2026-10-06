@@ -46,7 +46,15 @@ const PLANTED: Record<string, string> = {
 @keyframes grow { to { transform: scale(2); } } /* expect: 4 */
 .l { animation-iteration-count: infinite; } /* expect: 4 */
 .m { animation: none; animation-name: none; }
-.k { scroll-behavior: smooth; } /* expect: 4 */`,
+.k { scroll-behavior: smooth; } /* expect: 4 */
+.p { box-shadow: inset 0 4px 0 var(--agent), inset 0 0 0 1px var(--edge); } /* expect: 7 */
+.q { box-shadow: inset 3px 0 0 var(--signal); } /* expect: 7 */
+.r { border-left: 3px solid var(--line); } /* expect: 7 */
+.s::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: var(--agent); } /* expect: 7 */
+.t { box-shadow: 0 -1px 0 var(--line); }
+.u[data-insert]::before { content: ""; position: absolute; top: 0; bottom: 0; width: 3px; background: var(--ink); }
+.v:focus-visible::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--signal); }
+.w { box-shadow: inset 0 0 0 2px var(--agent); }`,
   'src/renderer/ui/Bad.tsx': `// a comment may say anything: → ─ §
 export const A = () => <div title="x">→</div>; // expect: 1 6
 export const B = () => <select />; // expect: 6

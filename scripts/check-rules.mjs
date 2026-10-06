@@ -6,6 +6,8 @@
 //      @keyframes, CSS animation or looping .animate() at all (nothing loops: no spinners), and a
 //      reduced-motion rule that zeroes it all
 //   6  no OS-drawn popups: title attributes, <select>, number and colour inputs, Menu.popup
+//   7  no stripe on one edge of a box marks a state (offset shadow of 2px or in an accent, one-sided
+//      border of 2px or in an accent, an absolute ::before/::after bar of 2-4px); use a background
 // Rules 3 and 5 are behaviour, checked by review and the smoke run. Prints file:line for each
 // violation and exits 1 if there are any. `npm run check:rules`; an argument checks another root
 // (the test points it at a folder of planted violations).
