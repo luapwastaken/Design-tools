@@ -196,7 +196,7 @@ function lightPixel(nx: number, ny: number, nz: number, open: number, thick: num
   // sheen: a glow at grazing angles over a darker body
   if (fin.sheen > 0) {
     const x = 1 - nz;
-    v = v * (1 - 0.3 * fin.sheen * nz * nz) + (1 - v) * fin.sheen * x * x * (0.5 + 0.5 * smooth(-0.4, 0.3, ndl)) * 0.9;
+    v = v * (1 - 0.4 * fin.sheen * nz * nz) + (1 - v) * fin.sheen * x * x * Math.sqrt(x) * 1.15 * (0.55 + 0.45 * smooth(-0.4, 0.3, ndl));
   }
 
   // the highlight: round, or stretched into a streak by the grain
@@ -361,6 +361,8 @@ export function plainLook(steps: Oklch[], banded = false): Look {
 /** per pixel, the angle (degrees above the picture plane) at which the cloth stops hiding the light, from 8 azimuths round */
 export type Horizons = { front: Uint8Array; back: Uint8Array };
 const AZIMUTHS = 8;
+/** degrees either side of a fold's horizon over which its shadow fades: a penumbra */
+const SOFT = 4;
 /** distances (in 1/560 of the picture) the horizon is marched out to */
 const REACH = Array.from({ length: 16 }, (_, k) => 1.5 * 1.3 ** k);
 
@@ -443,10 +445,11 @@ function reach(hz: Horizons, n: number, p: number, s: [number, number, number], 
   reachF = reachB = 1;
   if (elev > 0) {
     const [a, b] = [hz.front[k0 * n + p], hz.front[k1 * n + p]];
-    reachF = smooth(-2.5, 2.5, elev - (a + (b - a) * w));
+    reachF = smooth(-SOFT, SOFT, elev - (a + (b - a) * w));
   } else {
     const [a, b] = [hz.back[k0 * n + p], hz.back[k1 * n + p]];
-    reachB = smooth(-2.5, 2.5, -elev - (a + (b - a) * w));
+    // the same folds shade a face tipped toward the light as one turned away from it
+    reachB = reachF = smooth(-SOFT, SOFT, -elev - (a + (b - a) * w));
   }
 }
 
@@ -534,7 +537,7 @@ export function shade(sf: Surface, look: Look, light: Light, out: Uint8ClampedAr
         if (S[GLOW] >= 0.5) stats.glow[gi] += a * S[GLOW];
         else stats.steps[stepAt(S[TONE], look.steps)] += a;
         if (S[BOUNCE] > 0.05) stats.bounce[k] += a * S[BOUNCE];
-        if (S[SHINE] > 0.05) stats.shine += a * S[SHINE];
+        if (S[SHINE] > 0.2) stats.shine += a * S[SHINE];
       }
       // the shape over its own shadow: premultiplied, then back
       const alpha = a + sh * (1 - a);
@@ -741,11 +744,20 @@ function blurred(src: Float32Array, size: number, r: number): Float32Array {
 }
 
 const surfaces = new Map<string, Surface>();
+const MAX_SURFACES = 14;
 
 /** Built on first use and kept: the shapes never change, only the light and the ramp. `fold` is the cloth's drape. */
 export function surface(shape: Shape, size: number, fold: Fold = 'curtain'): Surface {
   const key = shape === 'cloth' ? `cloth:${fold}:${size}` : `${shape}:${size}`;
   let sf = surfaces.get(key);
-  if (!sf) surfaces.set(key, (sf = build(shape === 'cloth' ? clothHit(fold) : HITS[shape], size, shape === 'cloth')));
+  if (sf) {
+    // the least recently used goes first
+    surfaces.delete(key);
+    surfaces.set(key, sf);
+  } else {
+    // a cloth at full size is some 15 MB with its horizons: only the latest few are kept
+    if (surfaces.size >= MAX_SURFACES) surfaces.delete(surfaces.keys().next().value!);
+    surfaces.set(key, (sf = build(shape === 'cloth' ? clothHit(fold) : HITS[shape], size, shape === 'cloth')));
+  }
   return sf;
 }

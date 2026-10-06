@@ -4,7 +4,7 @@
 // Look of <ramp> (the same rows as Ramp settings, relighting every tick), Surface (how the material
 // is lit), the colours the light needs that the ramp lacks, and how it is seen. Show: All ramps puts
 // every ramp on the shape under the one light. Judged colour sits on the neutral surround.
-import { memo, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { memo, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent } from 'react';
 import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
 import type { RampSpec, Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
@@ -99,91 +99,96 @@ export function LightTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illus
     },
   };
   // the light or one of the sliders is mid-gesture: draw at drag size
-  const dragging = live !== null || doc.inGesture();
+  const inGesture = useSyncExternalStore(doc.subscribe, () => doc.inGesture());
+  const dragging = live !== null || inGesture;
   const k = dragging ? DRAGGING : 1;
 
   const loose = looseOf(d).length > 0;
   const spec = ramp?.spec;
   return (
     <div className={s.tab}>
-      <div className={s.main}>
-        <div className={s.head}>
-          {ramp && (
-            <>
-              <span className={s.caption}>
-                <b>{ramp.name}</b> on {view.all ? 'every ramp' : shape === 'all' ? 'all three shapes' : SHAPE_NAME[shape]}, lit {lightWords(light)}.{strayed && ' The selected colour is in no ramp, so this is the first ramp.'}
-              </span>
-              <Readout />
-            </>
-          )}
-        </div>
-        <div className={s.stage}>
-          <div className={s.ground} style={{ background: surround }} data-colour="" />
-          {!ramp ? (
-            <EmptyState
-              icon="light_mode"
-              problem
-              title={loose ? 'These colours are in no ramp yet' : 'Nothing to light yet'}
-              detail={loose ? 'Make ramps from them, and they show here on a sphere, a cube and a cloth fold under one light.' : 'Add a base colour, and its ramp shows here lit by the sun.'}
-              action={loose ? { label: 'Make ramps', icon: 'auto_awesome_motion', onClick: () => rampsFromLoose(doc) } : undefined}
-              className={s.empty}
+      <div className={s.layout}>
+        <div className={s.main}>
+          <div className={s.head}>
+            {ramp && (
+              <>
+                <span className={s.caption}>
+                  <b>{ramp.name}</b> on {view.all ? 'every ramp' : shape === 'all' ? 'all three shapes' : SHAPE_NAME[shape]}, lit {lightWords(light)}.{strayed && ' The selected colour is in no ramp, so this is the first ramp.'}
+                </span>
+                <Readout />
+              </>
+            )}
+          </div>
+          <div className={s.stage}>
+            <div className={s.ground} style={{ background: surround }} data-colour="" />
+            {!ramp ? (
+              <EmptyState
+                icon="light_mode"
+                problem
+                title={loose ? 'These colours are in no ramp yet' : 'Nothing to light yet'}
+                detail={loose ? 'Make ramps from them, and they show here on a sphere, a cube and a cloth fold under one light.' : 'Add a base colour, and its ramp shows here lit by the sun.'}
+                action={loose ? { label: 'Make ramps', icon: 'auto_awesome_motion', onClick: () => rampsFromLoose(doc) } : undefined}
+                className={s.empty}
+              />
+            ) : (
+              <>
+                {view.all ? (
+                  <Grid ramps={ramps} shape={shape as Shape} fold={view.fold} selected={ramp.id} light={light} banded={view.banded} ground={ground} scale={k} onSelect={(id) => onView({ ramp: id, rampFor: sel?.id ?? '' })} />
+                ) : shape === 'all' ? (
+                  <Three ramp={ramp} fold={view.fold} light={light} banded={view.banded} ground={ground} scale={k} />
+                ) : (
+                  <One ramp={ramp} shape={shape} fold={view.fold} light={light} banded={view.banded} ground={ground} scale={k} />
+                )}
+                <SunRing light={light} gesture={gesture} onKey={(l) => onView(l)} />
+              </>
+            )}
+          </div>
+          {ramp && !view.all && <StepUse ramp={ramp} shapes={shape === 'all' ? ALL_SHAPES : [shape]} fold={view.fold} light={light} banded={view.banded} ground={ground} />}
+          <div className={s.options}>
+            <Segmented
+              label="Shape"
+              options={SHAPES.map((o) => (o.value === 'all' && view.all ? { ...o, disabled: true, tip: 'All ramps shows one shape for each ramp' } : o))}
+              value={shape}
+              onChange={(next) => onView({ shape: next })}
             />
-          ) : (
+            <Segmented label="Show" options={[...SHOWS]} value={view.all ? 'all' : 'one'} onChange={(m) => onView({ all: m === 'all' })} />
+            {(shape === 'cloth' || shape === 'all') && <Segmented label="Drape" options={FOLDS.map((f) => ({ value: f.value, label: f.label, tip: f.tip }))} value={view.fold} onChange={(fold) => onView({ fold })} />}
+            <Segmented label="Shading" options={[...SHADINGS]} value={view.banded ? 'banded' : 'smooth'} onChange={(m) => onView({ banded: m === 'banded' })} />
+          </div>
+        </div>
+        <div className={s.controls}>
+          <InspectorGroup title="Light" id="illustration.light.light">
+            <InspectorRow label="Direction" info="Where the light comes from, in degrees clockwise from straight up: 0 is above, 90 the right, 180 below, 270 the left.">
+              <NumberField label="Direction" hideLabel value={Math.round(light.azimuth)} min={0} max={360} unit="°" onChange={(azimuth) => gesture.move({ azimuth: wrap(azimuth) })} onCommit={gesture.commit} onCancel={gesture.cancel} />
+            </InspectorRow>
+            <InspectorRow label="Height" info="How far round toward you or behind: 0 lights from the side, 90 from where you stand, and below 0 from behind the object (the sun is drawn hollow).">
+              <NumberField label="Height" hideLabel value={Math.round(light.elevation)} min={-90} max={90} unit="°" onChange={(elevation) => gesture.move({ elevation })} onCommit={gesture.commit} onCancel={gesture.cancel} />
+            </InspectorRow>
+            <Presets light={light} onPick={(l) => onView(l)} />
+            <p className={s.hint}>Drag the sun, or press it and use the arrow keys. Alt puts it behind the object, Shift holds one of the two numbers, a double-click goes back to Upper left.</p>
+            {spec && <LightColours key={spec.id} doc={doc} d={d} r={spec} />}
+            {spec && d.ramps.length > 1 && <EveryRamp doc={doc} d={d} r={spec} />}
+          </InspectorGroup>
+          {spec && ramp && (
             <>
-              {view.all ? (
-                <Grid ramps={ramps} shape={shape as Shape} fold={view.fold} selected={ramp.id} light={light} banded={view.banded} ground={ground} scale={k} onSelect={(id) => onView({ ramp: id, rampFor: sel?.id ?? '' })} />
-              ) : shape === 'all' ? (
-                <Three ramp={ramp} fold={view.fold} light={light} banded={view.banded} ground={ground} scale={k} />
-              ) : (
-                <One ramp={ramp} shape={shape} fold={view.fold} light={light} banded={view.banded} ground={ground} scale={k} />
-              )}
-              <SunRing light={light} gesture={gesture} onKey={(l) => onView(l)} />
+              <InspectorGroup title={`Look of ${ramp.name}`} id="illustration.light.look">
+                <RampLook key={spec.id} doc={doc} d={d} r={spec} />
+                {ramp.swatches.some((w) => w.edited) && <p className={s.hint}>{ramp.swatches.filter((w) => w.edited).length} edited steps keep their colour.</p>}
+              </InspectorGroup>
+              <Surface key={`surface-${spec.id}`} doc={doc} d={d} r={spec} />
+              {!view.all && <Needs doc={doc} d={d} ramp={ramp} shapes={shape === 'all' ? ALL_SHAPES : [shape]} fold={view.fold} light={light} banded={view.banded} ground={ground} />}
             </>
           )}
+          <InspectorGroup title="Seen" id="illustration.light.seen">
+            <InspectorRow label="Surround" info="What the object sits on. It also colours the light bounced back into the shadows.">
+              <Select options={SURROUNDS.map((o) => ({ value: o.value, label: SURROUND_NAME[o.value], swatch: surroundOf(o.value, d.swatches) }))} value={v.surround} onChange={(next) => patchView({ surround: next })} />
+            </InspectorRow>
+            <InspectorRow label="Seen as">
+              <Select options={PROOFS} value={v.proof} onChange={(proof: Proof) => patchView({ proof })} />
+            </InspectorRow>
+            <p className={s.hint}>The surround colours the light bounced back into the shadows, as well as what the object sits on.</p>
+          </InspectorGroup>
         </div>
-        {ramp && !view.all && <StepUse ramp={ramp} shapes={shape === 'all' ? ALL_SHAPES : [shape]} fold={view.fold} light={light} banded={view.banded} ground={ground} />}
-        <div className={s.options}>
-          <Segmented
-            label="Shape"
-            options={SHAPES.map((o) => (o.value === 'all' && view.all ? { ...o, disabled: true, tip: 'All ramps shows one shape for each ramp' } : o))}
-            value={shape}
-            onChange={(next) => onView({ shape: next })}
-          />
-          <Segmented label="Show" options={[...SHOWS]} value={view.all ? 'all' : 'one'} onChange={(m) => onView({ all: m === 'all' })} />
-          {(shape === 'cloth' || shape === 'all') && <Segmented label="Drape" options={FOLDS.map((f) => ({ value: f.value, label: f.label, tip: f.tip }))} value={view.fold} onChange={(fold) => onView({ fold })} />}
-          <Segmented label="Shading" options={[...SHADINGS]} value={view.banded ? 'banded' : 'smooth'} onChange={(m) => onView({ banded: m === 'banded' })} />
-        </div>
-      </div>
-      <div className={s.controls}>
-        <InspectorGroup title="Light" id="illustration.light.light">
-          <InspectorRow label="Direction" info="Where the light comes from, in degrees clockwise from straight up: 0 is above, 90 the right, 180 below, 270 the left.">
-            <NumberField label="Direction" hideLabel value={Math.round(light.azimuth)} min={0} max={360} unit="°" onChange={(azimuth) => gesture.move({ azimuth: wrap(azimuth) })} onCommit={gesture.commit} onCancel={gesture.cancel} />
-          </InspectorRow>
-          <InspectorRow label="Height" info="How far round toward you or behind: 0 lights from the side, 90 from where you stand, and below 0 from behind the object (the sun is drawn hollow).">
-            <NumberField label="Height" hideLabel value={Math.round(light.elevation)} min={-90} max={90} unit="°" onChange={(elevation) => gesture.move({ elevation })} onCommit={gesture.commit} onCancel={gesture.cancel} />
-          </InspectorRow>
-          <Presets light={light} onPick={(l) => onView(l)} />
-          {spec && <LightColours key={spec.id} doc={doc} d={d} r={spec} />}
-          {spec && d.ramps.length > 1 && <EveryRamp doc={doc} d={d} r={spec} />}
-        </InspectorGroup>
-        {spec && ramp && (
-          <>
-            <InspectorGroup title={`Look of ${ramp.name}`} id="illustration.light.look">
-              <RampLook key={spec.id} doc={doc} d={d} r={spec} />
-              {ramp.swatches.some((w) => w.edited) && <p className={s.hint}>{ramp.swatches.filter((w) => w.edited).length} edited steps keep their colour.</p>}
-            </InspectorGroup>
-            <Surface key={`surface-${spec.id}`} doc={doc} d={d} r={spec} />
-            {!view.all && <Needs doc={doc} d={d} ramp={ramp} shapes={shape === 'all' ? ALL_SHAPES : [shape]} fold={view.fold} light={light} banded={view.banded} ground={ground} />}
-          </>
-        )}
-        <InspectorGroup title="Seen" id="illustration.light.seen">
-          <InspectorRow label="Surround" info="What the object sits on. It also colours the light bounced back into the shadows.">
-            <Select options={SURROUNDS.map((o) => ({ value: o.value, label: SURROUND_NAME[o.value], swatch: surroundOf(o.value, d.swatches) }))} value={v.surround} onChange={(next) => patchView({ surround: next })} />
-          </InspectorRow>
-          <InspectorRow label="Seen as">
-            <Select options={PROOFS} value={v.proof} onChange={(proof: Proof) => patchView({ proof })} />
-          </InspectorRow>
-        </InspectorGroup>
       </div>
     </div>
   );
@@ -329,6 +334,8 @@ function SunRing({ light, gesture, onKey }: { light: Light; gesture: Gesture; on
       {...drag.handlers}
       onPointerDown={(e: PointerEvent<HTMLElement>) => {
         flip.current = e.altKey;
+        // the sun takes the keys, whether it or its ring was pressed
+        e.currentTarget.querySelector<HTMLElement>('[role="slider"]')?.focus({ preventScroll: true });
         drag.handlers.onPointerDown(e);
       }}
     >
@@ -357,11 +364,21 @@ function SunRing({ light, gesture, onKey }: { light: Light; gesture: Gesture; on
   );
 }
 
-/** the colours the ramp's look needs, as a Look: rebuilt only when the colours or the settings change */
+const looks = new Map<string, Look>();
+const statKeys = new WeakMap<Look, { key: string; stats: Stats }>();
+
+/** the ramp lit as its settings say, as a Look: made once for the same colours and settings, wherever it is asked for */
 export function useLook(ramp: { steps: Oklch[]; spec: RampSpec }, banded: boolean, ground: Oklch | null): Look {
   const { steps, spec } = ramp;
   const key = [steps.map((c) => c.join(' ')).join('|'), spec.material, spec.light.join(' '), JSON.stringify(spec.surface ?? null), banded, ground?.join(' ')].join('#');
-  return useMemo(() => lookOf({ steps, material: spec.material, light: spec.light, surface: spec.surface, banded, surround: ground }), [key]);
+  return useMemo(() => {
+    let look = looks.get(key);
+    if (!look) {
+      if (looks.size > 48) looks.clear();
+      looks.set(key, (look = lookOf({ steps, material: spec.material, light: spec.light, surface: spec.surface, banded, surround: ground })));
+    }
+    return look;
+  }, [key]);
 }
 
 /** what the pointer reads from each step, in words, lightest first */
@@ -443,6 +460,9 @@ const STAT_SIZE = 160;
 function useStats(ramp: LitRamp, shapes: Shape[], fold: Fold, light: Light, banded: boolean, ground: Oklch | null): { stats: Stats; look: Look } {
   const look = useLook(ramp, banded, ground);
   const stats = useMemo(() => {
+    const key = [shapes.join(), fold, light.azimuth, light.elevation].join('#');
+    const kept = statKeys.get(look);
+    if (kept?.key === key) return kept.stats;
     const sum = newStats();
     const px = new Uint8ClampedArray(STAT_SIZE * STAT_SIZE * 4);
     for (const shape of shapes) {
@@ -452,6 +472,7 @@ function useStats(ramp: LitRamp, shapes: Shape[], fold: Fold, light: Light, band
       sum.shine += one.shine;
       for (const k of ['steps', 'glow', 'bounce'] as const) one[k].forEach((x, i) => (sum[k][i] += x));
     }
+    statKeys.set(look, { key, stats: sum });
     return sum;
   }, [look, shapes.join(), fold, light.azimuth, light.elevation]);
   return { stats, look };

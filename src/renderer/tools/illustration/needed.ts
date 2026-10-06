@@ -11,7 +11,7 @@ export type Needed = { kind: 'glow' | 'bounce' | 'shine'; name: string; why: str
 /** a colour within this OKLab distance of one the palette has is that colour */
 const SAME = 0.04;
 /** what share of the object light must reach before its colour counts as needed */
-const SHARE = { glow: 0.06, bounce: 0.12, shine: 0.004 };
+const SHARE = { glow: 0.06, bounce: 0.18, shine: 0.004 };
 
 const distance = (a: Oklch, b: Oklch) => {
   const [p, q] = [toOklab(a), toOklab(b)];

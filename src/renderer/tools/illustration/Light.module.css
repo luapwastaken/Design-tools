@@ -2,11 +2,8 @@
    the pointer reads and the share of each step under it, the shape options, and the controls in
    groups on the right (under the stage when the tab is narrow). Only the canvases, the ground and the
    bar of steps carry content colour; everything else is tokens. Nothing animates. */
-.tab { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: 12px; min-height: 0; container-type: inline-size; }
-@container (max-width: 700px) {
-  .tab { grid-template-columns: minmax(0, 1fr); align-content: start; }
-  .stage { flex: none; height: 360px; }
-}
+.tab { flex: 1; display: flex; flex-direction: column; min-height: 0; container-type: inline-size; }
+.layout { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: 12px; min-height: 0; }
 .main { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
 .controls { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
 .controls > * { flex: none; }
@@ -86,3 +83,10 @@
 .needName { flex: 1; min-width: 0; color: var(--ink); font: 400 var(--fs-row)/1.25 var(--font-sans); }
 .needName small { display: block; color: var(--ink-3); font: 400 var(--fs-meta)/1.3 var(--font-sans); }
 .hex { flex: none; color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
+
+/* a narrow tab: the controls go under the stage, and the page scrolls (after the rules it overrides) */
+@container (max-width: 700px) {
+  .layout { flex: none; grid-template-columns: minmax(0, 1fr); }
+  .stage { flex: none; height: 360px; }
+  .controls { overflow: visible; }
+}
