@@ -1,20 +1,20 @@
 import type { KeyboardEvent } from 'react';
-import { inSrgb, parseHex, toHex, type Oklch } from '../../shared/color/index.ts';
+import { inSrgb, parseHex, READOUT_TOL, toHex, toSrgbGamut, type Oklch } from '../../shared/color/index.ts';
 import { fromHex } from '../../shared/color/picker.ts';
 import { valueOf } from '../../shared/color/value.ts';
 import { isTextField } from '../shell/core/keys.ts';
 import { cx } from './cx.ts';
+import { CopyAs } from './CopyAs.tsx';
 import { HexField } from './HexField.tsx';
 import { Icon } from './Icon.tsx';
 import { IconButton } from './IconButton.tsx';
 import { usePickerColour } from './pickerModels.ts';
 import { PickerNumbers, PickerSliders } from './PickerNumbers.tsx';
-import { Gamut, PickerOklch } from './PickerOklch.tsx';
+import { Gamut, PickerOklch, SrgbFix } from './PickerOklch.tsx';
 import { PickerSquare } from './PickerSquare.tsx';
 import { PickerStyles, toggleValueLock, usePickerModel, usePickerStyle, ValueLock } from './PickerStyles.tsx';
 import { PickerWheel } from './PickerWheel.tsx';
 import type { NumberGesture } from './scrub.ts';
-import { toast } from './toast.ts';
 import s from './Picker.module.css';
 
 /** A colour control's gesture: every drag is one begin/change/commit; `fromKey` steps may coalesce (spec §8). */
@@ -53,6 +53,12 @@ export function Picker(p: PickerProps) {
   const g = { onBegin: p.onBegin, onCommit: p.onCommit, onCancel: p.onCancel };
   const colour = usePickerColour(value, p.onChange);
   const srgb = style !== 'oklch';
+  /** the colour sRGB shows for one outside it, as the colour: one undo step */
+  const useSrgb = () => {
+    g.onBegin?.();
+    p.onChange(toSrgbGamut(value));
+    g.onCommit?.();
+  };
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if (e.code !== 'KeyV' || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.defaultPrevented || isTextField(e.target as HTMLElement)) return;
     e.preventDefault(); // so the tool's own V doesn't toggle it again
@@ -69,12 +75,15 @@ export function Picker(p: PickerProps) {
       )}
       <PickerBody value={value} colour={colour} {...g} />
       <HexRow value={value} {...g} onChange={p.onChange} />
-      {!srgb && <Gamut value={value} target={colour.target} />}
-      {srgb && !inSrgb(value) && (
-        <p className={s.outside}>
-          <Icon name="warning" size={14} />
-          Outside sRGB: shown clipped, and kept until you change it
-        </p>
+      {!srgb && <Gamut value={value} target={colour.target} onUse={useSrgb} />}
+      {srgb && !inSrgb(value, READOUT_TOL) && (
+        <>
+          <p className={s.outside}>
+            <Icon name="warning" size={14} />
+            Outside sRGB: shown clipped, and kept until you change it
+          </p>
+          <SrgbFix value={value} onUse={useSrgb} />
+        </>
       )}
     </div>
   );
@@ -96,7 +105,7 @@ export function PickerBody({ value, colour, numbers = true, ...gesture }: { valu
       {style === 'wheel' && <PickerWheel {...hsb} />}
       {numbers && (style === 'square' || style === 'wheel') && <PickerNumbers model={model} channels={colour.channels(model)} {...g} />}
       {style === 'sliders' && <PickerSliders model={model} channels={colour.channels(model)} {...g} />}
-      {style === 'oklch' && <PickerOklch value={value} channels={colour.channels('oklch')} target={colour.target} onSlide={colour.slide} {...g} onChange={colour.retarget} />}
+      {style === 'oklch' && <PickerOklch value={value} channels={colour.channels('oklch')} target={colour.target} chroma={colour.chroma} onSlide={colour.slide} onMax={colour.max} {...g} onChange={colour.retarget} />}
       {colour.locked && (
         <p className={s.held}>
           <span className="lbl">Value</span>
@@ -118,18 +127,11 @@ function HexRow({ value, ...g }: { value: Oklch } & ColourGesture) {
     g.onChange(fromHex(got, value[2]));
     g.onCommit?.();
   };
-  const copy = () => {
-    const text = hex.toUpperCase();
-    void navigator.clipboard.writeText(text).then(
-      () => toast.show({ icon: 'content_copy', message: <>Copied <b>{text}</b></> }),
-      () => toast.show({ kind: 'error', message: "Couldn't copy to the clipboard." }),
-    );
-  };
   return (
     <div className={s.hexRow}>
       <HexField value={value} className={s.hex} {...g} />
       {EyeDropper && <IconButton icon="colorize" label="Eyedropper" onClick={() => void pick()} />}
-      <IconButton icon="content_copy" label="Copy hex" onClick={copy} />
+      <CopyAs value={value} />
     </div>
   );
 }

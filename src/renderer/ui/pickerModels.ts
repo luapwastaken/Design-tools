@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { cmykEstimate, cssColor, rgb255, type Oklch } from '../../shared/color/index.ts';
 import { canHold, hsbMove, hslMove, oklchMove, projectMove, resolve, type Hold, type Move } from '../../shared/color/hold.ts';
 import { fromCmyk, fromHsb, fromHsl, fromRgb255, hsbOf, hslOf, maxChroma, sameColour, type Cmyk, type Hsb } from '../../shared/color/picker.ts';
+import { GREY_STRIP, FLOOR, hStrip, lStrip, type StripArt } from '../../shared/color/plane.ts';
 import { holdValue, hsbHold } from '../../shared/color/value.ts';
 import type { PickerModel } from '../../shared/types.ts';
 import { useValueLock } from './PickerStyles.tsx';
@@ -20,6 +21,14 @@ export type Channel = {
   span?: [number, number];
   /** fraction of the track where sRGB ends */
   limit?: number;
+  /** the value of the end of sRGB: the needle lands on it when dragged near */
+  snap?: number;
+  /** the track painted as a canvas that shows where sRGB ends (L and H), named by `paintKey`; `track()` is then ''. */
+  paint?(w: number): StripArt;
+  paintKey?: string;
+  note?: string;
+  /** a circular value: typed and arrow values wrap round (hue) */
+  wrap?: boolean;
   /** its track's CSS background: this channel's colours with the others held */
   track(): string;
   /** a drag, an arrow or a scrub: with the value lock on, the colour keeps its value */
@@ -59,6 +68,7 @@ function srgbChannels<T extends number[]>(v: T, set: (v: T) => void, make: (v: T
       set: (x) => set(put(v, i, x)),
       type: lock?.type && ((x) => lock.type!(put(v, i, x))),
       carrier: lock?.carrier === i,
+      wrap: label === 'H',
     };
   });
 }
@@ -146,7 +156,10 @@ export function usePickerColour(value: Oklch, onChange: (o: Oklch) => void) {
         max: 100,
         step: 0.5,
         precision: 1,
-        track: () => gradient('oklch', 21, (t) => [t, c, h]),
+        // where sRGB has no colour at this chroma the strip is clear, with a tick at each end
+        track: () => '',
+        paint: (w) => lStrip(c, h, w),
+        paintKey: `L|${c.toFixed(4)}|${h.toFixed(3)}`,
         set: (x) => retarget(put(value, 0, x / 100)),
         carrier: !!on,
       },
@@ -158,6 +171,7 @@ export function usePickerColour(value: Oklch, onChange: (o: Oklch) => void) {
         step: 0.001,
         span: [0, axis],
         limit: edge / axis,
+        snap: edge,
         track: () => (on ? gradient('oklch', LOCKED_STOPS, (t) => holdValue(on.target, t * edge, h)) : gradient('oklch', 8, (t) => [l, t * edge, h])),
         set: set(1),
       },
@@ -169,7 +183,11 @@ export function usePickerColour(value: Oklch, onChange: (o: Oklch) => void) {
         step: 1,
         precision: 1,
         unit: '°',
-        track: () => (on ? gradient('oklch', LOCKED_STOPS, (t) => holdValue(on.target, on.c, t * 360)) : gradient('oklch', 25, (t) => [l, c, t * 360])),
+        // held to a value every hue has a colour (chroma gives way): the strip is that; otherwise it is clear where sRGB has none
+        track: () => (on ? gradient('oklch', LOCKED_STOPS, (t) => holdValue(on.target, on.c, t * 360)) : ''),
+        ...(on ? {} : { paint: (w: number) => hStrip(l, c, w), paintKey: `H|${l.toFixed(4)}|${c.toFixed(4)}` }),
+        note: !on && c < GREY_STRIP ? `Shown at chroma ${FLOOR.toFixed(2)}: this colour is too grey for its hue to show` : undefined,
+        wrap: true,
         set: set(2),
       },
     ];
@@ -215,6 +233,12 @@ export function usePickerColour(value: Oklch, onChange: (o: Oklch) => void) {
     return `M${pts.join('L')}`;
   };
 
+  /** the most chroma sRGB has at this lightness and hue (at the held value, with the lock on): one move */
+  const max = () => {
+    const edge = on ? holdValue(on.target, 0.5, h)[1] : maxChroma(l, h, 'srgb');
+    slide([l, Math.floor(edge * 1e4) / 1e4, h]);
+  };
+
   return {
     hsb: hsb.v,
     setHsb: hsb.set,
@@ -224,6 +248,9 @@ export function usePickerColour(value: Oklch, onChange: (o: Oklch) => void) {
     /** the lock is on (at black or white it holds nothing but the readout still shows) */
     locked,
     slide,
+    max,
+    /** the chroma the lock remembers, which the H by L plane draws its line at */
+    chroma: on?.c ?? null,
     retarget,
     begin,
     hueTrack,

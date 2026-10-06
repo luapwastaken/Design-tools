@@ -1,6 +1,7 @@
 import { useId, useState, type KeyboardEvent, type Ref } from 'react';
 import { cssColor, parseHex, toHex, type Oklch } from '../../shared/color/index.ts';
-import { fromHex } from '../../shared/color/picker.ts';
+import { fromHex, keepHue, sameColour } from '../../shared/color/picker.ts';
+import { parseColours } from '../../shared/palette/paste.ts';
 import { cx } from './cx.ts';
 import { FieldError } from './FieldError.tsx';
 import type { ColourGesture } from './Picker.tsx';
@@ -21,11 +22,20 @@ export type HexFieldProps = {
   ref?: Ref<HTMLDivElement>;
 } & ColourGesture;
 
-const PROBLEM = 'Type a hex colour: 3 or 6 digits, # optional.';
+const PROBLEM = 'Type or paste a colour: a hex, an RGB, HSL or OKLCH code, or a name.';
+
+/** a hex as ever; otherwise the first colour a paste holds (an RGB, HSL or OKLCH code, a name, "Ember: #e8643c"…) */
+function read(text: string, hue: number): Oklch | null {
+  const hex = parseHex(text);
+  if (hex) return fromHex(hex, hue);
+  const first = parseColours(text).colours[0];
+  return first ? keepHue(first, hue) : null;
+}
 
 /**
- * A colour chip and its hex, typable (brief §6 fields): Enter or blur commits, Esc reverts. A hex
- * that doesn't parse stays with its message and is never committed; blur then reverts it.
+ * A colour chip and its code, typable (brief §6 fields): it shows the hex and reads any colour
+ * (the first of a paste wins). Enter or blur commits, Esc reverts. Text that isn't a colour stays
+ * with its message and is never committed; blur then reverts it.
  */
 export function HexField(p: HexFieldProps) {
   const { value, name, disabled, onChip, open, chipRef, className, ref } = p;
@@ -42,15 +52,15 @@ export function HexField(p: HexFieldProps) {
   /** false when the text can't be committed (the field then shows why) */
   const tryCommit = () => {
     if (text === null) return true;
-    const typed = parseHex(text);
+    const typed = read(text, value[2]);
     if (!typed) {
       setProblem(PROBLEM);
       return false;
     }
     revert();
-    if (typed !== hex) {
+    if (!sameColour(typed, value)) {
       p.onBegin?.();
-      p.onChange(fromHex(typed, value[2]));
+      p.onChange(typed);
       p.onCommit?.();
     }
     return true;
@@ -101,6 +111,7 @@ export function HexField(p: HexFieldProps) {
           type="text"
           value={text ?? hex}
           aria-label={name ? `${name}, hex` : 'Hex'}
+          placeholder="Paste any colour: hex, RGB, HSL, OKLCH or a name"
           aria-invalid={problem ? true : undefined}
           aria-describedby={problem ? errId : undefined}
           spellCheck={false}

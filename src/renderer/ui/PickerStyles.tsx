@@ -1,4 +1,4 @@
-import type { PickerModel, PickerStyle } from '../../shared/types.ts';
+import type { PickerModel, PickerPlane, PickerStyle } from '../../shared/types.ts';
 import { setPicker } from '../shell/core/settings.ts';
 import { getState, useShell } from '../shell/core/store.ts';
 import type { IconName } from '../shell/tool.ts';
@@ -21,6 +21,7 @@ const ICONS = PICKER_STYLE_OPTIONS.map((o) => ({ ...o, label: '', tip: o.label }
 
 export const usePickerStyle = (): PickerStyle => useShell((st) => st.settings?.pickerStyle ?? 'square');
 export const usePickerModel = (): PickerModel => useShell((st) => st.settings?.pickerModel ?? 'hsb');
+export const usePickerPlane = (): PickerPlane => useShell((st) => st.settings?.pickerPlane ?? 'lc');
 
 /** the value lock and the hue lock are app-wide too: one switch holds in every picker (V toggles the value lock in the colour tools) */
 export const useValueLock = (): boolean => useShell((st) => st.settings?.valueLock === true);
@@ -29,6 +30,7 @@ export const toggleValueLock = () => void setPicker({ valueLock: getState().sett
 export const toggleHueLock = () => void setPicker({ hueLock: getState().settings?.hueLock !== true });
 
 export const setPickerStyle = (pickerStyle: PickerStyle) => void setPicker({ pickerStyle });
+export const setPickerPlane = (pickerPlane: PickerPlane) => void setPicker({ pickerPlane });
 export const setPickerModel = (pickerModel: PickerModel) => void setPicker({ pickerModel });
 
 /** The four-icon style switch: Square, Wheel, Sliders, OKLCH plane. */

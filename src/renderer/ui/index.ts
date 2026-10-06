@@ -28,6 +28,8 @@ export { ViewStrip, type ViewStripProps, type ZoomControls } from './ViewStrip.t
 export { SectionHeader, type SectionHeaderProps } from './SectionHeader.tsx';
 export { ConfirmInline, type ConfirmInlineProps } from './ConfirmInline.tsx';
 export { Tooltip } from './Tooltip.tsx';
+export { CopyAs, copyColour } from './CopyAs.tsx';
+export { SrgbFix } from './PickerOklch.tsx';
 export { EmptyState, type EmptyStateProps } from './EmptyState.tsx';
 export { Progress, type ProgressProps } from './Progress.tsx';
 export { LibraryItemRow, ITEM_MIME, type LibraryItemRowProps } from './LibraryItemRow.tsx';

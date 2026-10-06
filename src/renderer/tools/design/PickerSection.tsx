@@ -1,18 +1,18 @@
 // The Colour picker section: the selected swatch in the app-wide picker style, then name and role,
 // hex, HSB, RGB and print type. Every value typable. Lock and delete sit in the header.
 import type { ReactNode } from 'react';
-import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
+import { cssColor, inSrgb, READOUT_TOL, toHex, toSrgbGamut, type Oklch } from '../../../shared/color/index.ts';
 import { fromHex } from '../../../shared/color/picker.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { HexField } from '../../ui/HexField.tsx';
 import { cx } from '../../ui/cx.ts';
-import { IconButton, NumberField, PICKER_STYLE_OPTIONS, PickerBody, pickFromScreen, Segmented, TextInput, Tooltip, useDocColour, usePickerStyle, ValueLock } from '../../ui/index.ts';
+import { CopyAs, IconButton, NumberField, PICKER_STYLE_OPTIONS, PickerBody, pickFromScreen, Segmented, SrgbFix, TextInput, Tooltip, useDocColour, usePickerStyle, ValueLock } from '../../ui/index.ts';
 import { usePickerColour, type Channel } from '../../ui/pickerModels.ts';
 import { setPickerStyle } from '../../ui/PickerStyles.tsx';
 import { Section } from '../common/Section.tsx';
 import { fmtL } from '../common/names.ts';
 import { tints } from './adjust.ts';
-import { armDelete, copyHex, select, selection, setRole, toggleLocked, type Doc } from './actions.ts';
+import { armDelete, select, selection, setRole, toggleLocked, type Doc } from './actions.ts';
 import { displayName, insertAfter, mapSwatch, nameIn, newSwatch, recolour, type DesignDoc, type DesignView } from './doc.ts';
 import { Role } from './Role.tsx';
 import s from './Picker.module.css';
@@ -80,6 +80,16 @@ function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Sw
     >
       <div className={s.picker} data-picker={style}>
         <PickerBody value={colour.value} colour={pc} numbers={false} {...g} />
+        {!inSrgb(colour.value, READOUT_TOL) && (
+          <SrgbFix
+            value={colour.value}
+            onUse={() => {
+              g.onBegin();
+              colour.onChange(toSrgbGamut(colour.value));
+              g.onCommit();
+            }}
+          />
+        )}
       </div>
 
       <Tints doc={doc} w={w} />
@@ -102,7 +112,7 @@ function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Sw
         <div className={s.hexRow}>
           <HexField {...colour} className={s.hex} />
           {CAN_PICK && <IconButton icon="colorize" label="Pick a colour from the screen" shortcut="I" onClick={() => void pick()} />}
-          <IconButton icon="content_copy" label="Copy hex" shortcut="C" onClick={() => copyHex(w)} />
+          <CopyAs value={colour.value} />
         </div>
       </div>
       {style !== 'sliders' && style !== 'oklch' && <Numbers label="HSB" channels={pc.channels('hsb')} g={g} />}
@@ -147,7 +157,7 @@ function Numbers({ label, channels, g }: { label: string; channels: Channel[]; g
       <span className={s.lab}>{label}</span>
       <div className={s.nums}>
         {channels.map((ch) => (
-          <NumberField key={ch.label} label={ch.label} value={ch.value} min={ch.min} max={ch.max} step={ch.step} precision={ch.precision} unit={ch.unit} {...g} onChange={ch.type ?? ch.set} />
+          <NumberField key={ch.label} label={ch.label} value={ch.value} min={ch.min} max={ch.max} step={ch.step} precision={ch.precision} unit={ch.unit} wrap={ch.wrap} {...g} onChange={ch.type ?? ch.set} />
         ))}
       </div>
     </div>
