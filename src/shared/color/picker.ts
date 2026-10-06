@@ -87,7 +87,8 @@ export function planeAxis(h: number): number {
   return Math.min(0.4, axisCeil(widest));
 }
 
-const keepHue = (o: Oklch, hue: number): Oklch => (o[1] < GREY ? [o[0], o[1], hue] : o);
+/** a grey takes the hue you were on: its own is noise */
+export const keepHue = (o: Oklch, hue: number): Oklch => (o[1] < GREY ? [o[0], o[1], hue] : o);
 
 /**
  * The same colour as far as a picker can tell: the same hex, and for a grey the same stored hue,
