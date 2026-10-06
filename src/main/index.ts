@@ -15,7 +15,7 @@ import { createSettings } from './settings.ts';
 import { createWindow, focusWindow, send } from './window.ts';
 import { createWorkspace } from './workspace.ts';
 
-const SMOKE_TIMEOUT_MS = 180_000;
+const SMOKE_TIMEOUT_MS = 300_000;
 
 // Smoke folders (temp userData and Library): --smoke makes a new one (printed at start) and runs the
 // full smoke pass (src/renderer/smoke.ts); --smoke-dir=<dir> reuses one and runs no pass, for

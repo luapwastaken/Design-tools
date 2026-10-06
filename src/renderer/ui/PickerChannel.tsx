@@ -3,11 +3,33 @@ import type { StripArt } from '../../shared/color/plane.ts';
 import { cx } from './cx.ts';
 import { useDrag } from './drag.ts';
 import { NumberField } from './NumberField.tsx';
+import type { Channel } from './pickerModels.ts';
 import { clamp, decimalsOf, roundTo, type NumberGesture } from './scrub.ts';
 import { Ticks } from './Ticks.tsx';
 import { Tooltip } from './Tooltip.tsx';
 import { useSize } from './useSize.ts';
 import s from './Picker.module.css';
+
+/** What a channel gives its track and its field, the same in every style that draws it (a channel painted or snapped in one must not go blank in another). */
+export const channelProps = (ch: Channel) => ({
+  label: ch.label,
+  value: ch.value,
+  min: ch.min,
+  max: ch.max,
+  step: ch.step,
+  precision: ch.precision,
+  unit: ch.unit,
+  span: ch.span,
+  limit: ch.limit,
+  snap: ch.snap,
+  paint: ch.paint,
+  paintKey: ch.paintKey,
+  note: ch.note,
+  wrap: ch.wrap,
+  track: ch.track(),
+  onChange: ch.set,
+  onType: ch.type,
+});
 
 export type PickerChannelProps = {
   label: string;
@@ -32,8 +54,8 @@ export type PickerChannelProps = {
   note?: string;
   /** a circular value (hue): typed and arrow values wrap round */
   wrap?: boolean;
-  /** a Value or Hue lock: the track doesn't drag; the field still takes typing */
-  locked?: boolean;
+  /** a hold on this channel: the track doesn't drag (the field still takes typing); a string is the reason, shown as the track's tooltip */
+  locked?: boolean | string;
   /** what a number typed into the field does, where it differs from a drag */
   onType?(v: number): void;
   /** between the track and the field: a lock button, or a blank keeping the rows aligned */
@@ -61,7 +83,7 @@ export function PickerChannel(p: PickerChannelProps) {
   }, [strip]);
 
   const drag = useDrag({
-    disabled: locked,
+    disabled: !!locked,
     onBegin: () => live.current.onBegin?.(),
     onMove({ x, alt }) {
       let v = clamp(roundTo(lo + Math.round((x * (hi - lo)) / step) * step, precision), min, max);
@@ -77,7 +99,7 @@ export function PickerChannel(p: PickerChannelProps) {
   const fit = limit === undefined ? undefined : `${limit * 100}% 100%`;
   const trk = (
     <div className={cx(s.trk, locked && s.locked, bare && className)} data-track={label} {...drag.handlers}>
-      <i ref={grad} className={cx(s.grad, paint && s.painted)} data-colour="" style={paint ? undefined : { backgroundImage: track, backgroundSize: fit }}>
+      <i ref={grad} className={cx(s.grad, paint && s.painted)} style={paint ? undefined : { backgroundImage: track, backgroundSize: fit }}>
         {strip && <canvas ref={canvas} width={strip.px.length / 4} height={1} />}
       </i>
       {limit !== undefined && <i className={s.lim} style={{ left: `${limit * 100}%` }} />}
@@ -88,7 +110,7 @@ export function PickerChannel(p: PickerChannelProps) {
   );
   // always wrapped, so a hint coming and going doesn't remount the track (and lose what is observing its size)
   const tracked = (
-    <Tooltip content={note} disabled={!note}>
+    <Tooltip content={typeof locked === 'string' ? locked : note} disabled={typeof locked !== 'string' && !note}>
       {trk}
     </Tooltip>
   );

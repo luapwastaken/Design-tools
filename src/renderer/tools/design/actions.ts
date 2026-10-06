@@ -1,5 +1,5 @@
 // Edits the row, the inspector and the keyboard share. Each is one history step (spec §8).
-import { hexToOklch, toHex, type Oklch } from '../../../shared/color/index.ts';
+import { hexToOklch, type Oklch } from '../../../shared/color/index.ts';
 import { holdValue, valueOf } from '../../../shared/color/value.ts';
 import type { DocController } from '../../../shared/doc-api.ts';
 import { buildRoles, completeRoles } from '../../../shared/palette/brand.ts';
@@ -8,7 +8,7 @@ import { ROLES, type Role } from '../../../shared/palette/roles.ts';
 import { fitChroma } from '../../../shared/palette/space.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { shell } from '../../shell/core/index.ts';
-import { pickFromScreen, toast } from '../../ui/index.ts';
+import { copyColour, pickFromScreen, toast } from '../../ui/index.ts';
 import { nextV } from './adjust.ts';
 import { suggestRoles } from './artboard.ts';
 import { runComplete, runGenerate } from './build.ts';
@@ -171,11 +171,9 @@ export function toggleLocked(doc: Doc): void {
   patchView({ locked: all ? have.filter((id) => !ids.includes(id)) : [...new Set([...have, ...ids])] });
 }
 
-export function copyHex(w: Swatch): void {
-  void navigator.clipboard.writeText(toHex(w.oklch).toUpperCase()).then(
-    () => toast.show({ icon: 'content_copy', message: 'Copied hex.' }),
-    () => toast.show({ kind: 'error', message: "Couldn't copy the hex." }),
-  );
+/** C: the swatch's colour in the format Copy as remembers, through the shared clipboard path */
+export function copyColourOf(w: Swatch): void {
+  void copyColour(w.oklch);
 }
 
 /** a job role belongs to one swatch: giving it to another takes it from the first (Undo brings it back) */
@@ -221,7 +219,7 @@ export function nudge(doc: Doc, dir: -1 | 1): void {
 
 export function copySelected(doc: Doc): void {
   const w = activeSwatch(doc.get());
-  if (w) copyHex(w);
+  if (w) copyColourOf(w);
 }
 
 /** A: every proposal on the board joins the palette, with the roles it lacks suggested */

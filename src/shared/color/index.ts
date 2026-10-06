@@ -42,8 +42,8 @@ const culoriOf = ([l, c, h]: Oklch): CuloriOklch => ({ mode: 'oklch', l, c, h })
 const within = ({ r, g, b }: { r: number; g: number; b: number }, eps = EPS) =>
   [r, g, b].every((v) => v >= -eps && v <= 1 + eps);
 
-/** the slack the pickers' readouts allow: a colour rounded to 4 decimals (oklch.com's red) is still sRGB */
-export const READOUT_TOL = 1e-4;
+/** the slack the pickers' readouts allow: a colour rounded to 4 decimals (oklch.com's red, the process inks) is still sRGB; half an 8-bit step is 2e-3 */
+export const READOUT_TOL = 1e-3;
 
 /** Any culori colour to an OKLCH triple, L held to 0..1; achromatic colours (no hue) take `hue`. */
 export function toOklch(color: Color, hue = 0): Oklch {

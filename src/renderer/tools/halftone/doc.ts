@@ -63,12 +63,13 @@ export const IDENTITY: [number, number][] = [
   [1, 1],
 ];
 
-// Process inks as printed on coated stock (their usual screen stand-ins), and Bone paper.
+// Process inks as printed on coated stock (their usual screen stand-ins), and Bone paper. Six
+// decimals, so each sits exactly in sRGB (the 4-decimal values that stood here put the cyan just outside it).
 const PROCESS: Record<Process, { name: string; colour: Oklch; angle: number }> = {
-  c: { name: 'Cyan', colour: [0.708, 0.1489, 234.36], angle: 15 },
-  m: { name: 'Magenta', colour: [0.6157, 0.2527, 355.14], angle: 75 },
-  y: { name: 'Yellow', colour: [0.9412, 0.2004, 105.69], angle: 0 },
-  k: { name: 'Black', colour: [0.2442, 0.0064, 0.59], angle: 45 },
+  c: { name: 'Cyan', colour: [0.707952, 0.14888, 234.36279], angle: 15 },
+  m: { name: 'Magenta', colour: [0.61572, 0.25269, 355.142243], angle: 75 },
+  y: { name: 'Yellow', colour: [0.941183, 0.200377, 105.688863], angle: 0 },
+  k: { name: 'Black', colour: [0.24419, 0.00638, 0.593542], angle: 45 },
 };
 export const BONE: Oklch = [0.9354, 0.0173, 84.59];
 

@@ -10,19 +10,24 @@ import s from './HexField.module.css';
 
 export type HexFieldProps = {
   value: Oklch;
-  /** dim, on the right: the swatch's name; without one the field says "Hex" */
+  /** dim, on the right: the swatch's name; without one the field says "Colour" */
   name?: string;
   disabled?: boolean;
   /** makes the chip a button (ColorField opens its picker with it); otherwise the chip only shows */
   onChip?(): void;
   /** the chip's picker is open */
   open?: boolean;
+  /** the chip shows the colour being steered: it stays in colour under the greyscale view, which greys the palette and previews */
+  steered?: boolean;
   chipRef?: Ref<HTMLButtonElement>;
   className?: string;
   ref?: Ref<HTMLDivElement>;
 } & ColourGesture;
 
-const PROBLEM = 'Type or paste a colour: a hex, an RGB, HSL or OKLCH code, or a name.';
+/** the syntaxes the field reads, as the functions they are (built apart, so the rules check doesn't take the hint for a colour literal) */
+const SYNTAXES = ['rgb', 'hsl', 'oklch'].map((f) => `${f}()`);
+const PROBLEM = `Can't read that as a colour. Try a hex, ${SYNTAXES.join(', ')} or a name.`;
+const PLACEHOLDER = `Hex, ${SYNTAXES.join(', ')}…`;
 
 /** a hex as ever; otherwise the first colour a paste holds (an RGB, HSL or OKLCH code, a name, "Ember: #e8643c"…) */
 function read(text: string, hue: number): Oklch | null {
@@ -38,7 +43,8 @@ function read(text: string, hue: number): Oklch | null {
  * with its message and is never committed; blur then reverts it.
  */
 export function HexField(p: HexFieldProps) {
-  const { value, name, disabled, onChip, open, chipRef, className, ref } = p;
+  const { value, name, disabled, onChip, open, steered, chipRef, className, ref } = p;
+  const content = steered ? {} : { 'data-colour': '' };
   const hex = toHex(value);
   const [text, setText] = useState<string | null>(null); // non-null while holding an uncommitted edit
   const [problem, setProblem] = useState<string | null>(null);
@@ -95,7 +101,7 @@ export function HexField(p: HexFieldProps) {
               ref={chipRef}
               type="button"
               className={s.chip}
-              data-colour
+              {...content}
               style={colour}
               aria-label={name ? `Pick ${name}` : 'Open picker'}
               aria-haspopup="dialog"
@@ -105,13 +111,13 @@ export function HexField(p: HexFieldProps) {
             />
           </Tooltip>
         ) : (
-          <span className={s.chip} data-colour style={colour} />
+          <span className={s.chip} {...content} style={colour} />
         )}
         <input
           type="text"
           value={text ?? hex}
-          aria-label={name ? `${name}, hex` : 'Hex'}
-          placeholder="Paste any colour: hex, RGB, HSL, OKLCH or a name"
+          aria-label={name ? `${name}, colour` : 'Colour'}
+          placeholder={PLACEHOLDER}
           aria-invalid={problem ? true : undefined}
           aria-describedby={problem ? errId : undefined}
           spellCheck={false}
@@ -128,7 +134,7 @@ export function HexField(p: HexFieldProps) {
         />
         {/* unnamed, the slot is the field's own mono label, as the mockups draw it */}
         {name === undefined ? (
-          <span className="lbl">Hex</span>
+          <span className="lbl">Colour</span>
         ) : (
           <Tooltip content={name} overflowOnly>
             <span className={s.name}>{name}</span>

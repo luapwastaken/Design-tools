@@ -5,6 +5,8 @@ import { cx } from './cx.ts';
 import { useDrag } from './drag.ts';
 import type { Gesture } from './Picker.tsx';
 import { PickerChannel } from './PickerChannel.tsx';
+import { HUE_HELD } from './PickerHold.tsx';
+import { useHueLock } from './PickerStyles.tsx';
 import { clamp, roundTo } from './scrub.ts';
 import s from './Picker.module.css';
 
@@ -87,7 +89,6 @@ export function SbArea({ hsb, onHsb, contour, className, ...g }: HsbProps & { cl
       className={cx(s.sb, className)}
       style={{ backgroundImage: `linear-gradient(0deg in srgb, ${BLACK}, ${WHITE}), linear-gradient(90deg in srgb, ${WHITE}, ${pure(h)})` }}
       data-plane=""
-      data-colour=""
       data-lock={contour ? '' : undefined}
       tabIndex={0}
       role="slider"
@@ -114,6 +115,7 @@ export function SbArea({ hsb, onHsb, contour, className, ...g }: HsbProps & { cl
 /** The Square style: the area, then the hue bar (its value is typed in the number row below). */
 export function PickerSquare({ hsb, onHsb, contour, hueTrack, ...g }: HsbProps) {
   const [h, sat, b] = hsb;
+  const hueHeld = useHueLock();
   return (
     <>
       <SbArea hsb={hsb} onHsb={onHsb} contour={contour} {...g} />
@@ -126,6 +128,7 @@ export function PickerSquare({ hsb, onHsb, contour, hueTrack, ...g }: HsbProps) 
         step={1}
         track={hueTrack ?? `linear-gradient(90deg in srgb, ${HUES})`}
         className={s.hueBar}
+        locked={hueHeld ? HUE_HELD : undefined}
         {...g}
         onChange={(x) => onHsb([x, sat, b])}
       />

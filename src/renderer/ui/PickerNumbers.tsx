@@ -1,9 +1,10 @@
 import type { PickerModel } from '../../shared/types.ts';
 import { NumberField } from './NumberField.tsx';
 import type { Gesture } from './Picker.tsx';
-import { PickerChannel } from './PickerChannel.tsx';
+import { PickerChannel, channelProps } from './PickerChannel.tsx';
+import { HUE_HELD, VALUE_HELD } from './PickerHold.tsx';
 import type { Channel } from './pickerModels.ts';
-import { setPickerModel } from './PickerStyles.tsx';
+import { setPickerModel, useHueLock } from './PickerStyles.tsx';
 import { Segmented } from './Segmented.tsx';
 import { Select } from './Select.tsx';
 import s from './Picker.module.css';
@@ -40,29 +41,13 @@ const TABS: { value: PickerModel; label: string; tip?: string }[] = [
 
 /** The Sliders style: the model, then a gradient slider and its field per number (Illustrator's Color panel). */
 export function PickerSliders({ model, channels, ...g }: Props) {
+  const hueHeld = useHueLock();
   return (
     <>
       <Segmented mono options={TABS} value={model} onChange={setPickerModel} className={s.tabs} />
       <div className={s.chans}>
         {channels.map((ch) => (
-          <PickerChannel
-            key={ch.label}
-            label={ch.label}
-            value={ch.value}
-            min={ch.min}
-            max={ch.max}
-            step={ch.step}
-            precision={ch.precision}
-            unit={ch.unit}
-            span={ch.span}
-            limit={ch.limit}
-            wrap={ch.wrap}
-            track={ch.track()}
-            locked={ch.carrier}
-            {...g}
-            onChange={ch.set}
-            onType={ch.type}
-          />
+          <PickerChannel key={ch.label} {...channelProps(ch)} locked={ch.carrier ? VALUE_HELD : hueHeld && ch.label === 'H' ? HUE_HELD : undefined} {...g} />
         ))}
       </div>
     </>

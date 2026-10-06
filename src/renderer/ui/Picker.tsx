@@ -1,7 +1,6 @@
 import type { KeyboardEvent } from 'react';
 import { inSrgb, parseHex, READOUT_TOL, toHex, toSrgbGamut, type Oklch } from '../../shared/color/index.ts';
 import { fromHex } from '../../shared/color/picker.ts';
-import { valueOf } from '../../shared/color/value.ts';
 import { isTextField } from '../shell/core/keys.ts';
 import { cx } from './cx.ts';
 import { CopyAs } from './CopyAs.tsx';
@@ -12,7 +11,8 @@ import { usePickerColour } from './pickerModels.ts';
 import { PickerNumbers, PickerSliders } from './PickerNumbers.tsx';
 import { Gamut, PickerOklch, SrgbFix } from './PickerOklch.tsx';
 import { PickerSquare } from './PickerSquare.tsx';
-import { PickerStyles, toggleValueLock, usePickerModel, usePickerStyle, ValueLock } from './PickerStyles.tsx';
+import { PickerHold, type Match } from './PickerHold.tsx';
+import { PickerStyles, toggleValueLock, usePickerModel, usePickerStyle } from './PickerStyles.tsx';
 import { PickerWheel } from './PickerWheel.tsx';
 import type { NumberGesture } from './scrub.ts';
 import s from './Picker.module.css';
@@ -24,8 +24,10 @@ export type Gesture = Omit<NumberGesture, 'onChange'>;
 
 export type PickerProps = {
   value: Oklch;
-  /** the style switch and the value lock at the top (a ColorField's popover); an inspector puts <PickerStyles> and <ValueLock> in its header instead */
+  /** the style switch at the top (a ColorField's popover); an inspector puts <PickerStyles> in its header instead */
   styles?: boolean;
+  /** the palette's other colours, for the hold row's Match menu (the colour tools) */
+  match?: Match[];
   className?: string;
 } & ColourGesture;
 
@@ -45,7 +47,7 @@ export async function pickFromScreen(): Promise<string | null> {
 /**
  * The colour picker, in the app-wide style: Square, Wheel, Sliders or OKLCH. Colours stay OKLCH;
  * the first three work in sRGB, where a colour outside it shows clipped and changes only when edited.
- * V toggles the value lock while focus is in it (the colour tools also take V from anywhere else).
+ * V toggles Hold value while focus is in it (the colour tools also take V from anywhere else).
  */
 export function Picker(p: PickerProps) {
   const { value, className } = p;
@@ -70,10 +72,9 @@ export function Picker(p: PickerProps) {
       {p.styles !== false && (
         <div className={s.top}>
           <PickerStyles />
-          <ValueLock />
         </div>
       )}
-      <PickerBody value={value} colour={colour} {...g} />
+      <PickerBody value={value} colour={colour} match={p.match} {...g} />
       <HexRow value={value} {...g} onChange={p.onChange} />
       {!srgb && <Gamut value={value} target={colour.target} onUse={useSrgb} />}
       {srgb && !inSrgb(value, READOUT_TOL) && (
@@ -90,10 +91,11 @@ export function Picker(p: PickerProps) {
 }
 
 /**
- * The picker's style, whichever it is, with the value lock's readout: shared by the Picker and the
- * Design inspector (which puts its own rows around it). `numbers` is the model row under Square and Wheel.
+ * The picker's style, whichever it is, with the hold row (Hold value, Value, Hold hue, Match): shared by
+ * the Picker and the Design inspector (which puts its own rows around it). `numbers` is the model row
+ * under Square and Wheel.
  */
-export function PickerBody({ value, colour, numbers = true, ...gesture }: { value: Oklch; colour: ReturnType<typeof usePickerColour>; numbers?: boolean } & Gesture) {
+export function PickerBody({ value, colour, numbers = true, match, ...gesture }: { value: Oklch; colour: ReturnType<typeof usePickerColour>; numbers?: boolean; match?: Match[] } & Gesture) {
   const g = { ...gesture, onBegin: () => (colour.begin(), gesture.onBegin?.()) };
   const style = usePickerStyle();
   const model = usePickerModel();
@@ -106,13 +108,7 @@ export function PickerBody({ value, colour, numbers = true, ...gesture }: { valu
       {numbers && (style === 'square' || style === 'wheel') && <PickerNumbers model={model} channels={colour.channels(model)} {...g} />}
       {style === 'sliders' && <PickerSliders model={model} channels={colour.channels(model)} {...g} />}
       {style === 'oklch' && <PickerOklch value={value} channels={colour.channels('oklch')} target={colour.target} chroma={colour.chroma} onSlide={colour.slide} onMax={colour.max} {...g} onChange={colour.retarget} />}
-      {colour.locked && (
-        <p className={s.held}>
-          <span className="lbl">Value</span>
-          <b>{(valueOf(value) * 100).toFixed(1)}</b>
-          {colour.target === null && <span>nothing to hold at black or white</span>}
-        </p>
-      )}
+      <PickerHold value={value} colour={colour} match={match} {...g} />
       {srgb && model === 'cmyk' && (style === 'sliders' || numbers) && <p className={s.note}>≈ Estimate from sRGB, no ICC profile</p>}
     </>
   );
@@ -129,7 +125,7 @@ function HexRow({ value, ...g }: { value: Oklch } & ColourGesture) {
   };
   return (
     <div className={s.hexRow}>
-      <HexField value={value} className={s.hex} {...g} />
+      <HexField value={value} steered className={s.hex} {...g} />
       {EyeDropper && <IconButton icon="colorize" label="Eyedropper" onClick={() => void pick()} />}
       <CopyAs value={value} />
     </div>

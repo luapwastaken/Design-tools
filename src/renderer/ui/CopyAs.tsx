@@ -1,4 +1,4 @@
-import { useRef, useSyncExternalStore } from 'react';
+import { useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { COPY_FORMATS, formatColour, type CopyFormat } from '../../shared/color/format.ts';
 import type { Oklch } from '../../shared/color/index.ts';
 import { ipc } from '../shell/core/ipc.ts';
@@ -33,15 +33,26 @@ function remember(next: CopyFormat) {
   listeners.forEach((fn) => fn());
 }
 
-/** The colour as text on the clipboard, in this format or the remembered one, through main (a test run writes to memory). */
-export async function copyColour(o: Oklch, as: CopyFormat = format): Promise<void> {
-  const text = formatColour(o, as);
+/** text on the clipboard through main (a test run writes to memory), and the toast that says so */
+async function put(text: string, said: ReactNode): Promise<void> {
   try {
     await ipc.invoke('clipboard.copy', { kind: 'text', data: text });
-    toast.show({ icon: 'content_copy', message: <>Copied <b>{text}</b></> });
+    toast.show({ icon: 'content_copy', message: said });
   } catch {
     toast.show({ kind: 'error', message: "Couldn't copy to the clipboard." });
   }
+}
+
+/** The colour as text on the clipboard, in this format or the remembered one. */
+export function copyColour(o: Oklch, as: CopyFormat = format): Promise<void> {
+  const text = formatColour(o, as);
+  return put(text, <>Copied <b>{text}</b></>);
+}
+
+/** Several colours, one to a line, in the remembered format; `what` names them in the toast ("Terracotta's 5 colours"). */
+export function copyColours(list: Oklch[], what: string): Promise<void> {
+  const label = COPY_FORMATS.find((f) => f.id === format)!.label;
+  return put(list.map((o) => formatColour(o, format)).join('\n'), `Copied ${what} as ${label}.`);
 }
 
 export function CopyAs({ value }: { value: Oklch }) {
@@ -69,7 +80,7 @@ export function CopyAs({ value }: { value: Oklch }) {
   return (
     <span className={s.copyAs}>
       <IconButton icon="content_copy" label={`Copy ${COPY_FORMATS.find((f) => f.id === current)!.label}`} onClick={() => void copyColour(value)} />
-      <IconButton ref={caret} icon="keyboard_arrow_down" size="xs" label="Copy as" onClick={open} />
+      <IconButton ref={caret} icon="keyboard_arrow_down" size="sm" label="Copy as" onClick={open} />
     </span>
   );
 }

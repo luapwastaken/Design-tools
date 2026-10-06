@@ -1,8 +1,10 @@
 /* The picker (plan unit F; styles from the colour UX pass, docs/rewrite/ux-pass/pickers.png). */
 .picker { display: flex; flex-direction: column; min-width: 0; }
-.styles { align-self: flex-start; margin-bottom: 10px; }
-/* the style switch and the value lock, along the top of a popover picker */
+/* the style switch along the top of a popover or Illustration's picker; the box is what is measured to name the segments */
 .top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.styleBox { display: flex; flex: 1 1 0; min-width: 0; }
+/* in a header the switch sets its own size, so it is told whether to name its segments */
+.styleBox.styleFit { flex: none; }
 /* the style switch is four icons, tighter than a labelled segment */
 div.icons button { padding: 0 5px; }
 
@@ -10,8 +12,12 @@ div.icons button { padding: 0 5px; }
 .planeWrap {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);
-  grid-template-rows: var(--plane-h, 206px) 16px;
+  grid-template-rows: minmax(0, 1fr) 16px;
   column-gap: 6px;
+  /* the plane takes the height its column has left, from --plane-min (what a popover gets) up to --plane-h; a column too short for the floor scrolls */
+  flex: 1 1 0;
+  min-height: calc(var(--plane-min, 206px) + 16px);
+  max-height: calc(var(--plane-h, 640px) + 16px);
 }
 .yAxis { position: relative; }
 .yAxis span, .xAxis span {
@@ -56,13 +62,13 @@ div.icons button { padding: 0 5px; }
 .xAxis span:first-child { transform: none; }
 .xAxis span:last-child { transform: translateX(-100%); }
 
-.caption { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; margin: 4px 0 0 30px; }
+.caption { display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 4px 0 0 30px; }
 div.planes button { padding: 0 8px; }
-/* what the plane shows and what is held, a line under its switch */
-.what { margin: 6px 0 0 30px; color: var(--ink-3); }
+/* what the plane shows and what is held, between its switch and its legend (a line of its own where there is no room) */
+.what { flex: 1 1 auto; min-width: 0; color: var(--ink-3); }
 /* a plane with no colour in it says so, rather than sitting blank */
 .none { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 0 12px; color: var(--ink-3); font-size: var(--fs-meta); text-align: center; pointer-events: none; }
-.legend { display: flex; gap: 12px; }
+.legend { display: flex; gap: 12px; margin-left: auto; }
 .legend > span { display: flex; align-items: center; gap: 5px; }
 .legend i { width: 12px; border-top: 1px solid var(--tick-strong); }
 .legend i.dash { border-top-style: dashed; }
@@ -71,14 +77,18 @@ div.planes button { padding: 0 8px; }
 /* the value lock's iso-value line: the same ring colours as the marker, drawn once, over the colours */
 .contour { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .contour path { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
-/* what the lock holds, under the picker */
-.held { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 0; color: var(--ink-3); font-size: var(--fs-meta); }
-.held b { color: var(--ink); font: 400 var(--fs-ctl)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
+/* the hold row under the picker: Hold value, the colour's Value, Hold hue, Match */
+.hold { display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 8px; }
+.holdValue { width: 96px; }
+.holdNote { color: var(--ink-3); font-size: var(--fs-meta); }
 
 /* ── Square and Wheel: the saturation-by-brightness area ── */
 .sb {
   position: relative;
-  height: var(--sb-h, 196px);
+  /* the area takes the height its column has left, as the plane does (the Wheel's own area is sized by .wheelSb) */
+  flex: 1 1 0;
+  min-height: var(--sb-min, 196px);
+  max-height: var(--sb-h, 640px);
   border-radius: 2px;
   /* two gradients multiplied: white to the hue across, black to white up (HSB exactly) */
   background-blend-mode: multiply;
@@ -92,7 +102,7 @@ div.planes button { padding: 0 8px; }
 .hueBar { margin-top: 8px; }
 
 .wheel {
-  --wheel: 240px;
+  --wheel: 232px;
   --ring: 20px;
   --sb: 128px;
   position: relative;
@@ -104,6 +114,9 @@ div.planes button { padding: 0 8px; }
 .hueRing { position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--edge); cursor: crosshair; touch-action: none; }
 .hole { position: absolute; inset: var(--ring); border-radius: 50%; background: var(--picker-ground, var(--module)); box-shadow: 0 0 0 1px var(--edge); }
 .wheelSb {
+  flex: none;
+  min-height: 0;
+  max-height: none;
   position: absolute;
   left: calc((var(--wheel) - var(--sb)) / 2);
   top: calc((var(--wheel) - var(--sb)) / 2);
@@ -122,9 +135,9 @@ div.planes button { padding: 0 8px; }
 .tabs { margin-bottom: 6px; }
 .chans { margin-top: 12px; }
 .tabs + .chans { margin-top: 4px; }
-.chan { display: grid; grid-template-columns: minmax(0, 1fr) 92px; align-items: center; gap: 10px; height: 38px; }
-/* a lock button between track and field (OKLCH's L and H; C keeps the gap) */
-.chan[data-aside] { grid-template-columns: minmax(0, 1fr) var(--ib-xs) 92px; gap: 6px; }
+.chan { display: grid; grid-template-columns: minmax(0, 1fr) 92px; align-items: center; gap: 10px; height: 34px; }
+/* a button between track and field (OKLCH's Max chroma; L and H keep the gap) */
+.chan[data-aside] { grid-template-columns: minmax(0, 1fr) var(--ib-sm) 92px; gap: 6px; }
 .trk { position: relative; height: 26px; touch-action: none; }
 .grad {
   position: absolute;
@@ -175,14 +188,13 @@ div.planes button { padding: 0 8px; }
 .outside > :global(.ico) { color: var(--ink-3); }
 
 /* ── hex and gamut ── */
-.hexRow { display: flex; align-items: flex-start; gap: 6px; margin-top: 6px; }
+.hexRow { display: flex; flex: none; align-items: flex-start; gap: 6px; margin-top: 8px; }
 .hex { flex: 1; }
-/* Copy and its format caret, one control */
-.copyAs { display: inline-flex; align-items: center; gap: 0; }
-.copyAs > :last-child { margin-left: -4px; }
+/* Copy and its format caret: a split button, each half its own target */
+.copyAs { display: inline-flex; align-items: center; gap: 1px; }
 
-.gam { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
-.gam > div:not(.fix) { display: flex; flex-direction: column; gap: 6px; padding: 8px 9px; border-radius: var(--r-ctl); background: var(--well); }
+.gam { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.gam > div:not(.fix) { display: flex; flex-direction: column; gap: 4px; padding: 6px 9px; border-radius: var(--r-ctl); background: var(--well); }
 .gv {
   display: flex;
   align-items: center;

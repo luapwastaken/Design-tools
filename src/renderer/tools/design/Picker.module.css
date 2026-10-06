@@ -1,7 +1,11 @@
 /* the Colour picker section (~560px wide at 1920): the area takes what height the window leaves, the rows under it never shrink */
 .section { min-width: 0; }
 .styles { flex: none; }
-.picker { display: flex; flex-direction: column; flex: none; min-width: 0; --sb-h: clamp(150px, calc(100vh - 440px - var(--palh, 300px)), 460px); --plane-h: var(--sb-h); }
+/* the area and plane take the height the column has left, down to their floor (--sb-min, --plane-min); the section's gaps are tighter than the others' so the whole picker fits at 1080p */
+.body.body { gap: 8px; }
+.picker { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; --sb-min: 100px; --plane-min: 88px; }
+/* the Wheel and the Sliders are a fixed size: the rows under them follow them up rather than sitting at the bottom */
+.picker[data-picker="wheel"], .picker[data-picker="sliders"] { flex: none; }
 .idle { display: flex; align-items: center; justify-content: center; flex: 1; min-height: 120px; color: var(--ink-3); }
 .hint { max-width: 32ch; margin: 0; text-align: center; font-size: var(--fs-base); line-height: 1.45; }
 

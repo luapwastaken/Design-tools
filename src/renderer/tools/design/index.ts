@@ -71,7 +71,7 @@ export const tool: ToolDefinition<DesignDoc> = {
   shortcuts: (doc) => [
     { keys: 'Space', label: 'Reroll the unlocked colours (build a palette when empty)', run: () => spaceNow(doc) },
     { keys: 'L', label: 'Lock or unlock the selected swatches: a locked colour stays through Space and Delete', run: () => toggleLocked(doc) },
-    { keys: 'V', label: 'Value lock', run: toggleValueLock },
+    { keys: 'V', label: 'Hold value', run: toggleValueLock },
     { keys: 'Delete', label: 'Delete swatches', run: () => armDelete(doc) },
     { keys: 'Ctrl+D', label: 'Duplicate', run: () => duplicate(doc) },
     { keys: 'Ctrl+N', label: 'New palette', run: () => void newPalette() },
@@ -81,7 +81,7 @@ export const tool: ToolDefinition<DesignDoc> = {
     { keys: 'Alt+ArrowRight', label: 'Move the selection right', run: () => nudge(doc, 1) },
     { keys: 'G', label: 'Greyscale', run: () => void toggleGreyscale() },
     { keys: 'I', label: 'Pick from screen', run: () => void eyedrop(doc) },
-    { keys: 'C', label: 'Copy the hex', run: () => copySelected(doc) },
+    { keys: 'C', label: 'Copy the colour', run: () => copySelected(doc) },
     { keys: 'A', label: 'Keep all proposals', run: () => keepAll(doc) },
     { keys: 'Escape', label: 'Discard proposals, then clear the selection', run: () => escape() },
     ...ROLES.map((role, i) => ({ keys: String(i + 1), label: `Role: ${role}`, run: () => roleSelected(doc, role) })),

@@ -99,7 +99,7 @@ export const tool: ToolDefinition<IllustrationDoc> = {
       { keys: 'ArrowRight', label: 'Darker step', run: () => move(doc, 1, 0) },
       { keys: 'H', label: 'Hero colour', run: hero },
       { keys: 'G', label: 'Greyscale', run: () => void toggleGreyscale() },
-      { keys: 'V', label: 'Value lock', run: toggleValueLock },
+      { keys: 'V', label: 'Hold value', run: toggleValueLock },
       // I picks: on the paper in Paint, anywhere on screen otherwise
       { keys: 'I', label: 'Pick', run: () => (inPaint() ? setPaint({ tool: 'pick' }) : void eyedrop(doc)) },
       { keys: 'B', label: 'Brush', run: () => inPaint() && setPaint({ tool: 'paint' }) },

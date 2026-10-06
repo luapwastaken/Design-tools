@@ -6,9 +6,8 @@ import { fromHex } from '../../../shared/color/picker.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { HexField } from '../../ui/HexField.tsx';
 import { cx } from '../../ui/cx.ts';
-import { CopyAs, IconButton, NumberField, PICKER_STYLE_OPTIONS, PickerBody, pickFromScreen, Segmented, SrgbFix, TextInput, Tooltip, useDocColour, usePickerStyle, ValueLock } from '../../ui/index.ts';
+import { CopyAs, IconButton, NumberField, PickerBody, PickerStyles, pickFromScreen, Segmented, SrgbFix, TextInput, Tooltip, useDocColour, usePickerStyle } from '../../ui/index.ts';
 import { usePickerColour, type Channel } from '../../ui/pickerModels.ts';
-import { setPickerStyle } from '../../ui/PickerStyles.tsx';
 import { Section } from '../common/Section.tsx';
 import { fmtL } from '../common/names.ts';
 import { tints } from './adjust.ts';
@@ -22,14 +21,13 @@ const TYPES: { value: Swatch['type']; label: string; tip: string }[] = [
   { value: 'global', label: 'Global', tip: 'Global swatch: edits update every use (ASE)' },
   { value: 'spot', label: 'Spot', tip: 'Spot colour: printed as its own ink (ASE)' },
 ];
-const STYLES = PICKER_STYLE_OPTIONS.map((o) => ({ value: o.value, label: o.value === 'oklch' ? 'OKLCH' : o.label }));
 const CAN_PICK = 'EyeDropper' in globalThis;
 
 export function PickerSection({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView }) {
   const sel = selection(d, v);
   const w = d.swatches.find((x) => x.id === sel[0]);
   const style = usePickerStyle();
-  const styles = <Segmented options={STYLES} value={style} fit onChange={setPickerStyle} className={s.styles} />;
+  const styles = <PickerStyles labelled className={s.styles} />;
   if (!w) {
     return (
       <Section title="Colour picker" sub={d.swatches.length ? 'select a colour' : undefined} actions={styles} className={s.section}>
@@ -57,6 +55,7 @@ function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Sw
   const pc = usePickerColour(colour.value, colour.onChange);
   const g: Gesture = { onBegin: () => colour.onBegin?.(), onCommit: (k) => colour.onCommit?.(k), onCancel: () => colour.onCancel?.() };
   const locked = v.locked.includes(w.id);
+  const match = d.swatches.filter((x) => x.id !== w.id).map((x) => ({ name: nameIn(d, x), oklch: x.oklch }));
   const pick = async () => {
     const got = await pickFromScreen();
     if (!got || got === toHex(colour.value)) return;
@@ -69,17 +68,17 @@ function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Sw
       title="Colour picker"
       sub={count > 1 ? `${name} · 1 of ${count} selected` : name}
       className={s.section}
+      bodyClassName={s.body}
       actions={
         <>
           {styles}
-          <ValueLock />
-          <IconButton icon={locked ? 'lock' : 'lock_open'} label={locked ? 'Unlock' : 'Lock: a re-roll and Delete leave it'} shortcut="L" size="sm" latched={locked} onClick={() => toggleLocked(doc)} />
+          <IconButton icon={locked ? 'lock' : 'lock_open'} label="Lock swatch" tip={locked ? 'Locked: a re-roll and Delete leave it. Click to unlock' : 'Lock swatch: a re-roll and Delete leave it'} shortcut="L" size="sm" latched={locked} onClick={() => toggleLocked(doc)} />
           <IconButton icon="delete" label={count > 1 ? `Delete ${count} swatches` : 'Delete swatch'} shortcut="Delete" size="sm" onClick={() => armDelete(doc)} />
         </>
       }
     >
       <div className={s.picker} data-picker={style}>
-        <PickerBody value={colour.value} colour={pc} numbers={false} {...g} />
+        <PickerBody value={colour.value} colour={pc} numbers={false} match={match} {...g} />
         {!inSrgb(colour.value, READOUT_TOL) && (
           <SrgbFix
             value={colour.value}
@@ -90,6 +89,12 @@ function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Sw
             }}
           />
         )}
+      </div>
+
+      <div className={s.hexRow}>
+        <HexField {...colour} steered className={s.hex} />
+        {CAN_PICK && <IconButton icon="colorize" label="Pick a colour from the screen" shortcut="I" onClick={() => void pick()} />}
+        <CopyAs value={colour.value} />
       </div>
 
       <Tints doc={doc} w={w} />
@@ -107,14 +112,6 @@ function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Sw
         </div>
       </div>
 
-      <div className={s.row}>
-        <span className={s.lab}>Hex</span>
-        <div className={s.hexRow}>
-          <HexField {...colour} className={s.hex} />
-          {CAN_PICK && <IconButton icon="colorize" label="Pick a colour from the screen" shortcut="I" onClick={() => void pick()} />}
-          <CopyAs value={colour.value} />
-        </div>
-      </div>
       {style !== 'sliders' && style !== 'oklch' && <Numbers label="HSB" channels={pc.channels('hsb')} g={g} />}
       {style !== 'sliders' && <Numbers label="RGB" channels={pc.channels('rgb')} g={g} />}
 

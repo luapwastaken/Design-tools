@@ -29,6 +29,8 @@
 .danger:hover { background: var(--danger-hover); }
 
 .btn:disabled { background: var(--well); color: var(--ink-4); }
+/* a toggle that is on is the raised key: tone, not a stripe */
+.btn[aria-pressed="true"], .btn[aria-pressed="true"]:hover { background: var(--raise-hover); color: var(--ink); }
 .ghost:disabled { background: none; }
 
 .lg { height: var(--btn-lg); padding: 0 14px; font-size: var(--fs-row); }

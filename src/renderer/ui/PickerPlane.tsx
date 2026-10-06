@@ -4,6 +4,7 @@ import { planeAxis } from '../../shared/color/picker.ts';
 import { planeArt, planeColour, planeFixed, planePoint, PLANES, planeScale, type PlaneArt } from '../../shared/color/plane.ts';
 import { holdValue } from '../../shared/color/value.ts';
 import type { PickerPlane as PlaneId } from '../../shared/types.ts';
+import { cx } from './cx.ts';
 import { useDrag } from './drag.ts';
 import type { ColourGesture } from './Picker.tsx';
 import { setPickerPlane, useHueLock, usePickerPlane } from './PickerStyles.tsx';
@@ -166,7 +167,8 @@ export function PickerPlane({ value, target = null, chroma = null, onSlide, onBe
   const yLabels = Y_LABELS[spec.y];
   const fixedText = id === 'lc' ? `H ${h.toFixed(1)}` : id === 'ch' ? `L ${(l * 100).toFixed(1)}` : `C ${c.toFixed(3)}`;
   // what is held, in words: the value, or the fixed channel
-  const caption = target !== null ? `${spec.name}${id === 'ch' ? '' : ` at ${fixedText}`}, holding value ${(target * 100).toFixed(1)}` : `${spec.name} at ${fixedText}`;
+  const holding = [target !== null && `value ${(target * 100).toFixed(1)}`, hueLock && id !== 'lc' && `hue ${h.toFixed(1)}`].filter(Boolean).join(' and ');
+  const caption = `${target !== null && id === 'ch' ? spec.name : `${spec.name} at ${fixedText}`}${holding ? `, holding ${holding}` : ''}`;
 
   return (
     <>
@@ -195,7 +197,7 @@ export function PickerPlane({ value, target = null, chroma = null, onSlide, onBe
           }}
           onKeyDown={onKeyDown}
         >
-          <canvas ref={canvas} className={s.canvas} width={pw} height={ph} data-colour="" />
+          <canvas ref={canvas} className={s.canvas} width={pw} height={ph} />
           {art && (
             <svg className={s.edges} viewBox={`0 0 ${pw} ${ph}`} preserveAspectRatio="none" aria-hidden="true">
               {art.p3 && <path className={s.p3Edge} d={art.p3} />}
@@ -237,6 +239,7 @@ export function PickerPlane({ value, target = null, chroma = null, onSlide, onBe
           onChange={setPickerPlane}
           className={s.planes}
         />
+        <span className={cx('lbl', s.what)}>{caption}</span>
         <span className={s.legend} aria-hidden="true">
           {target !== null && (
             <span className="lbl">
@@ -256,9 +259,6 @@ export function PickerPlane({ value, target = null, chroma = null, onSlide, onBe
           ) : null}
         </span>
       </div>
-      <p className={s.what}>
-        <span className="lbl">{caption}</span>
-      </p>
     </>
   );
 }

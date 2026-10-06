@@ -37,9 +37,10 @@ button.chip:focus-visible { outline: 1px solid var(--tick-strong); outline-offse
   height: 100%;
   font: 400 var(--fs-value)/1 var(--font-mono);
   font-variant-numeric: tabular-nums slashed-zero;
-  text-transform: uppercase;
   color: var(--ink);
 }
+/* a hex shows in capitals while idle; what is being typed (rgb(), oklch(), a name) is left as written */
+.cf input:not([data-dirty]) { text-transform: uppercase; }
 .cf input:focus-visible { outline: none; }
 
 .name {

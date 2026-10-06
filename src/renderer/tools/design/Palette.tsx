@@ -11,7 +11,7 @@ import { fmtC, fmtH, fmtL } from '../common/names.ts';
 import { GreyscaleButton } from '../common/Greyscale.tsx';
 import { Section } from '../common/Section.tsx';
 import { SURROUNDS, surroundOf } from '../common/surround.ts';
-import { addProposals, addSwatch, armDelete, clickSelect, completeNow, copyHex, duplicate, missingRoles, select, selection, setRole, toggleLocked, type Doc } from './actions.ts';
+import { addProposals, addSwatch, armDelete, clickSelect, completeNow, copyColourOf, duplicate, missingRoles, select, selection, setRole, toggleLocked, type Doc } from './actions.ts';
 import { inkOn, simulated } from './artboard.ts';
 import { DeleteConfirm } from './DeleteConfirm.tsx';
 import { displayName, listNames, moveIds, namesOf, plural, type ChipData, type DesignDoc, type DesignView, mapSwatch } from './doc.ts';
@@ -65,7 +65,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
       at,
       [
         { label: 'Duplicate', icon: 'content_copy', shortcut: 'Ctrl+D', onSelect: () => duplicate(doc) },
-        { label: 'Copy hex', shortcut: 'C', onSelect: () => copyHex(w) },
+        { label: 'Copy colour', shortcut: 'C', onSelect: () => copyColourOf(w) },
         { label: v.locked.includes(w.id) ? 'Unlock' : 'Lock', icon: v.locked.includes(w.id) ? 'lock_open' : 'lock', shortcut: 'L', onSelect: () => toggleLocked(doc) },
         { label: 'Role', submenu: roleItems(w) },
         'separator',
@@ -159,7 +159,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
         </>
       }
     >
-      <div className={s.stage} style={empty ? undefined : { background: surroundOf(v.surround, d.swatches) }}>
+      <div className={s.stage} data-colour={!empty && v.surround !== 'plain' ? '' : undefined} style={empty ? undefined : { background: surroundOf(v.surround, d.swatches) }}>
       {empty ? (
         <Empty doc={doc} v={v} onPop={onPop} />
       ) : (

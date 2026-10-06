@@ -1,12 +1,13 @@
 import { useRef, useState } from 'react';
 import { cmykEstimate, cssColor, rgb255, type Oklch } from '../../shared/color/index.ts';
-import { canHold, hsbMove, hslMove, oklchMove, projectMove, resolve, type Hold, type Move } from '../../shared/color/hold.ts';
+import { canHold, capture, hsbMove, hslMove, oklchMove, projectMove, resolve, type Hold, type Move } from '../../shared/color/hold.ts';
 import { fromCmyk, fromHsb, fromHsl, fromRgb255, hsbOf, hslOf, maxChroma, sameColour, type Cmyk, type Hsb } from '../../shared/color/picker.ts';
 import { GREY_STRIP, FLOOR, hStrip, lStrip, type StripArt } from '../../shared/color/plane.ts';
 import { holdValue, hsbHold } from '../../shared/color/value.ts';
 import type { PickerModel } from '../../shared/types.ts';
 import { useValueLock } from './PickerStyles.tsx';
 import { axisAt } from './PickerPlane.tsx';
+import { toast } from './toast.ts';
 
 /** One number of a colour model: its field, its track, and what setting it does to the colour. */
 export type Channel = {
@@ -35,7 +36,7 @@ export type Channel = {
   set(v: number): void;
   /** a number typed into its field; differs from `set` only where the channel has no carrier of the value (RGB, ≈CMYK) */
   type?(v: number): void;
-  /** the value lock's carrier (L, B, HSL L): moving it is the way to change the value, so its track doesn't drag */
+  /** the value hold's carrier (L, B, HSL L): its track doesn't drag (VALUE_HELD says why); the way to change the value is the Value field or its own number */
   carrier?: boolean;
 };
 
@@ -135,10 +136,19 @@ export function usePickerColour(value: Oklch, onChange: (o: Oklch) => void) {
   });
   const rgb = (v: number[]) => fromRgb255(v as [number, number, number], h);
 
-  /** a chroma or hue move on the OKLCH plane or its tracks */
-  const slide = (next: Oklch) => {
+  /** a chroma or hue move on the OKLCH plane or its tracks; the colour it made */
+  const slide = (next: Oklch): Oklch => {
     const m = on ? oklchMove(on, value, next) : null;
     emit(m ? m.v : next, m ? m.hold : free(next));
+    return m ? m.v : next;
+  };
+  /**
+   * The colour's value set outright (0..1), at its hue and the chroma last asked of it (which gives
+   * way where sRGB runs out): the Value field and Match. With the lock on, that value is the one held.
+   */
+  const setValue = (t: number) => {
+    const o = holdValue(t, on ? on.c : c, h);
+    emit(o, locked ? { ...(on ?? capture(o)), target: t, last: o } : null);
   };
   /** a colour typed or chosen outright */
   const retarget = (o: Oklch) => emit(o, free(o));
@@ -174,6 +184,11 @@ export function usePickerColour(value: Oklch, onChange: (o: Oklch) => void) {
         snap: edge,
         track: () => (on ? gradient('oklch', LOCKED_STOPS, (t) => holdValue(on.target, t * edge, h)) : gradient('oklch', 8, (t) => [l, t * edge, h])),
         set: set(1),
+        // typed past what sRGB has at the held value, chroma stops there: say so
+        type: (x) => {
+          const made = slide(put(value, 1, x));
+          if (on && made[1] < x - 1e-3) toast.show({ icon: 'info', message: `Capped at ${made[1].toFixed(3)}, the most sRGB has at this value` });
+        },
       },
       {
         label: 'H',
@@ -248,6 +263,7 @@ export function usePickerColour(value: Oklch, onChange: (o: Oklch) => void) {
     /** the lock is on (at black or white it holds nothing but the readout still shows) */
     locked,
     slide,
+    setValue,
     max,
     /** the chroma the lock remembers, which the H by L plane draws its line at */
     chroma: on?.c ?? null,

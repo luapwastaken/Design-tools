@@ -387,13 +387,23 @@ async function greyscale(): Promise<void> {
     patchIllustration({ tab: 'settings' });
     await sleep(120);
     const tool = host(id)!;
-    const btn = await until(() => tool.querySelector<HTMLButtonElement>('button[aria-label="Greyscale"]'), 3000);
-    if (!check(`${id}: the palette header has a Greyscale button`, btn && shows(btn) && btn.getAttribute('aria-pressed') === 'false', btn?.outerHTML.slice(0, 120))) continue;
+    const btn = await until(() => [...tool.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Greyscale'), 3000);
+    if (!check(`${id}: the palette header has a labelled Greyscale button (text and icon)`, btn && shows(btn) && btn.getAttribute('aria-pressed') === 'false' && btn.getBoundingClientRect().height >= 24 && !!btn.querySelector('svg, .ico'), btn?.outerHTML.slice(0, 120))) continue;
     const content = [...tool.querySelectorAll<HTMLElement>('[data-colour]')].filter(shows);
     const chrome = [btn!, tool.querySelector('h2'), ...tool.querySelectorAll('[role="tab"]')].filter((e): e is Element => !!e);
     btn!.click();
     check(`${id}: the button turns greyscale on, latched, and puts data-greyscale on the root`, (await until(() => pref() && on())) && btn!.getAttribute('aria-pressed') === 'true', [pref(), root.dataset.greyscale]);
     check(`${id}: every content colour on show is greyed and no chrome is`, content.length >= 3 && content.every((e) => filterOf(e).includes('dt-grey')) && chrome.every((e) => filterOf(e) === 'none'), [content.length, content.filter((e) => !filterOf(e).includes('dt-grey')).length, chrome.filter((e) => filterOf(e) !== 'none').length]);
+    // the surround is content: the stage (Design) and the mat (Illustration) grey with the swatches, and plain, which is chrome, does not
+    const mat = () => (id === 'design' ? tool.querySelector('[role="listbox"][aria-label="Swatches"]')?.parentElement : tool.querySelector('[role="listbox"][aria-label="Swatch board"]')) ?? null;
+    const setSurround = (kind: 'grey' | 'plain') => (id === 'design' ? patchDesign({ surround: kind }) : patchIllustration({ board: kind }));
+    setSurround('grey');
+    const greyMat = await until(() => mat());
+    check(`${id}: the surround behind the swatches is content, so it greys with them`, !!greyMat && greyMat.hasAttribute('data-colour') && filterOf(greyMat).includes('dt-grey'), greyMat?.outerHTML.slice(0, 100));
+    setSurround('plain');
+    await frame();
+    check(`${id}: a plain surround is chrome and stays unmarked`, !!mat() && !mat()!.hasAttribute('data-colour') && filterOf(mat()) === 'none');
+    setSurround('grey');
     press('g', { code: 'KeyG' });
     check(`${id}: G turns it off again`, (await until(() => !pref() && !on())) && btn!.getAttribute('aria-pressed') === 'false' && content.every((e) => filterOf(e) === 'none'), [pref(), root.dataset.greyscale]);
     press('g', { code: 'KeyG' });
@@ -401,6 +411,21 @@ async function greyscale(): Promise<void> {
     btn!.click();
     await until(() => !pref());
   }
+  // greyscale belongs to the two colour tools: left on, no other tool greys (they have no switch for it), and Design and Illustration come back grey
+  await shell.setPicker({ greyscale: true });
+  const greyed: string[] = [];
+  for (const id of ['pattern', 'logo', 'dither', 'halftone', 'postfx'] as const) {
+    shell.setActive(id);
+    await sleep(100);
+    if (on()) greyed.push(id);
+  }
+  check('with greyscale left on, Pattern, Logo, Dither, Halftone and Post FX are never greyed (the attribute is on the root in the colour tools only)', greyed.length === 0 && pref(), greyed);
+  shell.setActive('illustration');
+  const backIn = await until(() => on());
+  shell.setActive('design');
+  check('and it is back on the root in Illustration and in Design, where the setting was left', !!backIn && !!(await until(() => on())));
+  await shell.setPicker({ greyscale: false });
+  await until(() => !on());
   // one grey: the Seen as and See as lenses have the colour-vision lenses only
   const lensOptions = async (id: ToolId, label: string) => {
     shell.setActive(id);
@@ -649,7 +674,7 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   const moreBtn = host('design')?.querySelector<HTMLElement>('[role="listbox"] [data-swatch] button[aria-label="More"]');
   moreBtn?.click();
   const dup = await until(() => menuRow('Duplicate'));
-  check('the chip’s More button opens the same menu as a right-click', !!moreBtn && !!dup && !!menuRow('Copy hex') && !!menuRow('Delete'));
+  check('the chip’s More button opens the same menu as a right-click', !!moreBtn && !!dup && !!menuRow('Copy colour') && !!menuRow('Delete'));
   press('Escape');
   await until(() => !menuRow('Duplicate'));
 
@@ -2328,6 +2353,7 @@ async function illustration(): Promise<void> {
   check('Design goes back to its own palette', dd.source()?.itemId === glossy?.itemId && dd.state().t === 'saved', dd.state());
   await valueLockUi(light.id);
   await oklchUi(light.id);
+  await holdRowUi(light.id);
 
   // the painting: one gouache stroke, kept as a workspace PNG under the palette's id
   shell.setActive('illustration');
@@ -2378,7 +2404,7 @@ async function illustration(): Promise<void> {
 // ── the value lock ───────────────────────────────────────────────────────────────────────────────
 
 /** the value (0..1) of the hex a picker shows in its Hex field */
-const shownHex = (root: Element | null | undefined) => parseHex(root?.querySelector<HTMLInputElement>('input[aria-label="Hex"]')?.value ?? '');
+const shownHex = (root: Element | null | undefined) => parseHex(root?.querySelector<HTMLInputElement>('input[aria-label="Colour"]')?.value ?? '');
 const shownValue = (root: Element | null | undefined) => {
   const hex = shownHex(root);
   return hex ? valueOf(hexToOklch(hex)) : NaN;
@@ -2431,7 +2457,13 @@ async function holds(name: string, root: () => Element | null | undefined, el: E
   check(`${name}: the value stays within 0.5/100 while the colour moves`, drift < 0.5 && hexes.size >= 4, [drift.toFixed(2), hexes.size, v0.toFixed(3)]);
 }
 
-const lockButton = (root: Element | null | undefined) => root?.querySelector<HTMLButtonElement>('button[aria-label="Value lock"]') ?? null;
+/** a toggle of the picker's hold row by its label: a checkbox button */
+const toggleOf = (root: Element | null | undefined, label: string) => [...(root?.querySelectorAll<HTMLButtonElement>('button[role="checkbox"]') ?? [])].find((b) => b.textContent?.trim() === label) ?? null;
+const lockButton = (root: Element | null | undefined) => toggleOf(root, 'Hold value');
+const hueButton = (root: Element | null | undefined) => toggleOf(root, 'Hold hue');
+const isOn = (b: Element | null | undefined) => b?.getAttribute('aria-checked') === 'true';
+/** the hold row's Value field */
+const valueField = (root: Element | null | undefined) => root?.querySelector<HTMLInputElement>('input[aria-label="Value"]') ?? null;
 const lockOn = () => shell.getState().settings?.valueLock === true;
 const showsStyle = async (root: () => Element | null | undefined, style: string) => {
   const shown = !!(await until(() => root()?.querySelector(`[data-picker="${style}"]`)));
@@ -2444,7 +2476,7 @@ async function lockStyles(where: string, root: () => Element | null | undefined,
   const bar = () => root()?.querySelector('[data-track="H"]') ?? null;
   await shell.setPicker({ pickerStyle: 'square', pickerModel: 'hsb' });
   await showsStyle(root, 'square');
-  check(`${where}, Square: the lock draws the iso-value line on the area, which is marked colour`, !!root()?.querySelector('[data-plane][data-colour] svg path') && !!root()?.querySelector('[data-plane][data-lock]'));
+  check(`${where}, Square: the lock draws the iso-value line on the area, which stays in colour under the greyscale view`, !!root()?.querySelector('[data-plane] svg path') && !!root()?.querySelector('[data-plane][data-lock]') && !root()?.querySelector('[data-plane][data-colour]'));
   await holds(`${where}, Square hue bar`, root, bar(), at(bar()!, 0.03), at(bar()!, 0.66));
   const area = root()?.querySelector('[data-plane]');
   await holds(`${where}, Square area (x picks saturation, y is ignored)`, root, area, at(area!, 0.15, 0.2), at(area!, 0.8, 0.9));
@@ -2473,7 +2505,7 @@ async function lockStyles(where: string, root: () => Element | null | undefined,
   }
   await shell.setPicker({ pickerStyle: 'oklch' });
   await showsStyle(root, 'oklch');
-  check(`${where}, OKLCH plane: the iso-value line is drawn on a plane marked colour`, !!root()?.querySelector('[data-plane] svg path[d^="M"]') && !!root()?.querySelector('[data-plane] canvas[data-colour]'));
+  check(`${where}, OKLCH plane: the iso-value line is drawn on a plane that stays in colour`, !!root()?.querySelector('[data-plane] svg path[d^="M"]') && !!root()?.querySelector('[data-plane] canvas') && !root()?.querySelector('[data-plane] canvas[data-colour]'));
   const h = root()?.querySelector('[data-track="H"]');
   await holds(`${where}, OKLCH H track`, root, h, at(h!, 0.03), at(h!, 0.66));
   const plane = root()?.querySelector('[data-plane]');
@@ -2483,6 +2515,50 @@ async function lockStyles(where: string, root: () => Element | null | undefined,
   const before = shownHex(root());
   await sweep(l!, at(l!, 0.2), at(l!, 0.8), 4, () => {});
   check(`${where}, OKLCH: the L track is the value itself and does not drag while it is held`, !!l && shownHex(root()) === before, [before, shownHex(root())]);
+}
+
+/** Hold hue in every style: its hue control moves the colour with the hold off (the control) and leaves it alone with the hold on */
+async function hueHolds(where: string, root: () => Element | null | undefined): Promise<void> {
+  const ring = () => root()?.querySelector<HTMLElement>('[role="slider"][aria-label="Hue"]');
+  const round = (deg: number): [number, number] => {
+    const [cx, cy] = at(ring()!, 0.5);
+    const r = ring()!.getBoundingClientRect().width * 0.45;
+    return [cx + r * Math.sin((deg * Math.PI) / 180), cy - r * Math.cos((deg * Math.PI) / 180)];
+  };
+  const track = () => root()?.querySelector<HTMLElement>('[data-track="H"]');
+  const cases = [
+    ['square', 'hsb', track],
+    ['wheel', 'hsb', ring],
+    ['sliders', 'hsb', track],
+    ['oklch', 'oklch', track],
+  ] as const;
+  for (const [style, model, find] of cases) {
+    await shell.setPicker({ pickerStyle: style, pickerModel: model, hueLock: false });
+    await showsStyle(root, style);
+    const drag = () => (style === 'wheel' ? sweep(find()!, round(10), round(120), 6, () => {}) : sweep(find()!, at(find()!, 0.1), at(find()!, 0.8), 6, () => {}));
+    const start = shownHex(root());
+    await drag();
+    const moved = shownHex(root());
+    await shell.setPicker({ hueLock: true });
+    await frame();
+    await drag();
+    check(`${where}, ${style}: the hue control moves the colour with Hold hue off (the control), and leaves it alone with it on`, !!find() && moved !== start && shownHex(root()) === moved, [start, moved, shownHex(root())]);
+  }
+  await shell.setPicker({ hueLock: false });
+}
+
+/** the L track is the value carrier: it drags with Hold value off (the control) and does not with it on */
+async function carrierMoves(where: string, root: () => Element | null | undefined): Promise<void> {
+  await shell.setPicker({ pickerStyle: 'oklch', valueLock: false });
+  await showsStyle(root, 'oklch');
+  const l = () => root()?.querySelector<HTMLElement>('[data-track="L"]');
+  const start = shownHex(root());
+  await sweep(l()!, at(l()!, 0.2), at(l()!, 0.8), 4, () => {});
+  const moved = shownHex(root());
+  await shell.setPicker({ valueLock: true });
+  await frame();
+  await sweep(l()!, at(l()!, 0.8), at(l()!, 0.2), 4, () => {});
+  check(`${where}, OKLCH: the L track drags with Hold value off (the control) and does not with it on`, moved !== start && shownHex(root()) === moved, [start, moved, shownHex(root())]);
 }
 
 /** Design, Illustration (its step `step`) and a ColorField popover (Halftone), with the lock switched on by V and by its button */
@@ -2502,7 +2578,7 @@ async function valueLockUi(step: string): Promise<void> {
   await shell.setPicker({ valueLock: false, hueLock: false, pickerStyle: 'square', pickerModel: 'hsb' });
   await showsStyle(pickerSection, 'square');
   const root = () => pickerSection();
-  check('the value lock is off by default and its button is in the Colour picker header', !!lockButton(root()) && lockButton(root())!.getAttribute('aria-pressed') === 'false' && !root()?.querySelector('[data-plane] svg path'), lockButton(root())?.getAttribute('aria-pressed'));
+  check('Hold value is off by default, a labelled toggle in the picker, and the header has no padlock for it', !!lockButton(root()) && !isOn(lockButton(root())) && !root()?.querySelector('[data-plane] svg path') && !root()?.querySelector('button[aria-label="Value lock"]'), lockButton(root())?.getAttribute('aria-checked'));
   // the control: with the lock off the same hue drag swings the grey a long way
   const bar0 = root()?.querySelector('[data-track="H"]');
   const free: number[] = [];
@@ -2512,13 +2588,13 @@ async function valueLockUi(step: string): Promise<void> {
   dd.undo();
   press('v', { code: 'KeyV' });
   await frame();
-  check('V turns the value lock on in Design and the button agrees', lockOn() && lockButton(root())!.getAttribute('aria-pressed') === 'true', [lockOn(), lockButton(root())?.getAttribute('aria-pressed')]);
+  check('V turns Hold value on in Design and the toggle agrees', lockOn() && isOn(lockButton(root())), [lockOn(), lockButton(root())?.getAttribute('aria-checked')]);
   lockButton(root())!.click();
   await frame();
-  check('the button turns it off again', !lockOn() && lockButton(root())!.getAttribute('aria-pressed') === 'false', lockOn());
+  check('the toggle turns it off again', !lockOn() && !isOn(lockButton(root())), lockOn());
   press('v', { code: 'KeyV' });
   await frame();
-  check('V turns it back on, and the readout under the picker shows the held value', lockOn() && /Value\s*\d+\.\d/.test(root()?.textContent ?? ''), root()?.textContent?.slice(-80));
+  check('V turns it back on, and the Value field shows the colour’s value', lockOn() && Math.abs(Number(valueField(root())?.value) - shownValue(root()) * 100) < 0.3, [valueField(root())?.value, shownValue(root()) * 100]);
 
   const d0 = dd.depth();
   await lockStyles('Design', root, true);
@@ -2535,14 +2611,11 @@ async function valueLockUi(step: string): Promise<void> {
   const hb = root()?.querySelector('[data-track="H"]');
   await holds('Design, after typing L the lock holds the new value', root, hb, at(hb!, 0.1), at(hb!, 0.8));
 
-  // the hue lock is app-wide too: with it on the H track does not drag
-  await shell.setPicker({ pickerStyle: 'oklch', hueLock: true });
-  await showsStyle(root, 'oklch');
-  const lockedH = root()?.querySelector('[data-track="H"]');
-  const hex0 = shownHex(root());
-  await sweep(lockedH!, at(lockedH!, 0.1), at(lockedH!, 0.8), 4, () => {});
-  check('the hue lock keeps the H track from dragging, and its button on the H row is latched', shownHex(root()) === hex0 && root()?.querySelector('button[aria-label^="Hue lock"]')?.getAttribute('aria-pressed') === 'true', [hex0, shownHex(root())]);
-  await shell.setPicker({ hueLock: false });
+  // Hold value's carrier, and Hold hue (app-wide too) in every style
+  await carrierMoves('Design', root);
+  await hueHolds('Design', root);
+  await shell.setPicker({ valueLock: true });
+  check('Hold hue is a labelled toggle that follows the setting', !!hueButton(root()) && isOn(hueButton(root())) === (shell.getState().settings?.hueLock === true));
 
   // black has one colour: the lock holds nothing there, so the plane is not a trap
   dd.transact('Black', (d) => recolourInDesign(d, { [sw.id]: [0, 0, 0] }));
@@ -2559,12 +2632,14 @@ async function valueLockUi(step: string): Promise<void> {
   const sec = () => [...(host('illustration')?.querySelectorAll('section') ?? [])].find((s) => s.querySelector('h2')?.textContent === 'Colour picker');
   await showsStyle(sec, 'square');
   const il0 = il.depth();
-  check('Illustration’s Colour picker header has the value lock, on from Design', !!lockButton(sec()) && lockButton(sec())!.getAttribute('aria-pressed') === 'true' && lockOn());
+  check('Illustration’s Colour picker has the Hold value toggle, on from Design', !!lockButton(sec()) && isOn(lockButton(sec())) && lockOn());
   press('v', { code: 'KeyV' });
   await frame();
-  check('V toggles it in Illustration (once) and the button agrees', !lockOn() && lockButton(sec())!.getAttribute('aria-pressed') === 'false', [lockOn()]);
+  check('V toggles it in Illustration (once) and the toggle agrees', !lockOn() && !isOn(lockButton(sec())), [lockOn()]);
   press('v', { code: 'KeyV' });
   await lockStyles('Illustration', sec, false);
+  await hueHolds('Illustration', sec);
+  await shell.setPicker({ valueLock: true });
   check('Illustration drags made undo steps', il.depth() > il0 && il.undoLabel()?.startsWith('Change') === true, [il.depth() - il0, il.undoLabel()]);
   while (il.depth() > il0) il.undo();
 
@@ -2578,7 +2653,9 @@ async function valueLockUi(step: string): Promise<void> {
   if (check('Halftone has a colour chip to open', chip)) {
     chip!.click();
     const pop = () => document.querySelector('[role="dialog"][aria-label="Colour picker"]');
-    if (check('its popover opens the picker with the value lock in its top row', await until(() => pop() && lockButton(pop())), !!pop())) {
+    if (check('its popover opens the picker with the hold row (Hold value, Value, Hold hue)', await until(() => pop() && lockButton(pop()) && hueButton(pop()) && valueField(pop())), !!pop())) {
+      const names = [...pop()!.querySelectorAll('[role="radio"]')].map((r) => r.textContent?.trim()).slice(0, 4);
+      check('and its style switch is named, as the popover is wide enough for the words', names.join() === 'Square,Wheel,Sliders,OKLCH', names);
       pop()!.querySelector<HTMLElement>('[data-plane]')?.focus();
       const was = lockOn();
       press('v', { code: 'KeyV' });
@@ -2734,7 +2811,7 @@ async function oklchUi(step: string): Promise<void> {
   await shell.setPicker({ valueLock: false });
 
   // ── the code field takes anything a paste reads
-  const code = () => input('Hex')!;
+  const code = () => input('Colour')!;
   set([0.62, 0.14, 145]);
   const dd1 = il.depth();
   enter(code(), css('oklch', '0.7 0.1 250'));
@@ -2836,6 +2913,205 @@ async function oklchUi(step: string): Promise<void> {
 
   while (il.depth() > d0) il.undo();
   await shell.setPicker({ pickerStyle: prefs.pickerStyle, pickerModel: prefs.pickerModel, pickerPlane: prefs.pickerPlane, valueLock: prefs.valueLock, hueLock: prefs.hueLock });
+}
+
+
+// ── the hold row, the colour code field, the labelled controls and the copy format ──────────────
+
+/** Hold value, the Value field, Hold hue and Match in every picker; the Colour code field; the style switch and the header; greyscale and the picker's faces; C and Copy as */
+async function holdRowUi(step: string): Promise<void> {
+  const dd = designDoc();
+  const il = illustrationDoc();
+  const [depth, ilDepth] = [dd.depth(), il.depth()];
+  const before = designView().selected;
+  const prefs = await api.invoke('settings.get');
+  const enter = (el: HTMLInputElement, text: string) => {
+    typeInto(el, text);
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  };
+  /** a CSS colour string, built so the source holds no colour literal (check-rules) */
+  const css = (fn: string, args: string) => `${fn}(${args})`;
+
+  // ── Design
+  shell.setActive('design');
+  const a = designSwatch([0.62, 0.14, 29], 'Smoke A');
+  const b = designSwatch([0.82, 0.1, 200], 'Smoke B');
+  dd.transact('Add swatches', (d) => ({ ...d, swatches: [...d.swatches, a, b] }));
+  selectInDesign([a.id]);
+  patchDesign({ tab: 'contrast' });
+  await shell.setPicker({ valueLock: false, hueLock: false, greyscale: false, pickerStyle: 'oklch', pickerModel: 'hsb' });
+  const root = () => pickerSection();
+  await showsStyle(root, 'oklch');
+  const colourOf = (id: string) => dd.get().swatches.find((w) => w.id === id)!.oklch;
+  const input = (label: string) => root()?.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`) ?? null;
+
+  const rows: string[] = [];
+  for (const [style, model] of [['square', 'hsb'], ['wheel', 'hsb'], ['sliders', 'rgb'], ['oklch', 'hsb']] as const) {
+    await shell.setPicker({ pickerStyle: style, pickerModel: model });
+    await showsStyle(root, style);
+    if (!(lockButton(root()) && hueButton(root()) && valueField(root()))) rows.push(style);
+  }
+  check('every style has the hold row: Hold value, the Value field and Hold hue', rows.length === 0, rows);
+  await shell.setPicker({ pickerStyle: 'oklch' });
+  await showsStyle(root, 'oklch');
+
+  const lockSwatch = () => root()?.querySelector<HTMLButtonElement>('button[aria-label="Lock swatch"]');
+  check('the header keeps one padlock, named Lock swatch, and no padlock for the value', !!lockSwatch() && lockSwatch()!.getAttribute('aria-pressed') === 'false' && !root()?.querySelector('button[aria-label="Value lock"], button[aria-label^="Hue lock"]'));
+  lockSwatch()!.click();
+  await frame();
+  check('pressed, it keeps its name and says the state (aria-pressed), and the swatch is locked', lockSwatch()?.getAttribute('aria-pressed') === 'true' && designView().locked.includes(a.id), designView().locked);
+  lockSwatch()!.click();
+  await frame();
+  const radios = [...(root()?.querySelectorAll('[role="radio"]') ?? [])].map((r) => r.textContent?.trim()).slice(0, 4);
+  check('Design’s style switch is named: Square, Wheel, Sliders, OKLCH', radios.join() === 'Square,Wheel,Sliders,OKLCH', radios);
+
+  // typing the Value, with Hold value off: the value moves, the hue stays, chroma is kept or gives way; one undo step
+  const d0 = dd.depth();
+  const [, c0, h0] = colourOf(a.id);
+  enter(valueField(root())!, '60');
+  await frame();
+  const typed = colourOf(a.id);
+  check('typing 60 in Value sets the colour’s value to 60 at the same hue (chroma kept, or giving way), in one undo step', Math.abs(valueOf(typed) - 0.6) < 5e-4 && Math.abs(typed[2] - h0) < 1e-6 && typed[1] <= c0 + 1e-6 && dd.depth() === d0 + 1 && dd.undoLabel() === 'Change Smoke A', [valueOf(typed), typed, dd.undoLabel()]);
+  enter(valueField(root())!, '101');
+  await frame();
+  check('a Value past 100 is refused with the usual message', valueField(root())!.getAttribute('aria-invalid') === 'true' && Math.abs(valueOf(colourOf(a.id)) - 0.6) < 5e-4);
+  valueField(root())!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+  // with Hold value on, the typed Value is the one held
+  await shell.setPicker({ valueLock: true });
+  await frame();
+  enter(valueField(root())!, '35');
+  await frame();
+  const hTrack = root()?.querySelector('[data-track="H"]');
+  await holds('Design, after typing a Value the hold keeps it', root, hTrack, at(hTrack!, 0.1), at(hTrack!, 0.8));
+  check('and the Value field still reads the value that was held', Math.abs(Number(valueField(root())?.value) - 35) < 0.1 && Math.abs(valueOf(colourOf(a.id)) - 0.35) < 5e-4, [valueField(root())?.value, valueOf(colourOf(a.id))]);
+
+  // chroma typed past what sRGB has at the held value says so, and the colour keeps the value
+  const c = input('C')!;
+  enter(c, '0.35');
+  await frame();
+  check('a chroma typed past what sRGB has at the held value is capped with a plain message', colourOf(a.id)[1] < 0.349 && !!toastSays('Capped at') && Math.abs(valueOf(colourOf(a.id)) - 0.35) < 5e-4, [colourOf(a.id), toastSays('Capped at')?.message]);
+  await shell.setPicker({ valueLock: false });
+
+  // Match: the palette's other colours with their values; one sets this colour's value to it
+  const matchBtn = [...(root()?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((x) => x.textContent?.trim() === 'Match');
+  matchBtn?.click();
+  const rowB = await until(() => menuRow('Smoke B'));
+  check('Match lists the palette’s colours with their values', !!matchBtn && !!rowB && /\d+\.\d/.test(rowB.textContent ?? '') && !menuRow('Smoke A'), rowB?.textContent);
+  const dm = dd.depth();
+  rowB?.click();
+  await frame();
+  check('choosing one sets this colour’s value to it, as one undo step', Math.abs(valueOf(colourOf(a.id)) - valueOf(b.oklch)) < 5e-4 && dd.depth() === dm + 1, [valueOf(colourOf(a.id)), valueOf(b.oklch), dd.depth() - dm]);
+
+  // the Colour code field: labelled, readable in any syntax, hex when idle, says when it can't read
+  const code = () => input('Colour')!;
+  check('the code field is labelled Colour (its tag too) and its placeholder names the syntaxes', !!code() && code().placeholder.startsWith('Hex, ') && code().placeholder.includes(css('oklch', '')) && !input('Hex') && !!root()?.querySelector('.lbl') && /Colour/.test(code().parentElement?.textContent ?? ''), code()?.placeholder);
+  check('idle, the field shows the hex in capitals', getComputedStyle(code()).textTransform === 'uppercase' && /^#[0-9a-f]{6}$/i.test(code().value), [getComputedStyle(code()).textTransform, code().value]);
+  typeInto(code(), css('oklch', '0.62 0.12 285'));
+  await frame();
+  check('what is typed in another syntax is not capitalised while typing', getComputedStyle(code()).textTransform === 'none', getComputedStyle(code()).textTransform);
+  code().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  enter(code(), 'zzz');
+  await frame();
+  check('text that is no colour says so, in words, and changes nothing', code().getAttribute('aria-invalid') === 'true' && /read that as a colour/.test(root()?.textContent ?? ''), root()?.textContent?.slice(-160));
+  code().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await frame();
+
+  // the code row sits right under the picker, above Tints and the rest, and the whole section fits the window
+  const top = (el: Element | null | undefined) => el?.getBoundingClientRect().top ?? NaN;
+  const tints = root()?.querySelector('[role="group"][aria-label^="Tints"]');
+  const hold = root()?.querySelector('[role="group"][aria-label="Hold"]');
+  check('the Colour code row comes after the hold row and before Tints, Name and the rest', top(hold) < top(code()) && top(code()) < top(tints), [top(hold), top(code()), top(tints)]);
+  for (const plane of ['lc', 'ch', 'hl'] as const) {
+    await shell.setPicker({ pickerPlane: plane });
+    await frame();
+    const body = root()!.lastElementChild as HTMLElement;
+    const h = root()?.querySelector('[data-plane]')?.getBoundingClientRect().height ?? 0;
+    check(`Design, OKLCH ${plane}: the whole section fits the ${innerWidth} × ${innerHeight} window without scrolling, the plane keeping a usable height`, innerHeight < 990 || (body.scrollHeight <= body.clientHeight + 1 && h >= 80), [innerHeight, body.scrollHeight, body.clientHeight, h]);
+  }
+  await shell.setPicker({ pickerPlane: 'lc' });
+  // Sliders and OKLCH: every track is painted, with the value hold off and on
+  await shell.setPicker({ pickerStyle: 'sliders', pickerModel: 'oklch' });
+  await showsStyle(root, 'sliders');
+  for (const lock of [false, true]) {
+    await shell.setPicker({ valueLock: lock });
+    await frame();
+    const tracks = [...(root()?.querySelectorAll<HTMLElement>('[data-track]') ?? [])];
+    const painted = tracks.filter((t) => !!t.querySelector('canvas') || getComputedStyle(t.firstElementChild!).backgroundImage !== 'none');
+    check(`Sliders, OKLCH, Hold value ${lock ? 'on' : 'off'}: the L, C and H tracks are all painted`, tracks.length === 3 && painted.length === 3, [tracks.length, painted.length]);
+  }
+  await shell.setPicker({ valueLock: false, pickerStyle: 'oklch', pickerModel: 'hsb' });
+
+  // greyscale: the palette and previews grey, the picker's faces and chip stay in colour
+  await shell.setPicker({ greyscale: true });
+  await until(() => document.documentElement.dataset.greyscale === 'true');
+  const greyOf = (el: Element | null | undefined) => (el ? getComputedStyle(el).filter : '');
+  const faces = [root()?.querySelector('[data-plane] canvas'), root()?.querySelector('[data-track="L"] > i'), root()?.querySelector('[data-track="H"] > i'), code().parentElement?.firstElementChild];
+  check('with greyscale on, the plane, the strips and the picker’s own colour chip stay in colour', faces.every((e) => !!e && greyOf(e) === 'none'), faces.map(greyOf));
+  const tint = root()?.querySelector('[role="group"][aria-label^="Tints"] [data-colour]');
+  check('and the tints, which are palette, grey', greyOf(tint).includes('dt-grey'), greyOf(tint));
+  await shell.setPicker({ greyscale: false });
+
+  // C and Copy as: the chosen format, through the shared clipboard path
+  const caret = () => root()?.querySelector<HTMLButtonElement>('button[aria-label="Copy as"]');
+  const fmt = async (label: string) => {
+    caret()?.click();
+    const r = await until(() => [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')].find((x) => x.textContent?.includes(label)));
+    r?.click();
+    await sleep(150);
+  };
+  await fmt('After Effects');
+  (document.activeElement as HTMLElement | null)?.blur();
+  press('c', { code: 'KeyC' });
+  await sleep(200);
+  const copied = utf8((await api.invoke('clipboard.peek'))['text/plain']);
+  check('with After Effects chosen, the C key copies the colour in that format', copied === formatColour(colourOf(a.id), 'ae') && copied.startsWith('['), [copied, formatColour(colourOf(a.id), 'ae')]);
+  await fmt('Hex');
+  (document.activeElement as HTMLElement | null)?.blur();
+  press('c', { code: 'KeyC' });
+  await sleep(200);
+  check('and back to Hex, C copies the hex', utf8((await api.invoke('clipboard.peek'))['text/plain']) === toHex(colourOf(a.id)).toUpperCase());
+
+  // ── Illustration: the style switch is named under the header, the header has no value padlock, and Copy colour codes follows the format
+  shell.setActive('illustration');
+  selectInIllustration(step);
+  await shell.setPicker({ pickerStyle: 'oklch', valueLock: false, hueLock: false });
+  const sec = () => [...(host('illustration')?.querySelectorAll('section') ?? [])].find((s) => s.querySelector('h2')?.textContent === 'Colour picker');
+  await showsStyle(sec, 'oklch');
+  const namesOf = () => [...(sec()?.querySelectorAll('[role="radio"]') ?? [])].map((r) => r.textContent?.trim()).slice(0, 4);
+  await until(() => namesOf()[0] === 'Square'); // the switch is named once its row has been measured
+  const names = namesOf();
+  check('Illustration’s Colour picker names its style switch (Square, Wheel, Sliders, OKLCH) and has the hold row, with Match', names.join() === 'Square,Wheel,Sliders,OKLCH' && !!lockButton(sec()) && !!hueButton(sec()) && !!valueField(sec()) && [...(sec()?.querySelectorAll('button') ?? [])].some((x) => x.textContent?.trim() === 'Match'), names);
+  check('and its header has no padlock', !sec()?.querySelector('button[aria-label="Value lock"]'));
+  for (const plane of ['lc', 'ch', 'hl'] as const) {
+    await shell.setPicker({ pickerPlane: plane });
+    await frame();
+    const body = sec()!.lastElementChild as HTMLElement;
+    const h = sec()?.querySelector('[data-plane]')?.getBoundingClientRect().height ?? 0;
+    check(`Illustration, OKLCH ${plane}: the whole section fits the ${innerWidth} × ${innerHeight} window without scrolling, the plane keeping a usable height`, innerHeight < 990 || (body.scrollHeight <= body.clientHeight + 1 && h >= 80), [innerHeight, body.scrollHeight, body.clientHeight, h]);
+  }
+  await shell.setPicker({ pickerPlane: 'lc' });
+  const col = il.get().swatches.find((w) => w.id === step)!.oklch;
+  const il0 = il.depth();
+  enter(sec()!.querySelector<HTMLInputElement>('input[aria-label="Value"]')!, '55');
+  await frame();
+  check('typing a Value in Illustration sets the step’s value, in one undo step', Math.abs(valueOf(il.get().swatches.find((w) => w.id === step)!.oklch) - 0.55) < 5e-4 && il.depth() === il0 + 1 && Math.abs(il.get().swatches.find((w) => w.id === step)!.oklch[2] - col[2]) < 1e-6, il.undoLabel());
+  il.undo();
+  await fmt('After Effects');
+  const more = host('illustration')?.querySelector<HTMLButtonElement>('[role="listbox"][aria-label="Ramps"] button[aria-label="More"]');
+  more?.click();
+  const copyCodes = await until(() => menuRow('Copy colour codes'));
+  copyCodes?.click();
+  await sleep(250);
+  const lines = utf8((await api.invoke('clipboard.peek'))['text/plain']).split('\n');
+  check('Illustration’s Copy colour codes puts every step on the clipboard, one a line, in the chosen format', !!more && !!copyCodes && lines.length >= 2 && lines.every((l) => /^\[[\d.]+, [\d.]+, [\d.]+, 1\]$/.test(l)), lines);
+  await fmt('Hex');
+
+  (document.activeElement as HTMLElement | null)?.blur(); // a field left focused would keep the next check's keys to itself
+  while (dd.depth() > depth) dd.undo();
+  while (il.depth() > ilDepth) il.undo();
+  await shell.setPicker({ pickerStyle: prefs.pickerStyle, pickerModel: prefs.pickerModel, pickerPlane: prefs.pickerPlane, valueLock: prefs.valueLock, hueLock: prefs.hueLock, greyscale: prefs.greyscale });
+  patchDesign({ selected: before });
 }
 
 /**
@@ -2945,7 +3221,7 @@ async function startUi(): Promise<void> {
   const DAY: Pair = { light: [0.95, 0.05, 85], shadow: [0.4, 0.08, 275] };
   const picked = () => {
     const a = document.activeElement as HTMLInputElement | null;
-    return !!a && a.tagName === 'INPUT' && /hex$/i.test(a.getAttribute('aria-label') ?? '') && !!a.closest('section')?.querySelector('h2')?.textContent?.startsWith('Colour picker');
+    return !!a && a.tagName === 'INPUT' && /colour$/i.test(a.getAttribute('aria-label') ?? '') && !!a.closest('section')?.querySelector('h2')?.textContent?.startsWith('Colour picker');
   };
   const addVia = async (label: string) => {
     await sleep(300); // a new ramp scrolls into view a frame or two later, and a scroll closes a menu
