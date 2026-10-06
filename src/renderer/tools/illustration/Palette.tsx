@@ -50,10 +50,11 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
     if (at) document.querySelector(`[data-tool="illustration"] [data-row="${at}"]`)?.scrollIntoView({ block: 'nearest' });
   }, [at]);
   const firstGhost = ghosts?.items[0]?.id;
+  const popOpen = !!sourcePop.use();
   useEffect(() => {
-    // while a source's popover shows them, a scroll would close it (a press or scroll outside does)
-    if (firstGhost && !sourcePop.get()) document.querySelector('[data-tool="illustration"] [data-ghost-row]')?.scrollIntoView({ block: 'nearest' });
-  }, [firstGhost]);
+    // while a source's popover shows them, a scroll would close it (a press or scroll outside does); closed with colours left, they are brought into view
+    if (firstGhost && !popOpen) document.querySelector('[data-tool="illustration"] [data-ghost-row]')?.scrollIntoView({ block: 'nearest' });
+  }, [firstGhost, popOpen]);
 
   const onDragOver = (e: DragEvent<HTMLDivElement>) => {
     if (!drag || !e.dataTransfer.types.includes(REORDER_MIME)) return; // files: the shell routes them to onFiles
@@ -81,7 +82,7 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
   return (
     <Section
       title="Ramps"
-      sub={d.ramps.length ? String(d.ramps.length) : undefined}
+      sub={[d.ramps.length && String(d.ramps.length), ghosts && `${ghosts.items.length} proposed`].filter(Boolean).join(' · ') || undefined}
       className={s.palette}
       bodyClassName={s.pbody}
       actions={d.swatches.length > 0 ? <GreyscaleButton /> : undefined}
@@ -140,10 +141,10 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
             <p className={s.fine}>Click one to make its ramp. Colours you pick on the paint canvas land here too.</p>
             <div className={s.ghostFoot}>
               <Button size="xs" icon="add" onClick={() => addProposals(doc, ghosts.items)}>
-                Add all
+                Keep all
               </Button>
               <Button size="xs" variant="ghost" onClick={clearProposals}>
-                Clear
+                Discard all
               </Button>
             </div>
           </section>
@@ -252,11 +253,11 @@ function RampItem(p: ItemProps) {
         <IconButton
           icon="star"
           label={r.hero ? 'Hero colour: the other ramps stay quieter. Click to end it' : 'Make this the hero colour'}
-          size="xs"
+          size="sm"
           latched={r.hero}
           onClick={() => doc.transact(r.hero ? `End ${name} as hero` : `Make ${name} the hero`, (x) => setSpec(x, r.id, { hero: !r.hero }))}
         />
-        <IconButton icon="more_horiz" label="More" size="xs" onClick={(e) => openMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
+        <IconButton icon="more_horiz" label="More" size="sm" onClick={(e) => openMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
       </div>
       {p.armed ? (
         <div className={s.confirm}>
@@ -419,7 +420,7 @@ function LooseItem({ doc, d, v, list, sel, lit, armed: armedId }: LooseProps) {
         <Button size="xs" icon="auto_awesome_motion" onClick={() => rampsFromLoose(doc)} tooltip="Each colour becomes the base of a ramp">
           Make ramps
         </Button>
-        <IconButton icon="more_horiz" label="More" size="xs" onClick={(e) => openMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
+        <IconButton icon="more_horiz" label="More" size="sm" onClick={(e) => openMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
       </div>
       {gone ? (
         <div className={s.confirm}>
