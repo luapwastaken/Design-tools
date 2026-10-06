@@ -7,7 +7,7 @@ import { greyOf, valueOf } from '../../../shared/color/value.ts';
 import { MATERIALS } from '../../../shared/palette/ramp.ts';
 import type { RampSpec, Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
-import { Button, ConfirmInline, Icon, IconButton, menu, toast, Tooltip, type MenuAnchor } from '../../ui/index.ts';
+import { Button, ConfirmInline, copyColours, Icon, IconButton, menu, toast, Tooltip, type MenuAnchor } from '../../ui/index.ts';
 import { fmtV, plural } from '../common/names.ts';
 import { GreyscaleButton } from '../common/Greyscale.tsx';
 import { Section } from '../common/Section.tsx';
@@ -196,7 +196,7 @@ function RampItem(p: ItemProps) {
         { label: 'Move up', icon: 'arrow_upward', disabled: i === 0, onSelect: () => reorder(doc, r.id, i - 1) },
         { label: 'Move down', icon: 'arrow_downward', disabled: i === d.ramps.length - 1, onSelect: () => reorder(doc, r.id, i + 2) },
         { label: edited ? `Back to generated (${plural(edited, 'edited step')})` : 'Back to generated', icon: 'restart_alt', disabled: !edited, onSelect: () => doc.transact(`Regenerate ${name}`, (x) => revertRamp(x, r.id)) },
-        { label: 'Copy hex codes', onSelect: () => void copyHexes(name, steps) },
+        { label: 'Copy colour codes', onSelect: () => void copyColours(steps.map((w) => w.oklch), `${name}'s ${plural(steps.length, 'colour')}`) },
         // another tool removed the base: the ramp still knows its colour and can make it again
         { label: 'Rebuild base', icon: 'restart_alt', disabled: !baseless, onSelect: () => doc.transact(`Rebuild ${name}`, (x) => regen(x, r.id)) },
         'separator',
@@ -278,14 +278,6 @@ function RampItem(p: ItemProps) {
         <Chips doc={doc} d={d} v={p.v} list={steps} sel={p.sel} lit={p.lit} broken={broken} tall={on} />
       )}
     </div>
-  );
-}
-
-async function copyHexes(name: string, steps: Swatch[]): Promise<void> {
-  const text = steps.map((w) => toHex(w.oklch).toUpperCase()).join('\n');
-  await navigator.clipboard.writeText(text).then(
-    () => toast.show({ icon: 'content_copy', message: `Copied ${name}'s ${plural(steps.length, 'hex code')}.` }),
-    () => toast.show({ kind: 'error', message: "Couldn't copy to the clipboard." }),
   );
 }
 
