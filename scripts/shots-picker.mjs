@@ -36,7 +36,7 @@ page.on('pageerror', (e) => console.log('  pageerror:', String(e).slice(0, 300))
 page.on('console', (m) => m.type() === 'error' && console.log('  console.error:', m.text().slice(0, 300)));
 const cdp = await page.createCDPSession();
 const narrow = process.argv.includes('--narrow');
-const [W, H] = narrow ? [Number(process.env.NARROW_W ?? 1180), 860] : [1920, 1080];
+const [W, H] = narrow ? [Number(process.env.NARROW_W ?? 1000), 1100] : [1920, 1080];
 const prefix = narrow ? 'narrow-' : '';
 await cdp.send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: Number(process.env.DPR ?? 1), mobile: false });
 await sleep(1500);
