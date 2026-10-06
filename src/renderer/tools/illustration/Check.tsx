@@ -11,7 +11,8 @@ import { fmtV, stepWord } from '../common/names.ts';
 import { Value } from '../common/Value.tsx';
 import { mergingCvd, Vision } from '../common/Vision.tsx';
 import type { Doc } from './actions.ts';
-import { Problems, type Checks } from './CheckPane.tsx';
+import { fixRules, Problems, type Checks } from './CheckPane.tsx';
+import { toastMoved } from '../common/fixes.ts';
 import { nameOf, rampName, rampOf, recolour, stepsOf, type IllustrationDoc } from './doc.ts';
 import { hot, patchView, pointAt, type IllustrationView } from './view-state.ts';
 import s from './Check.module.css';
@@ -39,7 +40,12 @@ export function CheckTab({ doc, d, v, checks }: { doc: Doc; d: IllustrationDoc; 
   };
   const host = {
     pointAt,
-    onFix: (label: string, changes: Record<string, Oklch>) => doc.transact(label, (x) => Object.entries(changes).reduce((y, [id, o]) => recolour(y, id, o), x)),
+    rules: fixRules(checks.settled),
+    onFix: (label: string, changes: Record<string, Oklch>) => {
+      doc.transact(label, (x) => Object.entries(changes).reduce((y, [id, o]) => recolour(y, id, o), x));
+      const base = checks.shown.some((w) => changes[w.id] && w.step === 0 && checks.settled.ramps.some((r) => r.id === w.group));
+      toastMoved(doc, checks.shown, changes, 'V', base ? ' Its ramp followed.' : '');
+    },
   };
   // a simulation chosen in the strips stays; otherwise the one that merges a pair shows
   const cvd = mergingCvd(checks.vision, v.cvd);
