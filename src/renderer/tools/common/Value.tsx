@@ -1,11 +1,12 @@
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties } from 'react';
 import { contrast, cssColor, type Oklch } from '../../../shared/color/index.ts';
+import { greyOf, valueOf } from '../../../shared/color/value.ts';
 import type { ContrastPair, ValueCollision } from '../../../shared/palette/checks.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { Button, Icon, Module, NumberField, Ticks, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { valueFix } from './adjust.ts';
-import { displayName, fmtL, listNames, plural } from './names.ts';
+import { displayName, fmtV, listNames, plural } from './names.ts';
 import { useWidth } from './useWidth.ts';
 import s from './Checks.module.css';
 
@@ -29,7 +30,7 @@ const CHAR = 7.2;
 /** a pin shows this much of a long name; its tooltip has all of it */
 const NAME_CHARS = 10;
 const cut = (name: string) => (name.length > NAME_CHARS ? `${name.slice(0, NAME_CHARS - 1)}…` : name);
-const label = (w: Swatch) => `${cut(displayName(w))} ${fmtL(w.oklch[0])}`;
+const label = (w: Swatch) => `${cut(displayName(w))} ${fmtV(w.oklch)}`;
 
 /**
  * Pin labels in up to three lanes, each in the first lane where it clears the one before; near an
@@ -39,7 +40,7 @@ const label = (w: Swatch) => `${cut(displayName(w))} ${fmtL(w.oklch[0])}`;
 function laneOut(list: Swatch[], width: number) {
   const ends = [-Infinity, -Infinity, -Infinity];
   const at = list.map((w) => {
-    const x = clamp01(w.oklch[0]) * width;
+    const x = clamp01(valueOf(w.oklch)) * width;
     const wide = label(w).length * CHAR;
     const align: 'start' | 'centre' | 'end' = x - wide / 2 < 0 ? 'start' : x + wide / 2 > width ? 'end' : 'centre';
     const left = align === 'start' ? x : align === 'end' ? x - wide : x - wide / 2;
@@ -63,36 +64,35 @@ function clusterOf(collisions: ValueCollision[]): Swatch[] {
       grew = true;
     }
   }
-  return [...found.values()].sort((a, b) => a.oklch[0] - b.oklch[0]);
+  return [...found.values()].sort((a, b) => valueOf(a.oklch) - valueOf(b.oklch));
 }
 
 type ValueProps = CheckHost & {
   collisions: ValueCollision[];
   /** contrast pairs: a spread that breaks one which passes now isn't offered */
   contrast?: ContrastPair[];
+  /** the flag gap, in value units (0..100) */
   flagL: number;
   onFlagL(v: number): void;
   /** what the scale compares, when it isn't every swatch */
   sub?: string;
-  /** more controls in the header, before the flag field */
-  extra?: ReactNode;
 };
 
-/** The palette in greyscale by OKLCH lightness on a ruler; the worst run that reads as one grey is flagged. */
-export function Value({ swatches, onFix, pointAt, className, collisions, contrast: pairs = [], flagL, onFlagL, sub, extra }: ValueProps) {
-  const byL = [...swatches].sort((a, b) => a.oklch[0] - b.oklch[0]);
+/** The palette in greyscale by value (what greyscale shows) on a ruler; the worst run that reads as one grey is flagged. */
+export function Value({ swatches, onFix, pointAt, className, collisions, contrast: pairs = [], flagL, onFlagL, sub }: ValueProps) {
+  const byV = [...swatches].sort((a, b) => valueOf(a.oklch) - valueOf(b.oklch));
   const hit = new Set(collisions.flatMap((c) => [c.a.id, c.b.id]));
   const { ref: ruler, width } = useWidth<HTMLDivElement>();
-  const lanes = laneOut(byL, width);
+  const lanes = laneOut(byV, width);
   const cluster = collisions.length ? clusterOf(collisions) : [];
   const ids = new Set(cluster.map((w) => w.id));
   const elsewhere = collisions.filter((c) => !ids.has(c.a.id) || !ids.has(c.b.id)).length;
   const gap = flagL + 0.5;
-  // lightness runs 0 to 100: past a point a run can't all stand apart, only spread as evenly as it goes
+  // value runs 0 to 100: past a point a run can't all stand apart, only spread as evenly as it goes
   const fits = (cluster.length - 1) * gap <= 100;
 
   const fix = () => {
-    const others = swatches.filter((w) => !ids.has(w.id)).map((w) => w.oklch[0]);
+    const others = swatches.filter((w) => !ids.has(w.id)).map((w) => valueOf(w.oklch));
     // a spread that breaks a contrast pair which passes now just trades one problem for another
     const passing = pairs.filter((p) => p.ratio >= p.target);
     const ok = (next: Oklch[]) => {
@@ -102,48 +102,47 @@ export function Value({ swatches, onFix, pointAt, className, collisions, contras
     };
     const next = valueFix(cluster.map((w) => w.oklch), flagL / 100, others, ok);
     const names = cluster.map(displayName);
-    onFix(cluster.length === 2 ? `Spread ${names[0]} and ${names[1]} in lightness` : `Spread ${cluster.length} swatches in lightness`, Object.fromEntries(cluster.map((w, i) => [w.id, next[i]])));
+    onFix(cluster.length === 2 ? `Spread ${names[0]} and ${names[1]} in value` : `Spread ${cluster.length} swatches in value`, Object.fromEntries(cluster.map((w, i) => [w.id, next[i]])));
   };
 
   return (
     <Module
       title="Value"
-      sub={sub ? `${sub} · OKLCH lightness` : 'OKLCH lightness'}
+      sub={sub ? `${sub} · Rec. 709 luma` : 'Rec. 709 luma'}
       readout={swatches.length > 1 ? (collisions.length ? plural(collisions.length, 'collision') : 'No collisions') : undefined}
       actions={
         <>
-          {extra}
-          <NumberField label="Flag <" value={flagL} min={1} max={20} step={0.5} precision={1} unit="ΔL" size="sm" width={112} onChange={onFlagL} />
+          <NumberField label="Flag <" value={flagL} min={1} max={20} step={0.5} precision={1} unit="ΔV" size="sm" width={112} onChange={onFlagL} />
         </>
       }
       scroll
       className={className}
     >
-      {byL.length === 0 ? (
-        <p className={s.none}>The palette's lightness steps show here, in greyscale.</p>
+      {byV.length === 0 ? (
+        <p className={s.none}>The palette's values show here, in greyscale.</p>
       ) : (
         <>
           <div className={s.vstrip}>
-            {byL.map((w) => (
+            {byV.map((w) => (
               <Tooltip key={w.id} content={displayName(w)}>
-                <i style={{ background: cssColor(w.oklch) }} {...pointAt([w.id])} />
+                <i data-colour style={{ background: cssColor(w.oklch) }} {...pointAt([w.id])} />
               </Tooltip>
             ))}
           </div>
           <div className={s.vstrip}>
-            {byL.map((w) => (
-              <i key={w.id} style={{ background: cssColor([w.oklch[0], 0, 0]) }} {...pointAt([w.id])} />
+            {byV.map((w) => (
+              <i key={w.id} style={{ background: cssColor(greyOf(valueOf(w.oklch))) }} {...pointAt([w.id])} />
             ))}
           </div>
           <div ref={ruler} className={s.vscale} style={{ '--ramp': `${lanes.count * LANE + 8}px` } as CSSProperties}>
-            {byL.map((w, i) => {
+            {byV.map((w, i) => {
               const { lane, align } = lanes.at[i];
               const top = lane === null ? lanes.count * LANE : lane * LANE;
               return (
-                <Tooltip key={w.id} content={`${displayName(w)} · L ${fmtL(w.oklch[0])}`}>
+                <Tooltip key={w.id} content={`${displayName(w)} · V ${fmtV(w.oklch)}`}>
                   <span
                     className={cx(s.pin, align === 'start' && s.rgt, align === 'end' && s.lft, lane === null && s.bare, hit.has(w.id) && s.warn)}
-                    style={{ left: pct(w.oklch[0]), top, '--stem': `${lane === null ? 8 : (lanes.count - lane) * LANE - 4}px` } as CSSProperties}
+                    style={{ left: pct(valueOf(w.oklch)), top, '--stem': `${lane === null ? 8 : (lanes.count - lane) * LANE - 4}px` } as CSSProperties}
                     {...pointAt([w.id])}
                   >
                     {lane !== null && <span className={s.pl}>{label(w)}</span>}
@@ -154,7 +153,7 @@ export function Value({ swatches, onFix, pointAt, className, collisions, contras
             })}
             <i className={s.vramp} style={{ backgroundImage: RAMP }} />
             {collisions.map((c) => (
-              <i key={`${c.a.id}:${c.b.id}`} className={s.vbracket} style={{ left: pct(Math.min(c.a.oklch[0], c.b.oklch[0])), width: pct(c.deltaL) }} />
+              <i key={`${c.a.id}:${c.b.id}`} className={s.vbracket} style={{ left: pct(Math.min(valueOf(c.a.oklch), valueOf(c.b.oklch))), width: pct(c.deltaV) }} />
             ))}
             <span className={s.vticks}>
               <Ticks />
@@ -171,11 +170,11 @@ export function Value({ swatches, onFix, pointAt, className, collisions, contras
               <Icon name="error" size={16} />
               <span className={s.flagText}>
                 <Run list={cluster} />
-                {cluster.length === 2 ? ` sit ${(Math.abs(cluster[1].oklch[0] - cluster[0].oklch[0]) * 100).toFixed(1)} apart and read as one value.` : ' read as one value.'}
+                {cluster.length === 2 ? ` sit ${(Math.abs(valueOf(cluster[1].oklch) - valueOf(cluster[0].oklch)) * 100).toFixed(1)} apart and read as one value.` : ' read as one value.'}
                 {!fits && ` ${cluster.length} colours can't all stand ${flagL.toFixed(1)} apart; spread evenly they sit ${(100 / (cluster.length - 1)).toFixed(1)} apart.`}
                 {elsewhere > 0 && ` ${plural(elsewhere, 'other pair')} collide${elsewhere === 1 ? 's' : ''} too.`}
               </span>
-              <Button size="xs" onClick={fix} tooltip={fits ? `Space them ${gap.toFixed(1)} apart in lightness, order and hues kept` : 'Space them evenly from black to white, order and hues kept'}>
+              <Button size="xs" onClick={fix} tooltip={fits ? `Space them ${gap.toFixed(1)} apart in value, order and hues kept` : 'Space them evenly from black to white, order and hues kept'}>
                 {!fits ? 'Spread evenly' : cluster.length === 2 ? 'Spread apart' : `Spread these ${cluster.length}`}
               </Button>
             </div>
@@ -189,7 +188,7 @@ export function Value({ swatches, onFix, pointAt, className, collisions, contras
 /** "Moss 48.7 and Iron 54.1", "G1 50.0, G2 52.0 and 3 more" */
 function Run({ list }: { list: Swatch[] }) {
   const shown = list.length > 4 ? list.slice(0, 3) : list;
-  const parts = shown.map((w) => `${displayName(w)} ${fmtL(w.oklch[0])}`);
+  const parts = shown.map((w) => `${displayName(w)} ${fmtV(w.oklch)}`);
   const more = list.length - shown.length;
   const text = more ? `${parts.join(', ')} and ${more} more` : listNames(parts);
   return <b>{text}</b>;

@@ -1,4 +1,6 @@
 // How the colour tools name swatches in sentences, readouts and exports.
+import type { Oklch } from '../../../shared/color/index.ts';
+import { valueOf } from '../../../shared/color/value.ts';
 import { autoName } from '../../../shared/palette/names.ts';
 import type { Swatch } from '../../../shared/types.ts';
 
@@ -62,6 +64,8 @@ export const plural = (n: number, one: string, many = `${one}s`): string => `${n
 
 /** "L 66.2", "C .173", "H 37": the mockup's readouts */
 export const fmtL = (l: number) => (l * 100).toFixed(1);
+/** "V 59.6": the value (the grey a colour becomes) of a colour, as the checks and chips read it */
+export const fmtV = (o: Oklch) => (valueOf(o) * 100).toFixed(1);
 export const fmtC = (c: number) => c.toFixed(3).replace(/^0/, '');
 export const fmtH = (h: number) => Math.round(h) % 360;
 

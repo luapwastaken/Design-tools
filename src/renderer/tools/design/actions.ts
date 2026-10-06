@@ -1,14 +1,14 @@
 // Edits the row, the inspector and the keyboard share. Each is one history step (spec §8).
 import { hexToOklch, toHex, type Oklch } from '../../../shared/color/index.ts';
+import { holdValue, valueOf } from '../../../shared/color/value.ts';
 import type { DocController } from '../../../shared/doc-api.ts';
 import { generate } from '../../../shared/palette/generate.ts';
 import { gradientStops } from '../../../shared/palette/gradient.ts';
 import { ROLES } from '../../../shared/palette/roles.ts';
-import { fitChroma } from '../../../shared/palette/space.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { shell } from '../../shell/core/index.ts';
 import { pickFromScreen, toast } from '../../ui/index.ts';
-import { nextL } from './adjust.ts';
+import { nextV } from './adjust.ts';
 import { suggestRoles } from './artboard.ts';
 import { runGenerate } from './build.ts';
 import { displayName, insertAfter, listNames, moveIds, newSwatch, plural, recolour, removeIds, type DesignDoc, type DesignView } from './doc.ts';
@@ -53,12 +53,12 @@ export function step(doc: Doc, dir: -1 | 1): void {
   if (document.activeElement?.closest('[data-swatch]')) focusChip(next);
 }
 
-/** the active swatch's hue at the lightness the palette is missing most */
+/** the active swatch's hue at the value the palette is missing most */
 export function addSwatch(doc: Doc): void {
   const d = doc.get();
   const base = activeSwatch(d);
-  const l = nextL(d.swatches.map((w) => w.oklch[0]));
-  const w = newSwatch(base ? fitChroma([l, base.oklch[1], base.oklch[2]]) : [l, 0.12, 250]);
+  const v = nextV(d.swatches.map((w) => valueOf(w.oklch)));
+  const w = newSwatch(base ? holdValue(v, base.oklch[1], base.oklch[2]) : holdValue(v, 0.12, 250));
   doc.transact('Add swatch', (x) => insertAfter(x, base?.id ?? null, [w]));
   select([w.id]);
 }

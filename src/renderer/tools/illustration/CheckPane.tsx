@@ -3,6 +3,7 @@
 // design, and the order inside a ramp is the row's own value strip and its "Value breaks" mark.
 import { useMemo } from 'react';
 import type { Cvd, Oklch } from '../../../shared/color/index.ts';
+import { valueOf } from '../../../shared/color/value.ts';
 import { cvdClosest, valueCollisions, type CvdClosest, type ValueCollision } from '../../../shared/palette/checks.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { Button, Icon } from '../../ui/index.ts';
@@ -57,22 +58,22 @@ export function Problems({ doc, v, checks }: { doc: Doc; v: IllustrationView; ch
   const rows: { key: string; ids: string[]; text: React.ReactNode; fix?: { label: string; tip: string; run(): void } }[] = [];
 
   for (const c of collisions) {
-    const others = bases.filter((w) => w.id !== c.a.id && w.id !== c.b.id).map((w) => w.oklch[0]);
+    const others = bases.filter((w) => w.id !== c.a.id && w.id !== c.b.id).map((w) => valueOf(w.oklch));
     const [a, b] = valueFix([c.a.oklch, c.b.oklch], v.flagL / 100, others);
     rows.push({
       key: `v:${c.a.id}:${c.b.id}`,
       ids: [c.a.id, c.b.id],
       text: (
         <>
-          <b>{displayName(c.a)}</b> and <b>{displayName(c.b)}</b> read as one grey, {(c.deltaL * 100).toFixed(1)} apart in lightness.
+          <b>{displayName(c.a)}</b> and <b>{displayName(c.b)}</b> read as one grey, {(c.deltaV * 100).toFixed(1)} apart in value.
         </>
       ),
-      fix: { label: 'Spread apart', tip: 'Space them just past the flag gap in lightness, hues kept', run: () => fixTo(`Spread ${displayName(c.a)} and ${displayName(c.b)} in lightness`, { [c.a.id]: a, [c.b.id]: b }) },
+      fix: { label: 'Spread apart', tip: 'Space them just past the flag gap in value, hues kept', run: () => fixTo(`Spread ${displayName(c.a)} and ${displayName(c.b)} in value`, { [c.a.id]: a, [c.b.id]: b }) },
     });
   }
   for (const p of merged) {
     const kinds = CVDS.filter((k) => vision[k]?.flag && samePair(vision[k], p));
-    const others = shown.filter((w) => w.id !== p.a.id && w.id !== p.b.id).map((w) => w.oklch[0]);
+    const others = shown.filter((w) => w.id !== p.a.id && w.id !== p.b.id).map((w) => valueOf(w.oklch));
     let a = p.a.oklch;
     let b = p.b.oklch;
     for (const k of kinds) [a, b] = cvdFix(a, b, k, v.flagE, others) ?? [a, b];
@@ -83,10 +84,10 @@ export function Problems({ doc, v, checks }: { doc: Doc; v: IllustrationView; ch
       text: (
         <>
           <b>{displayName(p.a)}</b> and <b>{displayName(p.b)}</b> merge in {kinds.length === 4 ? 'every kind of' : kinds.join(', ')} vision.
-          {!parted && ' No lightness spread parts them: change one of their hues.'}
+          {!parted && ' No value spread parts them: change one of their hues.'}
         </>
       ),
-      fix: parted ? { label: 'Part them', tip: `Spread them in lightness until ΔE reaches ${v.flagE.toFixed(1)}`, run: () => fixTo(`Part ${displayName(p.a)} and ${displayName(p.b)}`, { [p.a.id]: a, [p.b.id]: b }) } : undefined,
+      fix: parted ? { label: 'Part them', tip: `Spread them in value until ΔE reaches ${v.flagE.toFixed(1)}`, run: () => fixTo(`Part ${displayName(p.a)} and ${displayName(p.b)}`, { [p.a.id]: a, [p.b.id]: b }) } : undefined,
     });
   }
 

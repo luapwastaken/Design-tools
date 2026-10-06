@@ -1,12 +1,13 @@
 // Tab 3, Check values: every ramp in colour and in greyscale with a verdict, the Value ruler (the
-// bases pinned by lightness, one cluster flag with its fix), Colour vision (a strip per simulation
+// bases pinned by value, one cluster flag with its fix), Colour vision (a strip per simulation
 // with its closest pair and ΔE), then the problems as a list, each with its one-click fix.
 import { useSyncExternalStore } from 'react';
 import { cssColor, type Oklch } from '../../../shared/color/index.ts';
+import { greyOf, valueOf } from '../../../shared/color/value.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
 import { Tooltip } from '../../ui/index.ts';
-import { fmtL, stepWord } from '../common/names.ts';
+import { fmtV, stepWord } from '../common/names.ts';
 import { Value } from '../common/Value.tsx';
 import { mergingCvd, Vision } from '../common/Vision.tsx';
 import type { Doc } from './actions.ts';
@@ -50,7 +51,7 @@ export function CheckTab({ doc, d, v, checks }: { doc: Doc; d: IllustrationDoc; 
     const nums = r.steps.map((w) => w.step ?? 0);
     const [lo, hi] = [Math.min(0, ...nums), Math.max(0, ...nums)];
     const word = (w: Swatch) => (r.ramp ? cap(stepWord(w.step ?? 0, lo, hi)) : nameOf(d, w));
-    for (let i = 1; i < r.steps.length; i++) if (Math.abs(r.steps[i].oklch[0] - r.steps[i - 1].oklch[0]) < gap) return `${word(r.steps[i - 1])} and ${word(r.steps[i])} too close`;
+    for (let i = 1; i < r.steps.length; i++) if (Math.abs(valueOf(r.steps[i].oklch) - valueOf(r.steps[i - 1].oklch)) < gap) return `${word(r.steps[i - 1])} and ${word(r.steps[i])} too close`;
     if (r.steps.some((w) => hit.has(w.id))) return 'Reads as another base';
     return null;
   };
@@ -59,7 +60,7 @@ export function CheckTab({ doc, d, v, checks }: { doc: Doc; d: IllustrationDoc; 
     <div className={s.tab}>
       <section className={s.board} aria-label="Greyscale">
         <h3 className={s.title}>
-          Value <span className={s.sub}>every ramp in greyscale; steps should step evenly</span>
+          Value <span className={s.sub}>every ramp by value; steps should step evenly</span>
         </h3>
         <div className={s.vrows}>
           {rows.map((r) => {
@@ -69,17 +70,17 @@ export function CheckTab({ doc, d, v, checks }: { doc: Doc; d: IllustrationDoc; 
                 <span className={s.name}>{r.name}</span>
                 <div className={s.strip}>
                   {r.steps.map((w) => (
-                    <Tooltip key={w.id} content={`${nameOf(d, w)} · L ${fmtL(w.oklch[0])}`}>
-                      <i className={cx(hit.has(w.id) && s.collide, lit.includes(w.id) && s.hot)} style={{ background: cssColor(w.oklch) }} {...pointAt([w.id])} />
+                    <Tooltip key={w.id} content={`${nameOf(d, w)} · V ${fmtV(w.oklch)}`}>
+                      <i className={cx(hit.has(w.id) && s.collide, lit.includes(w.id) && s.hot)} data-colour style={{ background: cssColor(w.oklch) }} {...pointAt([w.id])} />
                     </Tooltip>
                   ))}
                 </div>
                 <div className={s.strip}>
                   {r.steps.map((w, i) => {
-                    const close = i > 0 && Math.abs(w.oklch[0] - r.steps[i - 1].oklch[0]) < gap;
+                    const close = i > 0 && Math.abs(valueOf(w.oklch) - valueOf(r.steps[i - 1].oklch)) < gap;
                     return (
-                      <Tooltip key={w.id} content={`${nameOf(d, w)} · L ${fmtL(w.oklch[0])}${close ? ' · too close to the step before it' : ''}${hit.has(w.id) ? ' · reads as another base' : ''}`}>
-                        <i className={cx(hit.has(w.id) && s.collide, close && s.near, lit.includes(w.id) && s.hot)} style={{ background: cssColor([w.oklch[0], 0, 0]) }} {...pointAt([w.id])} />
+                      <Tooltip key={w.id} content={`${nameOf(d, w)} · V ${fmtV(w.oklch)}${close ? ' · too close to the step before it' : ''}${hit.has(w.id) ? ' · reads as another base' : ''}`}>
+                        <i className={cx(hit.has(w.id) && s.collide, close && s.near, lit.includes(w.id) && s.hot)} style={{ background: cssColor(greyOf(valueOf(w.oklch))) }} {...pointAt([w.id])} />
                       </Tooltip>
                     );
                   })}
@@ -91,7 +92,7 @@ export function CheckTab({ doc, d, v, checks }: { doc: Doc; d: IllustrationDoc; 
         </div>
       </section>
 
-      {/* the ruler: the bases pinned by lightness, one flag and one fix for the run that reads as one grey */}
+      {/* the ruler: the bases pinned by value, one flag and one fix for the run that reads as one grey */}
       <Value {...host} swatches={checks.bases} sub={d.ramps.length ? 'Ramp bases' : undefined} collisions={checks.collisions} flagL={v.flagL} onFlagL={(flagL) => patchView({ flagL })} className={s.module} />
       <Vision
         {...host}

@@ -1,8 +1,9 @@
-// Check palette tab: the palette as each colour vision sees it, and in greyscale (value), each row
+// Check palette tab: the palette as each colour vision sees it, and by value (its greys), each row
 // naming the colours that collide and carrying its fix; then print: ≈CMYK, gamut and, on request,
 // the nearest reference inks.
 import { useMemo } from 'react';
 import { cssColor, hexToOklch, simulateCvd, toSrgbGamut, type Cvd, type Oklch } from '../../../shared/color/index.ts';
+import { valueOf } from '../../../shared/color/value.ts';
 import { printInfo, type CvdClosest, type PrintInfo } from '../../../shared/palette/checks.ts';
 import type { InkMatch } from '../../../shared/palette/inks.ts';
 import type { Swatch } from '../../../shared/types.ts';
@@ -68,11 +69,6 @@ export function CheckTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: DesignVi
           contrast={r.contrast}
           flagL={v.flagL}
           onFlagL={(flagL) => patchView({ flagL })}
-          extra={
-            <Button size="xs" onClick={() => toggleSim('greyscale', v.sim)} aria-pressed={v.sim === 'greyscale'} tooltip={v.sim === 'greyscale' ? 'Show the palette as it is' : 'Show the palette row in greyscale'}>
-              {v.sim === 'greyscale' ? 'Stop greyscale' : 'See as greyscale'}
-            </Button>
-          }
         />
       </div>
       <div data-check="print" />
@@ -120,7 +116,7 @@ function VisionRow({ kind, shown, pair, sim, r, flagE, onFix }: { kind: Kind; sh
     if (!flagged || !pair || flagE === undefined) return null;
     let a = pair.a.oklch;
     let b = pair.b.oklch;
-    const others = shown.filter((w) => w.id !== pair.a.id && w.id !== pair.b.id).map((w) => w.oklch[0]);
+    const others = shown.filter((w) => w.id !== pair.a.id && w.id !== pair.b.id).map((w) => valueOf(w.oklch));
     for (const k of kinds) [a, b] = cvdFix(a, b, k, flagE, others) ?? [a, b];
     return a === pair.a.oklch && b === pair.b.oklch ? null : { [pair.a.id]: a, [pair.b.id]: b };
   })();
@@ -129,7 +125,7 @@ function VisionRow({ kind, shown, pair, sim, r, flagE, onFix }: { kind: Kind; sh
       <Label text={LABEL[kind]} to={kind === 'typical' ? 'normal' : kind} sim={sim} />
       <span className={s.strip} style={{ gridTemplateColumns: `repeat(${shown.length}, 1fr)` }}>
         {shown.map((w) => (
-          <i key={w.id} style={{ background: cssColor(kind === 'typical' ? w.oklch : simulateCvd(w.oklch, kind)) }} />
+          <i key={w.id} data-colour style={{ background: cssColor(kind === 'typical' ? w.oklch : simulateCvd(w.oklch, kind)) }} />
         ))}
       </span>
       <span className={cx(s.res, flagged && s.bad)}>
@@ -139,7 +135,7 @@ function VisionRow({ kind, shown, pair, sim, r, flagE, onFix }: { kind: Kind; sh
               {displayName(pair.a)} and {displayName(pair.b)} look alike, ΔE {pair.deltaE.toFixed(1)}
             </span>
             {parted && onFix && (
-              <Button size="xs" onClick={() => onFix(`Part ${displayName(pair.a)} and ${displayName(pair.b)}`, parted)} tooltip={`Spread them in lightness until ΔE reaches ${flagE!.toFixed(1)}`}>
+              <Button size="xs" onClick={() => onFix(`Part ${displayName(pair.a)} and ${displayName(pair.b)}`, parted)} tooltip={`Spread them in value until ΔE reaches ${flagE!.toFixed(1)}`}>
                 Part them
               </Button>
             )}
@@ -204,7 +200,7 @@ function PrintTable({ doc, rows }: { doc: Doc; rows: [Swatch, PrintInfo][] }) {
       </div>
       {rows.map(([w, info]) => (
         <div key={w.id} className={s.prow} role="row" {...pointAt([w.id])}>
-          <i className={s.pchip} style={{ background: cssColor(w.oklch) }} />
+          <i className={s.pchip} data-colour style={{ background: cssColor(w.oklch) }} />
           <span className={s.pname}>{displayName(w)}</span>
           <span className={s.pnum}>{info.cmyk.join(' ')}</span>
           <Gamut ok={info.inSrgb} label={info.inSrgb ? 'In' : 'Out'} bare />
@@ -212,7 +208,7 @@ function PrintTable({ doc, rows }: { doc: Doc; rows: [Swatch, PrintInfo][] }) {
           {info.nearest.map((m) => (
             <Tooltip key={m.library} content={`Match ${displayName(w)} to ${fullInk(m)} (ΔE ${m.deltaE.toFixed(1)})`}>
               <button type="button" className={s.ink} onClick={() => match(w, m)}>
-                <i className={s.pchip} style={{ background: cssColor(hexToOklch(m.hex)) }} />
+                <i className={s.pchip} data-colour style={{ background: cssColor(hexToOklch(m.hex)) }} />
                 <span className={s.inkName}>{inkLabel(m)}</span>
                 <span className={s.pnum}>{m.deltaE.toFixed(1)}</span>
               </button>

@@ -3,10 +3,11 @@
 // lens are in Ramp settings; Regenerate is here.
 import { useSyncExternalStore, type CSSProperties, type KeyboardEvent } from 'react';
 import { cssColor, toHex } from '../../../shared/color/index.ts';
+import { greyOf, valueOf } from '../../../shared/color/value.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
 import { Button, EmptyState, Tooltip } from '../../ui/index.ts';
-import { fmtL, plural, stepWord } from '../common/names.ts';
+import { fmtV, plural, stepWord } from '../common/names.ts';
 import { Section } from '../common/Section.tsx';
 import { surroundOf } from '../common/surround.ts';
 import { move, select, selected, type Doc } from './actions.ts';
@@ -85,7 +86,7 @@ type StepProps = { d: IllustrationDoc; v: IllustrationView; w: Swatch; word: str
 function Step({ d, v, w, word, on, lit, broken, plain }: StepProps) {
   const hex = toHex(w.oklch).toUpperCase();
   const named = w.name.trim() ? wordOf(d, w) : null;
-  const tip = `${nameOf(d, w)}${named ? ` · ${named}` : ''} · ${hex} · L ${fmtL(w.oklch[0])}${w.edited ? ' · edited by hand' : ''}`;
+  const tip = `${nameOf(d, w)}${named ? ` · ${named}` : ''} · ${hex} · V ${fmtV(w.oklch)}${w.edited ? ' · edited by hand' : ''}`;
   const seen = proofOf(w.oklch, v.proof);
   const pick = () => {
     select(w.id);
@@ -111,10 +112,10 @@ function Step({ d, v, w, word, on, lit, broken, plain }: StepProps) {
           pick();
         }}
       >
-        <i className={s.colour} style={{ background: cssColor(seen) }}>
+        <i className={s.colour} data-colour style={{ background: cssColor(seen) }}>
           {w.step === 0 && <b className={s.badge}>Base</b>}
         </i>
-        <i className={s.value} style={{ background: cssColor([w.oklch[0], 0, 0]) }} />
+        <i className={s.value} style={{ background: cssColor(greyOf(valueOf(w.oklch))) }} />
         {v.show !== 'off' && (
           <span className={s.read}>
             {v.show === 'hex' ? (

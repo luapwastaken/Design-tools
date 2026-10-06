@@ -1,12 +1,15 @@
-// Seeded palettes from a style preset: a lightness range and a chroma shape (spec §6.2). Lightness
-// is spread before anything else, so a generated palette passes the value check (v1's never did).
+// Seeded palettes from a style preset: a range of greys and a chroma shape (spec §6.2). Value (the
+// grey a colour becomes) is spread before anything else, then each colour is solved at its value, so
+// a generated palette passes the value check (v1's never did).
 import type { Oklch } from '../color/index.ts';
+import { holdValue, valueOf } from '../color/value.ts';
 import { random } from './random.ts';
-import { fitChroma, wrapHue } from './space.ts';
+import { wrapHue } from './space.ts';
 
 export type Preset = { id: string; label: string; describe: string };
 
 type Shape = Preset & {
+  /** the greys the palette runs between, as OKLCH lightnesses of a grey (turned to values on use) */
   l: [number, number];
   /** chroma at the ends of the lightness range and in its middle */
   c: [ends: number, mid: number];
@@ -15,7 +18,7 @@ type Shape = Preset & {
   /** hue step per colour, darkest first, and random wander either side */
   step: number;
   wander: number;
-  /** one strong colour, at the free lightness nearest `at` */
+  /** one strong colour, at the free value nearest the grey of lightness `at` */
   accent?: { at: number; c: number; hues: [number, number] };
 };
 
@@ -30,8 +33,11 @@ const SHAPES: Shape[] = [
 
 export const PRESETS: Preset[] = SHAPES.map(({ id, label, describe }) => ({ id, label, describe }));
 
-/** two lightnesses closer than this read as one grey; the value check flags 0.06, this keeps a margin */
+/** two values closer than this read as one grey; the value check flags 0.06, this keeps a margin */
 const MIN_GAP = 0.07;
+
+/** the value of the grey at OKLCH lightness `l` */
+const grey = (l: number) => valueOf([l, 0, 0]);
 
 /**
  * `count` colours; a non-null `locked[i]` stays at slot i unchanged and the others spread around
@@ -43,17 +49,17 @@ export function generate(opts: { seed: number; count: number; preset: string; lo
   const slots = Array.from({ length: Math.max(0, Math.floor(opts.count)) }, (_, i) => opts.locked[i] ?? null);
   const free = slots.flatMap((o, i) => (o ? [] : [i]));
   const taken = slots.filter((o): o is Oklch => !!o);
-  const range = rangeFor(shape.l, slots.length);
-  const ls = spreadLightness(taken.map((o) => o[0]), free.length, range, rnd);
+  const range = rangeFor([grey(shape.l[0]), grey(shape.l[1])], slots.length);
+  const vs = spreadValues(taken.map(valueOf), free.length, range, rnd);
   const base = baseHue(shape, taken, rnd);
   const [lo, hi] = range;
-  const at = shape.accent?.at ?? NaN;
-  const accent = shape.accent ? ls.reduce((best, l, j) => (Math.abs(l - at) < Math.abs(ls[best] - at) ? j : best), 0) : -1;
-  const made = ls.map((l, j): Oklch => {
-    if (j === accent) return fitChroma([l, shape.accent!.c * (0.85 + 0.3 * rnd()), between(shape.accent!.hues, rnd())]);
-    const t = Math.min(1, Math.max(0, (l - lo) / (hi - lo)));
+  const at = shape.accent ? grey(shape.accent.at) : NaN;
+  const accent = shape.accent ? vs.reduce((best, v, j) => (Math.abs(v - at) < Math.abs(vs[best] - at) ? j : best), 0) : -1;
+  const made = vs.map((v, j): Oklch => {
+    if (j === accent) return holdValue(v, shape.accent!.c * (0.85 + 0.3 * rnd()), between(shape.accent!.hues, rnd()));
+    const t = Math.min(1, Math.max(0, (v - lo) / (hi - lo)));
     const c = (shape.c[0] + (shape.c[1] - shape.c[0]) * Math.sin(Math.PI * t)) * (0.75 + 0.5 * rnd());
-    return fitChroma([l, c, wrapHue(base + j * shape.step + (rnd() - 0.5) * shape.wander)]);
+    return holdValue(v, c, wrapHue(base + j * shape.step + (rnd() - 0.5) * shape.wander));
   });
   free.forEach((slot, j) => (slots[slot] = made[j]));
   return slots as Oklch[];
@@ -61,7 +67,7 @@ export function generate(opts: { seed: number; count: number; preset: string; lo
 
 const between = ([a, b]: [number, number], t: number) => a + (b - a) * t;
 
-/** a preset's lightness range, widened as far as `n` colours need to stand MIN_GAP apart (Quiet at 12) */
+/** a preset's value range, widened as far as `n` colours need to stand MIN_GAP apart (Quiet at 12) */
 function rangeFor([lo, hi]: [number, number], n: number): [number, number] {
   const short = (n - 1) * MIN_GAP - (hi - lo);
   if (short <= 0) return [lo, hi];
@@ -76,14 +82,14 @@ function baseHue(shape: Shape, taken: Oklch[], rnd: () => number): number {
 }
 
 /**
- * `m` lightnesses in `range`, as far apart from each other and from `taken` as the gaps allow:
+ * `m` values in `range`, as far apart from each other and from `taken` as the gaps allow:
  * each point goes to the gap where it leaves the widest spacing, then all are jittered by what
  * spacing there is to spare above MIN_GAP. Sorted, darkest first.
  */
-function spreadLightness(taken: number[], m: number, range: [number, number], rnd: () => number): number[] {
+function spreadValues(taken: number[], m: number, range: [number, number], rnd: () => number): number[] {
   const fixed = [...taken].sort((a, b) => a - b);
   const edges = [Math.min(range[0], fixed[0] ?? 1), ...fixed, Math.max(range[1], fixed.at(-1) ?? 0)];
-  // points keep their distance from a locked lightness, but may sit right on a range end
+  // points keep their distance from a locked value, but may sit right on a range end
   const gaps = edges.slice(1).map((b, i) => {
     const [wallA, wallB] = [i === 0, i === edges.length - 2];
     return { a: edges[i], b, wallA, ends: (wallA ? 0 : 1) + (wallB ? 0 : 1), n: 0 };
@@ -101,6 +107,6 @@ function spreadLightness(taken: number[], m: number, range: [number, number], rn
       const start = g.wallA ? g.a : g.a + s;
       return Array.from({ length: g.n }, (_, i) => start + i * s);
     })
-    .map((l) => Math.min(0.99, Math.max(0.02, l + (rnd() * 2 - 1) * jitter)))
+    .map((v) => Math.min(0.99, Math.max(0.02, v + (rnd() * 2 - 1) * jitter)))
     .sort((a, b) => a - b);
 }

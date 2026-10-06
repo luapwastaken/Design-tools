@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { contrast, hexToOklch, type Oklch } from '../src/shared/color/index.ts';
 import { contrastPairs, contrastTarget, cvdClosest, printInfo, valueCollisions } from '../src/shared/palette/checks.ts';
+import { greyOf, holdValue, valueOf } from '../src/shared/color/value.ts';
 import { INKS } from '../src/shared/palette/inks.ts';
 import type { Swatch } from '../src/shared/types.ts';
 
@@ -49,12 +50,13 @@ test('contrast fix with two grounds: one lightness that passes on both, or none 
   assert.deepEqual(apart.map((p) => p.fix), [null, null]);
 });
 
-test('contrast fix keeps clear of the other lightnesses when a little more of a move does it', () => {
+test('contrast fix keeps clear of the other values when a little more of a move does it', () => {
   const list = [sw('Ground', [0.97, 0.01, 80], 'Background'), sw('Olive', [0.63, 0.1, 110], 'Muted'), sw('Chocolate', [0.52, 0.08, 50], 'Highlight')];
-  const least = contrastPairs(list).find((p) => p.text.name === 'Olive')!.fix!.oklch[0];
-  const clear = contrastPairs(list, { minGap: 0.06 }).find((p) => p.text.name === 'Olive')!.fix!.oklch[0];
-  assert.ok(Math.abs(least - 0.52) < 0.06, `the least move lands on Chocolate: ${least}`);
-  assert.ok(Math.abs(clear - 0.52) >= 0.06 - 1e-9 && clear < least, `a clear one: ${clear}`);
+  const least = contrastPairs(list).find((p) => p.text.name === 'Olive')!.fix!.oklch;
+  const clear = contrastPairs(list, { minGap: 0.06 }).find((p) => p.text.name === 'Olive')!.fix!.oklch;
+  const choc = valueOf(list[2].oklch);
+  assert.ok(Math.abs(valueOf(least) - choc) < 0.06, `the least move lands on Chocolate: ${valueOf(least)} vs ${choc}`);
+  assert.ok(Math.abs(valueOf(clear) - choc) >= 0.06 - 1e-9 && clear[0] < least[0], `a clear one: ${valueOf(clear)}`);
 });
 
 test('contrast fix keeps a wide-gamut colour wide', () => {
@@ -110,16 +112,32 @@ test('contrast with ink roles but no ground role: grounds come from the swatches
 
 // ── value ────────────────────────────────────────────────────────────────────────────────────────
 
-test('value: pairs closer than the threshold in OKLCH L, closest first', () => {
-  const list = [sw('A', [0.5, 0.1, 30]), sw('B', [0.54, 0.1, 200]), sw('C', [0.9, 0, 0]), sw('D', [0.51, 0, 0])];
+test('value: pairs whose value (the grey they become) is closer than the threshold, closest first', () => {
+  const list = [sw('A', holdValue(0.5, 0.1, 30)), sw('B', holdValue(0.54, 0.1, 200)), sw('C', greyOf(0.9)), sw('D', greyOf(0.51))];
   const hits = valueCollisions(list);
   assert.deepEqual(hits.map((h) => `${h.a.name}${h.b.name}`), ['AD', 'BD', 'AB']);
-  assert.ok(Math.abs(hits[0].deltaL - 0.01) < 1e-12);
+  assert.ok(Math.abs(hits[0].deltaV - 0.01) < 2e-3);
   assert.deepEqual(valueCollisions(list, 0.02).map((h) => `${h.a.name}${h.b.name}`), ['AD']);
-  assert.equal(valueCollisions(MONOLITH).length, 1, 'the mockup shows one collision (Moss and Iron)');
-  const grounds = [sw('Page', [0.965, 0, 0], 'Background'), sw('Card', [0.933, 0, 0], 'Surface'), sw('Ink', [0.94, 0, 0])];
+  // the mockup flags Moss and Iron by OKLCH L; by value the orange Ember sits as close to Iron as Moss does
+  assert.deepEqual(valueCollisions(MONOLITH).map((h) => [h.a.name, h.b.name].sort().join('+')), ['Ember+Iron', 'Iron+Moss']);
+  const grounds = [sw('Page', greyOf(0.98), 'Background'), sw('Card', greyOf(0.95), 'Surface'), sw('Ink', greyOf(0.957))];
   assert.deepEqual(valueCollisions(grounds).map((h) => `${h.a.name}${h.b.name}`), ['CardInk', 'PageInk'], 'a card may sit close to its page');
-  assert.equal(valueCollisions([sw('A', [0.52, 0, 0]), sw('B', [0.58, 0, 0])]).length, 0, 'exactly 6.0 apart is not flagged');
+  assert.equal(valueCollisions([sw('A', greyOf(0.52)), sw('B', greyOf(0.58))]).length, 0, 'exactly 6.0 apart is not flagged');
+});
+
+test('value is not OKLCH L: a yellow and a magenta at one L are far apart in value, so no collision', () => {
+  const yellow = hexToOklch('#c19901');
+  const magenta = hexToOklch('#ff13f7');
+  assert.ok(Math.abs(yellow[0] - magenta[0]) < 0.01, `one L: ${yellow[0]} ${magenta[0]}`);
+  assert.deepEqual(valueCollisions([sw('Yellow', yellow), sw('Magenta', magenta)]), []);
+});
+
+test('value is not OKLCH L: two colours at different L but one value do collide', () => {
+  const red = sw('Red', holdValue(0.25, 0.2, 0));
+  const grey = sw('Grey', greyOf(0.25));
+  assert.ok(Math.abs(red.oklch[0] - grey.oklch[0]) > 0.06, `different L: ${red.oklch[0]} ${grey.oklch[0]}`);
+  const [hit] = valueCollisions([red, grey]);
+  assert.ok(hit && hit.deltaV < 2e-3, 'the value is the same');
 });
 
 // ── colour vision ────────────────────────────────────────────────────────────────────────────────
