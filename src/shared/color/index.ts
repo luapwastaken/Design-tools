@@ -74,6 +74,9 @@ export function hexToOklch(hex: string): Oklch {
 
 export const toHex = (o: Oklch): string => formatHex(srgb(o));
 
+/** The sRGB colour a screen shows (gamut mapped, 0-1 per channel), unrounded: what `toHex` rounds. */
+export const displayRgb = (o: Oklch): Rgb => srgb(o);
+
 /** 0-255 per channel: exactly what the hex readout shows. */
 export function rgb255(o: Oklch): [number, number, number] {
   const hex = toHex(o);
