@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { inSrgb, READOUT_TOL } from '../src/shared/color/index.ts';
 import { curveAt, emptyDoc, fix, foldAngle, groundIsPaper, isIdentity, opaqueOf, printPx, sharedScreen, spotInk, withPoint, type HalftoneDoc } from '../src/renderer/tools/halftone/doc.ts';
 import { holds, placement, plateOf, screenKey, shownDots, svgOver } from '../src/renderer/tools/halftone/screening.ts';
 
@@ -104,4 +105,8 @@ test("a palette's dark ground becomes the paper once a white ink can print the l
   assert.equal(groundIsPaper(cream, [pink, dark]), true, 'inks darker than the ground');
   assert.equal(groundIsPaper(dark, [pink]), false, 'a transparent pink would only darken it');
   assert.equal(groundIsPaper(dark, [white, pink]), true, 'white under the pink');
+});
+
+test('the stock process inks sit in sRGB, so the picker never calls them outside it', () => {
+  for (const ink of emptyDoc().inks) assert.ok(inSrgb(ink.colour, READOUT_TOL), ink.name);
 });

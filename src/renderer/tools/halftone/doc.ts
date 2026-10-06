@@ -1,5 +1,5 @@
 // The Halftone document (plan: Document) and the limits that keep every edit printable.
-import type { Oklch } from '../../../shared/color/index.ts';
+import { hexToOklch, type Oklch } from '../../../shared/color/index.ts';
 import { curveAt } from '../../../shared/halftone/tone.ts';
 import type { Process, Shape } from '../../../shared/halftone/types.ts';
 
@@ -63,12 +63,13 @@ export const IDENTITY: [number, number][] = [
   [1, 1],
 ];
 
-// Process inks as printed on coated stock (their usual screen stand-ins), and Bone paper.
+// Process inks as printed on coated stock (their usual screen stand-ins), and Bone paper. Made from
+// their hex, so each sits exactly in sRGB (a 4-decimal OKLCH of #00aeef lands just outside it).
 const PROCESS: Record<Process, { name: string; colour: Oklch; angle: number }> = {
-  c: { name: 'Cyan', colour: [0.708, 0.1489, 234.36], angle: 15 },
-  m: { name: 'Magenta', colour: [0.6157, 0.2527, 355.14], angle: 75 },
-  y: { name: 'Yellow', colour: [0.9412, 0.2004, 105.69], angle: 0 },
-  k: { name: 'Black', colour: [0.2442, 0.0064, 0.59], angle: 45 },
+  c: { name: 'Cyan', colour: hexToOklch('#00aeef'), angle: 15 },
+  m: { name: 'Magenta', colour: hexToOklch('#ec008c'), angle: 75 },
+  y: { name: 'Yellow', colour: hexToOklch('#fff200'), angle: 0 },
+  k: { name: 'Black', colour: hexToOklch('#231f20'), angle: 45 },
 };
 export const BONE: Oklch = [0.9354, 0.0173, 84.59];
 

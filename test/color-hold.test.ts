@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { inSrgb, rgb255, type Oklch } from '../src/shared/color/index.ts';
 import { canHold, capture, hsbMove, hslMove, oklchMove, projectMove, resolve, type Hold } from '../src/shared/color/hold.ts';
 import { fromCmyk, fromHsb, fromHsl, fromRgb255, hsbOf, hslOf, type Hsb } from '../src/shared/color/picker.ts';
+import { heldEdge } from '../src/shared/color/fast.ts';
 import { holdValue, hslHold, valueOf } from '../src/shared/color/value.ts';
 
 const HUES = Array.from({ length: 73 }, (_, i) => i * 5);
@@ -172,4 +173,18 @@ test('holdValue is the OKLCH hold: a value the hue cannot reach at that chroma g
   const o = holdValue(0.9, 0.2, 264);
   near(o, 0.9, 'light blue');
   assert.ok(o[1] < 0.2);
+});
+
+test('the held edge is the real end of sRGB for dark saturated blues and violets (a missed secant solve cut it short)', () => {
+  // at value 12.4 and hue 279 sRGB has chroma to 0.271; the old solve stopped at 0.250
+  assert.ok(heldEdge(0.124, 279).c > 0.27);
+  assert.ok(holdValue(0.124, 0.3, 279)[1] > 0.27);
+  near(holdValue(0.124, 0.3, 279), 0.124, 'dark violet');
+  // and the edge is inside sRGB at the value asked, whatever the hue
+  for (const [v, h] of [[0.09, 267], [0.15, 306], [0.2, 333], [0.12, 342], [0.24, 354], [0.5, 120]] as const) {
+    const e = heldEdge(v, h);
+    const o: Oklch = [e.l, e.c, h];
+    assert.ok(inSrgb(o, 1e-3), `${v} ${h} inside`);
+    near(o, v, `${v} ${h} edge`);
+  }
 });

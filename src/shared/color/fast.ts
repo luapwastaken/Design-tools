@@ -75,18 +75,32 @@ export function holds(target: number, l: number, c: number, ca: number, sa: numb
   return inSrgb(v) && Math.abs(lumaOf(v) - target) < REACHED;
 }
 
+/** The L at chroma `c` (hue cos and sin) whose value is `target`, by bisection: value rises with L, so it cannot fail to converge where a clipped channel flattens it. */
+function bisectL(target: number, c: number, ca: number, sa: number): number {
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 30; i++) {
+    const m = (lo + hi) / 2;
+    if (lumaOf(lrgb(m, c * ca, c * sa)) < target) lo = m;
+    else hi = m;
+  }
+  return (lo + hi) / 2;
+}
+
 /**
  * The most chroma any colour at this value and hue has inside sRGB, and the L it has there. The
- * colours at one value form one run of chroma out from the grey, so bisection finds its end.
+ * colours at one value form one run of chroma out from the grey, so bisection finds its end. L is
+ * bisected too (not secant-solved): near a dark blue's corner a secant solve can miss, and that
+ * miss would read as "chroma out of reach" and cut the edge short.
  */
 export function heldEdge(target: number, h: number): { c: number; l: number } {
   const [ca, sa] = [Math.cos((h * Math.PI) / 180), Math.sin((h * Math.PI) / 180)];
   let lo = 0;
   let hi = 0.5;
-  let lLo = solveL(target, 0, ca, sa, target ** 0.73);
+  let lLo = bisectL(target, 0, ca, sa);
   for (let i = 0; i < 16; i++) {
     const m = (lo + hi) / 2;
-    const l = solveL(target, m, ca, sa, lLo);
+    const l = bisectL(target, m, ca, sa);
     if (holds(target, l, m, ca, sa)) [lo, lLo] = [m, l];
     else hi = m;
   }
