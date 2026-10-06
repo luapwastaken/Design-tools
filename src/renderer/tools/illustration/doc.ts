@@ -168,6 +168,14 @@ export function lightForAll(d: IllustrationDoc, id: string): IllustrationDoc {
   return regenAll({ ...d, ramps: d.ramps.map((x) => (x === r ? x : { ...x, light: [...r.light], shadow: [...r.shadow] })) });
 }
 
+/** the ramp's material, push, hue shift, saturation and Surface numbers on every ramp; each keeps its own colour */
+export function lookForAll(d: IllustrationDoc, id: string): IllustrationDoc {
+  const r = rampOf(d, id);
+  if (!r) return d;
+  const { material, intensity, push, hueShift, chromaCurve, surface } = r;
+  return regenAll({ ...d, ramps: d.ramps.map((x) => (x === r ? x : { ...x, material, intensity, push, hueShift, chromaCurve, surface: surface && { ...surface } })) });
+}
+
 /** one light for the scene: this light and shadow colour on every ramp (hand-edited steps stay), and on the next one born */
 export const setScene = (d: IllustrationDoc, light: Oklch, shadow: Oklch): IllustrationDoc =>
   regenAll({ ...d, scene: { light: [...light], shadow: [...shadow] }, ramps: d.ramps.map((r) => ({ ...r, light: [...light], shadow: [...shadow] })) });

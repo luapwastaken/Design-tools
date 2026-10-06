@@ -29,7 +29,7 @@ const finish = (gloss: number, softness: number, translucency: number, sheen: nu
 // finish(gloss, softness, translucency, sheen, grain, metal)
 export const FINISHES: Record<MaterialId, Finish> = {
   skin: finish(0.3, 0.8, 0.25, 0),
-  cloth: finish(0.08, 0.35, 0.4, 0.25),
+  cloth: finish(0.08, 0.35, 0.25, 0.25),
   velvet: finish(0.04, 0.15, 0.12, 1),
   metal: finish(0.85, 0, 0, 0, 0, 1),
   plastic: finish(0.7, 0.05, 0, 0),
@@ -66,3 +66,26 @@ export const SURFACE_SLIDERS = [
 
 /** true when the ramp has any of its own Surface numbers */
 export const hasOverrides = (surface?: SurfaceSpec): boolean => !!surface && Object.keys(surface).length > 0;
+
+/**
+ * Finishes that are a few Surface numbers (and, for gold, a material) in one pick: what cloth does
+ * as satin, silk or linen, and metal as gold. The numbers are written to the ramp as its own
+ * Surface, so they can be tuned after.
+ */
+export const FINISH_PRESETS: { id: string; label: string; tip: string; material?: MaterialId; surface: SurfaceSpec }[] = [
+  { id: 'satin', label: 'Satin', tip: 'Cloth with a glossy streak along the folds', surface: { gloss: 0.55, grain: 0.7, sheen: 0.1, softness: 0.35 } },
+  { id: 'silk', label: 'Silk', tip: 'Brighter and more fluid than satin, a little light comes through', surface: { gloss: 0.65, grain: 0.85, sheen: 0.15, softness: 0.45, translucency: 0.3 } },
+  { id: 'linen', label: 'Linen', tip: 'Matte and coarse: broad, soft light and a faint streak', surface: { gloss: 0.03, grain: 0.35, sheen: 0.1, softness: 0.5, translucency: 0.3 } },
+  { id: 'gold', label: 'Gold', tip: 'Polished metal with a soft brushed streak', material: 'metal', surface: { gloss: 0.75, grain: 0.2 } },
+];
+
+const sameSurface = (a: SurfaceSpec, b: SurfaceSpec = {}) => {
+  const [x, y] = [Object.entries(a), Object.entries(b)];
+  return x.length === y.length && x.every(([k, v]) => b[k as keyof SurfaceSpec] === v);
+};
+
+/** which finish the ramp has: one of the presets, "own" (the material's) or "custom" (some numbers of its own) */
+export function finishPresetOf(r: Pick<RampSpec, 'material' | 'surface'>): string {
+  const hit = FINISH_PRESETS.find((p) => (p.material ?? r.material) === r.material && sameSurface(p.surface, r.surface));
+  return hit?.id ?? (hasOverrides(r.surface) ? 'custom' : 'own');
+}

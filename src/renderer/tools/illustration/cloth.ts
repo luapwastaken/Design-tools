@@ -7,6 +7,8 @@ export type Fold = 'curtain' | 'drape' | 'crumple';
 export type Cloth = {
   /** half the width at the widest */
   xmax: number;
+  /** half the width at a height, when the sides are not straight */
+  half?(y: number): number;
   top(x: number): number;
   hem(x: number): number;
   z(x: number, y: number): number;
@@ -17,7 +19,7 @@ export type Cloth = {
 export const FOLDS: { value: Fold; label: string; tip: string }[] = [
   { value: 'curtain', label: 'Curtain', tip: 'Hung from a rail, falling in two soft folds' },
   { value: 'drape', label: 'Drape', tip: 'A swag between two pins, folds fanning from each' },
-  { value: 'crumple', label: 'Crumple', tip: 'Wrinkled cloth with no direction to it' },
+  { value: 'crumple', label: 'Crumple', tip: 'Cloth creased at every angle, long folds and fine ones' },
 ];
 
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -86,52 +88,55 @@ const drape: Cloth = {
   open: (x, y) => 1 - 0.38 * ((1 - drapeShape(x, y).folds) / 2) * smooth(0.0, 0.6, PIN_Y - y),
 };
 
-// ── crumple: flat facets with soft creases between them, no direction ───────────────────────────
+// ── crumple: long creases at every angle, finer ones across them ────────────────────────────────
 
-/** a hash of the lattice point and a salt, 0..1 */
-function hash(ix: number, iy: number, salt: number): number {
-  let h = Math.imul(ix, 374761393) + Math.imul(iy, 668265263) + Math.imul(salt, 1442695041);
+/** a crease: a line segment (centre, direction, half length) with a ridge along it, rounded on top and sagging softly either side */
+type Crease = { x: number; y: number; c: number; s: number; half: number; width: number; amp: number };
+
+/** a hash of a counter and a salt, 0..1 */
+function hash(i: number, salt: number): number {
+  let h = Math.imul(i, 374761393) + Math.imul(salt, 668265263);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-/** the facets' blend reaches 1.15 cells, the nearest an unsearched cell's point can be */
-const REACH6 = 1 / 1.15 ** 12;
+/** `n` creases of one scale, laid out from fixed hashes so the cloth is always the same cloth */
+const creases = (n: number, salt: number, half: [number, number], width: [number, number], amp: [number, number]): Crease[] =>
+  Array.from({ length: n }, (_, i) => {
+    const a = Math.PI * hash(i, salt + 1);
+    const mix = (r: [number, number], k: number) => r[0] + (r[1] - r[0]) * hash(i, salt + k);
+    return { x: 1.3 * (hash(i, salt + 2) - 0.5), y: 1.5 * (hash(i, salt + 3) - 0.5), c: Math.cos(a), s: Math.sin(a), half: mix(half, 4), width: mix(width, 5), amp: mix(amp, 6) };
+  });
 
-/** facets per unit of the picture */
-const FACETS = 3.4;
+// the long ones first, then the finer ones, which fall across them
+const CREASES: Crease[] = [...creases(9, 10, [0.45, 0.85], [0.06, 0.1], [0.06, 0.1]), ...creases(14, 40, [0.18, 0.4], [0.025, 0.045], [0.012, 0.022])];
 
-/**
- * Each cell of a jittered grid is a flat facet tipped its own way; the height at a point is the
- * facets round it blended by 1/distance^6, so each stays flat in its middle and creases at the seams.
- */
 function crumpleZ(x: number, y: number): number {
-  const [u, v] = [x * FACETS, y * FACETS];
-  const [cx, cy] = [Math.floor(u), Math.floor(v)];
-  let [sum, weight] = [0, 0];
-  for (let j = -1; j <= 1; j++) {
-    for (let i = -1; i <= 1; i++) {
-      const [ix, iy] = [cx + i, cy + j];
-      const [px, py] = [ix + 0.15 + 0.7 * hash(ix, iy, 1), iy + 0.15 + 0.7 * hash(ix, iy, 2)];
-      const [dx, dy] = [u - px, v - py];
-      const d2 = dx * dx + dy * dy + 1e-4;
-      // reaching no further than the cells searched, so a facet drops out at nothing
-      const w = 1 / (d2 * d2 * d2) - REACH6;
-      if (w <= 0) continue;
-      const height = 0.04 * (hash(ix, iy, 5) - 0.5) + (0.34 * (hash(ix, iy, 3) - 0.5) * dx + 0.34 * (hash(ix, iy, 4) - 0.5) * dy) / FACETS;
-      sum += w * height;
-      weight += w;
-    }
+  let z = 0;
+  for (const g of CREASES) {
+    const [dx, dy] = [x - g.x, y - g.y];
+    const along = dx * g.c + dy * g.s;
+    const a = Math.abs(along) / g.half;
+    if (a >= 1) continue;
+    const across = Math.abs(-dx * g.s + dy * g.c) / g.width;
+    if (across > 8) continue;
+    // a ridge with a soft crown and a broad sag either side, both dying out toward the ends
+    const q = across / 2.5;
+    const ridge = (1 / (1 + across * across) - 0.4 / (1 + q * q)) * (1 - across / 8);
+    const end = 1 - a * a;
+    z += g.amp * ridge * end * end;
   }
-  return weight > 0 ? (sum / weight) * 1.5 : 0;
+  // the whole cloth billows a little between the creases
+  return z + 0.04 * Math.sin(2.3 * x + 0.6) * Math.sin(1.9 * y + 1.1);
 }
 
 const crumple: Cloth = {
-  xmax: 0.62,
+  xmax: 0.66,
+  half: (y) => 0.62 + 0.03 * Math.sin(5 * y + 1) + 0.015 * Math.sin(13 * y),
   top: (x) => TOP - 0.02 + 0.03 * Math.sin(7 * x + 1),
   hem: (x) => HEM + 0.03 * Math.sin(9 * x),
   z: crumpleZ,
-  open: (x, y) => 1 - 0.38 * clamp01(0.5 - crumpleZ(x, y) / 0.08),
+  open: (x, y) => 1 - 0.38 * clamp01(0.3 - crumpleZ(x, y) / 0.05),
 };
 
 export const CLOTHS: Record<Fold, Cloth> = { curtain, drape, crumple };
