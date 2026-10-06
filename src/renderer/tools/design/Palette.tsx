@@ -11,7 +11,7 @@ import { fmtC, fmtH, fmtL } from '../common/names.ts';
 import { GreyscaleButton } from '../common/Greyscale.tsx';
 import { Section } from '../common/Section.tsx';
 import { SURROUNDS, surroundOf } from '../common/surround.ts';
-import { addProposals, addSwatch, armDelete, clickSelect, completeNow, copyHex, duplicate, missingRoles, select, selection, setRole, toggleLocked, type Doc } from './actions.ts';
+import { addProposals, addSwatch, armDelete, byRole, clickSelect, completeNow, copyHex, duplicate, missingRoles, proposedRoles, select, selection, setRole, sortByRole, toggleLocked, type Doc } from './actions.ts';
 import { inkOn, simulated } from './artboard.ts';
 import { DeleteConfirm } from './DeleteConfirm.tsx';
 import { displayName, listNames, moveIds, namesOf, plural, type ChipData, type DesignDoc, type DesignView, mapSwatch } from './doc.ts';
@@ -107,6 +107,9 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
   const empty = d.swatches.length === 0 && !ghosts;
   const locked = d.swatches.filter((w) => v.locked.includes(w.id)).length;
   const missing = missingRoles(d.swatches);
+  const sorted = byRole(d.swatches).every((w, i) => w === d.swatches[i]);
+  // what Keep all would give each ghost, shown on it before the press
+  const guess = ghosts ? proposedRoles(d.swatches, ghosts.items, true).roles : [];
   const sub = empty ? undefined : (
     <>
       {plural(d.swatches.length, 'colour')} · click one to edit it · drag to reorder
@@ -153,6 +156,11 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
                 Complete the palette: {missing.length > 3 ? `${missing.length} roles missing` : listNames(missing)}
               </Button>
             )}
+            {d.swatches.length > 1 && (
+              <Button size="xs" icon="sort" onClick={() => sortByRole(doc)} disabled={sorted} tooltip={sorted ? 'The palette is in role order' : 'Put the colours in role order: Background, Surface, Text, Muted, Primary, Accent, Highlight, then the rest'}>
+                Sort by role
+              </Button>
+            )}
             {!empty && <span className={s.hint}>{locked ? `${plural(locked, 'colour')} locked: ` : ''}Locked colours stay when you reroll</span>}
           </>
         )}
@@ -195,8 +203,8 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
               onRename={() => document.querySelector<HTMLInputElement>('[data-design-name]')?.focus()}
             />
           ))}
-          {ghosts?.items.map((p) => (
-            <Ghost key={p.id} p={p} data={v.chipData} shown={simulated(p.oklch, v.sim)} lockable={ghosts.from === 'generate'} onAdd={() => addProposals(doc, [p])} onDiscard={() => dropOne(p)} onLock={() => toggleLock(p.id)} />
+          {ghosts?.items.map((p, i) => (
+            <Ghost key={p.id} p={p} guess={guess[i]} data={v.chipData} shown={simulated(p.oklch, v.sim)} lockable={ghosts.from === 'generate'} onAdd={() => addProposals(doc, [p])} onDiscard={() => dropOne(p)} onLock={() => toggleLock(p.id)} />
           ))}
           <Tooltip content="Add a colour at the value the palette lacks most">
             <button type="button" className={s.add} aria-label="Add a swatch" onClick={() => addSwatch(doc)}>
@@ -291,7 +299,7 @@ function Tile(p: TileProps) {
             p.onRole(e.currentTarget);
           }}
         >
-          {w.role ?? '+ Role'}
+          {w.role ?? 'Add role'}
         </button>
         <Tooltip content={p.locked ? 'Unlock' : 'Lock: a re-roll and Delete leave it'} shortcut="L" side="below">
           <button
@@ -354,14 +362,14 @@ function Foot({ name, oklch, auto, data }: { name: string; oklch: Oklch; auto?: 
 }
 
 /** A proposal: a swatch in the machine's marking (periwinkle bar and tag), not in the palette yet. */
-function Ghost({ p, shown, data, lockable, onAdd, onDiscard, onLock }: { p: Proposal; data: ChipData; shown: Oklch; lockable: boolean; onAdd(): void; onDiscard(): void; onLock(): void }) {
+function Ghost({ p, guess, shown, data, lockable, onAdd, onDiscard, onLock }: { p: Proposal; guess: string | null | undefined; data: ChipData; shown: Oklch; lockable: boolean; onAdd(): void; onDiscard(): void; onLock(): void }) {
   const name = p.name ?? displayName({ name: '', oklch: p.oklch });
   return (
     <div className={cx(s.sw, s.ghost)} style={paint(shown)} data-ghost={p.id}>
       <div className={s.chip} data-colour>
         <span className={s.tags}>
           <span className={s.proposed}>Proposed</span>
-          {p.role && <span className={s.proposed}>{p.role}</span>}
+          {(p.role ?? guess) && <span className={s.proposed}>{p.role ?? guess}</span>}
         </span>
         {lockable && (
           <Tooltip content={p.locked ? 'Unlock: a re-roll changes it' : 'Lock: a re-roll keeps it'} shortcut="L" side="below">

@@ -29,7 +29,7 @@ export const DEFAULT_VIEW: DesignView = {
   flagE: 10,
   format: 'ase',
   preset: PRESETS[0]?.id ?? '',
-  accent: 'analogous',
+  accent: 'split',
   count: 6,
   seed: 1,
   k: 6,
