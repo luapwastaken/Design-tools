@@ -89,7 +89,7 @@ export const tool: ToolDefinition<IllustrationDoc> = {
       { keys: 'Alt+2', label: 'Light & preview', run: mode('light') },
       { keys: 'Alt+3', label: 'Check values', run: mode('check') },
       { keys: 'Alt+4', label: 'Paint', run: mode('paint') },
-      { keys: 'Shift+A', label: 'Add a base colour', run: () => addBase(doc) },
+      { keys: 'Shift+A', label: 'Add a colour', run: () => addBase(doc) },
       { keys: 'Delete', label: 'Delete ramp', run: () => arm(doc) },
       { keys: 'Ctrl+D', label: 'Duplicate ramp', run: () => duplicate(doc) },
       { keys: 'Ctrl+N', label: 'New palette', run: () => void newPalette() },

@@ -125,8 +125,7 @@ export async function illustrationShots({ page, ev, shot, clickText, rail, key, 
   const click = (t, extra = '') => clickText(t, T('illustration'), 'button,[role=tab],[role=radio],[role=checkbox],[role=option]' + extra);
   const tab = async (name) => { await clickText('~' + name, T('illustration'), '[role=tab]'); await sleep(1200); };
   await rail(2); await shot('02-illustration-empty');
-  await click('Skin'); await sleep(500);
-  for (let i = 0; i < 4; i++) { await click('~Add base colour'); await sleep(400); }
+  for (let i = 0; i < 5; i++) { await click('Add colour'); await sleep(400); }
   await shot('02-illustration-ramp-settings');
   await tab('Light & preview'); await shot('02-illustration-light');
   await click('All ramps'); await sleep(900); await shot('02-illustration-light-all-ramps'); await click('This ramp'); await click('Cube'); await sleep(600); await shot('02-illustration-light-cube'); await click('All'); await sleep(600); await shot('02-illustration-light-all-shapes'); await click('Sphere');

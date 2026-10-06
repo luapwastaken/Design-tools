@@ -67,7 +67,7 @@ export function SelectedRamp({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: I
       }
     >
       {!list.length ? (
-        <EmptyState icon="layers" title="No ramp yet" detail="Add a base colour, and its steps show here, from highlight to deep shadow." className={s.none} />
+        <EmptyState icon="layers" title="No ramp yet" detail="Add a colour, and its steps show here, from highlight to deep shadow." className={s.none} />
       ) : (
         <div className={cx(s.steps, !plain && s.mat)} style={{ '--cols': list.length, '--surround': surround } as CSSProperties} role="listbox" aria-label="Swatch board" onKeyDown={onKeyDown}>
           {list.map((w) => (

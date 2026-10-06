@@ -4,7 +4,7 @@
 .palette .pbody { padding: 0; gap: 0; overflow: hidden; }
 .grow { flex: 1; min-width: 0; }
 
-.list { display: flex; flex: 1 1 auto; flex-direction: column; gap: 6px; min-height: 0; padding: 8px 12px 8px; overflow: auto; scrollbar-gutter: stable; }
+.list { display: flex; flex: 1 1 auto; flex-direction: column; gap: 6px; min-height: 0; padding: 10px 12px 8px; overflow: auto; scrollbar-gutter: stable; }
 .hint { padding: 6px 6px 10px; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
 
 .item { position: relative; display: flex; flex: none; flex-direction: column; gap: 8px; padding: 10px 12px 12px; border-radius: var(--r-ctl); }
@@ -40,24 +40,6 @@
 .edited::after { content: ""; position: absolute; top: 3px; right: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--on-content-ink); box-shadow: 0 0 0 1.5px var(--on-content-bg); }
 .chip.broken .value { box-shadow: inset 0 0 0 1.5px var(--danger); }
 .loose .name { color: var(--ink-2); cursor: default; }
-
-.add {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 8px;
-  height: 34px;
-  margin-top: 6px;
-  padding: 0 10px;
-  border: 1px dashed var(--tick);
-  border-radius: var(--r-ctl);
-  color: var(--ink-2);
-  font: 400 var(--fs-base)/1 var(--font-sans);
-}
-.add:hover { background: var(--well-hover); color: var(--ink); }
-.add:focus-visible { outline: 1.5px solid var(--signal); outline-offset: 1px; }
-.add span { flex: 1; text-align: left; }
-.add kbd { padding: 2px 5px; border-radius: 4px; background: var(--well); color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); }
 
 /* proposals: periwinkle, since a machine offered them and nothing is in the palette until added */
 .ghosts { display: flex; flex: none; flex-direction: column; gap: 8px; margin-top: 12px; padding: 10px; border-radius: var(--r-ctl); background: var(--agent-soft); box-shadow: inset 0 0 0 1px var(--agent-ring); }
