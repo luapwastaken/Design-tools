@@ -1,24 +1,18 @@
 // Tab 1, Ramp settings: how the selected ramp is made (steps, intensity, hue shift, saturation, hero,
 // material, Rebuild base), its L / C / H curves (draggable), and how the steps are seen (Show,
 // Surround, Seen as). The Light and shadow colours are in Light & preview, where the light is.
-import { MATERIALS } from '../../../shared/palette/ramp.ts';
 import type { RampSpec } from '../../../shared/types.ts';
-import { Button, NumberField, Segmented, Select, Slider, Toggle, useDocNumber, InspectorRow } from '../../ui/index.ts';
-import { SURROUNDS, surroundOf } from '../common/surround.ts';
+import { Button, NumberField, Select, Toggle, useDocNumber, InspectorRow } from '../../ui/index.ts';
+import { SURROUNDS, surroundColour, surroundOf } from '../common/surround.ts';
 import { rampsFromLoose, selected, type Doc } from './actions.ts';
 import { Curves } from './Curves.tsx';
-import { LIT_VIEW, LitCanvas, SHAPE_NAME, useLut } from './Light.tsx';
+import { LIT_VIEW, LitCanvas, SHAPE_NAME, useLook } from './Light.tsx';
+import { RampLook } from './RampLook.tsx';
 import { brokenSteps, rampName, rampOf, regen, setSpec, stepsOf, type IllustrationDoc } from './doc.ts';
 import { proofOf, PROOFS, type Proof } from './proof.ts';
 import { patchView, shaped, type IllustrationView } from './view-state.ts';
 import s from './RampSettings.module.css';
 
-const INTENSITIES: { value: RampSpec['intensity']; label: string; tip: string }[] = [
-  { value: 'grounded', label: 'Grounded', tip: 'Close to what the material does under this light' },
-  { value: 'expressive', label: 'Expressive', tip: 'Pushed: more hue shift and chroma, as a painter would' },
-  { value: 'extreme', label: 'Extreme', tip: 'As far as it goes: stylised light' },
-];
-const MATERIAL_OPTIONS = MATERIALS.map((m) => ({ value: m.id, label: m.label }));
 const SHOWS: { value: IllustrationView['show']; label: string }[] = [
   { value: 'hex', label: 'Word and hex' },
   { value: 'name', label: 'Name' },
@@ -58,10 +52,10 @@ function LivePreview({ d, v, r }: { d: IllustrationDoc; v: IllustrationView; r: 
   const view = shaped(v.preview, LIT_VIEW);
   const shape = view.shape === 'all' ? 'sphere' : view.shape;
   const name = rampName(d, r);
-  const lut = useLut(stepsOf(d, r.id).map((w) => proofOf(w.oklch, v.proof)), view.banded);
+  const look = useLook({ steps: stepsOf(d, r.id).map((w) => proofOf(w.oklch, v.proof)), spec: r }, view.banded, surroundColour(v.surround, d.swatches));
   return (
-    <aside className={s.live} aria-label="The ramp, lit" data-live-preview="" style={{ background: surroundOf(v.surround, d.swatches) }}>
-      <LitCanvas shape={shape} size={240} lut={lut} azimuth={view.azimuth} elevation={view.elevation} label={`${name} on ${SHAPE_NAME[shape]}`} className={s.litCanvas} />
+    <aside className={s.live} aria-label="The ramp, lit" data-live-preview="" data-colour="" style={{ background: surroundOf(v.surround, d.swatches) }}>
+      <LitCanvas shape={shape} fold={view.fold} size={240} look={look} azimuth={view.azimuth} elevation={view.elevation} label={`${name} on ${SHAPE_NAME[shape]}`} className={s.litCanvas} />
       <span className={s.liveCap}>{name}, lit</span>
     </aside>
   );
@@ -73,14 +67,10 @@ function RampControls({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec
   const baseless = !list.some((x) => x.step === 0);
   const broken = brokenSteps(list).length;
   const spec = (x: IllustrationDoc) => rampOf(x, r.id) ?? r;
-  const set = (label: string, patch: Partial<RampSpec>) => doc.transact(`${label} of ${name}`, (x) => setSpec(x, r.id, patch));
   const steps = useDocNumber(doc, { label: `Change the steps of ${name}`, key: `${r.id}:steps`, get: (x) => spec(x).steps, set: (x, n) => setSpec(x, r.id, { steps: n }) });
-  const hue = useDocNumber(doc, { label: `Change the hue shift of ${name}`, key: `${r.id}:hue`, get: (x) => spec(x).hueShift, set: (x, n) => setSpec(x, r.id, { hueShift: n }) });
-  const chroma = useDocNumber(doc, { label: `Change the chroma curve of ${name}`, key: `${r.id}:chroma`, get: (x) => spec(x).chromaCurve, set: (x, n) => setSpec(x, r.id, { chromaCurve: n }) });
   // the split the ramp actually has: near white or black every step goes to the side with room
   const made = list.map((x) => x.step ?? 0);
   const lighter = made.filter((n) => n < 0).length;
-  const material = MATERIALS.find((m) => m.id === r.material);
   return (
     <>
       {baseless && (
@@ -99,14 +89,9 @@ function RampControls({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec
             {lighter} lighter, {made.length - 1 - lighter} darker
           </span>
         </InspectorRow>
-        <Segmented label="Intensity" fit options={INTENSITIES} value={r.intensity} onChange={(intensity) => set('Change the intensity', { intensity })} />
-        <Slider label="Hue shift" info="How far the light and shadow steps turn toward the light and shadow colours." min={-1} max={1} step={0.05} fieldWidth={70} {...hue} />
-        <Slider label="Saturation" info="Bends how chroma falls away toward the light and the shadow." min={-1} max={1} step={0.05} fieldWidth={70} {...chroma} />
+        <RampLook doc={doc} d={d} r={r} />
         <InspectorRow label="Hero ramp">
           <Toggle label="Quieten the other ramps" checked={r.hero} onChange={(hero) => doc.transact(hero ? `Make ${name} the hero` : `End ${name} as hero`, (x) => setSpec(x, r.id, { hero }))} />
-        </InspectorRow>
-        <InspectorRow label="Material" info={material?.describe}>
-          <Select options={MATERIAL_OPTIONS} value={r.material} onChange={(m) => set('Change the material', { material: m })} />
         </InspectorRow>
       </div>
       <p className={s.hint}>Edit any step and it keeps your colour; Regenerate rebuilds the ramp from the base.</p>
