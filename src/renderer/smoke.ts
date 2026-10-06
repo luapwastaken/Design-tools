@@ -20,6 +20,7 @@ import { parseSize } from '../shared/svg/index.ts';
 import { ALGORITHMS } from '../shared/dither/algorithms.ts';
 import type { LibraryItemRef, PatternPayload, Swatch, ToolId } from '../shared/types.ts';
 import { saveFile, saveToFolder } from './lib/export.ts';
+import type { ExportFormat } from './tools/common/ExportPalette.tsx';
 import { decodeFrames } from './lib/frames.ts';
 import { gifWriter, readGif } from './lib/gif.ts';
 import { decodeImage } from './lib/load.ts';
@@ -552,6 +553,19 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     const savedKpl = await until(() => toastStore.get().slice(shownKpl).find((t) => t.icon === 'download'));
     check('Export Krita writes a .kpl file', /^Exported .+\.kpl\.$/.test(String(savedKpl?.message ?? '')) && (await until(() => !popover())), savedKpl?.message);
   }
+  // the second button copies the format chosen (not always CSS), only for formats that are text; the binary ones can name swatches by role
+  const exportLabels: [ExportFormat, string | null][] = [['css', 'Copy CSS'], ['tailwind4', 'Copy Tailwind 4'], ['json', 'Copy JSON'], ['ase', null]];
+  const seen: (string | null)[] = [];
+  for (const [format] of exportLabels) {
+    patchDesign({ format });
+    button('design', 'Export')?.click();
+    await until(() => popover());
+    const copy = [...(popover()?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Copy'));
+    seen.push(copy?.textContent?.trim() ?? (popover()?.textContent?.includes('Swatch names') ? null : 'no names choice'));
+    press('Escape');
+    await until(() => !popover());
+  }
+  check('Export’s second button reads Copy and the format (CSS, Tailwind 4, JSON), and ASE has none but offers Swatch names by role', seen.join() === exportLabels.map(([, l]) => l).join(), seen);
   patchDesign({ format: 'ase' });
 
   // + Add > Paste codes: a popover anchored to the menu, live parse, Add makes proposals on the artboard
@@ -568,6 +582,18 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
       check('Propose colours in the popover proposes the pasted colour in the palette row and closes the popover', (await until(() => proposals.get()?.items.length === 1)) && (await until(() => !document.querySelector('[role="dialog"][aria-label="Paste codes"]'))) && !!host('design')?.querySelector('[data-ghost]'), proposals.get()?.items.length);
     }
   }
+  clearProposals();
+  // numbers as a Photoshop or Krita copy gives them, and a token named for its job, read back
+  button('design', 'Add colours')?.click();
+  (await until(() => menuRow('Paste codes')))?.click();
+  const box2 = await until(() => document.querySelector<HTMLTextAreaElement>('[role="dialog"][aria-label="Paste codes"] textarea[aria-label="Colours to parse"]'));
+  if (box2) {
+    type(box2, ['232 100 60', '"brand-primary": "#112233"', '0xFF8800'].join(String.fromCharCode(10)));
+    (await until(() => [...(box2.closest('[role="dialog"]')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Propose colours') && !b.disabled)))?.click();
+    const got = (await until(() => proposals.get()?.items.length === 3 && proposals.get()!.items)) || [];
+    check('Paste codes reads three plain numbers, 0xRRGGBB and a token named for its job (that one proposed as the Primary)', got.map((p) => toHex(p.oklch).toLowerCase()).join() === '#e8643c,#112233,#ff8800' && got[1]?.role === 'Primary', got.map((p) => [toHex(p.oklch), p.role]));
+  } else check('Paste codes opens again for the numbers', false);
+
   clearProposals();
 
   // the tabs: each one shows its own panel, the palette and the picker stay, and the choice is saved with the workspace
@@ -804,7 +830,9 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     check('the start panel has a Brand colour field, Build palette, Style, Accent and the other ways in, and Surprise me once (the top bar)', surpriseBtn().length === 1 && !!brandField && panelButtons().every(Boolean) && !!host('design')?.querySelector('button[aria-label^="Style:"]') && !!host('design')?.querySelector('button[aria-label^="Accent:"]') && !button('design', 'Generate a palette'), panelButtons());
     typeInto(brandField!, 'not a colour');
     press('Enter');
-    check('an unreadable brand colour says so and builds nothing', !!(await until(() => host('design')?.textContent?.includes('Type a colour'))) && dd.get().swatches.length === 0);
+    check('an unreadable brand colour says so and builds nothing', !!(await until(() => host('design')?.textContent?.includes('Not a colour yet'))) && dd.get().swatches.length === 0);
+    const startPanel = [...(host('design')?.querySelectorAll('h3') ?? [])].find((h) => h.textContent === 'Start a palette')?.parentElement;
+    check('and the start panel still fits its section with the message showing (nothing clipped, no scrollbar)', !!startPanel && startPanel.scrollHeight <= startPanel.clientHeight + 1 && startPanel.getBoundingClientRect().top >= (startPanel.parentElement?.getBoundingClientRect().top ?? 0) - 1, [startPanel?.scrollHeight, startPanel?.clientHeight]);
     typeInto(brandField!, ' ');
     press(' ', { code: 'Space' });
     check('Space is ignored while the brand colour field has focus', dd.get().swatches.length === 0 && !proposals.get());
@@ -819,6 +847,18 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     check('every role pair of the built palette passes contrast (Text 7:1, Muted 4.5:1 on both grounds)', read.failing.length === 0 && contrast(roleOf('Text')!.oklch, roleOf('Background')!.oklch) >= 7 && contrast(roleOf('Muted')!.oklch, roleOf('Surface')!.oklch) >= 4.5, read.failing.map((p) => [p.text.role, p.ground.role, p.ratio]));
     check('the first build opens Preview in use when no tab was chosen', designView().tab === 'preview' && !!(await until(() => host('design')?.querySelector('[role="img"][aria-label*="website preview"]'))), designView().tab);
     check('a built palette has no Complete the palette (every role is there) and the start panel is gone', !completeButton() && !host('design')?.textContent?.includes('Start a palette'));
+    {
+      const own = (r: string) => roleOf(r)!.oklch;
+      const [bg, surface, text, primary, accent, highlight] = ['Background', 'Surface', 'Text', 'Primary', 'Accent', 'Highlight'].map(own);
+      const hueGap = Math.abs(((accent[2] - primary[2] + 540) % 360) - 180);
+      check('the Accent is a lively second colour: a 3:1 fill on both grounds, 30 or more degrees of hue from the Primary, with real chroma', contrast(accent, bg) >= 3 && contrast(accent, surface) >= 3 && hueGap >= 30 && accent[1] >= 0.1, [contrast(accent, bg), hueGap, accent[1]]);
+      check('the Highlight is a coloured marker, and Text reads on it at 4.5:1', highlight[1] >= 0.04 && contrast(text, highlight) >= 4.5, [highlight[1], contrast(text, highlight)]);
+      check('the Check palette list grades Accent on Background as a 3:1 non-text row', designResults(dd.get().swatches, undefined, 6, 10).contrast.some((p) => p.text.role === 'Accent' && p.ground.role === 'Background' && p.target === 3));
+      const page = host('design')?.textContent ?? '';
+      const inUse = designResults(dd.get().swatches, undefined, 6, 10).verdicts.find((x) => x.id === 'preview');
+      const shownPairs = /(\d+) pairs? pass/i.exec(page)?.[1];
+      check('the preview half that is not the palette’s own ground says it is derived and not counted, and the Preview header and the In use line agree', page.includes('not built for this ground') && !!shownPairs && !!inUse?.ok && inUse.verdict === `All ${shownPairs} pairs on the page pass`, [shownPairs, inUse?.verdict]);
+    }
 
     // Space rerolls the unlocked colours in place: the locked Primary stays, one undo step, undo restores
     (document.activeElement as HTMLElement | null)?.blur?.();
@@ -828,6 +868,8 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     const same = (a: Swatch | undefined, b: Swatch | undefined) => !!a && !!b && a.oklch.join() === b.oklch.join();
     check('Space rerolls in place: same swatches and roles, the locked Primary byte-exact, most of the others new, no proposals', !!built && !!rerolled && rerolled.map((w) => w.id).join() === built.map((w) => w.id).join() && same(rerolled.find((w) => w.role === 'Primary'), roleOf('Primary')) && ['Text', 'Muted', 'Accent', 'Highlight'].filter((r) => !same(rerolled.find((w) => w.role === r), roleOf(r))).length >= 2 && !proposals.get() && dd.undoLabel() === 'Reroll palette', dd.undoLabel());
     check('and a reroll still reads: no role pair fails', designResults(dd.get().swatches, undefined, 6, 10).failing.length === 0);
+    const rolled = toastStore.get().findLast((t) => /^Rerolled \d+ colours?\./.test(String(t.message)));
+    check('a reroll says how many colours it made new, with an Undo', !!rolled?.undo, rolled?.message);
     ctrlZ();
     check('Ctrl+Z puts the unrerolled palette back', await until(() => dd.get().swatches === built));
     // a swatch lock (L) keeps a colour through Space as well
@@ -856,6 +898,57 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     await until(() => !document.querySelector('[role="dialog"][aria-label="Style and accent"]'));
     ctrlZ();
     patchDesign({ preset: 'quiet' });
+
+    // a role colour edited by hand locks, with a toast; Undo takes the colour back and leaves the lock
+    const textRole = roleOf('Text')!;
+    selectInDesign([textRole.id]);
+    const picked = await until(() => {
+      const input = pickerSection()?.querySelector<HTMLInputElement>('input[aria-label="Hex"]');
+      return input && input.value.replace('#', '').toLowerCase() === toHex(textRole.oklch).replace('#', '').toLowerCase() ? input : null;
+    });
+    typeInto(picked!, '2A2A55');
+    await sleep(60);
+    press('Enter');
+    const lockedNote = await until(() => toastStore.get().findLast((t) => String(t.message).startsWith('Locked') && String(t.message).includes('you edited it. L unlocks.')));
+    check('editing a role colour by hand locks it, and a toast says so', designView().locked.includes(textRole.id) && !!lockedNote, [designView().locked, lockedNote?.message]);
+    ctrlZ();
+    await until(() => dd.get().swatches === built);
+    check('Undo gives the colour back and keeps it locked', designView().locked.includes(textRole.id));
+    patchDesign({ locked: [roleOf('Primary')!.id] });
+
+    // a one-click fix moves the supporting colour, never a locked one, and says what moved
+    const muted = roleOf('Muted')!;
+    dd.transact('A faint Muted', (d) => recolourInDesign(d, { [muted.id]: [0.8, 0, 0] }));
+    patchDesign({ tab: 'contrast', locked: [roleOf('Primary')!.id] });
+    selectInDesign([muted.id]);
+    const lift = await until(() => [...(designPanel()?.querySelectorAll('button') ?? [])].find((b) => /^(Darken|Lift) to L/.test(b.textContent?.trim() ?? '') && shows(b)));
+    const shown = toastStore.get().length;
+    lift?.click();
+    const moved = await until(() => toastStore.get().slice(shown).find((t) => String(t.message).startsWith('Moved')));
+    const afterFix = dd.get().swatches;
+    check('a contrast fix moves the faint Muted, leaves the locked Primary alone, and a toast says what moved with an Undo', !!moved?.undo && same(afterFix.find((w) => w.id === roleOf('Primary')!.id), roleOf('Primary')) && !same(afterFix.find((w) => w.id === muted.id), { ...muted, oklch: [0.8, 0, 0] }), moved?.message);
+    ctrlZ();
+    await until(() => dd.get().swatches.find((w) => w.id === muted.id)?.oklch[0] === 0.8);
+    const grounds = ['Background', 'Surface'].map((r) => roleOf(r)!.id);
+    patchDesign({ locked: [muted.id, ...grounds] });
+    const stuck = await until(() => [...(designPanel()?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim() === 'Locked' && shows(b)));
+    const fixes = () => [...(designPanel()?.querySelectorAll('button') ?? [])].filter((b) => /^(Darken|Lift) to L/.test(b.textContent?.trim() ?? '') && shows(b));
+    check('when both sides of a pair are locked the fix is disabled and says Locked', !!stuck && (stuck as HTMLButtonElement).disabled && fixes().every((b) => (b as HTMLButtonElement).disabled), fixes().length);
+    ctrlZ();
+    await until(() => dd.get().swatches === built);
+    patchDesign({ locked: [roleOf('Primary')!.id] });
+
+    // two colours matched in value on purpose can be marked Intended: they leave the Value check and its count
+    dd.transact('Matched values', (d) => recolourInDesign(d, { [roleOf('Accent')!.id]: holdValue(valueOf(roleOf('Primary')!.oklch), 0.12, 250) }));
+    patchDesign({ tab: 'check', intended: [] });
+    const intendedButton = await until(() => [...(designPanel()?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim() === 'Intended' && shows(b)));
+    const valueBefore = designResults(dd.get().swatches, undefined, 6, 10, designView().locked, []);
+    intendedButton?.click();
+    const valueAfter = designResults(dd.get().swatches, undefined, 6, 10, designView().locked, designView().intended);
+    check('a matched pair offers Intended; marking it takes it out of the Value check and the count, and says so', !!intendedButton && valueBefore.collisions.length > 0 && designView().intended.length > 0 && valueAfter.collisions.length === 0 && valueAfter.toLookAt < valueBefore.toLookAt && !!(await until(() => designPanel()?.textContent?.includes('marked intended'))), [valueBefore.collisions.length, designView().intended]);
+    patchDesign({ intended: [], tab: 'contrast' });
+    ctrlZ();
+    await until(() => dd.get().swatches === built);
 
     // a chosen tab is never taken: after the user picks Contrast a new build leaves it
     designTab('contrast')?.click();
@@ -891,6 +984,21 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     check('Suggest more colours proposes beside the palette; Space with them up redraws them and moves nothing', ghostCount > 0 && (await until(() => proposals.get()?.items.map((p) => p.oklch.join()).join('|') !== firstSet)) && dd.get().swatches === kept, [ghostCount]);
     clearProposals();
 
+    // colours with no role: Space says there is nothing to reroll, the top bar offers Give roles, and they are not graded as text
+    await shell.newDoc('design');
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    dd.transact('Three plain colours', (d) => ({ ...d, swatches: [designSwatch([0.96, 0.01, 80], 'Pale'), designSwatch([0.2, 0.02, 80], 'Deep'), designSwatch([0.62, 0.18, 30], 'Vivid')] }));
+    check('a palette with no roles offers Give roles in the top bar in place of Reroll', !!(await until(() => button('design', 'Give roles'))) && !rerollButton());
+    press(' ', { code: 'Space' });
+    const nothingYet = await until(() => toastStore.get().findLast((t) => String(t.message).startsWith('Nothing to reroll yet')));
+    check('Space on it says there is nothing to reroll and changes nothing', !!nothingYet && dd.get().swatches.every((w) => w.role === null));
+    button('design', 'Give roles')?.click();
+    check('Give roles suggests roles from the lightest, darkest and most colourful, in one step', !!(await until(() => dd.get().swatches.some((w) => w.role))) && dd.undoLabel() === 'Give roles');
+    const extra = designSwatch([0.7, 0.1, 200], 'Extra');
+    dd.transact('A colour with no job', (d) => ({ ...d, swatches: [...d.swatches, extra] }));
+    check('once the palette has roles, a colour with none is not graded as text', !designResults(dd.get().swatches, undefined, 6, 10).contrast.some((p) => p.text.id === extra.id || p.ground.id === extra.id));
+    clearProposals();
+
     // From image: the popover closes once an image is chosen; proposals come lightest first; Keep all suggests roles
     // (Primary the most vivid colour with a real share); Complete the palette proposes what is missing
     await shell.newDoc('design');
@@ -913,6 +1021,12 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     check('the Palette header offers Complete the palette naming the missing roles', !!complete && ['Surface', 'Muted', 'Highlight'].every((r) => complete.textContent?.includes(r)), complete?.textContent);
     complete?.click();
     check('one click proposes the missing roles, each for its role, the palette untouched', !!(await until(() => proposals.get()?.from === 'complete' && proposals.get()?.items.map((p) => p.role).join() === 'Surface,Muted,Highlight')) && dd.get().swatches === roled && !!host('design')?.querySelector('[data-ghost]'), proposals.get()?.items.map((p) => p.role));
+    press(' ', { code: 'Space' });
+    check('Space with Complete the palette up rerolls the palette and the proposals follow it', !!(await until(() => dd.get().swatches !== roled)) && proposals.get()?.from === 'complete' && proposals.get()?.items.map((p) => p.role).join() === 'Surface,Muted,Highlight', proposals.get()?.items.map((p) => p.role));
+    ctrlZ();
+    await until(() => dd.get().swatches === roled);
+    completeButton()?.click();
+    await until(() => proposals.get()?.from === 'complete' && proposals.get()?.items.length === 3);
     button('design', 'Keep all')?.click();
     const whole = (await until(() => dd.get().swatches.length === 7 && dd.get().swatches)) || null;
     check('Keep all gives them their roles: seven distinct roles, no Complete button left', !!whole && new Set(whole.map((w) => w.role)).size === 7 && !(await until(() => completeButton(), 400)), whole?.map((w) => w.role));
@@ -3631,7 +3745,7 @@ async function lightUi(): Promise<void> {
   check('hovering the object reads which step the pixel shows', !!readout && /, step \d of 5, L \d/.test(readout.textContent ?? ''), readout?.textContent);
   const parts = [...(ui.querySelector('[data-step-use]')?.querySelectorAll('i') ?? [])];
   check('and a bar under the stage shares the object out by step: one part for each step', parts.length >= 5 && parts.every((i) => i.hasAttribute('data-colour')), parts.length);
-  check('the canvases carry data-colour for the greyscale view', [...ui.querySelectorAll('canvas[role="img"]')].every((e) => e.hasAttribute('data-colour')));
+  check('the canvases carry data-colour for the greyscale view', ui.querySelectorAll('canvas[role="img"]').length > 0 && [...ui.querySelectorAll('canvas[role="img"]')].every((e) => e.hasAttribute('data-colour')));
 
   // colours the light needs: offered, and added in one step
   patchIllustration({ preview: { ...view().preview, azimuth: 300, elevation: -45 } });

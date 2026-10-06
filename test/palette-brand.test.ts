@@ -213,3 +213,16 @@ test('a built palette passes the Contrast tab: no role pair fails but possibly a
     assert.deepEqual(failing.map((p) => `${p.text.role} on ${p.ground.role} ${p.ratio.toFixed(2)}`), [], `seed ${seed}`);
   }
 });
+
+test('the Highlight is a clearly coloured marker, clear of the page in lightness, on either ground', () => {
+  for (const st of STYLE_LIST) {
+    for (const hex of ['#E8643C', '#F6E05A', '#1B2A6B', '#7CFF3B', '#0E8C8C']) {
+      const c = buildRoles({ seed: 3, style: st.id, accent: 'split', locked: { Primary: hexToOklch(hex) } });
+      const why = `${st.id} ${hex}`;
+      const pageL = Math.max(c.Background[0], c.Surface[0]);
+      const dark = c.Background[0] < 0.5;
+      assert.ok(c.Highlight[1] >= (dark ? 0.07 : 0.04), `${why}: Highlight chroma ${c.Highlight[1].toFixed(3)}`);
+      assert.ok(dark ? c.Highlight[0] - pageL >= 0.1 : Math.min(c.Background[0], c.Surface[0]) - c.Highlight[0] >= 0.1, `${why}: Highlight L ${c.Highlight[0].toFixed(3)} on a page at ${pageL.toFixed(3)}`);
+    }
+  }
+});

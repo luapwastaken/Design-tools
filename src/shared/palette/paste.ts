@@ -1,7 +1,7 @@
 // Pasted colour lists: one per line, or separated by commas outside parentheses (the v1 paste split
 // `rgb(255, 128, 0)` into three junk items). Text around a colour is its name: "Ember: #e8643c".
 // A JSON paste (a list, a tokens object, this tool's own export) is read for its name and colour pairs.
-import { hexToOklch, parseCss, parseHex, toOklch, type Oklch } from '../color/index.ts';
+import { deltaE, hexToOklch, parseCss, parseHex, toOklch, type Oklch } from '../color/index.ts';
 import { wrapHue } from './space.ts';
 
 /** `names`: what the text called each (null: nothing); `notes`: what was dropped on the way ("Alpha is ignored") */
@@ -45,17 +45,15 @@ const cleanName = (n: string): string => n.replace(/^colou?r[-_.]+(?=\S)/i, '');
 
 export function parseColours(text: string): Pasted {
   const out: Pasted = { colours: [], names: [], rejected: [], notes: [] };
-  const seen = new Map<string, number>();
   const lines = jsonLines(text) ?? text.split(/\r?\n/).map((l) => l.replace(COMMENT, ''));
   const items: string[] = [];
   const add = (oklch: Oklch, name: string | null) => {
-    const key = oklch.map((v) => v.toFixed(4)).join(' ');
-    const at = seen.get(key);
-    if (at !== undefined) {
+    // the same colour written two ways (0-1 floats are not exact bytes) is one colour: closer than one 8-bit step
+    const at = out.colours.findIndex((c) => deltaE(c, oklch) < 0.5);
+    if (at >= 0) {
       out.names[at] ??= name; // "#abc, Ember: #aabbcc": one colour, and it keeps the name
       return;
     }
-    seen.set(key, out.colours.length);
     out.colours.push(oklch);
     out.names.push(name);
   };

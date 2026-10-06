@@ -54,7 +54,9 @@ test('a dark Background leads the dark page; the light page falls back to the li
   for (const s of [dark, light]) {
     assert.equal(s.primary.name, 'Moss');
     assert.equal(s.accent.name, 'Ember');
-    assert.equal(s.highlight.name, 'Sky');
+    // Sky where Text reads on it; else Sky carried toward the page (same hue), so the marker still shows
+    assert.ok(s.pairs.mark.ok);
+    assert.ok(s.highlight.name === 'Sky' || (s.highlight.name === 'highlight (derived)' && Math.abs(s.highlight.oklch[2] - 246.81) < 1), s.highlight.name);
   }
 });
 

@@ -143,3 +143,8 @@ test('design tokens: $value, key names, role words kept, prefixes dropped, the f
   assert.deepEqual(twice.colours.length, 1);
   assert.deepEqual(twice.names, ['Ember'], 'the later name is kept when the first had none');
 });
+
+test('one colour written two ways (bytes and 0-1 floats) is one colour', () => {
+  assert.deepEqual(hexes('0xFF8800\n[1, 0.5333, 0, 1]\n255 136 0'), ['#ff8800']);
+  assert.equal(parseColours('#ff8800, #ff8a00').colours.length, 2, 'a visible difference stays two');
+});

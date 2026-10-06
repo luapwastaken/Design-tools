@@ -115,7 +115,9 @@ export function scene(swatches: Swatch[], mode: Mode): Scene | null {
   const accent = accentSw ? slot(accentSw) : primary;
 
   const highlightSw = role('Highlight') ?? best(chromatic(pool('Highlight', [primary, accent])), (s) => s.oklch[1]);
-  const highlight = highlightSw ? slot(highlightSw) : accent;
+  const picked = highlightSw ? slot(highlightSw) : accent;
+  // a marker Text cannot read on (a deep one built for the other ground) is carried toward this page, so the preview still shows a marker
+  const highlight = ratio(text, picked) >= 4.5 ? picked : made(deriveMarker(picked.oklch, text.oklch, page.oklch), 'highlight (derived)');
 
   const onPrimary = onFill(primary, page, text);
   const onHighlight = text;
@@ -161,6 +163,18 @@ function deriveLink(primary: Oklch, text: Oklch, page: Slot, surface: Slot): Okl
   for (let i = 0; i < 18; i++) {
     const mid = (lo + hi) / 2;
     if (reads(at(mid))) hi = mid;
+    else lo = mid;
+  }
+  return at(hi);
+}
+
+/** the marker's lightness walked toward the page (hue kept, chroma easing) until the text reads on it at 4.6:1 */
+function deriveMarker(marker: Oklch, text: Oklch, page: Oklch): Oklch {
+  const at = (k: number): Oklch => [marker[0] + (page[0] - marker[0]) * k, marker[1] * (1 - 0.3 * k), marker[2]];
+  let [lo, hi] = [0, 1];
+  for (let i = 0; i < 18; i++) {
+    const mid = (lo + hi) / 2;
+    if (contrast(text, at(mid)) >= 4.6) hi = mid;
     else lo = mid;
   }
   return at(hi);

@@ -26,8 +26,8 @@ const SOURCES: { kind: PopKind | 'library'; icon: IconName; title: string }[] = 
 function readBrand(text: string): { brand: { oklch: Oklch; name: string | null } | null; problem: string | null } {
   if (!text.trim()) return { brand: null, problem: null };
   const r = parseColours(text);
-  if (r.colours.length > 1) return { brand: null, problem: 'That is a list. Type one colour here, or use Paste codes.' };
-  if (!r.colours.length) return { brand: null, problem: 'Type a colour: a hex, an RGB, HSL or OKLCH value, or a colour name.' };
+  if (r.colours.length > 1) return { brand: null, problem: 'That is a list: use Paste codes for several.' };
+  if (!r.colours.length) return { brand: null, problem: 'Not a colour yet. Try a hex like E8643C.' };
   return { brand: { oklch: r.colours[0], name: r.names[0] }, problem: null };
 }
 

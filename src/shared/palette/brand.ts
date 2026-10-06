@@ -129,7 +129,8 @@ export function buildRoles(o: BuildOptions): RoleColours {
   const [first, ...rest] = options;
   const chosen = rest.reduce((a, b) => (b.accent[1] > a.accent[1] * 1.25 ? b : a), first);
   const accent = lock.Accent ?? chosen.accent;
-  const highlightC = clamp(0.05 + 0.05 * st.bold * (0.7 + 0.6 * r[6]), 0.05, 0.1);
+  // a deep marker on a dark page needs more chroma than a pastel on a light one, or it is dusty
+  const highlightC = light ? clamp(0.05 + 0.05 * st.bold * (0.7 + 0.6 * r[6]), 0.05, 0.1) : clamp(0.1 + 0.05 * st.bold * (0.7 + 0.6 * r[6]), 0.1, 0.16);
   const highlight = lock.Highlight ?? marker(grounds, light, text, wrapHue(chosen.highlight + 20 * (r[13] - 0.5)), highlightC, [pV, valueOf(text), valueOf(accent)], r[8]);
   const muted = lock.Muted ?? readable(grounds, light, MUTED_RATIO + MARGIN, hue, st.chroma * 1.3, NaN, [pV, valueOf(text), valueOf(accent), valueOf(highlight)], light ? text[0] + 0.075 : text[0] - 0.075);
 
@@ -258,7 +259,8 @@ function marker(grounds: Oklch[], light: boolean, text: Oklch, wanted: number, c
   const hue = !light && (wanted < 125 || wanted > 340) ? 150 : wanted;
   const at = (l: number): Oklch => fitChroma([l, chroma, hue]);
   const gv = grounds.map(valueOf);
-  const [lo, hi] = light ? [0.78, 0.97] : [0.34, 0.56];
+  // far enough from the page in lightness (0.125) that it still reads as a marker under colour-blind simulations and in greyscale
+  const [lo, hi] = light ? [0.78, Math.max(0.8, Math.min(0.97, Math.min(...grounds.map((g) => g[0])) - 0.125))] : [Math.min(0.5, Math.max(0.34, Math.max(...grounds.map((g) => g[0])) + 0.125)), 0.56];
   const ls: number[] = [];
   for (let l = lo; l <= hi + 1e-9; l += 0.005) {
     const c = at(l);
