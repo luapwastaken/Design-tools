@@ -76,6 +76,8 @@ const clusterOf = (collisions: ValueCollision[]): Swatch[] => clustersOf(collisi
 
 type ValueProps = CheckHost & {
   collisions: ValueCollision[];
+  /** a pair meant to match in value (a painter's trick) can be marked: it leaves the check. `hidden` are the ones already marked */
+  intended?: { hidden: number; onMark(pairs: [string, string][]): void; onClear(): void };
   /** the flag gap, in value units (0..100) */
   flagL: number;
   onFlagL(v: number): void;
@@ -84,7 +86,7 @@ type ValueProps = CheckHost & {
 };
 
 /** The palette in greyscale by value (what greyscale shows) on a ruler; the worst run that reads as one grey is flagged. */
-export function Value({ swatches, onFix, pointAt, rules, className, collisions, flagL, onFlagL, sub }: ValueProps) {
+export function Value({ swatches, onFix, pointAt, rules, className, collisions, intended, flagL, onFlagL, sub }: ValueProps) {
   const byV = [...swatches].sort((a, b) => valueOf(a.oklch) - valueOf(b.oklch));
   const hit = new Set(collisions.flatMap((c) => [c.a.id, c.b.id]));
   const { ref: ruler, width } = useWidth<HTMLDivElement>();
@@ -190,7 +192,24 @@ export function Value({ swatches, onFix, pointAt, rules, className, collisions, 
               >
                 {!fits ? 'Spread evenly' : cluster.length === 2 ? 'Spread apart' : `Spread these ${cluster.length}`}
               </Button>
+              {intended && (
+                <Button
+                  size="xs"
+                  onClick={() => intended.onMark(collisions.filter((c) => ids.has(c.a.id) && ids.has(c.b.id)).map((c): [string, string] => [c.a.id, c.b.id]))}
+                  tooltip="They are meant to match in value. Leave them out of this check."
+                >
+                  Intended
+                </Button>
+              )}
             </div>
+          )}
+          {intended && intended.hidden > 0 && (
+            <p className={s.none}>
+              {plural(intended.hidden, 'pair')} marked intended, not counted.{' '}
+              <Button size="xs" onClick={intended.onClear}>
+                Check again
+              </Button>
+            </p>
           )}
         </>
       )}

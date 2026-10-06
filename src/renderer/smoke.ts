@@ -675,7 +675,7 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   const ids = [...(designPanel()?.querySelectorAll('[data-verdict]') ?? [])].map((e) => e.getAttribute('data-verdict'));
   const rank = (x: { ok?: boolean }) => (x.ok === false ? 0 : x.ok === undefined ? 1 : 2);
   const wantIds = [...live.verdicts].sort((a, b) => rank(a) - rank(b)).map((x) => x.id);
-  check('the Check palette tab lists a verdict per check, problems first', ids.length === 4 && ids.join() === wantIds.join(), [ids, wantIds]);
+  check('the Check palette tab lists a verdict per check, problems first', ids.length === 5 && ids.join() === wantIds.join(), [ids, wantIds]);
   const panelText = designPanel()?.textContent ?? '';
   check('colour vision names the closest pair and its ΔE for every simulation, and the names sit over the strips', (panelText.match(/ΔE \d/g)?.length ?? 0) >= 4 && /closest pair|look alike/.test(panelText) && !!designPanel()?.querySelector('[aria-hidden="true"] span'), panelText.slice(0, 200));
   check('the Print inks table shows without a click (P3, all four libraries)', ['P3', 'Riso ΔE', 'RAL ΔE', 'HKS ΔE', 'NCS ΔE'].every((w) => panelText.includes(w)) && ![...(designPanel()?.querySelectorAll('button') ?? [])].some((b) => b.textContent?.trim() === 'Inks'));
@@ -798,9 +798,10 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     (document.activeElement as HTMLElement | null)?.blur?.();
     patchDesign({ preset: 'quiet', accent: 'analogous', tab: 'contrast', tabChosen: false, locked: [] });
     const field = () => [...(host('design')?.querySelectorAll('label') ?? [])].find((l) => l.textContent?.includes('Brand colour'))?.querySelector('input') ?? null;
-    const panelButtons = () => ['Build palette', 'Surprise me', 'From image', 'From logo', 'Paste codes', 'Open from Library'].map((t) => !!button('design', t));
+    const panelButtons = () => ['Build palette', 'From image', 'From logo', 'Paste codes', 'Open from Library'].map((t) => !!button('design', t));
     const brandField = await until(() => field());
-    check('the start panel has a Brand colour field, Build palette, Style, Accent and the other ways in', !!brandField && panelButtons().every(Boolean) && !!host('design')?.querySelector('button[aria-label^="Style:"]') && !!host('design')?.querySelector('button[aria-label^="Accent:"]') && !button('design', 'Generate a palette'), panelButtons());
+    const surpriseBtn = () => [...(host('design')?.querySelectorAll('button') ?? [])].filter((b) => b.textContent?.trim().startsWith('Surprise me') && shows(b));
+    check('the start panel has a Brand colour field, Build palette, Style, Accent and the other ways in, and Surprise me once (the top bar)', surpriseBtn().length === 1 && !!brandField && panelButtons().every(Boolean) && !!host('design')?.querySelector('button[aria-label^="Style:"]') && !!host('design')?.querySelector('button[aria-label^="Accent:"]') && !button('design', 'Generate a palette'), panelButtons());
     typeInto(brandField!, 'not a colour');
     press('Enter');
     check('an unreadable brand colour says so and builds nothing', !!(await until(() => host('design')?.textContent?.includes('Type a colour'))) && dd.get().swatches.length === 0);
@@ -861,7 +862,7 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     await until(() => designView().tab === 'contrast' && designView().tabChosen);
     await shell.newDoc('design');
     (document.activeElement as HTMLElement | null)?.blur?.();
-    button('design', 'Surprise me')?.click();
+    surpriseBtn()[0]?.click();
     const surprise = (await until(() => dd.get().swatches.length === 7 && dd.get().swatches)) || null;
     check('Surprise me builds a role palette from a random colour (nothing locked) and leaves the chosen tab alone', !!surprise && surprise.map((w) => w.role).join() === 'Background,Surface,Text,Muted,Primary,Accent,Highlight' && designView().tab === 'contrast' && designView().locked.length === 0 && dd.undoLabel() === 'Build palette' && designResults(dd.get().swatches, undefined, 6, 10).failing.length === 0, [designView().tab, dd.undoLabel()]);
     await shell.newDoc('design');

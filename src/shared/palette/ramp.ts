@@ -3,6 +3,7 @@
 // from highlight to deep shadow, so value never breaks; the colours, the material and the
 // intensity steer hue and chroma, and how far the plan reaches.
 import type { Oklch } from '../color/index.ts';
+import { holdValue, valueOf } from '../color/value.ts';
 import type { MaterialId, RampSpec, Swatch } from '../types.ts';
 import { fitChroma, fromOklab, toOklab, wrapHue } from './space.ts';
 
@@ -129,7 +130,9 @@ function turn(a: number, b: number, f: number): number {
  * The ramp, lightest first: steps -n..+m around the base (step 0, returned as it is), with the odd
  * step of an even count on the shadow side, and every step on the one side there is room for when
  * the base is near white or black. `heroQuiet` (from `quietFor`) lowers the chroma of the generated
- * steps. Lightness strictly falls step to step.
+ * steps. Lightness strictly falls step to step, and so does value: where the hue turn and the
+ * shadow pull would let a step read as light as its neighbour (saturated blues near black), that
+ * step is solved again at a value just clear of it, keeping its hue and as much chroma as fits.
  */
 export function generateRamp(spec: RampSpec, heroQuiet = 0): { step: number; oklch: Oklch }[] {
   const count = clamp(Math.round(spec.steps), 3, 9);
@@ -168,8 +171,23 @@ export function generateRamp(spec: RampSpec, heroQuiet = 0): { step: number; okl
     return [L, fit * (1 - heroQuiet), hue];
   };
 
-  return Array.from({ length: count }, (_, i) => i - lights).map((step) => ({ step, oklch: step === 0 ? [...spec.base] : make(step) }));
+  const out = Array.from({ length: count }, (_, i) => i - lights).map((step): { step: number; oklch: Oklch } => ({ step, oklch: step === 0 ? [...spec.base] : make(step) }));
+  // value falls strictly outward from the base: highlight side up, shadow side down
+  const fixed = out.map((w) => ({ ...w }));
+  const clear = (at: number, from: number, dir: 1 | -1) => {
+    const [, c, h] = fixed[at].oklch;
+    const v = valueOf(fixed[from].oklch);
+    if (dir * (valueOf(fixed[at].oklch) - v) <= -VALUE_STEP) return;
+    fixed[at].oklch = holdValue(clamp(v - dir * VALUE_STEP, 0, 1), c, h);
+  };
+  for (let i = lights - 1; i >= 0; i--) clear(i, i + 1, -1);
+  for (let i = lights + 1; i < fixed.length; i++) clear(i, i - 1, 1);
+  // at the very ends of the scale there is no room left to part two steps: then lightness alone keeps the order
+  return fixed.every((w, i) => !i || w.oklch[0] < fixed[i - 1].oklch[0]) ? fixed : out;
 }
+
+/** the least value a step must fall below its inner neighbour: past 8-bit rounding, so two hexes never read the same grey */
+const VALUE_STEP = 0.006;
 
 /**
  * The ramp `groupId` rebuilt from its settings: hand-edited steps stay as they are (even past the

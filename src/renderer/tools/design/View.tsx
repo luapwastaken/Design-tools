@@ -92,7 +92,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   useEffect(() => void (!active && setPop(null)), [active]);
   const openPop: OpenPop = (kind, anchor, ends) => setPop({ kind, anchor, ends });
   const empty = d.swatches.length === 0;
-  const r = results(settled.swatches, settled.ramps, v.flagL, v.flagE, v.locked);
+  const r = results(settled.swatches, settled.ramps, v.flagL, v.flagE, v.locked, v.intended);
 
   const quiet = (what: string) => <p className={s.quiet}>{what}</p>;
   const when = (render: () => React.ReactNode): (() => React.ReactNode) => () => (empty ? quiet('Add a colour to the palette first.') : render());

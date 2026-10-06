@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { deltaE, inSrgb, type Oklch } from '../src/shared/color/index.ts';
 import { generateRamp, intensityAt, MATERIALS, newRamp, pushOf, quietFor, regenerate } from '../src/shared/palette/ramp.ts';
+import { valueOf } from '../src/shared/color/value.ts';
 import { toOklab } from '../src/shared/palette/space.ts';
 import type { MaterialId, RampSpec, Swatch } from '../src/shared/types.ts';
 
@@ -278,4 +279,11 @@ test('a new ramp that joins another takes its push as well as its intensity', ()
   const like = spec([0.5, 0.1, 100], { intensity: 'expressive', push: 1.3 });
   assert.equal(newRamp([0.6, 0.1, 10], 'n', like).push, 1.3);
   assert.equal('push' in newRamp([0.6, 0.1, 10], 'n', spec([0.5, 0.1, 100])), false);
+});
+
+test('value falls strictly step by step even for a saturated blue skin near black', () => {
+  const ramp = generateRamp(spec([0.2, 0.1, 255], { material: 'skin', steps: 7 }));
+  const v = ramp.map((r) => valueOf(r.oklch));
+  v.forEach((x, i) => i === 0 || assert.ok(x < v[i - 1], `step ${ramp[i].step}: ${v.map((n) => n.toFixed(3))}`));
+  ramp.forEach((r, i) => i === 0 || assert.ok(r.oklch[0] < ramp[i - 1].oklch[0], 'and lightness too'));
 });

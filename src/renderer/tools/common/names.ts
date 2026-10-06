@@ -36,7 +36,8 @@ export function stepWord(step: number, lo: number, hi: number): string {
 /**
  * What export and the checks' sentences call each swatch: blank names filled in. A blank Illustration
  * ramp step reads "Cloth deep shadow" (its ramp's name, its word) wherever it shows, so two steps
- * never share a colour name; `ramps` gives the name of a ramp whose base is gone.
+ * never share a colour name; `ramps` gives the name of a ramp whose base is gone. A made-up name that
+ * another swatch already carries gets a number ("Black 2"), so a sentence never names two colours alike.
  */
 export function named(list: Swatch[], ramps: { id: string; name?: string }[] = []): Swatch[] {
   const groups = new Map<string, Swatch[]>();
@@ -45,13 +46,17 @@ export function named(list: Swatch[], ramps: { id: string; name?: string }[] = [
     const base = groups.get(g)!.find((w) => w.step === 0);
     return base ? displayName(base) : ramps.find((r) => r.id === g)?.name?.trim() || null;
   };
+  const taken = new Set(list.flatMap((w) => (w.name.trim() ? [w.name.trim().toLowerCase()] : [])));
   return list.map((w) => {
     if (w.name.trim()) return w;
     const steps = w.step !== 0 && w.group !== undefined ? groups.get(w.group) : undefined;
     const ramp = steps && rampName(w.group!);
-    if (!steps || !ramp) return { ...w, name: displayName(w) };
-    const at = steps.map((x) => x.step!);
-    return { ...w, name: `${ramp} ${stepWord(w.step!, Math.min(...at), Math.max(...at))}` };
+    const at = steps && ramp ? steps.map((x) => x.step!) : [];
+    const made = steps && ramp ? `${ramp} ${stepWord(w.step!, Math.min(...at), Math.max(...at))}` : displayName(w);
+    let name = made;
+    for (let n = 2; taken.has(name.toLowerCase()); n++) name = `${made} ${n}`;
+    taken.add(name.toLowerCase());
+    return { ...w, name };
   });
 }
 

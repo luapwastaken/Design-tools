@@ -11,7 +11,7 @@ export function StatusSlot({ doc }: { doc: DocController<DesignDoc> }) {
   const v = useView();
   const ghosts = proposals.use()?.items.length ?? 0;
   const n = swatches.length;
-  const look = n ? results(swatches, ramps, v.flagL, v.flagE, v.locked).toLookAt : 0;
+  const look = n ? results(swatches, ramps, v.flagL, v.flagE, v.locked, v.intended).toLookAt : 0;
   return (
     <span>
       <b>{n}</b> {n === 1 ? 'swatch' : 'swatches'}

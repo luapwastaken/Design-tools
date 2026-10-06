@@ -158,3 +158,12 @@ test('spreadCluster: a run that reads as one grey spreads round its locked colou
   assert.ok(vs[1] - vs[0] >= 0.06 - 1e-6 && vs[2] - vs[1] >= 0.06 - 1e-6, `spaced ${vs.map((v) => v.toFixed(3))}`);
   assert.deepEqual(spreadCluster(run, 0.06, [], { locked: ['a', 'b', 'c'] }), { changes: null, blocked: true });
 });
+
+test('blank names that would repeat are numbered, so a sentence never names two colours alike', async () => {
+  const { named } = await import('../src/renderer/tools/common/names.ts');
+  const list = [sw('a', [0.12, 0.01, 30]), sw('b', [0.14, 0.01, 30]), { ...sw('c', [0.13, 0.01, 30]), name: 'Black 2' }];
+  const names = named(list).map((w) => w.name);
+  assert.equal(new Set(names.map((n) => n.toLowerCase())).size, 3, names.join());
+  assert.equal(names[2], 'Black 2', 'a name the user gave is never changed');
+  assert.ok(names[0] !== names[1]);
+});

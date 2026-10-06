@@ -15,7 +15,7 @@ import { Value } from '../common/Value.tsx';
 import { VISIONS, type Kind } from '../common/Vision.tsx';
 import { setColours, type Doc } from './actions.ts';
 import { displayName, type DesignDoc, type DesignView, type Simulate } from './doc.ts';
-import type { Results, Verdict } from './results.ts';
+import { pairKey, type Results, type Verdict } from './results.ts';
 import { patchView, pointAt } from './view-state.ts';
 import s from './Tabs.module.css';
 
@@ -73,6 +73,11 @@ export function CheckTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: DesignVi
           pointAt={pointAt}
           rules={rules}
           collisions={r.collisions}
+          intended={{
+            hidden: r.intended.length,
+            onMark: (pairs) => patchView({ intended: [...new Set([...v.intended, ...pairs.map(([a, b]) => pairKey(a, b))])] }),
+            onClear: () => patchView({ intended: [] }),
+          }}
           flagL={v.flagL}
           onFlagL={(flagL) => patchView({ flagL })}
         />

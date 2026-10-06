@@ -19,6 +19,8 @@ export type Results = {
   /** below their target (4.5:1, or 3:1 for fills) */
   failing: ContrastPair[];
   collisions: ValueCollision[];
+  /** collisions the user marked intended: not counted */
+  intended: ValueCollision[];
   vision: Record<Vision, CvdClosest | null>;
   outOfSrgb: Swatch[];
   /** pairs that merge under some simulation, once each however many merge them */
@@ -30,15 +32,20 @@ export type Results = {
   toLookAt: number;
 };
 
-let last: { swatches: Swatch[]; flagL: number; flagE: number; locked: readonly string[]; out: Results } | null = null;
+let last: { swatches: Swatch[]; flagL: number; flagE: number; locked: readonly string[]; intended: readonly string[]; out: Results } | null = null;
 
-/** `locked`: swatch ids a one-click fix must never move */
-export function results(raw: Swatch[], ramps: RampSpec[] | undefined, flagL: number, flagE: number, locked: readonly string[] = []): Results {
-  if (last && last.swatches === raw && last.flagL === flagL && last.flagE === flagE && last.locked === locked) return last.out;
+/** a value pair's key in `intended` */
+export const pairKey = (a: string, b: string): string => [a, b].sort().join(':');
+
+/** `locked`: swatch ids a one-click fix must never move; `intended`: value pairs the user meant (pairKey) */
+export function results(raw: Swatch[], ramps: RampSpec[] | undefined, flagL: number, flagE: number, locked: readonly string[] = [], intended: readonly string[] = []): Results {
+  if (last && last.swatches === raw && last.flagL === flagL && last.flagE === flagE && last.locked === locked && last.intended === intended) return last.out;
   const swatches = named(raw, ramps);
   const contrast = contrastPairs(swatches, { minGap: flagL / 100, locked });
   const failing = contrast.filter((p) => p.ratio < p.target);
-  const collisions = valueCollisions(swatches, flagL / 100);
+  const every = valueCollisions(swatches, flagL / 100);
+  const collisions = every.filter((c) => !intended.includes(pairKey(c.a.id, c.b.id)));
+  const marked = every.filter((c) => intended.includes(pairKey(c.a.id, c.b.id)));
   const vision = Object.fromEntries(VISIONS.map((k) => [k, cvdClosest(swatches, k, { flagBelow: flagE })])) as Results['vision'];
   const outOfSrgb = swatches.filter((w) => !inSrgb(w.oklch));
   // one pair merging under several simulations is one problem with one fix (as Vision shows it)
@@ -46,12 +53,12 @@ export function results(raw: Swatch[], ramps: RampSpec[] | undefined, flagL: num
   const page = swatches.length ? scene(swatches, ownMode(swatches)) : null;
   const pairs = page ? (Object.entries(page.pairs) as [PairId, { ok: boolean }][]) : [];
   const preview = { failing: pairs.filter(([, p]) => !p.ok).map(([id]) => id), total: pairs.length };
-  const r = { shown: swatches, contrast, failing, collisions, vision, outOfSrgb, merged, preview };
+  const r = { shown: swatches, contrast, failing, collisions, intended: marked, vision, outOfSrgb, merged, preview };
   const verdicts = [contrastVerdict(r), previewVerdict(r), valueVerdict(r), visionVerdict(r), printVerdict(r)];
   // a role pair that fails shows on the page too: only what no role pair covers (the button, the link, the pills) adds to the count
   const onlyPreview = preview.failing.filter((id) => PREVIEW_ONLY.includes(id)).length;
   const out = { ...r, verdicts, toLookAt: failing.length + collisions.length + merged + outOfSrgb.length + onlyPreview };
-  last = { swatches: raw, flagL, flagE, locked, out };
+  last = { swatches: raw, flagL, flagE, locked, intended, out };
   return out;
 }
 
