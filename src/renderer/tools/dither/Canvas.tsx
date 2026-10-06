@@ -86,7 +86,7 @@ export function DitherCanvas({ d, v, frame, result, busy }: Props) {
         <span className={cx(s.index, colour && s.live)}>
           <Under index={index ?? null} />
           Index <b>{index === null ? '–' : index + 1}</b>
-          <i className={s.chip} style={colour ? { background: cssColor(colour) } : undefined} />
+          <i className={s.chip} data-colour style={colour ? { background: cssColor(colour) } : undefined} />
           <b className={s.hex}>{colour ? toHex(colour).toUpperCase() : '–'}</b>
         </span>
       </>

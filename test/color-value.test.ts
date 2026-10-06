@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { converter } from 'culori';
 import { inSrgb, rgb255, type Oklch } from '../src/shared/color/index.ts';
 import { fromHsb } from '../src/shared/color/picker.ts';
-import { greyOf, holdValue, hsbHold, LUMA, pureLuma, valueOf } from '../src/shared/color/value.ts';
+import { greyMatrix, greyOf, holdValue, hsbHold, LUMA, pureLuma, valueOf } from '../src/shared/color/value.ts';
 
 const HUES = Array.from({ length: 72 }, (_, i) => i * 5);
 const rgbOf = converter('rgb');
@@ -16,6 +16,18 @@ test('value is Rec. 709 luma of the gamma-encoded colour the screen shows', () =
   }
   assert.equal(valueOf([0, 0, 0]), 0);
   assert.ok(Math.abs(valueOf([1, 0, 0]) - 1) < 1e-9);
+});
+
+test('the greyscale filter matrix is the luma weights: R, G and B all become the value, alpha stays', () => {
+  const m = greyMatrix().split(/\s+/).map(Number);
+  assert.equal(m.length, 20);
+  for (const row of [0, 1, 2]) assert.deepEqual(m.slice(row * 5, row * 5 + 5), [...LUMA, 0, 0]);
+  assert.deepEqual(m.slice(15), [0, 0, 0, 1, 0]);
+  // applied to a colour it gives valueOf: the filter and the checks are one measure
+  const o: Oklch = [0.62, 0.25, 29];
+  const { r, g, b } = rgbOf({ mode: 'oklch', l: o[0], c: o[1], h: o[2] })!;
+  const [cr, cg, cb] = [r, g, b].map((x) => Math.min(1, Math.max(0, x)));
+  assert.ok(Math.abs(m[0] * cr + m[1] * cg + m[2] * cb - valueOf(o)) < 0.02, 'the clipped colour and the gamut-mapped one agree to a hair');
 });
 
 test('OKLCH L is not value: at one L the grey moves with hue, which is why the lock holds value', () => {

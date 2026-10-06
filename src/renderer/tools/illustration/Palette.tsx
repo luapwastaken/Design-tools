@@ -3,11 +3,13 @@
 // Selection here is the selection everywhere: it carries across the modes.
 import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type PointerEvent } from 'react';
 import { cssColor, toHex } from '../../../shared/color/index.ts';
+import { greyOf, valueOf } from '../../../shared/color/value.ts';
 import { MATERIALS } from '../../../shared/palette/ramp.ts';
 import type { RampSpec, Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
 import { Button, ConfirmInline, Icon, IconButton, menu, toast, Tooltip, type MenuAnchor } from '../../ui/index.ts';
-import { fmtL, plural } from '../common/names.ts';
+import { fmtV, plural } from '../common/names.ts';
+import { GreyscaleButton } from '../common/Greyscale.tsx';
 import { Section } from '../common/Section.tsx';
 import { addBase, addProposals, arm, deleteLoose, deleteRamp, duplicate, focusStep, move, rampsFromLoose, reorder, select, selected, type Doc } from './actions.ts';
 import { brokenSteps, looseOf, nameOf, rampName, regen, revertRamp, setSpec, stepsOf, wordOf, type IllustrationDoc } from './doc.ts';
@@ -79,7 +81,12 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
       sub={d.ramps.length ? String(d.ramps.length) : undefined}
       className={s.palette}
       bodyClassName={s.pbody}
-      actions={<IconButton icon="add" label="Add a base colour: new, from an image, from the screen, from a palette" shortcut="Shift+A" size="sm" onClick={(e) => addMenu(doc, e.currentTarget.getBoundingClientRect(), e.currentTarget, e.detail === 0)} />}
+      actions={
+        <>
+          {d.swatches.length > 0 && <GreyscaleButton />}
+          <IconButton icon="add" label="Add a base colour: new, from an image, from the screen, from a palette" shortcut="Shift+A" size="sm" onClick={(e) => addMenu(doc, e.currentTarget.getBoundingClientRect(), e.currentTarget, e.detail === 0)} />
+        </>
+      }
     >
       <div
         role="listbox"
@@ -132,7 +139,7 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
               {ghosts.items.map((it) => (
                 <Tooltip key={it.id} content={`Add ${toHex(it.oklch).toUpperCase()} as a base colour`}>
                   <button type="button" className={s.ghost} data-ghost={it.id} aria-label={`Add ${toHex(it.oklch)} as a base colour`} onClick={() => addProposals(doc, [it])}>
-                    <i style={{ background: cssColor(it.oklch) }} />
+                    <i data-colour style={{ background: cssColor(it.oklch) }} />
                   </button>
                 </Tooltip>
               ))}
@@ -241,7 +248,7 @@ function RampItem(p: ItemProps) {
           </span>
         </Tooltip>
         {broken.size > 0 && (
-          <Tooltip content="A step is as light as, or lighter than, the one before it. Lightness should fall from highlight to deep shadow; a hand edit, or a base moved past one, breaks it.">
+          <Tooltip content="A step is as light as, or lighter than, the one before it. Value should fall from highlight to deep shadow; a hand edit, or a base moved past one, breaks it.">
             <span className={s.broken}>
               <Icon name="error" size={14} />
               Value breaks
@@ -347,7 +354,7 @@ function Chips({ d, v, list, sel, lit, broken, tall }: ChipsProps) {
     <div className={cx(s.chips, tall && s.tall)}>
       {list.map((w) => {
         const word = w.name.trim() ? wordOf(d, w) : null;
-        const label = `${nameOf(d, w)}${word ? ` · ${word}` : ''} · L ${fmtL(w.oklch[0])}${w.edited ? ' · edited by hand' : ''}`;
+        const label = `${nameOf(d, w)}${word ? ` · ${word}` : ''} · V ${fmtV(w.oklch)}${w.edited ? ' · edited by hand' : ''}`;
         return (
           <Tooltip key={w.id} content={label}>
             <button
@@ -368,13 +375,13 @@ function Chips({ d, v, list, sel, lit, broken, tall }: ChipsProps) {
               }}
               onKeyDown={onKeyDown(w)}
             >
-              <i className={s.colour} style={{ background: cssColor(w.oklch) }} />
-              <i className={s.value} style={{ background: cssColor([w.oklch[0], 0, 0]) }} />
+              <i className={s.colour} data-colour style={{ background: cssColor(w.oklch) }} />
+              <i className={s.value} style={{ background: cssColor(greyOf(valueOf(w.oklch))) }} />
             </button>
           </Tooltip>
         );
       })}
-      <span ref={dnd.ghost} className={s.ghostDrag} hidden aria-hidden="true" />
+      <span ref={dnd.ghost} className={s.ghostDrag} data-colour hidden aria-hidden="true" />
     </div>
   );
 }

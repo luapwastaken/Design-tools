@@ -22,7 +22,7 @@ export function Meters({ inks, maxInk }: { inks: InkCoverage[]; maxInk: number |
       <div className={s.list}>
         {inks.map((k) => (
           <div key={k.id} className={cx(s.row, k.hidden && s.hidden)}>
-            <i className={s.chip} style={{ background: cssColor(k.colour) }} />
+            <i className={s.chip} data-colour style={{ background: cssColor(k.colour) }} />
             <Tooltip content={k.label} overflowOnly>
               <span className={s.label}>{k.label}</span>
             </Tooltip>
@@ -56,7 +56,7 @@ export function InkProbe({ at, inks, view }: { at: { x: number; y: number }; ink
       {inks.map((k, i) =>
         k.colour ? (
           <span key={i} className={s.entry} aria-label={`${k.label} ${pct(k.value)}%`}>
-            <i className={s.probeChip} style={{ background: cssColor(k.colour) }} />
+            <i className={s.probeChip} data-colour style={{ background: cssColor(k.colour) }} />
             {pct(k.value)}
           </span>
         ) : (

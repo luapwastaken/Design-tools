@@ -12,6 +12,12 @@ export const LUMA = [0.2126, 0.7152, 0.0722] as const;
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 const luma = (r: number, g: number, b: number) => LUMA[0] * r + LUMA[1] * g + LUMA[2] * b;
 
+/** the values of an SVG feColorMatrix that greys the picture to this measure: R, G and B all become the luma, alpha stays */
+export const greyMatrix = (): string => {
+  const row = `${LUMA.join(' ')} 0 0`;
+  return `${row} ${row} ${row} 0 0 0 1 0`;
+};
+
 /** The value of what the screen shows, 0 (black) to 1 (white). */
 export function valueOf(o: Oklch): number {
   const { r, g, b } = displayRgb(o);

@@ -91,7 +91,7 @@ function RampControls({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec
           </Button>
         </div>
       )}
-      {broken > 0 && <p className={s.bad}>A step is as light as the one before it: lightness should fall from highlight to deep shadow.</p>}
+      {broken > 0 && <p className={s.bad}>A step is as light as the one before it: value should fall from highlight to deep shadow.</p>}
       <div className={s.grid}>
         <InspectorRow label="Steps">
           <NumberField label="Steps" hideLabel min={3} max={9} step={1} width={70} {...steps} />
@@ -128,9 +128,6 @@ function ViewControls({ d, v }: { d: IllustrationDoc; v: IllustrationView }) {
         </InspectorRow>
         <InspectorRow label="Seen as">
           <Select options={PROOFS} value={v.proof} onChange={(proof: Proof) => patchView({ proof })} />
-        </InspectorRow>
-        <InspectorRow label="Greyscale">
-          <Toggle label="Greyscale (G)" checked={v.proof === 'grey'} onChange={(on) => patchView({ proof: on ? 'grey' : 'off' })} />
         </InspectorRow>
       </div>
     </div>

@@ -13,6 +13,7 @@ import {
   type Oklch,
   type WcagGrade,
 } from '../color/index.ts';
+import { valueOf } from '../color/value.ts';
 import { INK_LIBRARIES, nearestInks, type InkMatch } from './inks.ts';
 import { isGround, isInk } from './roles.ts';
 import { fitChroma } from './space.ts';
@@ -32,7 +33,7 @@ const carriesText = (role: string | null): boolean => role === null || isInk(rol
  * Text on grounds. With ground roles, every swatch that carries text on each of them; without, the
  * darkest and lightest swatches that aren't inks stand in as grounds, and each other swatch is
  * checked on the one it reads best on. A failing text carries one fix for all its grounds: the
- * nearest lightness that passes on every one, `minGap` clear of the other swatches' lightnesses
+ * nearest lightness that passes on every one, `minGap` clear of the other swatches' values
  * where a little more of a move gets there, so the fix doesn't make a value collision. Its fix is
  * null when no lightness of its hue passes on all its grounds.
  */
@@ -46,7 +47,7 @@ export function contrastPairs(swatches: Swatch[], { minGap = 0 }: { minGap?: num
     const on = roled.length ? grounds : [grounds.reduce((a, b) => (contrast(text.oklch, b.oklch) > contrast(text.oklch, a.oklch) ? b : a))];
     const target = contrastTarget(text.role);
     const failing = on.some((g) => contrast(text.oklch, g.oklch) < target);
-    const others = swatches.filter((s) => s !== text).map((s) => s.oklch[0]);
+    const others = swatches.filter((s) => s !== text).map((s) => valueOf(s.oklch));
     const fix = failing ? fixLightness(text, on.map((g) => g.oklch), target, others, minGap) : null;
     return on.map((ground) => pair(text, ground, fix));
   });
@@ -64,7 +65,7 @@ function pair(text: Swatch, ground: Swatch, fix: ContrastFix | null): ContrastPa
   return { text, ground, ratio, grade: wcagGrade(ratio), target, fix: ratio >= target || !fix ? null : { ...fix, ratio: contrast(fix.oklch, ground.oklch) } };
 }
 
-/** how far past the smallest passing move a fix may go to keep clear of the other lightnesses */
+/** how far past the smallest passing move a fix may go to keep clear of the other values */
 const CLEAR_REACH = 0.13;
 
 /**
@@ -76,7 +77,7 @@ function fixLightness(text: Swatch, grounds: Oklch[], target: number, others: nu
   const wide = !inSrgb(text.oklch);
   const at = (L: number): Oklch => (wide ? [L, c, h] : fitChroma([L, c, h]));
   const passes = (L: number) => grounds.every((g) => contrast(at(L), g) >= target);
-  const clear = (L: number) => others.every((o) => Math.abs(o - L) >= minGap - 1e-9);
+  const clear = (L: number) => others.every((o) => Math.abs(o - valueOf(at(L))) >= minGap - 1e-9);
   const moves = [1, 0].flatMap((end) => {
     if (!passes(end)) return [];
     // bisect for the smallest move that passes (moving towards an end only ever raises the ratio past each ground)
@@ -106,15 +107,16 @@ function fixLightness(text: Swatch, grounds: Oklch[], target: number, others: nu
 
 // ── value ────────────────────────────────────────────────────────────────────────────────────────
 
-export type ValueCollision = { a: Swatch; b: Swatch; deltaL: number };
+export type ValueCollision = { a: Swatch; b: Swatch; deltaV: number };
 
-/** pairs whose OKLCH lightness is closer than `minDeltaL`: they read as the same grey. Closest first. */
-export function valueCollisions(swatches: Swatch[], minDeltaL = 0.06): ValueCollision[] {
+/** pairs whose value (the grey they become, shared/color/value.ts) is closer than `minDeltaV`: they read as the same grey. Closest first. */
+export function valueCollisions(swatches: Swatch[], minDeltaV = 0.06): ValueCollision[] {
+  const v = new Map(swatches.map((w) => [w, valueOf(w.oklch)]));
   return checkedPairs(swatches)
-    .map(([a, b]) => ({ a, b, deltaL: Math.abs(a.oklch[0] - b.oklch[0]) }))
+    .map(([a, b]) => ({ a, b, deltaV: Math.abs(v.get(a)! - v.get(b)!) }))
     // a hair of slack, so 0.58 − 0.52 counts as the 6.0 it reads as
-    .filter((p) => p.deltaL < minDeltaL - 1e-9)
-    .sort((x, y) => x.deltaL - y.deltaL);
+    .filter((p) => p.deltaV < minDeltaV - 1e-9)
+    .sort((x, y) => x.deltaV - y.deltaV);
 }
 
 // ── colour vision ────────────────────────────────────────────────────────────────────────────────

@@ -14,7 +14,7 @@ const LIGHT: Oklch = [0.97, 0.006, 90];
 export const inkOn = (o: Oklch): string => cssColor(contrast(o, DARK) >= contrast(o, LIGHT) ? DARK : LIGHT);
 
 /** the colour the stage shows under a Simulate filter; the file's colour is never touched */
-export const simulated = (o: Oklch, sim: Simulate): Oklch => (sim === 'normal' ? o : sim === 'greyscale' ? [o[0], 0, 0] : simulateCvd(o, sim));
+export const simulated = (o: Oklch, sim: Simulate): Oklch => (sim === 'normal' ? o : simulateCvd(o, sim));
 
 /**
  * Roles the generator hands out, so the contrast badges work from the first press: lightest

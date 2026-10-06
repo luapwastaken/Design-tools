@@ -295,7 +295,7 @@ export const LitCanvas = memo(function LitCanvas(p: { shape: Shape; size: number
     shade(surface(p.shape, p.size), p.lut, p, image.current.data);
     ctx.putImageData(image.current, 0, 0);
   }, [p.shape, p.size, p.lut, p.azimuth, p.elevation]);
-  return <canvas ref={ref} width={p.size} height={p.size} className={p.className} role="img" aria-label={p.label} />;
+  return <canvas ref={ref} width={p.size} height={p.size} className={p.className} data-colour role="img" aria-label={p.label} />;
 });
 
 /** the small dial, for the all-ramps grid, where the sun's ring has no room: the rim is elevation 0 */

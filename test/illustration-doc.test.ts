@@ -1,5 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { hexToOklch } from '../src/shared/color/index.ts';
+import { greyOf, holdValue } from '../src/shared/color/value.ts';
+import { PROOFS } from '../src/renderer/tools/illustration/proof.ts';
 import { writeJson } from '../src/shared/palette/writers.ts';
 import type { Swatch } from '../src/shared/types.ts';
 import {
@@ -39,6 +42,24 @@ test('a new ramp: five steps around its base, lightest first, value falling', ()
   assert.deepEqual(baseOf(d, r.id)?.oklch, [0.6, 0.12, 30]);
   assert.deepEqual(brokenSteps(steps), []);
   assert.deepEqual(d.swatches.map((w) => w.id), steps.map((w) => w.id), 'the file holds the ramp in row order');
+});
+
+test('brokenSteps judges value, not OKLCH L: equal L with a falling value is fine, a rise in value at a falling L is broken', () => {
+  // a yellow and a magenta at one L: the magenta is far darker in value, so lighter-to-darker holds
+  const yellow = flat('y', hexToOklch('#c19901'));
+  const magenta = flat('m', hexToOklch('#ff13f7'));
+  assert.ok(Math.abs(yellow.oklch[0] - magenta.oklch[0]) < 0.01);
+  assert.deepEqual(brokenSteps([yellow, magenta]), []);
+  assert.deepEqual(brokenSteps([magenta, yellow]), ['y'], 'the yellow is lighter in value than the magenta before it');
+  // a step darker in L but lighter in value than the one before it
+  const blue = flat('b', holdValue(0.6, 0.2, 265));
+  const grey = flat('g', greyOf(0.5));
+  assert.deepEqual(brokenSteps([grey, blue]), ['b'], 'the blue steps up in value');
+});
+
+test('Illustration offers colour-vision lenses but no Greyscale: grey is the app-wide toggle', () => {
+  assert.deepEqual(PROOFS.map((p) => p.value), ['off', 'deutan', 'protan', 'tritan', 'achromat']);
+  assert.ok(!PROOFS.some((p) => /grey/i.test(p.label)));
 });
 
 test('an edited step stays put when the Light settings change; the rest follow', () => {

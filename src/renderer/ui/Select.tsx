@@ -53,7 +53,7 @@ export function Select<T extends string>({ label, options, value, onChange, disa
       }}
     >
       {label && <span className="lbl">{label}</span>}
-      {current?.swatch !== undefined && <span className={s.chip} style={{ background: current.swatch }} />}
+      {current?.swatch !== undefined && <span className={s.chip} data-colour style={{ background: current.swatch }} />}
       <span className={s.value}>{current?.label ?? ''}</span>
       <Icon name="unfold_more" size={16} />
     </button>

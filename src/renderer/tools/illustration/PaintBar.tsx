@@ -130,14 +130,14 @@ function OnBrush({ brush, hint, named, medium, kind, load, size }: { brush: Pain
     const says = brush ? (tip ?? `On the brush: ${brush.name}.`) : hint;
     return (
       <Tooltip content={says}>
-        <i className={s.brushChip} role="img" aria-label={says} style={chip} />
+        <i className={s.brushChip} data-colour role="img" aria-label={says} style={chip} />
       </Tooltip>
     );
   }
   return (
     <span className={s.readout}>
       <Tooltip content={tip ?? ''} disabled={!tip}>
-        <i className={s.brushChip} style={chip} />
+        <i className={s.brushChip} data-colour style={chip} />
       </Tooltip>
       <Tooltip overflowOnly>
         <span className={cx(s.brushName, !brush && s.dim)}>{brush?.name ?? hint}</span>

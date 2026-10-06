@@ -17,7 +17,7 @@ export type DesignTab = 'contrast' | 'check' | 'preview' | 'harmonies' | 'notes'
 /** what each palette chip says: Hex; Hex and L C H; the Table adds RGB and ≈CMYK */
 export type ChipData = 'hex' | 'lch' | 'table';
 /** the view filter over the artboard and the In use page; never written to the document */
-export type Simulate = 'normal' | Cvd | 'greyscale';
+export type Simulate = 'normal' | Cvd;
 export type CheckId = 'contrast' | 'value' | 'vision' | 'print';
 
 /** Never in history: saved with the workspace through shell.setView (spec §7.1). */
@@ -40,7 +40,7 @@ export type DesignView = {
   /** Value and Hue lock: the OKLCH picker's drags keep L or H; typed values still change them (spec §5) */
   lockL: boolean;
   lockH: boolean;
-  /** Value check: flag pairs closer than this, in L × 100 */
+  /** Value check: flag pairs closer than this, in value × 100 */
   flagL: number;
   /** Colour vision check: flag pairs closer than this ΔE */
   flagE: number;

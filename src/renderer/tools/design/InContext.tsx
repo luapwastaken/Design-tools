@@ -81,7 +81,7 @@ function Site({ sc, label }: { sc: Scene; label: string }) {
     '--on-hl': css(sc.onHighlight),
   } as CSSProperties;
   return (
-    <div className={s.site} style={vars} role="img" aria-label={label}>
+    <div className={s.site} data-colour style={vars} role="img" aria-label={label}>
       <div className={s.nav}>
         <span className={s.brand}>
           <i className={s.logo} />

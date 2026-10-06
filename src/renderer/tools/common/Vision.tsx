@@ -1,5 +1,6 @@
 import type { KeyboardEvent } from 'react';
 import { cssColor, simulateCvd, type Cvd } from '../../../shared/color/index.ts';
+import { valueOf } from '../../../shared/color/value.ts';
 import type { CvdClosest } from '../../../shared/palette/checks.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { Button, Icon, Module, NumberField, Tooltip } from '../../ui/index.ts';
@@ -53,7 +54,7 @@ export function Vision({ swatches, onFix, pointAt, className, vision, names = tr
     if (!chosen?.flag) return null;
     let a = chosen.a.oklch;
     let b = chosen.b.oklch;
-    const others = swatches.filter((w) => w !== chosen.a && w !== chosen.b).map((w) => w.oklch[0]);
+    const others = swatches.filter((w) => w !== chosen.a && w !== chosen.b).map((w) => valueOf(w.oklch));
     for (const k of kinds) [a, b] = cvdFix(a, b, k, flagE, others) ?? [a, b];
     return a === chosen.a.oklch && b === chosen.b.oklch ? null : { [chosen.a.id]: a, [chosen.b.id]: b };
   })();
@@ -95,7 +96,7 @@ export function Vision({ swatches, onFix, pointAt, className, vision, names = tr
                       {displayName(chosen.a)} and {displayName(chosen.b)}
                     </b>{' '}
                     merge under {kinds.length === 4 ? 'every simulation' : kinds.map((k) => LABEL[k].toLowerCase()).join(', ')}.{' '}
-                    {parted ? 'Moving them apart in lightness parts them.' : 'No lightness spread parts them; change one of their hues.'}
+                    {parted ? 'Moving them apart in value parts them.' : 'No value spread parts them; change one of their hues.'}
                   </>
                 ) : (
                   <>
@@ -105,7 +106,7 @@ export function Vision({ swatches, onFix, pointAt, className, vision, names = tr
                 )}
               </span>
               {parted && (
-                <Button size="xs" onClick={fix} tooltip={`Spread them in lightness until ΔE reaches ${flagE.toFixed(1)}`}>
+                <Button size="xs" onClick={fix} tooltip={`Spread them in value until ΔE reaches ${flagE.toFixed(1)}`}>
                   Part them
                 </Button>
               )}
@@ -126,7 +127,7 @@ function Row({ kind, swatches, pair, pointAt, on, onPick, short }: RowProps) {
       <span className="lbl">{LABEL[kind]}</span>
       <span className={s.strip} style={{ gridTemplateColumns: `repeat(${swatches.length}, 1fr)` }}>
         {swatches.map((w) => (
-          <i key={w.id} style={{ background: cssColor(kind === 'typical' ? w.oklch : simulateCvd(w.oklch, kind)) }} />
+          <i key={w.id} data-colour style={{ background: cssColor(kind === 'typical' ? w.oklch : simulateCvd(w.oklch, kind)) }} />
         ))}
       </span>
       <span className={cx(s.rd, flagged && s.worst)}>

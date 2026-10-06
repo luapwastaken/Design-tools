@@ -97,7 +97,7 @@ export function ColourModule({ doc, d }: { doc: Doc; d: PatternDoc }) {
               return (
                 <Tooltip key={j} content={says}>
                   <button type="button" role="radio" aria-label={says} aria-checked={j === at} tabIndex={j === at ? 0 : -1} className={cx(s.chip, j === at && s.on)} onClick={() => setPicked(j)}>
-                    <i style={{ background: cssColor(c) }} />
+                    <i data-colour style={{ background: cssColor(c) }} />
                   </button>
                 </Tooltip>
               );

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { inSrgb, type Oklch } from '../src/shared/color/index.ts';
+import { valueOf } from '../src/shared/color/value.ts';
 import { valueCollisions } from '../src/shared/palette/checks.ts';
 import { generate, PRESETS } from '../src/shared/palette/generate.ts';
 import type { Swatch } from '../src/shared/types.ts';
@@ -59,10 +60,10 @@ test('locked colours stay in their slot, unchanged, and the rest spread around t
   }
 });
 
-test('free slots run dark to light', () => {
+test('free slots run dark to light, in value', () => {
   const out = generate({ seed: 3, count: 5, preset: 'warm', locked: [] });
-  const ls = out.map((o) => o[0]);
-  assert.deepEqual(ls, [...ls].sort((a, b) => a - b));
+  const vs = out.map(valueOf);
+  assert.deepEqual(vs, [...vs].sort((a, b) => a - b));
 });
 
 test('a locked colour steers the hue when the preset has no hue range of its own', () => {

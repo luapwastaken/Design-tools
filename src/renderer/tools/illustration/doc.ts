@@ -2,6 +2,7 @@
 // swatches, each with its ramp (`group`) and `step`, so every other tool reads a normal palette;
 // `ramps` says how each one is built, in row order. Pure: no DOM, so it is unit tested.
 import type { Oklch } from '../../../shared/color/index.ts';
+import { valueOf } from '../../../shared/color/value.ts';
 import { MATERIALS, newRamp, regenerate } from '../../../shared/palette/ramp.ts';
 import type { MaterialId, PalettePayload, RampSpec, Swatch } from '../../../shared/types.ts';
 import { displayName, stepWord } from '../common/names.ts';
@@ -54,9 +55,10 @@ export function nameOf(d: IllustrationDoc, w: Swatch): string {
 /** What export and the checks call each swatch: blank names filled in. */
 export const named = (d: IllustrationDoc): Swatch[] => d.swatches.map((w) => (w.name.trim() ? w : { ...w, name: nameOf(d, w) }));
 
-/** steps whose lightness doesn't fall from highlight to deep shadow (a hand edit, or a base moved past one) */
+/** steps whose value doesn't fall from highlight to deep shadow (a hand edit, or a base moved past one) */
 export function brokenSteps(steps: Swatch[]): string[] {
-  return steps.filter((w, i) => i > 0 && w.oklch[0] >= steps[i - 1].oklch[0]).map((w) => w.id);
+  const v = steps.map((w) => valueOf(w.oklch));
+  return steps.filter((w, i) => i > 0 && v[i] >= v[i - 1]).map((w) => w.id);
 }
 
 // ── writing: each returns the next document ────────────────────────────────────────────────────

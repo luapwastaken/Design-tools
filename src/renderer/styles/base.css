@@ -55,3 +55,7 @@ input, textarea { min-width: 0; user-select: text; }
 
 /* icons (brief §3.3): Phosphor svgs sized by font-size, 16px unless told otherwise */
 .ico { font-size: 16px; width: 1em; height: 1em; flex: none; user-select: none; color: inherit; }
+
+/* the greyscale view (G in the colour tools): content colours show as the grey they become, by the
+   value measure (the dt-grey filter, mounted in the shell); chrome is never marked data-colour */
+:root[data-greyscale] [data-colour] { filter: url(#dt-grey); }

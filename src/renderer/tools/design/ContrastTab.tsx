@@ -27,7 +27,7 @@ const MARKS = [3, 4.5, 7];
 /** the text on its ground at the two sizes a layout uses */
 function Specimen({ text, ground }: { text: Oklch; ground: Oklch }) {
   return (
-    <span className={s.aa} style={{ background: cssColor(ground), color: cssColor(text) }} aria-hidden="true">
+    <span className={s.aa} data-colour style={{ background: cssColor(ground), color: cssColor(text) }} aria-hidden="true">
       <b>Aa</b>
       <span>
         Body 12
@@ -147,7 +147,7 @@ export function ContrastTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: Desig
               return (
                 <Tooltip key={role} content={owner ? (owner.id === w.id ? `${name} is the ${role}` : `${displayName(owner)} is the ${role}. Click to give it to ${name}.`) : `Give ${name} the ${role} job`}>
                   <button type="button" className={cx(s.roleChip, owner && s.held, owner?.id === w.id && s.mine)} onClick={() => setRole(doc, w.id, owner?.id === w.id ? null : role)}>
-                    {owner && <i className={s.dot} style={{ background: cssColor(owner.oklch) }} />}
+                    {owner && <i className={s.dot} data-colour style={{ background: cssColor(owner.oklch) }} />}
                     <span>{role}</span>
                   </button>
                 </Tooltip>

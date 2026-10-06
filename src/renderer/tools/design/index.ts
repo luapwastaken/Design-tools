@@ -2,6 +2,7 @@
 // Spec: docs/superpowers/specs/2026-09-28-colour-design-tool.md; plan unit V.
 import { asSvg, unsupportedImage } from '../../lib/load.ts';
 import type { ToolDefinition } from '../../shell/tool.ts';
+import { toggleGreyscale } from '../common/Greyscale.tsx';
 import { baseName, fetchBlob, isSvg } from '../common/take.ts';
 import { ROLES } from '../../../shared/palette/roles.ts';
 import { armDelete, copySelected, duplicate, escape, eyedrop, generateNow, keepAll, newPalette, nudge, roleSelected, step, toggleLocked } from './actions.ts';
@@ -76,6 +77,7 @@ export const tool: ToolDefinition<DesignDoc> = {
     { keys: 'ArrowRight', label: 'Next swatch', run: () => step(doc, 1) },
     { keys: 'Alt+ArrowLeft', label: 'Move the selection left', run: () => nudge(doc, -1) },
     { keys: 'Alt+ArrowRight', label: 'Move the selection right', run: () => nudge(doc, 1) },
+    { keys: 'G', label: 'Greyscale', run: () => void toggleGreyscale() },
     { keys: 'I', label: 'Pick from screen', run: () => void eyedrop(doc) },
     { keys: 'C', label: 'Copy the hex', run: () => copySelected(doc) },
     { keys: 'A', label: 'Keep all proposals', run: () => keepAll(doc) },

@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { MenuHost, ToastHost } from '../ui/index.ts';
 import { useShell } from './core/index.ts';
+import { GreyView } from './GreyView.tsx';
 import { LibraryPanel } from './LibraryPanel.tsx';
 import { Rail } from './Rail.tsx';
 import { ResizeHandle } from './ResizeHandle.tsx';
@@ -75,6 +76,7 @@ export function App() {
       </div>
       <StatusBar />
       <MenuHost />
+      <GreyView />
     </div>
   );
 }

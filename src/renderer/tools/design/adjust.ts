@@ -4,9 +4,9 @@ import { fitChroma } from '../../../shared/palette/space.ts';
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
-/** where a new swatch goes in lightness: the middle of the widest gap the palette leaves */
-export function nextL(ls: number[]): number {
-  const stops = [0.12, ...ls.map(clamp01).sort((x, y) => x - y), 0.96];
+/** where a new swatch goes in value (0..1, the grey it becomes): the middle of the widest gap the palette leaves */
+export function nextV(vs: number[]): number {
+  const stops = [0.05, ...vs.map(clamp01).sort((x, y) => x - y), 0.95];
   let best = 0.6;
   let width = -1;
   for (let i = 1; i < stops.length; i++) {

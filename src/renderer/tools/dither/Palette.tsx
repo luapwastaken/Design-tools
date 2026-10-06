@@ -119,7 +119,7 @@ export function PaletteModule({ doc, d, frame }: { doc: Doc; d: DitherDoc; frame
                     }}
                     onDragEnd={() => setDrag(null)}
                   >
-                    <i className={s.colour} style={{ background: cssColor(c.oklch) }} />
+                    <i className={s.colour} data-colour style={{ background: cssColor(c.oklch) }} />
                     <span className={s.num}>{c.on ? usedAt[n] + 1 : '–'}</span>
                   </button>
                 </Tooltip>
