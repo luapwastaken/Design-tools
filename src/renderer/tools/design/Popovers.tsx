@@ -2,7 +2,7 @@
 // logo, Paste codes, Harmony from a colour, Insert gradient, Suggest more colours; and the style and
 // accent that rerolls the palette. Each source only proposes: the colours land in the row as
 // proposals, never in the document until kept.
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { gradientStops } from '../../../shared/palette/gradient.ts';
 import { PRESETS } from '../../../shared/palette/generate.ts';
@@ -18,7 +18,7 @@ import { HARMONIES, runGradient, runHarmony } from './build.ts';
 import { displayName, type DesignDoc, type DesignView } from './doc.ts';
 import { proposals } from './proposals.ts';
 import { extract, picture, takeImage, takeSvg, takeText } from './sources.ts';
-import { activeSwatch, regenerate, restyle, selection, suggestMore, type Doc } from './actions.ts';
+import { activeSwatch, regenerate, restyle, seedGesture, selection, suggestMore, type Doc } from './actions.ts';
 import { StyleFields } from './StyleFields.tsx';
 import { patchView } from './view-state.ts';
 import s from './Popovers.module.css';
@@ -69,13 +69,15 @@ function Row({ children }: { children: ReactNode }) {
 
 /** Style, Accent and Seed: a change rerolls the unlocked colours in place (the same seed only changes what the style or accent changes) */
 function StyleBody({ doc, v }: { doc: Doc; v: DesignView }) {
+  // one gesture for a scrub or a typed seed, so it is one undo step and one toast, whatever it re-renders between
+  const seed = useMemo(() => seedGesture(doc), [doc]);
   return (
     <>
       <Row>
         <StyleFields doc={doc} v={v} className={s.grow} />
       </Row>
       <Row>
-        <NumberField label="Seed" value={v.seed} min={0} max={99999} step={1} onChange={(seed) => restyle(doc, { seed })} className={s.grow} />
+        <NumberField label="Seed" value={v.seed} min={0} max={99999} step={1} {...seed} className={s.grow} />
         <IconButton icon="casino" label="Reroll: a new seed" shortcut="Space" onClick={() => restyle(doc, { seed: 1 + Math.floor(Math.random() * 99999) })} />
       </Row>
       <p className={s.dim}>These rebuild every colour that has a role and is not locked. Press L on a colour to keep it.</p>
@@ -85,9 +87,22 @@ function StyleBody({ doc, v }: { doc: Doc; v: DesignView }) {
 
 /** the generator's ramp-shaped colours, proposed beside the palette: Colours and Seed redo them while they are up */
 function SuggestBody({ doc, v, onDone }: { doc: Doc; v: DesignView; onDone(): void }) {
-  const preset = PRESETS.find((p) => p.id === v.preset);
+  const preset = PRESETS.find((p) => p.id === v.suggestStyle);
   return (
     <>
+      <Row>
+        <Select label="Style" options={PRESETS.map((p) => ({ value: p.id, label: p.label }))} value={v.suggestStyle} onChange={(suggestStyle) => regenerate(doc, { suggestStyle })} className={s.grow} />
+        <Select
+          label="Hues from"
+          options={[
+            { value: 'all', label: 'All colours' },
+            { value: 'selected', label: 'Selected colour' },
+          ]}
+          value={v.suggestFrom}
+          onChange={(suggestFrom) => regenerate(doc, { suggestFrom })}
+          className={s.grow}
+        />
+      </Row>
       <Row>
         <NumberField label="Colours" value={v.count} min={2} max={12} step={1} onChange={(count) => regenerate(doc, { count })} className={s.grow} />
       </Row>
@@ -95,7 +110,7 @@ function SuggestBody({ doc, v, onDone }: { doc: Doc; v: DesignView; onDone(): vo
         <NumberField label="Seed" value={v.seed} min={0} max={99999} step={1} onChange={(seed) => regenerate(doc, { seed })} className={s.grow} />
         <IconButton icon="casino" label="Another seed" onClick={() => regenerate(doc, { seed: 1 + Math.floor(Math.random() * 99999) })} />
       </Row>
-      <p className={s.dim}>{preset ? `${preset.label}: ${preset.describe} ` : ''}Pick the style with the caret beside Reroll. They arrive as proposals; locked colours of the palette keep their place.</p>
+      <p className={s.dim}>{preset ? `${preset.label}: ${preset.describe} ` : ''}They arrive as proposals and your palette stays as it is.</p>
       <Button
         icon="add"
         variant="primary"
@@ -165,6 +180,7 @@ function ImageBody({ v, onDone }: { v: DesignView; onDone(): void }) {
 
 function LogoBody({ onDone }: { onDone(): void }) {
   const library = useShell((st) => st.library);
+  const input = useRef<HTMLInputElement>(null);
   const [chosen, setChosen] = useState('');
   const items = library?.collections.flatMap((c) => c.items.filter((i) => i.kind === 'logo' || i.kind === 'svg')) ?? [];
   const pick = async (id: string) => {
@@ -183,6 +199,20 @@ function LogoBody({ onDone }: { onDone(): void }) {
         onChange={(id) => id && void pick(id).catch(failed("Couldn't read that logo"))}
         disabled={!items.length}
       />
+      <Button icon="upload_file" variant={items.length ? 'secondary' : 'primary'} onClick={() => input.current?.click()}>
+        Choose SVG
+      </Button>
+      <input
+        ref={input}
+        type="file"
+        accept="image/svg+xml,.svg"
+        hidden
+        onChange={(e) => {
+          const file = e.currentTarget.files?.[0];
+          e.currentTarget.value = '';
+          if (file) void takeFile(file).then(onDone, failed(`Couldn't take colours from ${file.name}`));
+        }}
+      />
       <p className={s.dim}>Its fill and stroke colours become proposals. You can also drop an SVG here.</p>
     </>
   );
@@ -199,7 +229,7 @@ function PasteBody({ onDone }: { onDone(): void }) {
   return (
     <>
       {/* as text, not a placeholder: the examples are copy, and they stay visible while typing */}
-      <p className={s.forms}>#E8643C · rgb(232, 100, 60) · hsl(14 79% 57%) · oklch(0.66 0.17 37) · Ember: #E8643C</p>
+      <p className={s.forms}>#E8643C · rgb(232, 100, 60) · hsl(14 79% 57%) · oklch(0.66 0.17 37) · 232 100 60 · Ember: #E8643C</p>
       <textarea
         className={s.paste}
         value={text}
@@ -214,12 +244,18 @@ function PasteBody({ onDone }: { onDone(): void }) {
         }}
       />
       {read.colours.length > 0 && <SwatchStrip colors={read.colours.map(cssColor)} height={22} />}
+      {read.rejected.length > 0 && (
+        <p className={s.dim}>
+          Skipped: {read.rejected.slice(0, 4).join(' / ')}
+          {read.rejected.length > 4 ? ` and ${read.rejected.length - 4} more` : ''}
+        </p>
+      )}
       <Row>
         <span className={cx(s.dim, s.grow)}>
           {!text.trim()
             ? 'One per line, or separated by commas.'
             : read.colours.length
-              ? `${read.colours.length === 1 ? 'One colour' : `${read.colours.length} colours`} found${read.rejected.length ? `, ${read.rejected.length} skipped` : ''}.`
+              ? `${read.colours.length === 1 ? 'One colour' : `${read.colours.length} colours`} found${read.rejected.length ? `, ${read.rejected.length} skipped` : ''}.${read.notes.map((n) => ` ${n}.`).join('')}`
               : 'No colours found.'}
         </span>
         <Button icon="content_paste" variant="primary" onClick={add} disabled={!read.colours.length} shortcut="Ctrl+Enter" tooltip="Show them in the palette row as proposals; Keep all adds them">

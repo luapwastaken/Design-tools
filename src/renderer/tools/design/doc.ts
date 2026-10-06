@@ -34,6 +34,8 @@ export type DesignView = {
   sim: Simulate;
   /** swatch ids pinned with L: Space (a reroll) and Delete leave them */
   locked: string[];
+  /** value pairs marked intended ("idA:idB", sorted): a painter's matched values, left out of the Value check */
+  intended: string[];
   /** the surround the palette is judged on */
   surround: Surround;
   chipData: ChipData;
@@ -47,6 +49,9 @@ export type DesignView = {
   format: ExportFormat;
   /** Style: a role palette's neutral lean, chroma and accent boldness (shared/palette/brand); also Suggest more colours' preset */
   preset: string;
+  /** Suggest more colours: its own style (a generator preset), and whose hues it follows; the Style above is the role builder's */
+  suggestStyle: string;
+  suggestFrom: 'all' | 'selected';
   /** the harmony the Accent and Highlight follow */
   accent: Accent;
   /** Suggest more colours: how many */

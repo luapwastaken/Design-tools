@@ -62,7 +62,9 @@ export function Popover({ anchor, label, align = 'start', focus = STOPS, onClose
       el.style.transformOrigin = `${Math.min(Math.max(a.left + a.width / 2 - at.x, 0), w)}px ${at.origin.split(' ')[1]}`;
     };
     place();
+    // the first control, or the panel itself when it holds none that can take focus (Esc still reaches it)
     el.querySelector<HTMLElement>(focus)?.focus({ preventScroll: true });
+    if (!el.contains(document.activeElement)) el.focus({ preventScroll: true });
     // a change inside (the picker's style) changes its size
     const ro = new ResizeObserver(place);
     ro.observe(el);
@@ -102,7 +104,7 @@ export function Popover({ anchor, label, align = 'start', focus = STOPS, onClose
 
   return createPortal(
     <Nest.Provider value={register}>
-      <div ref={ref} role="dialog" aria-label={label} className={cx(s.pop, className)} onKeyDown={onKeyDown} onContextMenu={(e) => e.preventDefault()}>
+      <div ref={ref} role="dialog" aria-label={label} tabIndex={-1} className={cx(s.pop, className)} onKeyDown={onKeyDown} onContextMenu={(e) => e.preventDefault()}>
         {children}
       </div>
     </Nest.Provider>,

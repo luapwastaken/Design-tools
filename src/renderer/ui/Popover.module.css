@@ -12,6 +12,8 @@
   color: var(--ink);
   transition: transform var(--t-move) var(--ease);
 }
+/* focus parked on the panel only so Esc reaches it; it is not a control */
+.pop:focus { outline: none; }
 @starting-style {
   .pop { transform: scale(.96); }
 }

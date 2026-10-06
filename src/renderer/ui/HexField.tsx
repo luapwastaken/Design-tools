@@ -22,7 +22,7 @@ export type HexFieldProps = {
   ref?: Ref<HTMLDivElement>;
 } & ColourGesture;
 
-const PROBLEM = 'Type or paste a colour: a hex, an RGB, HSL or OKLCH code, or a name.';
+const PROBLEM = 'Type or paste a colour: a hex, an RGB, HSL or OKLCH code, three numbers (0-255 or 0-1), or a name.';
 
 /** a hex as ever; otherwise the first colour a paste holds (an RGB, HSL or OKLCH code, a name, "Ember: #e8643c"…) */
 function read(text: string, hue: number): Oklch | null {

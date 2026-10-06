@@ -4,27 +4,69 @@
 import { hexToOklch, parseCss, parseHex, toOklch, type Oklch } from '../color/index.ts';
 import { wrapHue } from './space.ts';
 
-export type Pasted = { colours: Oklch[]; names: (string | null)[]; rejected: string[] };
+/** `names`: what the text called each (null: nothing); `notes`: what was dropped on the way ("Alpha is ignored") */
+export type Pasted = { colours: Oklch[]; names: (string | null)[]; rejected: string[]; notes: string[] };
 
 const FN = /\b(rgba?|hsla?|hwb|oklch|oklab|lab|lch|color)\(([^()]*)\)/gi;
 const HASH_HEX = /#([0-9a-f]{3,8})\b/gi;
 /** without "#", only 3 or 6 digits: 4-letter words (cafe, beef) would read as #RGBA */
-const BARE_HEX = /^(?:(.*?)\s*[:=]\s*)?([0-9a-f]{3}|[0-9a-f]{6})$/i;
+const BARE_HEX = /^(?:(.*?)\s*[:=]\s*)?((?:0x)?(?:[0-9a-f]{3}|[0-9a-f]{6}))$/i;
 /** a CSS colour keyword (white, rebeccapurple), as the whole item or after "name:" */
 const KEYWORD = /^(?:(.*?)\s*[:=]\s*)?([a-z]+)$/i;
 const COMMENT = /\/\*.*?\*\/|(?:^|\s)\/\/.*$/g;
 /** separators, brackets and wrapping left over once the colour is cut out of an item */
 const PUNCT = /^[\s"'`:=;,\-*[\]{}()]+|[\s"'`:=;,\-*[\]{}()]+$/g;
 
+const NUM = String.raw`[+-]?(?:\d+\.?\d*|\.\d+)`;
+/** three or four bare numbers, optionally in brackets: "255 136 0", "[1, 0.5333, 0, 1]" */
+const NUMBERS = new RegExp(String.raw`^(\[)?\s*(${NUM})(?:\s*,\s*|\s+)(${NUM})(?:\s*,\s*|\s+)(${NUM})(?:(?:\s*,\s*|\s+)(${NUM}))?\s*\]?$`);
+/** a hex or a function with an alpha that is dropped */
+const ALPHA_NOTE = 'Alpha is ignored';
+const ALPHA = /#(?:[0-9a-f]{4}|[0-9a-f]{8})\b|\b(?:rgba|hsla)\(|\/\s*[\d.]+%?\s*\)/i;
+
+/**
+ * Colours as plain numbers. Any above 1, or whole numbers: RGB 0-255 (Photoshop, Krita, Cinema 4D).
+ * Fractions up to 1 (or only 0s and 1s): in brackets sRGB 0-1 (an After Effects array, 4th is alpha), else this tool's own
+ * "Linear RGB 0-1" copy. Null when it isn't numbers, or they fit neither.
+ */
+function fromNumbers(item: string): { oklch: Oklch; alpha: boolean } | null {
+  const m = NUMBERS.exec(item.trim());
+  if (!m) return null;
+  const v = [Number(m[2]), Number(m[3]), Number(m[4])];
+  const alpha = m[5] !== undefined;
+  const unit = v.every((x) => x >= 0 && x <= 1) && (v.some((x) => !Number.isInteger(x)) || v.includes(1));
+  if (unit) return { oklch: toOklch({ mode: m[1] ? 'rgb' : 'lrgb', r: v[0], g: v[1], b: v[2] }), alpha };
+  if (v.some((x) => !Number.isInteger(x) || x < 0 || x > 255)) return null;
+  return { oklch: toOklch({ mode: 'rgb', r: v[0] / 255, g: v[1] / 255, b: v[2] / 255 }), alpha };
+}
+
+/** "color-primary", "--brand-primary" and the like: the prefix that says it is a colour is not part of the name */
+const cleanName = (n: string): string => n.replace(/^colou?r[-_.]+(?=\S)/i, '');
+
 export function parseColours(text: string): Pasted {
-  const out: Pasted = { colours: [], names: [], rejected: [] };
-  const seen = new Set<string>();
+  const out: Pasted = { colours: [], names: [], rejected: [], notes: [] };
+  const seen = new Map<string, number>();
   const lines = jsonLines(text) ?? text.split(/\r?\n/).map((l) => l.replace(COMMENT, ''));
   const items: string[] = [];
+  const add = (oklch: Oklch, name: string | null) => {
+    const key = oklch.map((v) => v.toFixed(4)).join(' ');
+    const at = seen.get(key);
+    if (at !== undefined) {
+      out.names[at] ??= name; // "#abc, Ember: #aabbcc": one colour, and it keeps the name
+      return;
+    }
+    seen.set(key, out.colours.length);
+    out.colours.push(oklch);
+    out.names.push(name);
+  };
   for (const line of lines) {
     const parts = splitOutsideParens(line);
-    // "255, 128, 0" is one colour written as numbers, not three hex colours (#225555, #112288, …): say it wasn't read
-    if (parts.length > 1 && parts.every((p) => /^\d{1,3}$/.test(p))) out.rejected.push(line.trim());
+    // numbers alone are one colour (0-255, or 0-1): "250, 250, 250" is a grey, not three 3-digit hexes
+    const numbers = fromNumbers(line);
+    if (numbers) {
+      if (numbers.alpha && !out.notes.includes(ALPHA_NOTE)) out.notes.push(ALPHA_NOTE);
+      add(numbers.oklch, null);
+    } else if (parts.length > 1 && parts.every((p) => /^\d{1,3}$/.test(p))) out.rejected.push(line.trim());
     else items.push(...parts);
   }
   for (const item of items) {
@@ -33,15 +75,12 @@ export function parseColours(text: string): Pasted {
       out.rejected.push(item);
       continue;
     }
-    const rest = found.reduce((s, f) => s.replace(f.text, ' '), item).replace(PUNCT, '').trim();
-    for (const f of found) {
-      const key = f.oklch!.map((v) => v.toFixed(4)).join(' ');
-      if (seen.has(key)) continue; // "#abc, #aabbcc": one colour
-      seen.add(key);
-      out.colours.push(f.oklch!);
-      // a list number ("1.") or a lone bracket isn't a name
-      out.names.push(found.length === 1 && /\p{L}/u.test(rest) ? rest : null);
-    }
+    let rest = found.reduce((s, f) => s.replace(f.text, ' '), item).replace(PUNCT, '').trim();
+    // a token written out ("accent": { "$value": "#e8643c" }) is called by its key
+    if (rest.includes('$value')) rest = rest.split(/["']?\s*:/)[0].replace(PUNCT, '');
+    if (ALPHA.test(item) && !out.notes.includes(ALPHA_NOTE)) out.notes.push(ALPHA_NOTE);
+    // a list number ("1.") or a lone bracket isn't a name
+    for (const f of found) add(f.oklch!, found.length === 1 && /\p{L}/u.test(rest) ? cleanName(rest) : null);
   }
   return out;
 }
@@ -66,10 +105,12 @@ function jsonLines(text: string): string[] | null {
     const o = v as Record<string, unknown>;
     // a swatch object: this tool's JSON keeps full-precision OKLCH beside the hex
     const oklch = Array.isArray(o.oklch) && o.oklch.length === 3 && o.oklch.every(Number.isFinite) ? `oklch(${o.oklch.join(' ')})` : null;
-    const colour = oklch ?? o.hex ?? o.value ?? o.color ?? o.colour;
+    const colour = oklch ?? o.hex ?? o.$value ?? o.value ?? o.color ?? o.colour;
     if (typeof colour === 'string') add(colour, o.name ?? key);
     else for (const [k, x] of Object.entries(o)) walk(x, k);
   };
+  // a bare array of three or four numbers (an After Effects colour) is one colour, read as it is
+  if (Array.isArray(data) && data.length >= 3 && data.length <= 4 && data.every((x) => typeof x === 'number')) return [`[${data.join(', ')}]`];
   walk(data, '');
   return lines;
 }
@@ -98,7 +139,7 @@ function findColours(item: string): { text: string; oklch: Oklch | null }[] | nu
   if (found.length) return found;
   // a bare hex or keyword only counts as the whole item (or after "name:"), so words like "Coffee bad" stay names
   const bare = BARE_HEX.exec(item);
-  if (bare) return [{ text: bare[2], oklch: fromHex(bare[2]) }];
+  if (bare) return [{ text: bare[2], oklch: fromHex(bare[2].replace(/^0x/i, '')) }];
   const word = KEYWORD.exec(item);
   const named = word && parseCss(word[2]);
   return named ? [{ text: word[2], oklch: named }] : null;

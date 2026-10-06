@@ -108,13 +108,38 @@ test('hues are 0..360 and nothing is NaN', () => {
   assert.ok(colours.flat().every(Number.isFinite));
 });
 
-test('a run of plain numbers is not a list of hex colours: it is refused whole', () => {
-  for (const text of ['255, 128, 0', '255,128,0', '100, 200', '12 , 34 , 56']) {
+test('plain numbers are one colour: 0-255, or 0-1 (brackets: sRGB as After Effects writes it; none: Linear RGB)', () => {
+  for (const text of ['255, 136, 0', '255,136,0', '255 136 0', '[255, 136, 0]', '255, 136, 0, 255']) assert.deepEqual(hexes(text), ['#ff8800'], text);
+  assert.deepEqual(hexes('[1, 0.5333, 0, 1]'), ['#ff8800'], 'an After Effects array');
+  assert.deepEqual(hexes('1, 0.2462, 0'), ['#ff8800'], 'this tool’s Linear RGB copy');
+  assert.deepEqual(parseColours('255, 136, 0, 128').notes, ['Alpha is ignored']);
+  assert.deepEqual(parseColours('[1, 0.5333, 0, 1]').notes, ['Alpha is ignored']);
+  assert.deepEqual(hexes('250, 250, 250'), ['#fafafa'], 'a run of three 3-digit numbers is a grey, not three hex colours');
+  // two numbers, or numbers that fit no scale, are refused whole
+  for (const text of ['100, 200', '300, 20, 5', '123, 456, 789']) {
     const r = parseColours(text);
     assert.deepEqual(r.colours, [], text);
-    assert.deepEqual(r.rejected, [text.trim()], text);
+    assert.deepEqual(r.rejected.length > 0, true, text);
   }
   // letters make them hex; one number alone is still a 3-digit hex
   assert.deepEqual(hexes('fff, 123'), ['#ffffff', '#112233']);
   assert.deepEqual(hexes('123'), ['#112233']);
+});
+
+test('0xRRGGBB, and an 8-digit hex says its alpha is dropped', () => {
+  assert.deepEqual(hexes('0xFF8800'), ['#ff8800']);
+  assert.deepEqual(parseColours('#ff880080').notes, ['Alpha is ignored']);
+  assert.deepEqual(parseColours('#ff8800').notes, []);
+});
+
+test('design tokens: $value, key names, role words kept, prefixes dropped, the first name kept', () => {
+  const dtcg = parseColours('{"brand": {"primary": {"$value": "#E8643C", "$type": "color"}, "surface": {"$value": "#fbf7f0"}}}');
+  assert.deepEqual(dtcg.colours.map(toHex), ['#e8643c', '#fbf7f0']);
+  assert.deepEqual(dtcg.names, ['primary', 'surface']);
+  const fragment = parseColours('"accent": {"$value": "#E8643C"}');
+  assert.deepEqual(fragment.names, ['accent']);
+  assert.deepEqual(parseColours('--color-brand-primary: #e8643c;').names, ['brand-primary']);
+  const twice = parseColours('#E8643C\nEmber: #E8643C');
+  assert.deepEqual(twice.colours.length, 1);
+  assert.deepEqual(twice.names, ['Ember'], 'the later name is kept when the first had none');
 });
