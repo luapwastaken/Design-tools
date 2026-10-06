@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { deltaE, inSrgb, type Oklch } from '../src/shared/color/index.ts';
-import { generateRamp, MATERIALS, newRamp, quietFor, regenerate } from '../src/shared/palette/ramp.ts';
+import { generateRamp, intensityAt, MATERIALS, newRamp, pushOf, quietFor, regenerate } from '../src/shared/palette/ramp.ts';
 import { toOklab } from '../src/shared/palette/space.ts';
 import type { MaterialId, RampSpec, Swatch } from '../src/shared/types.ts';
 
@@ -236,4 +236,46 @@ test('regenerate: the hero makes the other ramps quieter; an unknown ramp change
   });
   const swatches = [sw('a', [0.5, 0.1, 10])];
   assert.equal(regenerate({ swatches, ramps: [r] }, 'nope'), swatches);
+});
+
+test('push: a ramp with none is its intensity; a push on a stop is that intensity; in between is in between', () => {
+  const base: Oklch = [0.55, 0.15, 30];
+  for (const intensity of INTENSITIES) {
+    const plain = generateRamp(spec(base, { intensity }));
+    const at = pushOf({ intensity, push: undefined });
+    assert.deepEqual(generateRamp(spec(base, { intensity: 'grounded', push: at })), plain, `${intensity} as a push of ${at}`);
+  }
+  const chromaAt = (push: number) => generateRamp(spec(base, { push })).map((w) => w.oklch[1]);
+  const hueFrom = (push: number) => generateRamp(spec(base, { push })).map((w) => arc(w.oklch[2], base[2]));
+  // the light end of the ramp turns away from the base a little further with every bit of push
+  const turn = [0, 0.25, 0.5, 0.75, 1, 1.5, 2].map((p) => hueFrom(p)[0]);
+  assert.ok(turn.every((v, i) => i === 0 || v >= turn[i - 1] - 1e-9) && turn[6] > turn[0] + 1, `hue turn ${turn}`);
+  const [a, b, c] = [chromaAt(0.5), chromaAt(0), chromaAt(1)];
+  a.forEach((v, i) => assert.ok(v >= Math.min(b[i], c[i]) - 1e-9 && v <= Math.max(b[i], c[i]) + 1e-9, `chroma of step ${i} lies between the stops`));
+  // no gaps in the range: neighbouring pushes give neighbouring ramps
+  for (let p = 0; p < 2; p += 0.1) {
+    const [x, y] = [generateRamp(spec(base, { push: p })), generateRamp(spec(base, { push: p + 0.1 }))];
+    x.forEach((w, i) => assert.ok(deltaE(w.oklch, y[i].oklch) < 4, `push ${p.toFixed(1)} step ${i}`));
+  }
+});
+
+test('push: value never breaks anywhere on the scale, and the numbers outside it are held', () => {
+  for (const base of BASES) {
+    for (const push of [0, 0.3, 0.7, 1, 1.4, 2, -5, 9]) {
+      const ramp = generateRamp(spec(base, { push, material: 'metal' }));
+      ramp.forEach((w, i) => i === 0 || assert.ok(w.oklch[0] < ramp[i - 1].oklch[0], `${base} push ${push} step ${i}`));
+    }
+  }
+  assert.deepEqual(generateRamp(spec([0.55, 0.15, 30], { push: 7 })), generateRamp(spec([0.55, 0.15, 30], { push: 2 })));
+  assert.equal(pushOf({ intensity: 'extreme', push: undefined }), 2);
+  assert.equal(pushOf({ intensity: 'grounded', push: Number.NaN }), 0);
+  assert.deepEqual(['grounded', 'expressive', 'extreme'], [0, 1, 2].map(intensityAt));
+  assert.equal(intensityAt(0.49), 'grounded');
+  assert.equal(intensityAt(1.51), 'extreme');
+});
+
+test('a new ramp that joins another takes its push as well as its intensity', () => {
+  const like = spec([0.5, 0.1, 100], { intensity: 'expressive', push: 1.3 });
+  assert.equal(newRamp([0.6, 0.1, 10], 'n', like).push, 1.3);
+  assert.equal('push' in newRamp([0.6, 0.1, 10], 'n', spec([0.5, 0.1, 100])), false);
 });

@@ -41,6 +41,25 @@ export type MaterialId =
   | 'skin' | 'cloth' | 'velvet' | 'metal' | 'plastic' | 'glass'
   | 'water' | 'foliage' | 'stone' | 'wood' | 'paper' | 'fur';
 
+/**
+ * What the Light & preview tab does with a ramp's material: each 0..1, absent = the material's own.
+ * It only changes how the picture is lit, never the ramp's colours.
+ */
+export type SurfaceSpec = {
+  gloss?: number;
+  /** how wide and soft the terminator is */
+  softness?: number;
+  /** light through the material: thin cloth, paper, leaves, wax */
+  translucency?: number;
+  sheen?: number;
+  /** how far the highlight is stretched into a streak (satin, silk, brushed metal) */
+  grain?: number;
+  /** sky fill and ground bounce */
+  ambient?: number;
+  /** the grain's streak runs across the folds instead of along them */
+  across?: boolean;
+};
+
 /** How Illustration builds one ramp (spec 2026-09-29 §3.1). Other tools pass it through untouched. */
 export type RampSpec = {
   id: string;
@@ -49,6 +68,8 @@ export type RampSpec = {
   shadow: [number, number, number];
   material: MaterialId;
   intensity: 'grounded' | 'expressive' | 'extreme';
+  /** 0..2, between the intensities (0 grounded, 1 expressive, 2 extreme); absent = the intensity's own */
+  push?: number;
   /** 3..9, default 5 */
   steps: number;
   hueShift: number;
@@ -56,6 +77,8 @@ export type RampSpec = {
   hero: boolean;
   /** the base's name when the file was written, so a ramp whose base another tool deleted keeps its name */
   name?: string;
+  /** Light & preview's overrides of how the material is lit */
+  surface?: SurfaceSpec;
 };
 
 export type PalettePayload = {

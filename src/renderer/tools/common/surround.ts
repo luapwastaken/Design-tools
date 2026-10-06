@@ -25,3 +25,11 @@ function groundOf(list: Swatch[]): string {
 
 /** the CSS background of the surround */
 export const surroundOf = (kind: Surround, list: Swatch[]): string => (kind === 'grey' ? cssColor(GREY_18) : kind === 'ground' ? groundOf(list) : 'var(--module)');
+
+/** the surround as a colour, for what it lights (the bounce), or null for none (plain) */
+export function surroundColour(kind: Surround, list: Swatch[]): Oklch | null {
+  if (kind === 'grey') return GREY_18;
+  if (kind === 'plain') return null;
+  const g = list.find((w) => w.role === 'Background') ?? list.find((w) => isGround(w.role)) ?? [...list].sort((a, b) => a.oklch[0] - b.oklch[0])[0];
+  return g ? g.oklch : null;
+}

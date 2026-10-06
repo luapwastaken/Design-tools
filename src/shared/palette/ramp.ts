@@ -56,6 +56,26 @@ const INTENSITY = {
   expressive: { hue: 1.8, chroma: 1.3, value: 1.1, pull: 1.25 },
   extreme: { hue: 3, chroma: 1.7, value: 1.2, pull: 1.5 },
 };
+const STOPS = [INTENSITY.grounded, INTENSITY.expressive, INTENSITY.extreme];
+
+/** where each intensity sits on the Push scale, which runs 0 to 2 */
+export const PUSH_AT: Record<RampSpec['intensity'], number> = { grounded: 0, expressive: 1, extreme: 2 };
+
+/** the Push the ramp has: its own, or its intensity's */
+export const pushOf = (spec: Pick<RampSpec, 'intensity' | 'push'>): number => (typeof spec.push === 'number' && Number.isFinite(spec.push) ? Math.min(2, Math.max(0, spec.push)) : (PUSH_AT[spec.intensity] ?? 0));
+
+/** the intensity a Push is nearest to */
+export const intensityAt = (push: number): RampSpec['intensity'] => (push < 0.5 ? 'grounded' : push < 1.5 ? 'expressive' : 'extreme');
+
+/** the intensity table, read between its stops at `push` */
+function pushed(spec: RampSpec): typeof INTENSITY.grounded {
+  if (typeof spec.push !== 'number' || !Number.isFinite(spec.push)) return INTENSITY[spec.intensity] ?? INTENSITY.grounded;
+  const p = Math.min(2, Math.max(0, spec.push));
+  const i = Math.min(1, Math.floor(p));
+  const f = p - i;
+  const [a, b] = [STOPS[i], STOPS[i + 1]];
+  return { hue: a.hue + (b.hue - a.hue) * f, chroma: a.chroma + (b.chroma - a.chroma) * f, value: a.value + (b.value - a.value) * f, pull: a.pull + (b.pull - a.pull) * f };
+}
 
 /** a non-hero ramp's steps lose this share of their chroma, so the hero reads first */
 const QUIET = 0.15;
@@ -85,6 +105,7 @@ export const newRamp = (base: Oklch, id: string = crypto.randomUUID(), like?: Ra
   shadow: [...(like?.shadow ?? DAYLIGHT.shadow)],
   material: 'cloth',
   intensity: like?.intensity ?? 'grounded',
+  ...(like?.push !== undefined && { push: like.push }),
   steps: like?.steps ?? 5,
   hueShift: 0,
   chromaCurve: 0,
@@ -113,7 +134,7 @@ function turn(a: number, b: number, f: number): number {
 export function generateRamp(spec: RampSpec, heroQuiet = 0): { step: number; oklch: Oklch }[] {
   const count = clamp(Math.round(spec.steps), 3, 9);
   const mat = MATERIALS.find((x) => x.id === spec.material) ?? MATERIALS[0];
-  const k = INTENSITY[spec.intensity] ?? INTENSITY.grounded;
+  const k = pushed(spec);
   const [L0, C0, h0] = spec.base;
 
   const top = L0 + (1 - L0) * Math.min(0.95, mat.light.value * k.value);
