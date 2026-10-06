@@ -1,11 +1,12 @@
-/* The Colour picker section: the area grows with the window (the shared picker's --sb-h and --plane-h). */
+/* The Colour picker section: the picker's area and plane take the height the section has left, down to their floor. */
 .picker { min-width: 0; }
-.body { --sb-h: clamp(140px, calc(100vh - 705px), 420px); --plane-h: clamp(140px, calc(100vh - 705px), 400px); gap: 12px; }
+/* the picker's area and plane take the height the section has left, down to their floor */
+.body { --sb-min: 100px; --plane-min: 88px; gap: 8px; }
 .quiet { color: var(--ink-3); font-size: var(--fs-base); line-height: 1.45; }
 .ident { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .chip { flex: none; width: 32px; height: 32px; border-radius: var(--r-ctl); box-shadow: inset 0 0 0 1px var(--edge); }
 .name { flex: 1; min-width: 0; }
 .name label input::placeholder { color: var(--ink); }
 .where { flex: none; color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); white-space: nowrap; }
-.pick { flex: none; }
+.pick { flex: 1 1 auto; }
 .note { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }

@@ -10,6 +10,8 @@ export type IconButtonProps = {
   icon: IconName;
   /** tooltip and aria-label */
   label: string;
+  /** the tooltip, where it says more than the name does (a toggle's name must not change with its state) */
+  tip?: string;
   size?: 'md' | 'sm' | 'xs';
   /** a toggle that is on: raised, filled icon, aria-pressed */
   latched?: boolean;
@@ -26,9 +28,9 @@ export type IconButtonProps = {
 
 const ICON = { md: 18, sm: 16, xs: 14 } as const;
 
-export function IconButton({ icon, label, size = 'md', latched, onClick, disabled, shortcut, tabIndex, className, ref, onContent }: IconButtonProps) {
+export function IconButton({ icon, label, tip, size = 'md', latched, onClick, disabled, shortcut, tabIndex, className, ref, onContent }: IconButtonProps) {
   return (
-    <Tooltip content={label} shortcut={shortcut}>
+    <Tooltip content={tip ?? label} shortcut={shortcut}>
       <button
         ref={ref}
         type="button"

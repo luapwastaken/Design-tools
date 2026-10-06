@@ -6,10 +6,11 @@ import { cx } from './cx.ts';
 import { Icon } from './Icon.tsx';
 import { IconButton } from './IconButton.tsx';
 import type { Gesture } from './Picker.tsx';
-import { PickerChannel } from './PickerChannel.tsx';
+import { PickerChannel, channelProps } from './PickerChannel.tsx';
+import { HUE_HELD, VALUE_HELD } from './PickerHold.tsx';
 import type { Channel } from './pickerModels.ts';
 import { PickerPlane } from './PickerPlane.tsx';
-import { toggleHueLock, useHueLock } from './PickerStyles.tsx';
+import { useHueLock } from './PickerStyles.tsx';
 import s from './Picker.module.css';
 
 type Props = {
@@ -25,42 +26,21 @@ type Props = {
   onChange(v: Oklch): void;
 } & Gesture;
 
-/** The OKLCH style: lightness by chroma at the hue, then L, C and H, with the hue lock on the H row (the value lock is the picker's own switch). */
+/** The OKLCH style: lightness by chroma at the hue, then L, C and H (the holds are the hold row's, under the picker). */
 export function PickerOklch({ value, channels, target, chroma, onSlide, onMax, onChange, ...g }: Props) {
-  const hueLock = useHueLock();
+  const hueHeld = useHueLock();
   const max = () => {
     g.onBegin?.();
     onMax();
     g.onCommit?.();
   };
-  const aside = [<span />, <IconButton icon="last_page" label="Most chroma sRGB has here" size="xs" onClick={max} />, <IconButton icon={hueLock ? 'lock' : 'lock_open'} label="Hue lock: drags keep the hue" size="xs" latched={hueLock} onClick={toggleHueLock} />];
+  const aside = [<span />, <IconButton icon="last_page" label="Most chroma sRGB has here" size="sm" onClick={max} />, <span />];
   return (
     <>
       <PickerPlane value={value} target={target} chroma={chroma} onSlide={onSlide} {...g} onChange={onChange} />
       <div className={s.chans}>
         {channels.map((ch, i) => (
-          <PickerChannel
-            key={ch.label}
-            label={ch.label}
-            value={ch.value}
-            min={ch.min}
-            max={ch.max}
-            step={ch.step}
-            precision={ch.precision}
-            unit={ch.unit}
-            span={ch.span}
-            limit={ch.limit}
-            snap={ch.snap}
-            paint={ch.paint}
-            paintKey={ch.paintKey}
-            note={ch.note}
-            wrap={ch.wrap}
-            track={ch.track()}
-            locked={ch.carrier || (i === 2 && hueLock)}
-            aside={aside[i]}
-            {...g}
-            onChange={ch.set}
-          />
+          <PickerChannel key={ch.label} {...channelProps(ch)} locked={ch.carrier ? VALUE_HELD : i === 2 && hueHeld ? HUE_HELD : undefined} aside={aside[i]} {...g} />
         ))}
       </div>
     </>

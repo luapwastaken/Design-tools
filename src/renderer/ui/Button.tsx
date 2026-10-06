@@ -15,6 +15,8 @@ export type ButtonProps = {
   children?: ReactNode;
   onClick?(e: MouseEvent<HTMLButtonElement>): void;
   disabled?: boolean;
+  /** a toggle that is on: raised, aria-pressed */
+  latched?: boolean;
   tooltip?: string;
   shortcut?: string;
   type?: 'button' | 'submit';
@@ -27,7 +29,7 @@ export type ButtonProps = {
 
 const ICON = { xs: 14, md: 16, lg: 16 } as const;
 
-export function Button({ variant = 'secondary', size = 'md', icon, iconEnd, children, onClick, disabled, tooltip, shortcut, type = 'button', autoFocus, tabIndex, className, ref }: ButtonProps) {
+export function Button({ variant = 'secondary', size = 'md', icon, iconEnd, children, onClick, disabled, latched, tooltip, shortcut, type = 'button', autoFocus, tabIndex, className, ref }: ButtonProps) {
   const button = (
     <button
       ref={ref}
@@ -37,6 +39,7 @@ export function Button({ variant = 'secondary', size = 'md', icon, iconEnd, chil
       autoFocus={autoFocus}
       tabIndex={tabIndex}
       aria-keyshortcuts={shortcut && ariaKeys(shortcut)}
+      aria-pressed={latched}
       onClick={onClick}
     >
       {icon && <Icon name={icon} size={ICON[size]} />}
