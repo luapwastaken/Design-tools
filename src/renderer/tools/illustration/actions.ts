@@ -73,7 +73,7 @@ export function focusPickerColour(): void {
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
       const section = [...document.querySelectorAll('[data-tool="illustration"] section')].find((x) => x.querySelector('h2')?.textContent === 'Colour picker');
-      section?.querySelector<HTMLInputElement>('input[aria-label$="hex" i]')?.focus({ preventScroll: true });
+      section?.querySelector<HTMLInputElement>('input[aria-label$="colour" i]')?.focus({ preventScroll: true });
     }),
   );
 }
