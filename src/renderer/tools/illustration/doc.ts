@@ -3,7 +3,7 @@
 // `ramps` says how each one is built, in row order. Pure: no DOM, so it is unit tested.
 import type { Oklch } from '../../../shared/color/index.ts';
 import { MATERIALS, newRamp, regenerate } from '../../../shared/palette/ramp.ts';
-import type { MaterialId, PalettePayload, RampSpec, Swatch } from '../../../shared/types.ts';
+import type { MaterialId, PalettePayload, RampSpec, Swatch, SurfaceSpec } from '../../../shared/types.ts';
 import { displayName, stepWord } from '../common/names.ts';
 
 export type { RampSpec };
@@ -204,12 +204,26 @@ function specOf(raw: unknown): RampSpec | null {
     shadow: triple(r.shadow) ? r.shadow : def.shadow,
     material: MATERIALS.some((m) => m.id === r.material) ? (r.material as MaterialId) : def.material,
     intensity: r.intensity === 'grounded' || r.intensity === 'extreme' || r.intensity === 'expressive' ? r.intensity : def.intensity,
+    ...(num(r.push) && { push: Math.min(2, Math.max(0, r.push)) }),
     steps: num(r.steps) ? Math.min(9, Math.max(3, Math.round(r.steps))) : def.steps,
     hueShift: num(r.hueShift) ? Math.min(1, Math.max(-1, r.hueShift)) : def.hueShift,
     chromaCurve: num(r.chromaCurve) ? Math.min(1, Math.max(-1, r.chromaCurve)) : def.chromaCurve,
     hero: r.hero === true,
     ...(typeof r.name === 'string' && r.name.trim() && { name: r.name }),
+    ...surfaceOf(r.surface),
   };
+}
+
+const SURFACE_NUMBERS = ['gloss', 'softness', 'translucency', 'sheen', 'grain', 'ambient'] as const;
+
+/** a ramp's Surface overrides as a file holds them: the numbers it has, kept to 0..1; nothing when there are none */
+function surfaceOf(raw: unknown): { surface?: SurfaceSpec } {
+  if (typeof raw !== 'object' || raw === null) return {};
+  const r = raw as Record<string, unknown>;
+  const surface: SurfaceSpec = {};
+  for (const k of SURFACE_NUMBERS) if (num(r[k])) surface[k] = Math.min(1, Math.max(0, r[k]));
+  if (typeof r.across === 'boolean') surface.across = r.across;
+  return Object.keys(surface).length ? { surface } : {};
 }
 
 /** the file's body: each ramp notes its base's name, so the ramp keeps it if another tool deletes the base */

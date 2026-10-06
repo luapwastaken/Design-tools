@@ -219,3 +219,35 @@ test('other tools name a blank ramp step by its ramp, as Illustration does', () 
   assert.deepEqual(namedAnywhere(plain.swatches, plain.ramps).map((w) => w.name), named(plain).map((w) => w.name));
   assert.deepEqual(namedAnywhere(plain.swatches).map((w) => w.name), ['Cloth highlight', 'Cloth light', 'Cloth', 'Cloth shadow', 'Cloth deep shadow']);
 });
+
+test('a file from before Push and Surface loads unchanged; the new numbers load held to their ranges', () => {
+  const d = withRamps([0.6, 0.12, 30]);
+  const old = toPayload(d);
+  assert.equal('push' in old.ramps![0], false);
+  assert.equal('surface' in old.ramps![0], false);
+  const back = fromPayload(JSON.parse(JSON.stringify(old)));
+  assert.deepEqual(back.ramps, d.ramps.map((r) => ({ ...r, name: 'R0' })));
+  assert.equal('push' in back.ramps[0] || 'surface' in back.ramps[0], false);
+  const odd = { ...old.ramps![0], push: 4, surface: { gloss: 2, softness: -1, translucency: 0.4, sheen: 'x', grain: Number.NaN, across: true, nonsense: 1 } };
+  const got = fromPayload({ ...old, ramps: [odd as never] }).ramps[0];
+  assert.equal(got.push, 2);
+  assert.deepEqual(got.surface, { gloss: 1, softness: 0, translucency: 0.4, across: true });
+  assert.equal('surface' in fromPayload({ ...old, ramps: [{ ...old.ramps![0], surface: { gloss: 'a' } as never }] }).ramps[0], false);
+  // and they travel: saved, loaded, copied
+  const saved = fromPayload(JSON.parse(JSON.stringify(toPayload({ ...d, ramps: [{ ...d.ramps[0], push: 0.6, surface: { sheen: 0.7 } }] }))));
+  assert.equal(saved.ramps[0].push, 0.6);
+  assert.deepEqual(saved.ramps[0].surface, { sheen: 0.7 });
+  const copy = duplicateRamp(saved, saved.ramps[0].id);
+  assert.deepEqual(copy.doc.ramps[1].surface, { sheen: 0.7 });
+  assert.equal(copy.doc.ramps[1].push, 0.6);
+});
+
+test('a Push or Surface change regenerates the ramp (push) or leaves its colours alone (surface)', () => {
+  const d = withRamps([0.6, 0.12, 30]);
+  const id = d.ramps[0].id;
+  const pushed = setSpec(d, id, { push: 1.6 });
+  assert.notDeepEqual(stepsOf(pushed, id).map((w) => w.oklch), stepsOf(d, id).map((w) => w.oklch));
+  const shiny = setSpec(d, id, { surface: { gloss: 0.9 } });
+  assert.deepEqual(stepsOf(shiny, id).map((w) => w.oklch), stepsOf(d, id).map((w) => w.oklch));
+  assert.deepEqual(shiny.ramps[0].surface, { gloss: 0.9 });
+});
