@@ -58,6 +58,35 @@ test('light goes through only where the material lets it: back light transmits w
   assert.ok(edge < glow, `a sheet turned from the light glows less (${edge} vs ${glow})`);
 });
 
+test('skin, leaves and paper scatter a band of warm light along the terminator even in front light; stone does not', () => {
+  const [lx, ly, lz] = frame(UPPER_LEFT).l;
+  // normals from the light round to its far side, always facing the viewer
+  const dot = lz;
+  const s = [-lx * dot, -ly * dot, 1 - lz * dot];
+  const k = Math.hypot(...s);
+  const arc = (deg: number) => {
+    const [c, n] = [Math.cos((deg * Math.PI) / 180), Math.sin((deg * Math.PI) / 180)];
+    return [lx * c + (s[0] / k) * n, ly * c + (s[1] / k) * n, lz * c + (s[2] / k) * n] as const;
+  };
+  const band = (material: Parameters<typeof lookFor>[0]) => {
+    const f = frame(UPPER_LEFT, finishOf(material));
+    let [best, at] = [0, 0];
+    for (let d = 0; d <= 130; d += 1) {
+      const w = transmission(...arc(d), 1, 0, f)[0];
+      if (w > best) [best, at] = [w, d];
+    }
+    return { best, at };
+  };
+  const [skin, foliage, paper, stone] = (['skin', 'foliage', 'paper', 'stone'] as const).map(band);
+  assert.ok(skin.best > 0.1 && foliage.best > skin.best && paper.best > 0.05, `${skin.best} ${foliage.best} ${paper.best}`);
+  assert.equal(stone.best, 0);
+  // the band sits at the terminator (about 90 degrees from the light round the arc), not in the middle of the lit side
+  assert.ok(skin.at > 70 && skin.at < 120, `skin's band at ${skin.at}`);
+  assert.equal(transmission(...arc(0), 1, 0, frame(UPPER_LEFT, finishOf('skin')))[0], 0, 'none facing the light');
+  // a thick body scatters less past its terminator
+  assert.ok(transmission(...arc(skin.at), 1, 1, frame(UPPER_LEFT, finishOf('skin')))[0] < skin.best * 0.5);
+});
+
 test('back-lit, thin translucent cloth glows, an opaque one goes dark, and a solid ball only at its thin rim', () => {
   const size = 120;
   const opaque = render('cloth', BEHIND, size, lookFor('cloth', { surface: { translucency: 0 } }));

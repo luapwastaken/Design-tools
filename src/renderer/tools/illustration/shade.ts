@@ -102,7 +102,12 @@ export type Frame = {
   /** transmission: how much of the light goes through, and how much of that shows with the light in front */
   through: number;
   back: number;
+  /** the warm band of scattered light along the terminator (skin, leaves, paper) */
+  scatter: number;
 };
+
+/** a thick body scatters less light past its terminator than a thin one */
+const thinner = (thick: number) => 1 - 0.7 * thick;
 
 const lobes = new Map<number, Float32Array>();
 /** n.h ^ e at LOBE+1 points of sqrt(1 - n.h); cached by exponent (a drag changes the light, not the gloss) */
@@ -147,6 +152,7 @@ export function frame(light: Light, fin: Finish = DEFAULT_FINISH, ground = 0.28,
     tint,
     through: Math.min(1, 1.8 * fin.translucency),
     back: 0.12 + 0.88 * smooth(0.1, -0.35, l[2]),
+    scatter: soft * Math.min(1, 2 * fin.translucency),
   };
 }
 
@@ -228,6 +234,16 @@ function lightPixel(nx: number, ny: number, nz: number, open: number, thick: num
     wg = f.through * trf * (1 - 0.85 * thick) * f.back * (ndl < 0 ? selfB : 1);
     tg = 0.38 + 0.55 * (toward * (0.35 + 0.65 * f.back) + 0.22 * (ndl < 0 ? 0 : 1 - smooth(0, 0.5, ndl)));
     v *= 1 - 0.4 * wg;
+  }
+
+  // skin, leaves and paper scatter light past the terminator: a band of the warm glow along it
+  if (f.scatter > 0) {
+    const band = smooth(f.lo - 0.1, f.lo + 0.2, ndl) * (1 - smooth(f.hi - 0.1, f.hi + 0.3, ndl));
+    const ws = 0.55 * f.scatter * band * thinner(thick);
+    if (ws > wg) {
+      wg = ws;
+      tg = Math.max(tg, v + 0.1);
+    }
   }
 
   S[TONE] = v < 0 ? 0 : v > 1 ? 1 : v;
