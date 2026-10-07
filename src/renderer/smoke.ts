@@ -4,8 +4,8 @@
 // 'full' runs the smoke list; 'quiet' is the relaunch: it restores, checks, and quits with no input.
 import { contrast, cssColor, deltaE, hexToOklch, inSrgb, parseCss, parseHex, rgb255, toHex, type Oklch } from '../shared/color/index.ts';
 import { COPY_FORMATS, formatColour } from '../shared/color/format.ts';
-import { maxChroma } from '../shared/color/picker.ts';
-import { heldChArt } from '../shared/color/plane.ts';
+import { fromHsb, fromHsl, fromRgb255, hsbOf, hslOf, maxChroma, planeAxis } from '../shared/color/picker.ts';
+import { heldChArt, planeColour } from '../shared/color/plane.ts';
 import { PNG_FORMAT, SVG_FORMAT } from '../shared/clipboard.ts';
 import { greyMatrix, holdValue, LUMA, valueOf } from '../shared/color/value.ts';
 import { PIGMENTS } from '../shared/paint/pigments.ts';
@@ -2625,6 +2625,70 @@ const showsStyle = async (root: () => Element | null | undefined, style: string)
   return shown;
 };
 
+/**
+ * Square: each colour model has its own area, as Photoshop's picker has (two components across and up, the
+ * third on the bar). With the lock off: the areas differ, a drag sets exactly its two channels as one undo
+ * step, and the arrows (Shift ×10) step them. The Wheel's inner area follows HSB and HSL and keeps HSB's for the rest.
+ */
+async function squareAreas(where: string, root: () => Element | null | undefined, colour: () => Oklch): Promise<void> {
+  const dd = designDoc();
+  const d0 = dd.depth();
+  const area = () => root()?.querySelector<HTMLElement>('[data-plane]') ?? null;
+  const show = async (style: 'square' | 'wheel', model: string) => {
+    await shell.setPicker({ pickerStyle: style, pickerModel: model as 'hsb' });
+    await showsStyle(root, style);
+    await frame();
+  };
+  const looks: Record<string, string> = {};
+  const kinds: string[] = [];
+  const bars: string[] = [];
+  for (const model of ['hsb', 'hsl', 'rgb', 'cmyk', 'oklch']) {
+    await show('square', model);
+    const a = area();
+    looks[model] = `${a?.style.backgroundImage}|${a?.style.backgroundBlendMode}|${a?.querySelector('canvas') ? 'canvas' : ''}`;
+    kinds.push(a?.dataset.area ?? '');
+    bars.push(root()?.querySelector('[data-track]')?.getAttribute('data-track') ?? '');
+  }
+  check(`${where}, Square: each model draws its own area (≈CMYK keeps HSB's)`, kinds.join() === 'hsb,hsl,rgb,hsb,oklch' && new Set([looks.hsb, looks.hsl, looks.rgb, looks.oklch]).size === 4 && looks.cmyk === looks.hsb, [kinds, Object.values(looks).map((l) => l.slice(0, 40))]);
+  check(`${where}, Square: the bar under the area is the third component (hue, and red for RGB)`, bars.join() === 'H,H,R,H,H', bars);
+  check(`${where}, Square: the OKLCH area is a canvas with its gamut edges and no model's gradients`, !!looks.oklch.endsWith('canvas') && !looks.hsb.endsWith('canvas'));
+  check(`${where}, Square: the faces stay in colour under the greyscale view (no data-colour on any area)`, !root()?.querySelector('[data-plane][data-colour], [data-plane] canvas[data-colour]'));
+
+  const drive = async (model: string, to: [number, number], expect: (o: Oklch) => Oklch, key: [string, (o: Oklch) => Oklch]) => {
+    await show('square', model);
+    const el = area()!;
+    const before = colour();
+    const depth = dd.depth();
+    await sweep(el, at(el, 0.2, 0.8), at(el, ...to), 6, () => {});
+    const want = toHex(expect(before));
+    check(`${where}, Square ${model.toUpperCase()}: a drag sets its two channels and is one undo step`, toHex(colour()) === want && dd.depth() === depth + 1, [toHex(colour()), want, dd.depth() - depth]);
+    const now = colour();
+    el.focus();
+    press(key[0], { shiftKey: true });
+    await frame();
+    check(`${where}, Square ${model.toUpperCase()}: Shift+${key[0]} steps ten`, toHex(colour()) === toHex(key[1](now)) && dd.depth() === depth + 2, [toHex(colour()), toHex(key[1](now))]);
+  };
+  await drive('hsb', [0.7, 0.3], (o) => fromHsb([hsbOf(o)[0], 70, 70]), ['ArrowRight', (o) => fromHsb([hsbOf(o)[0], 80, 70])]);
+  await drive('hsl', [0.7, 0.3], (o) => fromHsl([hslOf(o)[0], 70, 70]), ['ArrowUp', (o) => fromHsl([hslOf(o)[0], 70, 80])]);
+  await drive('rgb', [0.6, 0.25], (o) => fromRgb255([rgb255(o)[0], 191, 153], o[2]), ['ArrowRight', (o) => fromRgb255([rgb255(o)[0], rgb255(o)[1], rgb255(o)[2] + 10], o[2])]);
+  await drive(
+    'oklch',
+    [0.6, 0.3],
+    (o) => [0.7, Math.round(planeColour('lc', 0.6, 0.7, o, planeAxis(Math.round(o[2] * 10) / 10))[1] * 1000) / 1000, o[2]],
+    ['ArrowUp', (o) => [Math.round((o[0] + 0.1) * 1000) / 1000, o[1], o[2]]],
+  );
+  while (dd.depth() > d0) dd.undo();
+
+  await show('wheel', 'hsl');
+  check(`${where}, Wheel: HSL's area inside the ring`, area()?.dataset.area === 'hsl' && !!root()?.querySelector('[role="slider"][aria-label="Hue"]'));
+  for (const model of ['rgb', 'cmyk', 'oklch']) {
+    await show('wheel', model);
+    check(`${where}, Wheel ${model.toUpperCase()}: keeps HSB's area inside the ring`, area()?.dataset.area === 'hsb');
+  }
+  await shell.setPicker({ pickerStyle: 'square', pickerModel: 'hsb' });
+  await showsStyle(root, 'square');
+}
+
 /** every style of the picker in `root` with the lock on: hue drags (and the area, plane and tracks) hold the value */
 async function lockStyles(where: string, root: () => Element | null | undefined, full: boolean): Promise<void> {
   const bar = () => root()?.querySelector('[data-track="H"]') ?? null;
@@ -2634,8 +2698,19 @@ async function lockStyles(where: string, root: () => Element | null | undefined,
   await holds(`${where}, Square hue bar`, root, bar(), at(bar()!, 0.03), at(bar()!, 0.66));
   const area = root()?.querySelector('[data-plane]');
   await holds(`${where}, Square area (x picks saturation, y is ignored)`, root, area, at(area!, 0.15, 0.2), at(area!, 0.8, 0.9));
+  // each model's own area holds the value too: HSL's lightness, RGB's green (blue from the pointer) and OKLCH's L follow the line
+  for (const model of ['hsl', 'rgb', 'oklch'] as const) {
+    await shell.setPicker({ pickerStyle: 'square', pickerModel: model });
+    await showsStyle(root, 'square');
+    const sq = root()?.querySelector<HTMLElement>('[data-plane]');
+    check(`${where}, Square ${model.toUpperCase()}: the lock draws the iso-value line on the area, which stays in colour`, sq?.dataset.area === model && !!sq.querySelector('svg path[d^="M"]') && sq.hasAttribute('data-lock') && !sq.hasAttribute('data-colour'));
+    await holds(`${where}, Square ${model.toUpperCase()} area (x picks one channel, the value line gives the other)`, root, sq, at(sq!, 0.15, 0.2), at(sq!, 0.8, 0.9));
+  }
   if (full) {
-    await shell.setPicker({ pickerStyle: 'wheel' });
+    await shell.setPicker({ pickerStyle: 'wheel', pickerModel: 'hsl' });
+    await showsStyle(root, 'wheel');
+    await holds(`${where}, Wheel HSL area (x picks saturation, lightness follows the line)`, root, root()?.querySelector('[data-plane]'), at(root()!.querySelector('[data-plane]')!, 0.15, 0.2), at(root()!.querySelector('[data-plane]')!, 0.8, 0.9));
+    await shell.setPicker({ pickerModel: 'hsb' });
     await showsStyle(root, 'wheel');
     const ring = root()?.querySelector<HTMLElement>('[role="slider"][aria-label="Hue"]');
     const round = (deg: number): [number, number] => {
@@ -2681,15 +2756,19 @@ async function hueHolds(where: string, root: () => Element | null | undefined): 
   };
   const track = () => root()?.querySelector<HTMLElement>('[data-track="H"]');
   const cases = [
-    ['square', 'hsb', track],
-    ['wheel', 'hsb', ring],
-    ['sliders', 'hsb', track],
-    ['oklch', 'oklch', track],
+    ['square', 'hsb', track, false],
+    ['square', 'hsl', track, true],
+    ['wheel', 'hsb', ring, false],
+    ['wheel', 'hsl', ring, true],
+    ['sliders', 'hsb', track, false],
+    ['oklch', 'oklch', track, false],
   ] as const;
-  for (const [style, model, find] of cases) {
+  // each drag ends where the last one did, so the HSL cases (which follow the same colour) drag back the other way
+  for (const [style, model, find, back] of cases) {
     await shell.setPicker({ pickerStyle: style, pickerModel: model, hueLock: false });
     await showsStyle(root, style);
-    const drag = () => (style === 'wheel' ? sweep(find()!, round(10), round(120), 6, () => {}) : sweep(find()!, at(find()!, 0.1), at(find()!, 0.8), 6, () => {}));
+    const [a, b] = back ? [0.8, 0.1] : [0.1, 0.8];
+    const drag = () => (style === 'wheel' ? sweep(find()!, round(back ? 120 : 10), round(back ? 10 : 120), 6, () => {}) : sweep(find()!, at(find()!, a), at(find()!, b), 6, () => {}));
     const start = shownHex(root());
     await drag();
     const moved = shownHex(root());
@@ -2732,6 +2811,9 @@ async function valueLockUi(step: string): Promise<void> {
   await shell.setPicker({ valueLock: false, hueLock: false, pickerStyle: 'square', pickerModel: 'hsb' });
   await showsStyle(pickerSection, 'square');
   const root = () => pickerSection();
+  await squareAreas('Design', root, () => designDoc().get().swatches.find((x) => x.id === sw.id)!.oklch);
+  await shell.setPicker({ pickerStyle: 'square', pickerModel: 'hsb' });
+  await showsStyle(pickerSection, 'square');
   check('Hold value is off by default, a labelled toggle in the picker, and the header has no padlock for it', !!lockButton(root()) && !isOn(lockButton(root())) && !root()?.querySelector('[data-plane] svg path') && !root()?.querySelector('button[aria-label="Value lock"]'), lockButton(root())?.getAttribute('aria-checked'));
   // the control: with the lock off the same hue drag swings the grey a long way
   const bar0 = root()?.querySelector('[data-track="H"]');
