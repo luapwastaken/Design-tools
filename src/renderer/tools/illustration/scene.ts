@@ -28,7 +28,13 @@ export const LIGHTS: LightPreset[] = [
 
 const near = (a: Oklch, b: Oklch) => a.every((v, i) => Math.abs(v - b[i]) < 1e-6);
 const sameLight = (a: LightPair, b: LightPair) => near(a.light, b.light) && near(a.shadow, b.shadow);
-export const presetOf = (p: LightPair): LightPreset | null => LIGHTS.find((x) => sameLight(x, p)) ?? null;
+/** a colour typed as hex lands within a hex step of the preset's: close in lightness and chroma, and in hue where it has one */
+const nearly = (a: Oklch, b: Oklch) => {
+  const turn = Math.abs(((a[2] - b[2] + 540) % 360) - 180);
+  return Math.abs(a[0] - b[0]) < 0.006 && Math.abs(a[1] - b[1]) < 0.006 && (Math.min(a[1], b[1]) < 0.012 || turn < 2);
+};
+/** the preset a pair is: its exact values, or the same colours typed as hex */
+export const presetOf = (p: LightPair): LightPreset | null => LIGHTS.find((x) => nearly(x.light, p.light) && nearly(x.shadow, p.shadow)) ?? null;
 
 /** The light row's reading of the palette: the pair the ramps share (or, with none, the one the next is born with), and what it is. */
 export function sceneLight(d: IllustrationDoc, selectedRamp?: string): { pair: LightPair; preset: LightPreset | null; mixed: boolean } {
@@ -49,8 +55,14 @@ export function sceneLight(d: IllustrationDoc, selectedRamp?: string): { pair: L
 export type Subject = { id: string; label: string; base: Oklch; material: MaterialId };
 
 export const SUBJECTS: Subject[] = [
-  { id: 'skin', label: 'Skin', base: [0.74, 0.075, 55], material: 'skin' },
-  { id: 'hair', label: 'Hair', base: [0.36, 0.06, 50], material: 'fur' },
+  // skin and hair come in a few tones, each born with the subject's material
+  { id: 'skin-light', label: 'Skin light', base: [0.86, 0.05, 60], material: 'skin' },
+  { id: 'skin', label: 'Skin medium', base: [0.74, 0.075, 55], material: 'skin' },
+  { id: 'skin-deep', label: 'Skin deep', base: [0.45, 0.07, 48], material: 'skin' },
+  { id: 'hair-blonde', label: 'Hair blonde', base: [0.78, 0.09, 85], material: 'fur' },
+  { id: 'hair', label: 'Hair brown', base: [0.36, 0.06, 50], material: 'fur' },
+  { id: 'hair-black', label: 'Hair black', base: [0.2, 0.015, 60], material: 'fur' },
+  { id: 'hair-red', label: 'Hair red', base: [0.5, 0.14, 40], material: 'fur' },
   { id: 'foliage', label: 'Foliage', base: [0.6, 0.12, 140], material: 'foliage' },
   { id: 'sky', label: 'Sky', base: [0.78, 0.08, 235], material: 'paper' },
   { id: 'cloth', label: 'Cloth', base: [0.55, 0.09, 250], material: 'cloth' },

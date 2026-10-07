@@ -38,6 +38,13 @@ export function CheckTab({ doc, d, v, checks }: { doc: Doc; d: IllustrationDoc; 
     const list = stepsOf(checks.settled, r.id);
     return `${rampName(checks.settled, r)} ${list.findIndex((x) => x.id === w.id) + 1}/${list.length}`;
   };
+  // the label over a strip: a step's place in its ramp (one ramp: "3"; several: "Pine 3"), so no two read alike; the tooltip has the full name
+  const column = (w: Swatch) => {
+    const r = rampOf(checks.settled, w.group);
+    if (!r) return w.name;
+    const at = stepsOf(checks.settled, r.id).findIndex((x) => x.id === w.id) + 1;
+    return checks.settled.ramps.length > 1 ? `${rampName(checks.settled, r)} ${at}` : String(at);
+  };
   const host = {
     pointAt,
     rules: fixRules(checks.settled),
@@ -104,6 +111,7 @@ export function CheckTab({ doc, d, v, checks }: { doc: Doc; d: IllustrationDoc; 
         {...host}
         swatches={checks.shown}
         short={short}
+        column={column}
         vision={checks.vision}
         names={checks.shown.length <= NAMED}
         flagE={v.flagE}

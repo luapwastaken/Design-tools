@@ -41,9 +41,11 @@ type VisionProps = CheckHost & {
   onCvd(k: Cvd): void;
   /** a short name for the rows' pair labels ("Skin 4/5"); sentences keep the full one */
   short?(w: Swatch): string;
+  /** the label over each colour's strip (a ramp step's number, say), where the full name would be cut alike; its tooltip has the full name */
+  column?(w: Swatch): string;
 };
 
-export function Vision({ swatches, onFix, pointAt, rules, className, vision, names = true, flagE, onFlagE, cvd, onCvd, short = displayName }: VisionProps) {
+export function Vision({ swatches, onFix, pointAt, rules, className, vision, names = true, flagE, onFlagE, cvd, onCvd, short = displayName, column }: VisionProps) {
   const chosen = vision[cvd];
   // the same pair flagged under several simulations is one problem with one fix
   const kinds = chosen?.flag ? CVDS.filter((k) => vision[k]?.flag && samePair(vision[k], chosen)) : [];
@@ -66,8 +68,8 @@ export function Vision({ swatches, onFix, pointAt, rules, className, vision, nam
           {names && (
             <div className={s.cvdNames} style={{ gridTemplateColumns: `repeat(${swatches.length}, 1fr)` }}>
               {swatches.map((w) => (
-                <Tooltip key={w.id} content={displayName(w)} overflowOnly>
-                  <span>{displayName(w)}</span>
+                <Tooltip key={w.id} content={displayName(w)} overflowOnly={!column}>
+                  <span>{column ? column(w) : displayName(w)}</span>
                 </Tooltip>
               ))}
             </div>

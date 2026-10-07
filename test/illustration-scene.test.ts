@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { deltaE, inSrgb, type Oklch } from '../src/shared/color/index.ts';
+import { deltaE, hexToOklch, inSrgb, toHex, type Oklch } from '../src/shared/color/index.ts';
 import { valueOf } from '../src/shared/color/value.ts';
 import { createDocController } from '../src/shared/doc.ts';
 import { generateRamp, MATERIALS, newRamp } from '../src/shared/palette/ramp.ts';
@@ -124,7 +124,7 @@ test('a scene in a file that is not a pair of colours is ignored', () => {
 });
 
 test('a subject makes a named ramp of its material, from a base that sits in sRGB', () => {
-  assert.deepEqual(SUBJECTS.map((s) => s.label), ['Skin', 'Hair', 'Foliage', 'Sky', 'Cloth', 'Metal', 'Stone', 'Wood', 'Water']);
+  assert.deepEqual(SUBJECTS.map((s) => s.label), ['Skin light', 'Skin medium', 'Skin deep', 'Hair blonde', 'Hair brown', 'Hair black', 'Hair red', 'Foliage', 'Sky', 'Cloth', 'Metal', 'Stone', 'Wood', 'Water']);
   for (const s of SUBJECTS) {
     assert.ok(MATERIALS.some((m) => m.id === s.material), `${s.label}: a real material`);
     assert.ok(inSrgb(s.base), `${s.label}: inside sRGB`);
@@ -156,13 +156,13 @@ test('a limited set is 3 to 5 bases spaced in value, lightest first, in sRGB', (
 test('a Library palette adds into this one with new ids, every ramp keeping its material', () => {
   const lib = (() => {
     let d = emptyDoc();
-    for (const [i, s] of SUBJECTS.slice(0, 3).entries()) d = addRamp(d, s.base, s.label, null, s.material).doc;
+    for (const s of SUBJECTS.filter((x) => ['skin', 'hair', 'foliage'].includes(x.id))) d = addRamp(d, s.base, s.label, null, s.material).doc;
     // and a flat colour no ramp holds
     return { ...d, swatches: [...d.swatches, { id: 'flat', name: 'Flat', role: null, oklch: [0.5, 0.1, 10] as Oklch, type: 'process' as const }] };
   })();
   const { list, total } = paletteBases(lib, 10);
   assert.deepEqual([list.length, total], [4, 4]);
-  assert.deepEqual(list.map((c) => c.name), ['Skin', 'Hair', 'Foliage', 'Flat']);
+  assert.deepEqual(list.map((c) => c.name), ['Skin medium', 'Hair brown', 'Foliage', 'Flat']);
   assert.deepEqual(list.map((c) => c.material), ['skin', 'fur', 'foliage', undefined]);
   // the same palette twice: ramps and swatches are new each time, and nothing collides
   let d = withRamps([0.5, 0.1, 200]);
@@ -214,4 +214,12 @@ test('a new palette starts in the light the last one was left in', () => {
     carryLight(null);
   }
   assert.equal(emptyDoc().scene, undefined, 'nothing carried: Daylight');
+});
+
+test('a preset typed back in as hex still reads as the preset, and a different light does not', () => {
+  for (const l of LIGHTS) {
+    const typed = { light: hexToOklch(toHex(l.light)), shadow: hexToOklch(toHex(l.shadow)) };
+    assert.equal(presetOf(typed)?.id, l.id, `${l.label} typed as hex`);
+  }
+  assert.equal(presetOf({ light: [0.87, 0.09, 75], shadow: [0.36, 0.105, 333] }), null, 'ten degrees off Golden hour is Custom');
 });
