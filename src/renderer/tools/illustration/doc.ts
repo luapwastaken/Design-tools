@@ -181,12 +181,12 @@ export function lightForAll(d: IllustrationDoc, id: string): IllustrationDoc {
   return regenAll({ ...d, ramps: d.ramps.map((x) => (x === r ? x : { ...x, light: [...r.light], shadow: [...r.shadow] })) });
 }
 
-/** the ramp's material, push, hue shift, saturation and Surface numbers on every ramp; each keeps its own colour */
+/** the ramp's look (Intensity, Push, Hue shift, Saturation) on every ramp; each keeps its own colour, material and Surface, so a study of mixed materials stays mixed */
 export function lookForAll(d: IllustrationDoc, id: string): IllustrationDoc {
   const r = rampOf(d, id);
   if (!r) return d;
-  const { material, intensity, push, hueShift, chromaCurve, surface } = r;
-  return regenAll({ ...d, ramps: d.ramps.map((x) => (x === r ? x : { ...x, material, intensity, push, hueShift, chromaCurve, surface: surface && { ...surface } })) });
+  const { intensity, push, hueShift, chromaCurve } = r;
+  return regenAll({ ...d, ramps: d.ramps.map((x) => (x === r ? x : { ...x, intensity, push, hueShift, chromaCurve })) });
 }
 
 /** one light for the scene: this light and shadow colour on every ramp (hand-edited steps stay), and on the next one born */

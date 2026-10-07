@@ -1,7 +1,8 @@
 // Where the sun is drawn and how it moves (the Light & preview tab). The ring is a circle, the
 // object at its centre: the sun sits where the light is in the picture, so its distance from the
-// centre is cos(height), the rim being light from the side and the centre light from the viewer.
-// Light from behind the object is drawn at the same place, as a hollow sun. Pure.
+// centre grows with cos(height), the rim being light from the side. Light from the viewer is drawn
+// at the object's edge (not over its middle), and light from behind at the same place as the same
+// light in front, as a hollow sun. Pure.
 import type { Light } from './shade.ts';
 
 const RAD = Math.PI / 180;
@@ -19,22 +20,32 @@ export const PRESETS: { id: string; label: string; tip: string; light: Light }[]
 /** the preset this light is, if it is one */
 export const presetOf = (l: Light): string | null => PRESETS.find((p) => p.light.azimuth === ((l.azimuth % 360) + 360) % 360 && p.light.elevation === l.elevation)?.id ?? null;
 
-/** Where the sun is in the picture, on the unit circle (x right, y up): the light's direction seen from the front. */
+/** How far from the centre, in rings, the sun is drawn when the light is from the viewer or from straight behind: just outside the object, not over its middle */
+const HEAD = 0.7;
+/** the drawn distance for a true distance (cos of the height): the whole height range is squeezed into the band between the object's edge and the ring */
+const drawnR = (r: number) => HEAD + (1 - HEAD) * r;
+
+/**
+ * Where the sun is drawn, on the unit circle (x right, y up): in the light's direction as seen
+ * from the front, the rim being light from the side. Light from the viewer or from behind is out
+ * at the object's edge, not over its middle (the height only moves it between there and the ring).
+ */
 export function sunAt({ azimuth, elevation }: Light): { x: number; y: number } {
-  const r = Math.cos(elevation * RAD);
+  const r = drawnR(Math.cos(elevation * RAD));
   return { x: r * Math.sin(azimuth * RAD), y: r * Math.cos(azimuth * RAD) };
 }
 
 /**
  * The light for a pointer at (x, y) on the unit circle (y up), on the front or the behind side of
- * the object; the azimuth stays where it was when the pointer is at the centre. Beyond the rim it
- * is on the rim.
+ * the object (what `sunAt` draws, the other way round). Inside the object's edge is light from
+ * the viewer; the azimuth stays where it was when the pointer is at the centre. Beyond the rim it
+ * is on the rim, and from behind never quite 0 (that would read as in front).
  */
 export function lightAt(x: number, y: number, behind: boolean, was: Light): Light {
-  const r = Math.hypot(x, y);
-  const azimuth = r < 0.02 ? was.azimuth : Math.round((Math.atan2(x, y) / RAD + 360) % 360);
-  const e = Math.round(Math.acos(Math.min(1, r)) / RAD);
-  return { azimuth: azimuth % 360, elevation: behind && e > 0 ? -e : e };
+  const r = Math.min(1, Math.max(0, (Math.hypot(x, y) - HEAD) / (1 - HEAD)));
+  const azimuth = Math.hypot(x, y) < 0.02 ? was.azimuth : Math.round((Math.atan2(x, y) / RAD + 360) % 360);
+  const e = Math.round(Math.acos(r) / RAD);
+  return { azimuth: azimuth % 360, elevation: behind ? -Math.max(e, 1) : e };
 }
 
 export type Arrow = 'left' | 'right' | 'up' | 'down';

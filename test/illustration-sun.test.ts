@@ -8,10 +8,12 @@ const ARROWS: [Arrow, number, number][] = [['left', -1, 0], ['right', 1, 0], ['u
 
 test('the sun is drawn where the light is: the same direction seen from the front, a circle and not an ellipse', () => {
   for (let azimuth = 0; azimuth < 360; azimuth += 15) {
-    for (const elevation of [-80, -45, -10, 0, 12, 35, 60, 89]) {
+    for (const elevation of [-90, -80, -45, -10, 0, 12, 35, 60, 89, 90]) {
       const [lx, ly] = direction({ azimuth, elevation });
       const s = sunAt({ azimuth, elevation });
-      assert.ok(near(s.x, lx) && near(s.y, ly), `${azimuth}/${elevation}`);
+      // the way round the ring is the light's own: the drawn point is the direction, however far out
+      const d = Math.hypot(lx, ly);
+      if (d > 1e-6) assert.ok(near(s.x * d, lx * Math.hypot(s.x, s.y)) && near(s.y * d, ly * Math.hypot(s.x, s.y)), `${azimuth}/${elevation}`);
       assert.ok(Math.hypot(s.x, s.y) <= 1 + 1e-9);
     }
   }
@@ -22,6 +24,12 @@ test('the sun is drawn where the light is: the same direction seen from the fron
   // light behind the object is drawn at the same place as the light in front of it
   const [front, back] = [sunAt({ azimuth: 200, elevation: 30 }), sunAt({ azimuth: 200, elevation: -30 })];
   assert.ok(near(front.x, back.x) && near(front.y, back.y));
+  // from the viewer and from straight behind (the Front and Back set-ups) the sun is out by the object's edge, never over its middle
+  for (const l of [PRESETS.find((p) => p.id === 'front')!.light, PRESETS.find((p) => p.id === 'back')!.light, { azimuth: 0, elevation: 90 }, { azimuth: 123, elevation: -90 }]) {
+    const s = sunAt(l);
+    assert.ok(Math.hypot(s.x, s.y) >= 0.7 - 1e-9, `${l.azimuth}/${l.elevation} is at ${Math.hypot(s.x, s.y).toFixed(2)} of the ring`);
+    assert.ok(near((Math.atan2(s.x, s.y) * (180 / Math.PI) + 360) % 360, l.azimuth, 1e-6), 'and in the light’s direction');
+  }
 });
 
 test('a pointer on the circle makes the light the sun is drawn at, on the side the sun is on', () => {
@@ -32,8 +40,10 @@ test('a pointer on the circle makes the light the sun is drawn at, on the side t
     assert.ok(Math.abs(got.azimuth - azimuth) <= 1 && Math.abs(got.elevation - elevation) <= 1, `${azimuth}/${elevation} -> ${got.azimuth}/${got.elevation}`);
   }
   assert.deepEqual(lightAt(0, 0, false, { azimuth: 123, elevation: 20 }), { azimuth: 123, elevation: 90 }, 'the centre keeps the direction');
+  assert.equal(lightAt(0.5, 0, false, { azimuth: 0, elevation: 20 }).elevation, 90, 'and inside the object’s edge is light from the viewer');
+  assert.equal(lightAt(0.5, 0, true, { azimuth: 0, elevation: -20 }).elevation, -90, 'or from straight behind');
   assert.deepEqual(lightAt(2, 0, false, { azimuth: 0, elevation: 20 }), { azimuth: 90, elevation: 0 }, 'past the rim is the rim');
-  assert.equal(lightAt(1, 0, true, { azimuth: 0, elevation: -20 }).elevation, 0, 'and the rim is the same from behind');
+  assert.equal(lightAt(1, 0, true, { azimuth: 0, elevation: -20 }).elevation, -1, 'and the rim is as near the rim from behind as it gets without reading as in front');
   assert.ok(lightAt(0.5, 0.5, true, { azimuth: 0, elevation: -20 }).elevation < 0);
 });
 

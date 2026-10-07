@@ -1,2 +1,4 @@
 /* the scene light: the preset, then the light and shadow colour fields, one to a line so each shows its whole hex and name */
 .row { display: flex; flex: none; flex-direction: column; gap: 6px; min-width: 0; padding: 10px 12px 0; }
+/* the colour chips are 24px to hit, like every control (the shared chip is 20) */
+.row button[aria-haspopup="dialog"] { width: 24px; height: 24px; }

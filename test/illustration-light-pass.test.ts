@@ -216,21 +216,26 @@ test('finishes: Satin, Silk, Linen and Gold set the Surface numbers, Gold on a m
   assert.equal(finishPresetOf({ material: 'cloth', surface: { gloss: 0.9 } }), 'custom');
 });
 
-test('Apply look to every ramp: material, finish and settings go to all, each ramp keeps its own colour', () => {
+test('Apply look to every ramp: only the look goes to all (intensity, push, hue shift, saturation); each ramp keeps its colour, material and finish', () => {
   let d = emptyDoc();
   for (const base of [[0.6, 0.12, 30], [0.5, 0.1, 140], [0.7, 0.09, 250]] as Oklch[]) d = addRamp(d, base, 'R').doc;
   const [a, b, c] = d.ramps;
-  d = setSpec(d, a.id, { material: 'metal', intensity: 'extreme', hueShift: 0.4, surface: { gloss: 0.7, grain: 0.2 } });
+  d = setSpec(d, a.id, { material: 'metal', intensity: 'extreme', push: 1.8, hueShift: 0.4, chromaCurve: -0.3, surface: { gloss: 0.7, grain: 0.2 } });
+  d = setSpec(d, c.id, { material: 'skin', surface: { softness: 0.9 } });
   const bases = d.ramps.map((r) => r.base.join());
   const next = lookForAll(d, a.id);
   for (const id of [b.id, c.id]) {
     const r = rampOf(next, id)!;
-    assert.equal(r.material, 'metal');
     assert.equal(r.intensity, 'extreme');
+    assert.equal(r.push, 1.8);
     assert.equal(r.hueShift, 0.4);
-    assert.deepEqual(r.surface, { gloss: 0.7, grain: 0.2 });
-    assert.notEqual(r.surface, rampOf(next, a.id)!.surface, 'its own copy');
+    assert.equal(r.chromaCurve, -0.3);
   }
+  // the material and the finish are not part of the look: a mixed-material study stays mixed
+  assert.equal(rampOf(next, b.id)!.material, rampOf(d, b.id)!.material);
+  assert.equal(rampOf(next, c.id)!.material, 'skin');
+  assert.deepEqual(rampOf(next, c.id)!.surface, { softness: 0.9 });
+  assert.equal(rampOf(next, b.id)!.surface, rampOf(d, b.id)!.surface);
   assert.deepEqual(next.ramps.map((r) => r.base.join()), bases);
   assert.notDeepEqual(stepsOf(next, b.id).map((w) => w.oklch), stepsOf(d, b.id).map((w) => w.oklch), 'the other ramps are regenerated for the new look');
   assert.equal(lookForAll(d, 'nope'), d);
