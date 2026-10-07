@@ -1,32 +1,21 @@
-import type { CSSProperties, KeyboardEvent, PointerEvent } from 'react';
-import { cssColor } from '../../shared/color/index.ts';
-import { fromHsb, type Hsb } from '../../shared/color/picker.ts';
+import { useLayoutEffect, useRef, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
 import { cx } from './cx.ts';
 import { useDrag } from './drag.ts';
 import type { Gesture } from './Picker.tsx';
-import { PickerChannel } from './PickerChannel.tsx';
+import { PickerChannel, channelProps } from './PickerChannel.tsx';
 import { HUE_HELD } from './PickerHold.tsx';
+import { axisAt, planeImage } from './PickerPlane.tsx';
+import type { Area } from './pickerModels.ts';
 import { useHueLock } from './PickerStyles.tsx';
-import { clamp, roundTo } from './scrub.ts';
+import { useSize } from './useSize.ts';
 import s from './Picker.module.css';
 
-// Square: saturation across, brightness up, the hue bar below, as in Photoshop, Figma and Affinity.
-// The square is two sRGB gradients multiplied, which is HSB exactly: white to the pure hue across,
-// times black to white up.
+// Square: two components of the model across and up, the third on the bar below, as in Photoshop
+// (see Area in pickerModels.ts for each model's). HSB is saturation by brightness with the hue on the bar,
+// and the gradients are two sRGB ramps multiplied: white to the pure hue across, times black to white up.
 
-const WHITE = cssColor([1, 0, 0]);
-const BLACK = cssColor([0, 0, 0]);
-const pure = (h: number) => cssColor(fromHsb([h, 100, 100]));
-/** the pure hues 60° apart: between them the hue runs linearly in sRGB */
-export const HUES = [0, 60, 120, 180, 240, 300, 360].map(pure).join(', ');
-
-export type HsbProps = {
-  hsb: Hsb;
-  onHsb(v: Hsb): void;
-  /** the value lock's iso-value line, as an SVG path in a 0-100 box: the drag rides it (x picks saturation, brightness is solved) */
-  contour?: string | null;
-  /** the hue bar's colours at the held value (Square only) */
-  hueTrack?: string | null;
+export type AreaProps = {
+  area: Area;
 } & Gesture;
 
 /** the ring marking a place on a colour area */
@@ -63,74 +52,86 @@ export const focusThen = (down: (e: PointerEvent<HTMLElement>) => void) => (e: P
   down(e);
 };
 
-/** The saturation-by-brightness area at the hue (the Square's, and the one inside the Wheel). */
-export function SbArea({ hsb, onHsb, contour, className, ...g }: HsbProps & { className?: string }) {
-  const [h, sat, b] = hsb;
+/** the OKLCH model's area: the lightness by chroma plane at the hue (drawn once per hue, at device pixels, with its sRGB and P3 edges) */
+function LcPlane({ hue }: { hue: number }) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const size = useSize(canvas);
+  const dpr = Math.ceil(devicePixelRatio || 1);
+  const [pw, ph] = [(size?.w ?? 0) * dpr, (size?.h ?? 0) * dpr];
+  const art = pw && ph ? planeImage('lc', hue, pw, ph, axisAt(hue), null) : null;
+  useLayoutEffect(() => {
+    if (art) canvas.current?.getContext('2d')!.putImageData(art.image, 0, 0);
+  }, [art]);
+  return (
+    <>
+      <canvas ref={canvas} className={s.canvas} width={pw} height={ph} />
+      {art && (
+        <svg className={s.edges} viewBox={`0 0 ${pw} ${ph}`} preserveAspectRatio="none" aria-hidden="true">
+          {art.p3 && <path className={s.p3Edge} d={art.p3} />}
+          <path d={art.srgb} />
+        </svg>
+      )}
+    </>
+  );
+}
+
+/** The model's area (the Square's, and HSB's or HSL's inside the Wheel). */
+export function PickerArea({ area, className, ...g }: AreaProps & { className?: string }) {
   const drag = useDrag({
     onBegin: g.onBegin,
-    onMove({ x, y }) {
-      // held to a value, the pointer picks the saturation only and brightness follows the line
-      const next: Hsb = [h, roundTo(x * 100, 1), contour ? b : roundTo((1 - y) * 100, 1)];
-      if (next[1] !== sat || next[2] !== b) onHsb(next);
-    },
+    onMove: ({ x, y }) => area.move(x, 1 - y),
     onCommit: g.onCommit,
     onCancel: g.onCancel,
   });
   const onKeyDown = (e: KeyboardEvent) => {
     const d = arrow(e);
-    if (!d) return;
-    // held to a value, Up and Down are the way to change it: they move brightness; Left and Right leave it to the line
-    const next: Hsb = [h, clamp(Math.round(sat) + d[0], 0, 100), contour && !d[1] ? b : clamp(Math.round(b) + d[1], 0, 100)];
-    if (next[1] !== sat || next[2] !== b) keyStep(g, () => onHsb(next));
+    const change = d && area.key(...d);
+    if (change) keyStep(g, change);
   };
 
   return (
     <div
-      className={cx(s.sb, className)}
-      style={{ backgroundImage: `linear-gradient(0deg in srgb, ${BLACK}, ${WHITE}), linear-gradient(90deg in srgb, ${WHITE}, ${pure(h)})` }}
+      className={cx(s.sb, !area.paint && s.sbCanvas, className)}
+      style={area.paint ? { backgroundImage: area.paint.image, backgroundBlendMode: area.paint.blend } : undefined}
       data-plane=""
-      data-lock={contour ? '' : undefined}
+      data-area={area.kind}
+      data-lock={area.contour ? '' : undefined}
       tabIndex={0}
       role="slider"
-      aria-label="Saturation and brightness"
+      aria-label={area.name}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={Math.round(sat)}
-      aria-valuetext={`Saturation ${Math.round(sat)}%, brightness ${Math.round(b)}%`}
+      aria-valuenow={area.now}
+      aria-valuetext={area.text}
       {...drag.handlers}
       onPointerDown={focusThen(drag.handlers.onPointerDown)}
       onKeyDown={onKeyDown}
     >
-      {contour && (
+      {!area.paint && <LcPlane hue={area.hue} />}
+      {area.contour && (
         <svg className={s.contour} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <path className={s.halo} d={contour} />
-          <path className={s.mark} d={contour} />
+          <path className={s.halo} d={area.contour} />
+          <path className={s.mark} d={area.contour} />
         </svg>
       )}
-      <Mark style={{ left: `${sat}%`, top: `${100 - b}%` }} />
+      <Mark style={{ left: `${area.u * 100}%`, top: `${(1 - area.v) * 100}%` }} />
     </div>
   );
 }
 
-/** The Square style: the area, then the hue bar (its value is typed in the number row below). */
-export function PickerSquare({ hsb, onHsb, contour, hueTrack, ...g }: HsbProps) {
-  const [h, sat, b] = hsb;
+/** The Square style: the model's area, then the bar of its third component (its value is typed in the number row below). */
+export function PickerSquare({ area, ...g }: AreaProps) {
   const hueHeld = useHueLock();
+  const { bar } = area;
   return (
     <>
-      <SbArea hsb={hsb} onHsb={onHsb} contour={contour} {...g} />
+      <PickerArea area={area} {...g} />
       <PickerChannel
         bare
-        label="H"
-        value={h}
-        min={0}
-        max={360}
-        step={1}
-        track={hueTrack ?? `linear-gradient(90deg in srgb, ${HUES})`}
+        {...channelProps(bar)}
         className={s.hueBar}
-        locked={hueHeld ? HUE_HELD : undefined}
+        locked={bar.label === 'H' && hueHeld ? HUE_HELD : undefined}
         {...g}
-        onChange={(x) => onHsb([x, sat, b])}
       />
     </>
   );

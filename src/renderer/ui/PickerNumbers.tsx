@@ -19,11 +19,16 @@ const MODELS: { value: PickerModel; label: string }[] = [
   { value: 'oklch', label: 'OKLCH' },
 ];
 
+/** the model menu: in Square and Wheel it picks the model the area shows, and the numbers */
+export function PickerModelSelect({ model }: { model: PickerModel }) {
+  return <Select options={MODELS} value={model} onChange={setPickerModel} menuWidth={112} />;
+}
+
 /** Square and Wheel: a model menu, then one field per number of it (Figma's row). */
 export function PickerNumbers({ model, channels, ...g }: Props) {
   return (
     <div className={s.nums} data-n={channels.length}>
-      <Select options={MODELS} value={model} onChange={setPickerModel} menuWidth={112} />
+      <PickerModelSelect model={model} />
       {channels.map((ch) => (
         <NumberField key={ch.label} label={ch.label} value={ch.value} min={ch.min} max={ch.max} step={ch.step} precision={ch.precision} unit={ch.unit} wrap={ch.wrap} {...g} onChange={ch.type ?? ch.set} />
       ))}

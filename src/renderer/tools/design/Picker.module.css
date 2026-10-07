@@ -16,6 +16,7 @@
 .other { width: 100%; }
 
 .row { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; flex: none; }
+.model { width: 112px; }
 .lab { color: var(--ink-2); font-size: var(--fs-base); white-space: nowrap; }
 .hexRow { display: flex; align-items: flex-start; gap: 6px; min-width: 0; }
 .hex { flex: 1; min-width: 0; }

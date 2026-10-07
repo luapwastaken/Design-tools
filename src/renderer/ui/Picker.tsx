@@ -99,17 +99,16 @@ export function PickerBody({ value, colour, numbers = true, match, ...gesture }:
   const g = { ...gesture, onBegin: () => (colour.begin(), gesture.onBegin?.()) };
   const style = usePickerStyle();
   const model = usePickerModel();
-  const hsb = { hsb: colour.hsb, onHsb: colour.setHsb, contour: colour.contour(), ...g };
   const srgb = style !== 'oklch';
   return (
     <>
-      {style === 'square' && <PickerSquare {...hsb} hueTrack={colour.hueTrack()} />}
-      {style === 'wheel' && <PickerWheel {...hsb} />}
+      {style === 'square' && <PickerSquare area={colour.area(model)} {...g} />}
+      {style === 'wheel' && <PickerWheel area={colour.area(model, true)} {...g} />}
       {numbers && (style === 'square' || style === 'wheel') && <PickerNumbers model={model} channels={colour.channels(model)} {...g} />}
       {style === 'sliders' && <PickerSliders model={model} channels={colour.channels(model)} {...g} />}
       {style === 'oklch' && <PickerOklch value={value} channels={colour.channels('oklch')} target={colour.target} chroma={colour.chroma} onSlide={colour.slide} onMax={colour.max} {...g} onChange={colour.retarget} />}
       <PickerHold value={value} colour={colour} match={match} {...g} />
-      {srgb && model === 'cmyk' && (style === 'sliders' || numbers) && <p className={s.note}>≈ Estimate from sRGB, no ICC profile</p>}
+      {srgb && model === 'cmyk' && (style === 'sliders' || numbers) && <p className={s.note}>≈ Estimate from sRGB, no ICC profile{style !== 'sliders' && '. Four inks have no flat plane, so the area stays saturation by brightness'}</p>}
     </>
   );
 }

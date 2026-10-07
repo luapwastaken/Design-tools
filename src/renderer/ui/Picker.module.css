@@ -91,12 +91,13 @@ div.planes button { padding: 0 8px; }
   min-height: var(--sb-min, 196px);
   max-height: var(--sb-h, 640px);
   border-radius: 2px;
-  /* two gradients multiplied: white to the hue across, black to white up (HSB exactly) */
+  /* HSB: two gradients multiplied, white to the hue across, black to white up (the others set their blend inline) */
   background-blend-mode: multiply;
   box-shadow: inset 0 0 0 1px var(--edge);
   cursor: crosshair;
   touch-action: none;
 }
+.sbCanvas { background: var(--well); }
 .sb:focus-visible, .hueRing:focus-visible { outline: 1px solid var(--tick-strong); outline-offset: 2px; }
 .dot { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; overflow: visible; pointer-events: none; }
 .dot circle { fill: none; }
