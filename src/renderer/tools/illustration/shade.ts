@@ -308,7 +308,8 @@ function lightPixel(nx: number, ny: number, nz: number, open: number, thick: num
   S[TONE] = v < 0 ? 0 : v > 1 ? 1 : v;
   S[GLOW] = wg;
   S[GLOW_TONE] = tg > 1 ? 1 : tg;
-  S[BOUNCE] = f.tint > 0 ? Math.min(0.7, f.amb * 0.8 * down * (1 - lit)) * f.tint * (1 - f.flat * fin.metal) : 0;
+  // reflected light hugs the shadow side's edge (a surface facing the ground at a slant), not its middle
+  S[BOUNCE] = f.tint > 0 ? Math.min(0.7, f.amb * 0.8 * down * (1 - lit) * (0.3 + 0.7 * (1 - nz))) * f.tint * (1 - f.flat * fin.metal) : 0;
   S[SHINE] = shine * (1 - 0.3 * fin.metal);
 }
 
