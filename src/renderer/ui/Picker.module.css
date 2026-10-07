@@ -49,7 +49,7 @@ div.icons button { padding: 0 5px; }
 .edges path { fill: none; stroke: var(--tick-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .edges .p3Edge { stroke-dasharray: 3 3; }
 
-.vline, .hline { position: absolute; left: 0; top: 0; background: var(--cross); opacity: .55; pointer-events: none; }
+.vline, .hline { position: absolute; left: 0; top: 0; background: var(--cross); box-shadow: 0 0 0 1px var(--cross-halo); pointer-events: none; }
 .vline { width: 1px; height: 100%; }
 .hline { width: 100%; height: 1px; }
 .ring { position: absolute; left: -10px; top: -10px; width: 20px; height: 20px; overflow: visible; pointer-events: none; }
@@ -72,7 +72,8 @@ div.planes button { padding: 0 8px; }
 .legend > span { display: flex; align-items: center; gap: 5px; }
 .legend i { width: 12px; border-top: 1px solid var(--tick-strong); }
 .legend i.dash { border-top-style: dashed; }
-.legend i.iso { height: 2px; border-top: 0; background: var(--cross); }
+/* the key sits on the panel, not on the plane: the ink token reads in both themes (the line on the plane is white with a dark halo) */
+.legend i.iso { height: 2px; border-top: 0; background: var(--ink); }
 
 /* the value lock's iso-value line: the same ring colours as the marker, drawn once, over the colours */
 .contour { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
