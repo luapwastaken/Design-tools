@@ -31,6 +31,7 @@ import { select as selectInDesign } from './tools/design/actions.ts';
 import { newSwatch as designSwatch, recolour as recolourInDesign, type DesignDoc } from './tools/design/doc.ts';
 import { clearProposals, proposals } from './tools/design/proposals.ts';
 import { results as designResults } from './tools/design/results.ts';
+import { toastMoved } from './tools/common/fixes.ts';
 import { armed as armedInDesign, getView as designView, patchView as patchDesign } from './tools/design/view-state.ts';
 import { used, type DitherDoc } from './tools/dither/doc.ts';
 import { lookOf as ditherLook, withLook } from './tools/dither/looks.ts';
@@ -897,6 +898,14 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     check('and a reroll still reads: no role pair fails', designResults(dd.get().swatches, undefined, 6, 10).failing.length === 0);
     const rolled = toastStore.get().findLast((t) => /^Rerolled \d+ colours?\./.test(String(t.message)));
     check('a reroll says how many colours it made new, with an Undo', !!rolled?.undo, rolled?.message);
+    // a second reroll replaces the first one's toast: a run of rerolls is one notice, not a stack
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    press(' ', { code: 'Space' });
+    await until(() => dd.depth() === steps + 2);
+    const rolls = toastStore.get().filter((t) => /^Rerolled \d+ colours?\./.test(String(t.message)) && !t.leaving);
+    check('a new reroll toast replaces the previous one instead of stacking', rolls.length === 1 && dd.depth() === steps + 2, rolls.map((t) => t.message));
+    ctrlZ();
+    await until(() => dd.depth() === steps + 1);
     ctrlZ();
     check('Ctrl+Z puts the unrerolled palette back', await until(() => dd.get().swatches === built));
     // a swatch lock (L) keeps a colour through Space as well
@@ -904,6 +913,8 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     selectInDesign([accent.id]);
     press('l', { code: 'KeyL' });
     check('L locks the selected swatch', designView().locked.includes(accent.id) && !!(await until(() => host('design')?.querySelector(`[data-swatch="${accent.id}"] button[aria-pressed="true"]`))), designView().locked);
+    const lockBadge = host('design')?.querySelector(`[data-swatch="${accent.id}"] button[aria-pressed]`);
+    check('the lock badge keeps one accessible name, Lock swatch, and shows its state in aria-pressed', lockBadge?.getAttribute('aria-label') === 'Lock swatch' && lockBadge.getAttribute('aria-pressed') === 'true', [lockBadge?.getAttribute('aria-label'), lockBadge?.getAttribute('aria-pressed')]);
     (document.activeElement as HTMLElement | null)?.blur?.();
     press(' ', { code: 'Space' });
     const second = (await until(() => dd.depth() === steps + 1 && dd.get().swatches)) || null;
@@ -973,9 +984,18 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     intendedButton?.click();
     const valueAfter = designResults(dd.get().swatches, undefined, 6, 10, designView().locked, designView().intended);
     check('a matched pair offers Intended; marking it takes it out of the Value check and the count, and says so', !!intendedButton && valueBefore.collisions.length > 0 && designView().intended.length > 0 && valueAfter.collisions.length === 0 && valueAfter.toLookAt < valueBefore.toLookAt && !!(await until(() => designPanel()?.textContent?.includes('marked intended'))), [valueBefore.collisions.length, designView().intended]);
+    const marked = valueBefore.collisions[0];
+    const isMarked = (p: { a: Swatch; b: Swatch } | null | undefined) => !!p && !!marked && [p.a.id, p.b.id].sort().join() === [marked.a.id, marked.b.id].sort().join();
+    check('a pair marked Intended leaves the Achromatopsia row too, so the count can reach 0; the other colour-vision rows still judge it', isMarked(valueBefore.vision.achromat) && !isMarked(valueAfter.vision.achromat) && ['protan', 'deutan', 'tritan'].every((k) => valueAfter.vision[k as 'protan']?.deltaE === valueBefore.vision[k as 'protan']?.deltaE), [valueBefore.vision.achromat?.deltaE, valueAfter.vision.achromat?.deltaE]);
     patchDesign({ intended: [], tab: 'contrast' });
     ctrlZ();
     await until(() => dd.get().swatches === built);
+
+    // a fix's toast lists the colours that moved, not the ones it left where they were
+    const [moverA, moverB] = [designSwatch([0.5, 0.1, 30], 'Mover'), designSwatch([0.6, 0.1, 100], 'Stayer')];
+    toastMoved({ get: () => 0, undo() {} }, [moverA, moverB], { [moverA.id]: [0.7, 0.1, 30], [moverB.id]: [0.6, 0.1, 120] }, 'V');
+    const listed = toastStore.get().findLast((t) => String(t.message).startsWith('Moved'));
+    check('a fix toast names only the colours whose number moved (no "V 41 to 41")', !!listed && String(listed.message).includes('Mover') && !String(listed.message).includes('Stayer') && !/(\d+) to /.test(String(listed.message)), listed?.message);
 
     // a chosen tab is never taken: after the user picks Contrast a new build leaves it
     designTab('contrast')?.click();
@@ -998,6 +1018,23 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     const wide = (await until(() => dd.get().swatches.length === 7 && dd.get().swatches)) || null;
     const widePrimary = wide?.find((w) => w.role === 'Primary');
     check('a wide-gamut brand colour stays exactly as typed, shows the gamut warning, and the roles still read', !!widePrimary && widePrimary.oklch.every((v, i) => Math.abs(v - [0.7, 0.33, 150][i]) < 0.002) && !!(await until(() => host('design')?.querySelector(`[data-swatch="${widePrimary.id}"] [data-icon="warning"]`))) && designResults(dd.get().swatches, undefined, 6, 10).failing.filter((p) => p.text.role !== 'Primary').length === 0, widePrimary?.oklch);
+
+    // a pale brand colour: the build goes dark, says why in the header while it holds, and its Text is no look-alike of the Primary
+    await shell.newDoc('design');
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    const paleField = await until(() => field());
+    typeInto(paleField!, 'FFF3A3');
+    press('Enter');
+    const pale = (await until(() => dd.get().swatches.length === 7 && dd.get().swatches)) || null;
+    const paleText = pale?.find((w) => w.role === 'Text');
+    const palePrimary = pale?.find((w) => w.role === 'Primary');
+    const paleRes = pale ? designResults(pale, undefined, 6, 10, designView().locked) : null;
+    const paleLike = (['protan', 'deutan', 'tritan', 'achromat'] as const).some((k) => paleRes?.vision[k]?.flag && [paleRes.vision[k]!.a.id, paleRes.vision[k]!.b.id].includes(paleText!.id) && [paleRes.vision[k]!.a.id, paleRes.vision[k]!.b.id].includes(palePrimary!.id));
+    check('a pale brand colour builds a Text that is no look-alike of the Primary under any colour vision', !!paleText && !!palePrimary && !paleLike && (paleText.oklch[1] ?? 1) < 0.03, [paleText?.oklch, palePrimary?.oklch]);
+    check('the ground flip shows as a plain line in the Palette header while it applies, not only as a toast', !!(await until(() => host('design')?.querySelector('[data-ground-flip]')?.textContent?.includes('Built on a dark ground'))), host('design')?.querySelector('[data-ground-flip]')?.textContent);
+    // no keyboard-focus rule draws a bar: a focused chip, step or tile gets a full ring
+    const focusBars = [...document.styleSheets].flatMap((sh) => [...sh.cssRules]).filter((r): r is CSSStyleRule => r instanceof CSSStyleRule && /:focus-visible[^,{]*::(before|after)/.test(r.selectorText) && r.style.position === 'absolute' && /^[1-4]px$/.test(r.style.height));
+    check('no :focus-visible rule draws a bar under a chip, step or tile (a full outline ring instead)', focusBars.length === 0, focusBars.map((r) => r.selectorText));
 
     // Suggest more colours keeps the old path: ramp-shaped proposals beside the palette, which Space re-draws
     button('design', 'Add colours')?.click();
@@ -3295,7 +3332,7 @@ async function emptyUi(): Promise<void> {
   patchIllustration({ tab: 'settings' });
   const start = await until(() => host('illustration')?.querySelector('section[aria-label="Start"]'), 3000);
   check('an empty palette shows the start in the Ramps section', shows(start) && !!start?.parentElement?.closest('section')?.textContent?.startsWith('Ramps'), start?.textContent?.slice(0, 40));
-  check('it is one plain sentence and a hex field: no sample chips, no starter chips', start?.querySelector('p')?.textContent === 'No ramps yet. Pick a light, then add colours.' && !start?.querySelector('i, img, svg') && !button('illustration', 'Skin') && !button('illustration', 'Night sky'), start?.textContent);
+  check('it is one plain sentence and a hex field: no sample chips, no starter chips', start?.querySelector('p')?.textContent === 'No ramps yet. Pick a light, then add colours.' && !start?.querySelector('i, img, svg') && !button('illustration', 'Skin medium') && !button('illustration', 'Night sky'), start?.textContent);
   check('and it points at the labelled From… button beside Add colour, not a hidden arrow', /use From… to add several colours/.test(start?.textContent ?? '') && !!button('illustration', 'From…') && !!button('illustration', 'Add colour'), start?.textContent);
   const [addBtn, fromBtn] = [button('illustration', 'Add colour'), button('illustration', 'From…')];
   check('Add colour and From… are two full-size buttons side by side, both at least 24px tall', !!addBtn && !!fromBtn && addBtn.getBoundingClientRect().height >= 24 && fromBtn.getBoundingClientRect().height >= 24 && fromBtn.getBoundingClientRect().left >= addBtn.getBoundingClientRect().right && !document.querySelector('[data-tool="illustration"] [aria-label^="Add colours from"]'), [addBtn?.getBoundingClientRect().height, fromBtn?.getBoundingClientRect().left]);
@@ -3373,9 +3410,9 @@ async function startUi(): Promise<void> {
 
   // the sources menu: worded and ordered as Design's + Add colours, subjects with their colour
   caret()?.click();
-  const labels = await until(() => (row('Skin') ? rows().map((r) => r.textContent?.trim() ?? '') : null), 2000);
+  const labels = await until(() => (row('Skin medium') ? rows().map((r) => r.textContent?.trim() ?? '') : null), 2000);
   check('From… opens the sources in Design’s words and order, then the subjects and the limited sets', !!labels && ['From image…', 'Paste codes…', 'Pick from screen', 'From Library…'].every((t, i) => labels[i]?.startsWith(t)) && labels.some((l) => l.startsWith('Atmospheric triad')), labels);
-  check('each subject shows its colour, which the greyscale view takes over', rows().filter((r) => ['Skin', 'Hair', 'Foliage', 'Sky', 'Cloth', 'Metal', 'Stone', 'Wood', 'Water'].includes(r.textContent?.trim() ?? '')).every((r) => !!r.querySelector('[data-colour]')));
+  check('each subject shows its colour, which the greyscale view takes over', rows().filter((r) => ['Skin light', 'Skin medium', 'Skin deep', 'Hair blonde', 'Hair brown', 'Hair black', 'Hair red', 'Foliage', 'Sky', 'Cloth', 'Metal', 'Stone', 'Wood', 'Water'].includes(r.textContent?.trim() ?? '')).length === 14 && rows().filter((r) => /^(Skin|Hair|Foliage|Sky|Cloth|Metal|Stone|Wood|Water)/.test(r.textContent?.trim() ?? '')).every((r) => !!r.querySelector('[data-colour]')));
   press('Escape');
   await until(() => !openMenu(), 2000);
 
@@ -3395,10 +3432,10 @@ async function startUi(): Promise<void> {
   check('and is one step', ramps().length === 1 && il.depth() === key, il.depth());
 
   // a subject: named, its material, the scene's light
-  await addVia('Skin');
+  await addVia('Skin medium');
   const skin = await until(() => (ramps().length === 2 ? ramps()[1] : null), 2000);
   const skinBase = skin && il.get().swatches.find((w) => w.group === skin.id && w.step === 0);
-  check('Subject > Skin makes a ramp named Skin of the skin material, lit by the scene', skin?.material === 'skin' && skinBase?.name === 'Skin' && lit(skin, GOLDEN), [skin?.material, skinBase?.name]);
+  check('Subject > Skin medium makes a ramp named Skin medium of the skin material, lit by the scene', skin?.material === 'skin' && skinBase?.name === 'Skin medium' && lit(skin, GOLDEN), [skin?.material, skinBase?.name]);
   check('with the picker’s field focused', !!(await until(picked, 2000)));
   for (const label of ['Foliage', 'Sky', 'Cloth']) await addVia(label);
   await until(() => ramps().length === 5, 2000);
@@ -3431,6 +3468,12 @@ async function startUi(): Promise<void> {
   il.transact('A light of its own', (d) => ({ ...d, ramps: d.ramps.map((r) => ({ ...r, light: [0.9, 0.06, 150], shadow: [0.3, 0.05, 20] })) }));
   await until(() => /Custom/.test(lightBtn()?.textContent ?? ''), 2000);
   check('one light that is no preset reads as Custom', /Custom/.test(lightBtn()?.textContent ?? ''), lightBtn()?.textContent);
+  // a preset's colours typed back in as hex (a hex step off the exact numbers) read as the preset
+  il.transact('Golden hour typed as hex', (d) => ({ ...d, ramps: d.ramps.map((r) => ({ ...r, light: hexToOklch(toHex(GOLDEN.light)), shadow: hexToOklch(toHex(GOLDEN.shadow)) })) }));
+  const typedName = await until(() => (/Golden hour/.test(lightBtn()?.textContent ?? '') ? lightBtn()?.textContent : null), 2000);
+  check('a preset typed back in as hex reads as the preset, not Custom', !!typedName && !/Custom/.test(typedName), lightBtn()?.textContent);
+  il.transact('A light of its own again', (d) => ({ ...d, ramps: d.ramps.map((r) => ({ ...r, light: [0.9, 0.06, 150], shadow: [0.3, 0.05, 20] })) }));
+  await until(() => /Custom/.test(lightBtn()?.textContent ?? ''), 2000);
   // the chips act: a colour typed into one lights every ramp with it, as one undo step, the other colour staying
   const dChip = il.depth();
   const lightField = hexField('Light');
