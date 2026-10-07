@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { contrast, type Oklch } from '../src/shared/color/index.ts';
+import { contrast, hexToOklch as hexOklch, type Oklch } from '../src/shared/color/index.ts';
 import { readPaletteFile } from '../src/shared/color/palette-readers.ts';
 import type { Swatch } from '../src/shared/types.ts';
 import { describe, scene, type Mode, type Scene } from '../src/renderer/tools/design/context-slots.ts';
@@ -141,5 +141,18 @@ test('the fixture palettes resolve to finite colours and ratios in both versions
       for (const sl of slots) assert.ok(sl.oklch.every(Number.isFinite), `${file} ${mode} ${sl.name}`);
       for (const p of Object.values(s.pairs)) assert.ok(p.ratio >= 1 && p.ratio <= 21, `${file} ${mode}`);
     }
+  }
+});
+
+test('a mid-tone brand colour still gets a readable button label and pills (black or white when the palette has none)', () => {
+  const pal = [
+    sw('Page', [0.97, 0.005, 200], 'Background'),
+    sw('Ink', [0.2, 0.01, 200], 'Text'),
+    sw('Teal', hexOklch('#0E8C8C'), 'Primary'),
+  ];
+  for (const mode of MODES) {
+    const s = must(scene(pal, mode));
+    assert.ok(s.pairs.button.ok, `${mode}: button ${s.pairs.button.ratio.toFixed(2)}`);
+    for (const k of ['success', 'warning', 'error'] as const) assert.ok(s.pairs[k].ok, `${mode}: ${k} pill ${s.pairs[k].ratio.toFixed(2)}`);
   }
 });

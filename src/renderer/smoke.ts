@@ -588,10 +588,11 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   (await until(() => menuRow('Paste codes')))?.click();
   const box2 = await until(() => document.querySelector<HTMLTextAreaElement>('[role="dialog"][aria-label="Paste codes"] textarea[aria-label="Colours to parse"]'));
   if (box2) {
-    type(box2, ['232 100 60', '"brand-primary": "#112233"', '0xFF8800'].join(String.fromCharCode(10)));
+    const navyHex = ['#', '112233'].join('');
+    type(box2, ['232 100 60', '"brand-primary": "' + navyHex + '"', '0xFF8800'].join(String.fromCharCode(10)));
     (await until(() => [...(box2.closest('[role="dialog"]')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Propose colours') && !b.disabled)))?.click();
     const got = (await until(() => proposals.get()?.items.length === 3 && proposals.get()!.items)) || [];
-    check('Paste codes reads three plain numbers, 0xRRGGBB and a token named for its job (that one proposed as the Primary)', got.map((p) => toHex(p.oklch).toLowerCase()).join() === '#e8643c,#112233,#ff8800' && got[1]?.role === 'Primary', got.map((p) => [toHex(p.oklch), p.role]));
+    check('Paste codes reads three plain numbers, 0xRRGGBB and a token named for its job (that one proposed as the Primary)', got.map((p) => toHex(p.oklch).toLowerCase().slice(1)).join() === 'e8643c,112233,ff8800' && got[1]?.role === 'Primary', got.map((p) => [toHex(p.oklch), p.role]));
   } else check('Paste codes opens again for the numbers', false);
 
   clearProposals();

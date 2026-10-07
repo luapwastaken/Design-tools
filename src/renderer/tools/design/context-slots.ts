@@ -59,8 +59,13 @@ const ratio = (a: Slot, b: Slot) => contrast(a.oklch, b.oklch);
 const isLight = (o: Oklch) => contrast(o, BLACK) >= contrast(o, WHITE);
 const best = <T>(list: T[], score: (t: T) => number): T | undefined =>
   list.reduce<T | undefined>((top, t) => (top === undefined || score(t) > score(top) ? t : top), undefined);
-/** whichever of the ground pair reads better on a fill: the palette does the work, never a stock white */
-const onFill = (fill: Slot, page: Slot, text: Slot) => (ratio(page, fill) >= ratio(text, fill) ? page : text);
+/** whichever of the ground pair reads better on a fill: the palette does the work; only when neither reads at 4.5:1 does black or white (a mid-tone brand colour) */
+function onFill(fill: Slot, page: Slot, text: Slot): Slot {
+  const own = ratio(page, fill) >= ratio(text, fill) ? page : text;
+  if (ratio(own, fill) >= 4.5) return own;
+  const stock = [made(BLACK, 'black (added)'), made(WHITE, 'white (added)')].reduce((a, b) => (ratio(b, fill) > ratio(a, fill) ? b : a));
+  return ratio(stock, fill) > ratio(own, fill) ? stock : own;
+}
 
 /** The website's colours on a light or a dark ground; null for an empty palette. */
 export function scene(swatches: Swatch[], mode: Mode): Scene | null {
@@ -212,10 +217,19 @@ function statusColours(swatches: Swatch[], primary: Oklch, page: Slot, text: Slo
     .sort((a, b) => a.gap - b.gap);
   const picked = new Map<Status, Swatch>();
   for (const c of near) if (!picked.has(c.k) && ![...picked.values()].includes(c.s)) picked.set(c.k, c.s);
+  const reads = (fill: Slot) => ratio(onFill(fill, page, text), fill) >= 4.6;
   const fills = kinds.map((k) => {
     const sw = picked.get(k);
     const { hue, name, l } = STATUS_HUE[k];
-    const fill = sw ? slot(sw) : made([clamp(primary[0], ...l), clamp(primary[1], 0.1, 0.15), hue], `${name} (added)`);
+    // a palette colour whose label cannot read on it (a mid-tone brand teal) is left for the Primary: the pill takes a made colour
+    let fill = sw && reads(slot(sw)) ? slot(sw) : null;
+    if (!fill) {
+      const start = clamp(primary[0], ...l);
+      const at = (L: number) => made([L, clamp(primary[1], 0.1, 0.15), hue], `${name} (added)`);
+      // the lightness nearest the Primary's, inside the status's own range, where a label reads
+      const steps = Array.from({ length: 21 }, (_, i) => l[0] + ((l[1] - l[0]) * i) / 20).sort((a, b) => Math.abs(a - start) - Math.abs(b - start));
+      fill = at(steps.find((L) => reads(at(L))) ?? start);
+    }
     return [k, { fill, ink: onFill(fill, page, text) }] as const;
   });
   return Object.fromEntries(fills) as Scene['status'];
