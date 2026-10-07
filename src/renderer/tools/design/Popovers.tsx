@@ -19,7 +19,7 @@ import { displayName, type DesignDoc, type DesignView } from './doc.ts';
 import { proposals } from './proposals.ts';
 import { extract, picture, takeImage, takeSvg, takeText } from './sources.ts';
 import { activeSwatch, regenerate, restyle, seedGesture, selection, suggestMore, type Doc } from './actions.ts';
-import { StyleFields } from './StyleFields.tsx';
+import { AccentField, StyleField } from './StyleFields.tsx';
 import { patchView } from './view-state.ts';
 import s from './Popovers.module.css';
 
@@ -74,7 +74,10 @@ function StyleBody({ doc, v }: { doc: Doc; v: DesignView }) {
   return (
     <>
       <Row>
-        <StyleFields doc={doc} v={v} className={s.grow} />
+        <StyleField doc={doc} v={v} className={s.grow} />
+      </Row>
+      <Row>
+        <AccentField doc={doc} v={v} className={s.grow} />
       </Row>
       <Row>
         <NumberField label="Seed" value={v.seed} min={0} max={99999} step={1} {...seed} className={s.grow} />

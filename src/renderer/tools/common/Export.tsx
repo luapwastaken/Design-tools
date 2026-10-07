@@ -127,7 +127,7 @@ export function LastExport({ last }: { last: ExportRecord | null }) {
         <span className={s.lastName}>{last.name}</span>
       </Tooltip>
       <span className={s.lastAt}>{clock(last.at)}</span>
-      <IconButton icon="folder_open" label="Show in Explorer" size="xs" onClick={() => void ipc.invoke('shell.reveal', last.path).catch(() => toast.show({ kind: 'error', message: `${last.name} isn't there any more.` }))} />
+      <IconButton icon="folder_open" label="Show in Explorer" size="sm" onClick={() => void ipc.invoke('shell.reveal', last.path).catch(() => toast.show({ kind: 'error', message: `${last.name} isn't there any more.` }))} />
     </div>
   );
 }

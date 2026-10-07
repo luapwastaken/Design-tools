@@ -212,7 +212,7 @@ export function Well(p: {
             max={PARTS_MAX}
             onChange={(parts) => p.onChange(p.well.map((x) => (x.id === w.id ? { ...x, parts } : x)))}
           />
-          <IconButton icon="close" label={`Take ${name(w.id)} out`} size="xs" onClick={() => p.onChange(p.well.filter((x) => x.id !== w.id))} />
+          <IconButton icon="close" label={`Take ${name(w.id)} out`} size="sm" onClick={() => p.onChange(p.well.filter((x) => x.id !== w.id))} />
         </span>
       ))}
       <div className={s.wellActs}>

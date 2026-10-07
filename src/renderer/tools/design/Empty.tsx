@@ -63,7 +63,7 @@ export function Empty({ doc, v, onPop }: { doc: Doc; v: DesignView; onPop: OpenP
         </Button>
       </div>
       <div className={s.options}>
-        <StyleFields doc={doc} v={v} className={s.opt} />
+        <StyleFields doc={doc} v={v} className={s.opt} accentClassName={s.optWide} />
       </div>
       <div className={s.cards}>
         {SOURCES.map((c) => (

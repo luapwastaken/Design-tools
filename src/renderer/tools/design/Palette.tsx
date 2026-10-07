@@ -11,7 +11,7 @@ import { fmtC, fmtH, fmtL } from '../common/names.ts';
 import { GreyscaleButton } from '../common/Greyscale.tsx';
 import { Section } from '../common/Section.tsx';
 import { SURROUNDS, surroundOf } from '../common/surround.ts';
-import { addProposals, addSwatch, armDelete, byRole, clickSelect, completeNow, copyColourOf, duplicate, missingRoles, proposedRoles, select, selection, setRole, sortByRole, toggleLocked, type Doc } from './actions.ts';
+import { addProposals, addSwatch, armDelete, byRole, clickSelect, completeNow, copyColourOf, duplicate, groundFlip, missingRoles, proposedRoles, select, selection, setRole, sortByRole, toggleLocked, type Doc } from './actions.ts';
 import { inkOn, simulated } from './artboard.ts';
 import { DeleteConfirm } from './DeleteConfirm.tsx';
 import { displayName, listNames, moveIds, namesOf, plural, type ChipData, type DesignDoc, type DesignView, mapSwatch } from './doc.ts';
@@ -110,9 +110,13 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
   const sorted = byRole(d.swatches).every((w, i) => w === d.swatches[i]);
   // what Keep all would give each ghost, shown on it before the press
   const guess = ghosts ? proposedRoles(d.swatches, ghosts.items, true).roles : [];
+  // a brand colour that cannot hold 3:1 on the Style's ground put the palette on the other one: said here while it holds, not only once in a toast
+  const [bg, brand] = [d.swatches.find((w) => w.role === 'Background'), d.swatches.find((w) => w.role === 'Primary')];
+  const flipped = bg && brand && !v.locked.includes(bg.id) && v.locked.includes(brand.id) ? groundFlip(bg.oklch, v.preset, { name: names.get(brand.id) ?? brand.name, oklch: brand.oklch }) : null;
   const sub = empty ? undefined : (
     <>
       {plural(d.swatches.length, 'colour')} · click one to edit it · drag to reorder
+      {flipped && <span data-ground-flip> · {flipped}</span>}
       {sel.length > 1 && <> · {sel.length} selected</>}
       {v.sim !== 'normal' && <span className={s.sim}> · Simulating {SIM_NAME[v.sim]}</span>}
     </>
@@ -161,7 +165,11 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
                 Sort by role
               </Button>
             )}
-            {!empty && <span className={s.hint}>{locked ? `${plural(locked, 'colour')} locked: ` : ''}Locked colours stay when you reroll</span>}
+            {!empty && (
+              <Tooltip content="Locked colours stay when you reroll">
+                <span className={s.hint}>{locked} locked</span>
+              </Tooltip>
+            )}
           </>
         )}
         </>
@@ -288,7 +296,7 @@ function Tile(p: TileProps) {
     >
       <div className={s.chip} data-colour>
         <span className={s.more} onClick={(e) => e.stopPropagation()}>
-          <IconButton icon="more_horiz" label="More" size="xs" onContent tabIndex={-1} onClick={(e) => p.onMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
+          <IconButton icon="more_horiz" label="More" size="sm" onContent tabIndex={-1} onClick={(e) => p.onMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
         </span>
         <button
           type="button"
@@ -305,7 +313,7 @@ function Tile(p: TileProps) {
           <button
             type="button"
             className={cx(s.lock, p.locked && s.on)}
-            aria-label={p.locked ? 'Unlock' : 'Lock'}
+            aria-label="Lock swatch"
             aria-pressed={p.locked}
             tabIndex={-1}
             onClick={(e) => {
@@ -373,7 +381,7 @@ function Ghost({ p, guess, shown, data, lockable, onAdd, onDiscard, onLock }: { 
         </span>
         {lockable && (
           <Tooltip content={p.locked ? 'Unlock: a re-roll changes it' : 'Lock: a re-roll keeps it'} shortcut="L" side="below">
-            <button type="button" className={cx(s.lock, p.locked && s.on)} aria-label={p.locked ? 'Unlock' : 'Lock'} aria-pressed={p.locked} onClick={onLock}>
+            <button type="button" className={cx(s.lock, p.locked && s.on)} aria-label="Lock swatch" aria-pressed={p.locked} onClick={onLock}>
               <Icon name={p.locked ? 'lock' : 'lock_open'} size={14} fill={p.locked} />
             </button>
           </Tooltip>

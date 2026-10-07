@@ -16,6 +16,8 @@ export type ToastOptions = {
   ctrlZ?: boolean;
   /** Ctrl+Z answers this toast's Undo only while this holds (asked at the key press; `toast.refresh` redraws the hint) */
   when?: () => boolean;
+  /** a newer toast with the same key takes the place of the one showing (a run of rerolls is one toast, not a stack) */
+  key?: string;
   /** ms; default 8000 with undo, 5000 without, until dismissed for errors */
   duration?: number;
   onClose?(reason: 'timeout' | 'undo' | 'dismiss'): void;
@@ -79,6 +81,13 @@ export const toast = {
     // the same plain notice, still showing, is not shown twice (a press on a dead brush says it once)
     const same = typeof o.message === 'string' && !o.undo ? list.find((x) => !x.leaving && !x.undo && x.message === o.message && x.kind === o.kind) : undefined;
     if (same) return same.id;
+    // the toast this one replaces goes at once, without its Undo or its leave
+    const old = o.key ? list.filter((x) => x.key === o.key) : [];
+    for (const x of old) {
+      clearTimeout(timers.get(x.id)?.handle);
+      timers.delete(x.id);
+    }
+    if (old.length) list = list.filter((x) => !old.includes(x));
     const id = crypto.randomUUID();
     const duration = o.duration ?? (o.kind === 'error' ? Infinity : o.undo ? 8000 : 5000);
     emit([...list, { ...o, id, owner: toast.owner(), ctrlZLive: !!o.undo && o.ctrlZ !== false, leaving: false }]);

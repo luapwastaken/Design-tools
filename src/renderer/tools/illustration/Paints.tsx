@@ -107,7 +107,7 @@ function Box({ v }: { v: IllustrationView }) {
                   </Tooltip>
                 )}
               </button>
-              {'custom' in p && <IconButton icon="delete" label={`Remove ${p.name}`} size="xs" onClick={() => setArmed(p.id)} />}
+              {'custom' in p && <IconButton icon="delete" label={`Remove ${p.name}`} size="sm" onClick={() => setArmed(p.id)} />}
             </div>
           ),
         )}

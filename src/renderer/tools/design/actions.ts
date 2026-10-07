@@ -303,15 +303,20 @@ export function buildNow(doc: Doc, brand?: { oklch: Oklch; name?: string | null 
   const primary = swatches.find((w) => w.role === 'Primary')!;
   doc.transact('Build palette', (d) => ({ ...d, swatches }));
   patchView({ selected: [primary.id], locked: brand ? [primary.id] : [], ...(v.tabChosen ? {} : { tab: 'preview' as const }) });
-  const ground = made.Background[0] > 0.6 ? 'light' : 'dark';
-  const wanted = styleGround(v.preset);
-  if (brand && ground !== wanted) {
-    const on = contrast(brand.oklch, wanted === 'light' ? [0.97, 0, 0] : [0.23, 0, 0]);
-    toast.show({
-      icon: 'info',
-      message: `Built on a ${ground} ground: ${displayName({ name: brand.name ?? '', oklch: brand.oklch })} reads ${on.toFixed(1)}:1 on ${wanted === 'light' ? 'white' : 'the dark page'}, under the 3:1 a fill needs. Lock a ${wanted} Background to keep it.`,
-    });
-  }
+  const flipped = groundFlip(made.Background, v.preset, brand ? { name: brand.name ?? '', oklch: brand.oklch } : null);
+  if (flipped) toast.show({ icon: 'info', message: `${flipped} Lock a ${styleGround(v.preset)} Background to keep it.` });
+}
+
+/**
+ * Why a palette sits on the other ground than its Style: the brand colour cannot hold 3:1 on the
+ * Style's ground, so the build used the other one. Null when the ground is the Style's, or there is no brand colour.
+ */
+export function groundFlip(background: Oklch, preset: string, brand: { name: string; oklch: Oklch } | null): string | null {
+  const ground = background[0] > 0.6 ? 'light' : 'dark';
+  const wanted = styleGround(preset);
+  if (!brand || ground === wanted) return null;
+  const on = contrast(brand.oklch, wanted === 'light' ? [0.97, 0, 0] : [0.23, 0, 0]);
+  return `Built on a ${ground} ground: ${displayName(brand)} reads ${on.toFixed(1)}:1 on ${wanted === 'light' ? 'white' : 'the dark page'}, under the 3:1 a fill needs.`;
 }
 
 /** the swatch that holds each of the seven jobs (the first, should an import give two the same one) */
@@ -353,6 +358,7 @@ function announceReroll(doc: Doc, n: number, before: ReturnType<typeof rerollFie
   const after = doc.get();
   toast.show({
     icon: 'casino',
+    key: 'reroll',
     message: `Rerolled ${plural(n, 'colour')}.`,
     when: () => doc.get() === after,
     undo: () => {
