@@ -16,8 +16,7 @@
 .step.hot .colour { outline: 1px dashed var(--tick-strong); outline-offset: 2px; }
 .step.sel, .step.sel:hover { box-shadow: 0 0 0 1.5px var(--ink); }
 .step.sel .colour, .step.sel:hover .colour { outline: none; }
-.step:focus-visible { outline: none; }
-.step:focus-visible .read::after { content: ""; position: absolute; right: 10px; bottom: -4px; left: 10px; height: 2px; border-radius: 1px; background: var(--signal); }
+.step:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .badge { position: absolute; top: 8px; left: 8px; padding: 3px 6px; border-radius: 3px; background: var(--on-content-bg); color: var(--on-content-ink); font: 500 var(--fs-label)/1 var(--font-sans); }
 .edited .colour::after { content: ""; position: absolute; top: 9px; right: 9px; width: 7px; height: 7px; border-radius: 50%; background: var(--on-content-ink); box-shadow: 0 0 0 1.5px var(--on-content-bg); }
 .step.broken .colour { box-shadow: inset 0 0 0 2px var(--danger); }

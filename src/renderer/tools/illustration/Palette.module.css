@@ -34,8 +34,7 @@
 .chip.hot { outline: 1px dashed var(--tick-strong); outline-offset: 2px; }
 /* the selected step: ink ring with a module-coloured gap, so it reads on any colour */
 .chip.sel, .chip.sel:hover { box-shadow: 0 0 0 2px var(--surface-4, var(--raise)), 0 0 0 3.5px var(--ink); }
-.chip:focus-visible { outline: none; }
-.chip:focus-visible::after { content: ""; position: absolute; right: 2px; bottom: -8px; left: 2px; height: 2px; border-radius: 1px; background: var(--signal); }
+.chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .base::before { content: ""; position: absolute; top: 24px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--on-content-ink); box-shadow: 0 0 0 1px var(--on-content-bg); }
 .edited::after { content: ""; position: absolute; top: 3px; right: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--on-content-ink); box-shadow: 0 0 0 1.5px var(--on-content-bg); }
 .chip.broken .value { box-shadow: inset 0 0 0 1.5px var(--danger); }

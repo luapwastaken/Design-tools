@@ -43,18 +43,8 @@
 /* left out: the colour folds down to a band, so it reads as off without dimming it */
 .off .colour { height: 6px; margin-top: 18px; }
 .off .num { color: var(--ink-4); }
-/* keyboard focus: the signal bar under the meta row, never a ring round the colour */
-.chip:focus-visible { outline: none; }
-.chip:focus-visible::after {
-  content: "";
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 0;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--signal);
-}
+/* keyboard focus: a full ring round the chip (never a bar on one edge) */
+.chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 /* a drag: the chip stays with a dashed outline, the insertion point is a signal bar */
 .dragged { outline: 1px dashed var(--tick); outline-offset: -1px; }
 .before::before, .after::before {

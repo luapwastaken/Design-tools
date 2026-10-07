@@ -81,8 +81,8 @@ export function checkCss(decls, vars, isTokens) {
 const LEN = /^(-?\d*\.?\d+)(px)?$/i;
 const ACCENT = /var\(--(signal|agent|danger|ok|cross)(?![\w])[\w-]*\)/;
 const SIDE = /^border-(top|right|bottom|left|block|inline)(-start|-end)?(-width|-color)?$/;
-// positions and keyboard focus are not states: drop lines, insert markers, the focus bar
-const POSITION_MARKS = /\[data-(insert|drop)|:focus-visible|\.(before|after)\b/;
+// positions are not states: drop lines and insert markers. Keyboard focus is one, and a full ring (outline), never a bar
+const POSITION_MARKS = /\[data-(insert|drop)|\.(before|after)\b/;
 
 /**
  * Rule 7: nothing marks a state (selected, active, proposed, failing) with a coloured bar on one
