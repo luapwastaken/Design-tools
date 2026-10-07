@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react';
 import { cmykEstimate, cssColor, rgb255, type Oklch } from '../../shared/color/index.ts';
 import { canHold, capture, hsbMove, hslMove, oklchMove, projectMove, resolve, type Hold, type Move } from '../../shared/color/hold.ts';
+import { hslLine, rgbLine, rgbOnLine } from '../../shared/color/area.ts';
 import { fromCmyk, fromHsb, fromHsl, fromRgb255, hsbOf, hslOf, maxChroma, sameColour, type Cmyk, type Hsb } from '../../shared/color/picker.ts';
-import { GREY_STRIP, FLOOR, hStrip, lStrip, type StripArt } from '../../shared/color/plane.ts';
+import { GREY_STRIP, FLOOR, hStrip, lStrip, planeColour, planePoint, type StripArt } from '../../shared/color/plane.ts';
 import { holdValue, hsbHold } from '../../shared/color/value.ts';
 import type { PickerModel } from '../../shared/types.ts';
 import { useValueLock } from './PickerStyles.tsx';
-import { axisAt } from './PickerPlane.tsx';
+import { axisAt, lcContour, planeHue } from './PickerPlane.tsx';
+import { clamp, roundTo } from './scrub.ts';
 import { toast } from './toast.ts';
 
 /** One number of a colour model: its field, its track, and what setting it does to the colour. */
@@ -38,6 +40,42 @@ export type Channel = {
   type?(v: number): void;
   /** the value hold's carrier (L, B, HSL L): its track doesn't drag (VALUE_HELD says why); the way to change the value is the Value field or its own number */
   carrier?: boolean;
+};
+
+/** the pure hues 60° apart: between them the hue runs linearly in sRGB */
+const pure = (h: number) => cssColor(fromHsb([h, 100, 100]));
+export const HUES = [0, 60, 120, 180, 240, 300, 360].map(pure).join(', ');
+const WHITE = cssColor([1, 0, 0]);
+const BLACK = cssColor([0, 0, 0]);
+/** an sRGB colour (0-255 each) as CSS */
+const srgb = (r: number, g: number, b: number) => cssColor(fromRgb255([r, g, b], 0));
+
+/**
+ * One area of the Square (the Wheel's inner square too), as Photoshop's picker has one per model: the
+ * area shows two components of the model, `bar` the third. Positions are 0..1, y up.
+ */
+export type Area = {
+  kind: 'hsb' | 'hsl' | 'rgb' | 'oklch';
+  name: string;
+  text: string;
+  /** the number aria-valuenow carries */
+  now: number;
+  /** the area's CSS backgrounds and how they blend; null where the area is a canvas (OKLCH's plane, drawn at `hue`) */
+  paint: { image: string; blend: string } | null;
+  hue: number;
+  /** where the colour is */
+  u: number;
+  v: number;
+  /** the value lock's iso-value line in a 0-100 box: null with the lock off (or where there is none) */
+  contour: string | null;
+  /** the pointer at (x, y); with the lock on, the move rides the iso-value line */
+  move(x: number, y: number): void;
+  /** an arrow (a step across and up): the change it makes, or null when it changes nothing */
+  key(dx: number, dy: number): (() => void) | null;
+  /** the third component: the hue, red for RGB */
+  bar: Channel;
+  /** the Wheel's ring: the hue, for the models whose third component it is */
+  ring: { h: number; set(h: number): void } | null;
 };
 
 const stops = (n: number, at: (t: number) => Oklch) => Array.from({ length: n }, (_, i) => cssColor(at(i / (n - 1)))).join(', ');
@@ -233,19 +271,120 @@ export function usePickerColour(value: Oklch, onChange: (o: Oklch) => void) {
     }
   };
 
-  /** the Square's hue bar: each hue at the held value and the saturation last set */
-  const hueTrack = () => (on ? gradient('srgb', LOCKED_STOPS, (t) => fromHsb([t * 360, ...hsbHold(on.target, t * 360, on.s)])) : null);
+  /** the path through points of the 0-100 box (y up) */
+  const path = (pts: [number, number][]) => `M${pts.map(([x, y]) => `${x.toFixed(2)} ${(100 - y).toFixed(2)}`).join('L')}`;
+  /** the hue bar: every hue at full saturation (at the held value with the lock on) */
+  const hueBar = (ch: Channel): Channel => (on ? ch : { ...ch, track: () => `linear-gradient(90deg in srgb, ${HUES})` });
 
-  /** the iso-value line over the saturation-by-brightness area, in its 0-100 box: from the grey at S 0 to where saturation runs out */
-  const contour = () => {
-    if (!on) return null;
-    const hue = hsb.v[0];
-    const top = hsbHold(on.target, hue, 100)[0];
-    const pts = Array.from({ length: 25 }, (_, i) => {
-      const s = (top * i) / 24;
-      return `${s.toFixed(2)} ${(100 - hsbHold(on.target, hue, s)[1]).toFixed(2)}`;
+  /** HSB's and HSL's areas: saturation across, the third component up, the hue on the bar. Held to a value, x picks saturation and the third follows the iso-value line. */
+  function satArea(kind: 'hsb' | 'hsl', third: string, paint: Area['paint'], line: (hue: number) => [number, number][]): Area {
+    const k = kind === 'hsb' ? hsb : hsl;
+    const [hu, sat, up] = k.v;
+    const to = (s: number, t: number) => (s !== sat || t !== up) && k.set([hu, s, t]);
+    return {
+      kind,
+      name: `Saturation and ${third}`,
+      text: `Saturation ${Math.round(sat)}%, ${third} ${Math.round(up)}%`,
+      now: Math.round(sat),
+      paint,
+      hue: hu,
+      u: sat / 100,
+      v: up / 100,
+      contour: on ? path(line(hu)) : null,
+      move: (x, y) => void to(roundTo(x * 100, 1), on ? up : roundTo(y * 100, 1)),
+      // held to a value, Up and Down change it (they move the third); Left and Right leave it to the line
+      key(dx, dy) {
+        const s = clamp(Math.round(sat) + dx, 0, 100);
+        const t = on && !dy ? up : clamp(Math.round(up) + dy, 0, 100);
+        return s !== sat || t !== up ? () => void to(s, t) : null;
+      },
+      bar: hueBar(channels(kind)[0]),
+      ring: { h: hu, set: (x) => k.set([x, sat, up]) },
+    };
+  }
+  const hsbArea = () =>
+    satArea('hsb', 'brightness', { image: `linear-gradient(0deg in srgb, ${BLACK}, ${WHITE}), linear-gradient(90deg in srgb, ${WHITE}, ${pure(hsb.v[0])})`, blend: 'multiply' }, (hue) => {
+      const top = hsbHold(on!.target, hue, 100)[0];
+      return Array.from({ length: 25 }, (_, i) => [(top * i) / 24, hsbHold(on!.target, hue, (top * i) / 24)[1]]);
     });
-    return `M${pts.join('L')}`;
+  // HSL: a grey-to-hue ramp across (the grey at S 0, the hue at S 100) under white at the top fading out at the middle and black at the bottom, which is HSL exactly
+  const hslArea = () =>
+    satArea(
+      'hsl',
+      'lightness',
+      { image: `linear-gradient(180deg in srgb, ${WHITE}, transparent 50%, transparent 50%, ${BLACK}), linear-gradient(90deg in srgb, ${srgb(128, 128, 128)}, ${pure(hsl.v[0])})`, blend: 'normal' },
+      (hue) => hslLine(on!.target, hue),
+    );
+
+  /** RGB's area at the red on the bar: blue across, green up; the two ramps screen to the four corners' bilinear blend exactly */
+  function rgbArea(): Area {
+    const [r, g, b] = rgb255(value);
+    const line = on && rgbLine(on.target, r);
+    // held to a value the pointer rides that value's straight line: blue from the pointer, green solved
+    const ride = (c: number[]) => {
+      const o = rgb(c);
+      emit(o, { ...on!, last: o });
+    };
+    return {
+      kind: 'rgb',
+      name: 'Blue and green',
+      text: `Blue ${b}, green ${g}`,
+      now: b,
+      paint: { image: `linear-gradient(0deg in srgb, ${BLACK}, ${srgb(0, 255, 0)}), linear-gradient(90deg in srgb, ${srgb(r, 0, 0)}, ${srgb(r, 0, 255)})`, blend: 'screen' },
+      hue: h,
+      u: b / 255,
+      v: g / 255,
+      contour: line ? path(line.map(([x, y]) => [x * 100, y * 100])) : null,
+      move(x, y) {
+        const c = on ? rgbOnLine(on.target, r, x) : [r, Math.round(y * 255), Math.round(x * 255)];
+        if (!c || (c[1] === g && c[2] === b)) return;
+        if (on) ride(c);
+        else retarget(rgb(c));
+      },
+      // held to a value, Up and Down change it (green); Left and Right slide blue along the line
+      key(dx, dy) {
+        const next = on && !dy ? rgbOnLine(on.target, r, (b + dx) / 255) : [r, clamp(g + dy, 0, 255), clamp(b + dx, 0, 255)];
+        if (!next || (next[1] === g && next[2] === b)) return null;
+        return () => (on && !dy ? ride(next) : retarget(rgb(next)));
+      },
+      bar: channels('rgb')[0],
+      ring: null,
+    };
+  }
+
+  /** the OKLCH model's area: lightness by chroma at the hue, with the plane's gamut edges; hue on the bar. L carries the value, so held, the pointer's y has no say. */
+  function oklchArea(): Area {
+    const axis = axisAt(h);
+    const [u, v] = planePoint('lc', value, axis);
+    const to = (next: Oklch, held: boolean) => (next[0] !== l || next[1] !== c) && (held ? slide(next) : retarget(next));
+    return {
+      kind: 'oklch',
+      name: 'Chroma and lightness',
+      text: `L ${(l * 100).toFixed(1)}, C ${c.toFixed(3)}`,
+      now: Math.round(l * 100),
+      paint: null,
+      hue: planeHue(h),
+      u: clamp(u, 0, 1),
+      v: clamp(v, 0, 1),
+      contour: on ? lcContour(on.target, planeHue(h), 100, 100, axis) : null,
+      move(x, y) {
+        const at = planeColour('lc', x, y, value, axis);
+        void to([on ? l : roundTo(at[0], 3), roundTo(at[1], 3), h], !!on);
+      },
+      key(dx, dy) {
+        const next: Oklch = [clamp(roundTo(l + dy * 0.01, 3), 0, 1), clamp(roundTo(c + dx * 0.002, 3), 0, 0.4), h];
+        return next[0] !== l || next[1] !== c ? () => void to(next, !!on && !dy) : null;
+      },
+      bar: channels('oklch')[2],
+      ring: null,
+    };
+  }
+
+  /** the Square's area for the model; the Wheel's inner square is HSB's or HSL's (RGB, ≈CMYK and OKLCH have no matching hue ring, so it stays HSB's) */
+  const area = (model: PickerModel, wheel = false): Area => {
+    if (wheel) return model === 'hsl' ? hslArea() : hsbArea();
+    // ≈CMYK has four inks and no honest flat plane: it keeps the saturation by brightness area
+    return { hsb: hsbArea, hsl: hslArea, rgb: rgbArea, cmyk: hsbArea, oklch: oklchArea }[model]();
   };
 
   /** the most chroma sRGB has at this lightness and hue (at the held value, with the lock on): one move */
@@ -255,8 +394,7 @@ export function usePickerColour(value: Oklch, onChange: (o: Oklch) => void) {
   };
 
   return {
-    hsb: hsb.v,
-    setHsb: hsb.set,
+    area,
     channels,
     /** the value held, 0..1, when the lock has something to hold; null when it is off, or at black or white */
     target: on?.target ?? null,
@@ -269,7 +407,5 @@ export function usePickerColour(value: Oklch, onChange: (o: Oklch) => void) {
     chroma: on?.c ?? null,
     retarget,
     begin,
-    hueTrack,
-    contour,
   };
 }

@@ -15,6 +15,7 @@ export { useDocNumber, useDocColour } from './bind.ts';
 export { ColorField, type ColorFieldProps } from './ColorField.tsx';
 export { Popover } from './Popover.tsx';
 export type { Match } from './PickerHold.tsx';
+export { PickerModelSelect } from './PickerNumbers.tsx';
 export { Picker, PickerBody, pickFromScreen, type PickerProps, type ColourGesture } from './Picker.tsx';
 export { PickerStyles, toggleValueLock, usePickerStyle, usePickerModel, PICKER_STYLE_OPTIONS } from './PickerStyles.tsx';
 export type { PickerStyle, PickerModel } from '../../shared/types.ts';

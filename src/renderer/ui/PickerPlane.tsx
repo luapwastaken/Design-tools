@@ -30,7 +30,7 @@ function memo<K, T>(cache: Map<K, T>, key: K, make: () => T, keep = KEEP): T {
   return v;
 }
 
-type Art = { image: ImageData } & Pick<PlaneArt, 'srgb' | 'p3' | 'empty'>;
+export type Art = { image: ImageData } & Pick<PlaneArt, 'srgb' | 'p3' | 'empty'>;
 const axes = new Map<number, number>();
 const arts = new Map<string, Art>();
 
@@ -39,8 +39,20 @@ export const planeHue = (h: number) => Math.round(h * 10) / 10;
 /** the chroma axis the L by C plane and the C track share */
 export const axisAt = (h: number) => memo(axes, planeHue(h), () => planeAxis(planeHue(h)));
 
+/** the plane's art at a fixed value, cached: a drag across it never redraws (the Square's OKLCH area uses it too) */
+export const planeImage = (id: PlaneId, fixed: number, pw: number, ph: number, axis: number, held: number | null): Art =>
+  memo(
+    arts,
+    `${id}|${fixed}|${held}|${axis}|${pw}|${ph}`,
+    () => {
+      const a = planeArt(id, fixed, pw, ph, axis, held);
+      return { image: new ImageData(a.px, pw, ph), srgb: a.srgb, p3: a.p3, empty: a.empty };
+    },
+    16,
+  );
+
 /** the value lock's iso-value line over the L by C plane: from the grey axis out to the most chroma sRGB has at this value */
-const lcContour = (target: number, hue: number, w: number, rows: number, axis: number) => {
+export const lcContour = (target: number, hue: number, w: number, rows: number, axis: number) => {
   const top = holdValue(target, 0.5, hue)[1];
   const pts = Array.from({ length: 49 }, (_, i) => {
     const c = (top * i) / 48;
@@ -96,13 +108,7 @@ export function PickerPlane({ value, target = null, chroma = null, onSlide, onBe
   // doesn't depend on L, so a drag with the lock on never redraws it
   const held = id === 'ch' && target !== null ? Math.round(target * 500) / 500 : null;
   const fixed = held !== null ? 0 : id === 'lc' ? planeHue(h) : planeFixed(id, value);
-  const art =
-    w && rows
-      ? memo(arts, `${id}|${fixed}|${held}|${axis}|${pw}|${ph}`, () => {
-          const a = planeArt(id, fixed, pw, ph, axis, held);
-          return { image: new ImageData(a.px, pw, ph), srgb: a.srgb, p3: a.p3, empty: a.empty };
-        }, 16)
-      : null;
+  const art = w && rows ? planeImage(id, fixed, pw, ph, axis, held) : null;
 
   useLayoutEffect(() => {
     if (art) canvas.current?.getContext('2d')!.putImageData(art.image, 0, 0);

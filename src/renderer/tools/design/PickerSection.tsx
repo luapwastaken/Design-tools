@@ -6,7 +6,7 @@ import { fromHex } from '../../../shared/color/picker.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { HexField } from '../../ui/HexField.tsx';
 import { cx } from '../../ui/cx.ts';
-import { CopyAs, IconButton, NumberField, PickerBody, PickerStyles, pickFromScreen, Segmented, SrgbFix, TextInput, Tooltip, useDocColour, usePickerStyle } from '../../ui/index.ts';
+import { CopyAs, IconButton, NumberField, PickerBody, PickerModelSelect, PickerStyles, pickFromScreen, Segmented, SrgbFix, TextInput, Tooltip, useDocColour, usePickerModel, usePickerStyle } from '../../ui/index.ts';
 import { usePickerColour, type Channel } from '../../ui/pickerModels.ts';
 import { Section } from '../common/Section.tsx';
 import { fmtL } from '../common/names.ts';
@@ -52,6 +52,7 @@ function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Sw
     set: (x, o) => recolour(x, { [w.id]: o }),
   });
   const style = usePickerStyle();
+  const model = usePickerModel();
   const pc = usePickerColour(colour.value, colour.onChange);
   const g: Gesture = { onBegin: () => colour.onBegin?.(), onCommit: (k) => colour.onCommit?.(k), onCancel: () => colour.onCancel?.() };
   const locked = v.locked.includes(w.id);
@@ -112,6 +113,14 @@ function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Sw
         </div>
       </div>
 
+      {(style === 'square' || style === 'wheel') && (
+        <div className={s.row}>
+          <span className={s.lab}>Area</span>
+          <div className={s.model}>
+            <PickerModelSelect model={model} />
+          </div>
+        </div>
+      )}
       {style !== 'sliders' && style !== 'oklch' && <Numbers label="HSB" channels={pc.channels('hsb')} g={g} />}
       {style !== 'sliders' && <Numbers label="RGB" channels={pc.channels('rgb')} g={g} />}
 
