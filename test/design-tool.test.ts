@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { deltaE, hexToOklch, simulateCvd, type Oklch } from '../src/shared/color/index.ts';
 import { greyOf, holdValue, valueOf } from '../src/shared/color/value.ts';
 import type { RampSpec, Swatch } from '../src/shared/types.ts';
-import { cvdFix, spreadV, spreadVs, valueFix } from '../src/renderer/tools/common/adjust.ts';
+import { cvdFix, partPair, spreadCluster, spreadV, spreadVs, valueFix } from '../src/renderer/tools/common/adjust.ts';
 import { nextV } from '../src/renderer/tools/design/adjust.ts';
 import { fromPayload, moveIds, recolour, toPayload, type DesignDoc } from '../src/renderer/tools/design/doc.ts';
 
@@ -116,4 +116,56 @@ test('an Illustration palette goes back to its file with its ramps, groups, step
   // a plain palette stays plain
   assert.equal('ramps' in toPayload(fromPayload({ notes: '', swatches: [sw('a', [0.5, 0, 0])] })), false);
   assert.equal('scene' in toPayload(fromPayload({ notes: '', swatches: [sw('a', [0.5, 0, 0])] })), false);
+});
+
+test('a held colour never moves in a spread: the free ones make room round it, or nothing moves', () => {
+  const a: Oklch = holdValue(0.5, 0.1, 30);
+  const b: Oklch = holdValue(0.52, 0.1, 200);
+  const [x, y] = spreadV(a, b, 0.1, [], undefined, [true, false]);
+  assert.deepEqual(x, a, 'the held one is exactly as it was');
+  assert.ok(Math.abs(val(y) - val(x)) >= 0.1 - 1e-6 && val(y) > val(x), 'the free one moved clear, still the lighter');
+  // darker free colour: it steps down, not through the held one
+  const [p, q] = spreadV(b, a, 0.1, [], undefined, [false, true]);
+  assert.deepEqual(q, a);
+  assert.ok(val(a) - val(p) >= 0.1 - 1e-6 || val(p) - val(a) >= 0.1 - 1e-6);
+  // no room: the held one at white, the other can only be lighter than it is
+  const white: Oklch = [1, 0, 0];
+  assert.deepEqual(spreadVs([white, holdValue(0.98, 0.02, 30)], 0.2, [], undefined, [true, false]).map(val).map((v) => +v.toFixed(2)), [1, 0.8], 'it steps down away from the white');
+  // a run between two held colours that cannot hold it comes back as it was
+  const [lo, hi] = [holdValue(0.4, 0, 0), holdValue(0.5, 0, 0)];
+  const mid = holdValue(0.45, 0.05, 90);
+  assert.deepEqual(spreadVs([lo, mid, hi], 0.1, [], undefined, [true, false, true]), [lo, mid, hi]);
+});
+
+test('partPair: a locked colour stays, the colour that moves first moves alone, and a passing contrast pair is not broken', () => {
+  const red = { ...sw('red', [0.6, 0.15, 30]), role: 'Primary' };
+  const green = { ...sw('green', [0.62, 0.12, 140]), role: 'Highlight' };
+  const rank = (w: Swatch) => (w.role === 'Highlight' ? 0 : 2);
+  const both = [red, green];
+  const free = partPair(red, green, ['deutan'], 12, both, { rank });
+  assert.ok(free.changes && free.changes.red === red.oklch, 'the Primary stays where it is: the Highlight moves first');
+  assert.notDeepEqual(free.changes!.green, green.oklch);
+  assert.ok(deltaE(simulateCvd(free.changes!.red, 'deutan'), simulateCvd(free.changes!.green, 'deutan')) >= 12);
+  const lockedGreen = partPair(red, green, ['deutan'], 12, both, { locked: ['green'], rank });
+  assert.ok(lockedGreen.changes && lockedGreen.changes.green === green.oklch && lockedGreen.changes.red !== red.oklch, 'the locked one stays, the other moves');
+  assert.deepEqual(partPair(red, green, ['deutan'], 12, both, { locked: ['red', 'green'] }), { changes: null, blocked: true });
+});
+
+test('spreadCluster: a run that reads as one grey spreads round its locked colours, the supporting ones first', () => {
+  const run = [sw('a', greyOf(0.5)), sw('b', greyOf(0.52)), sw('c', greyOf(0.54))].map((w, i) => ({ ...w, role: i === 1 ? 'Highlight' : 'Primary' }));
+  const moved = spreadCluster(run, 0.06, [], { locked: ['a'], rank: (w) => (w.role === 'Highlight' ? 0 : 2) });
+  const out = moved.changes!;
+  assert.deepEqual(out.a, run[0].oklch, 'locked, so it stays');
+  const vs = ['a', 'b', 'c'].map((id) => val(out[id]));
+  assert.ok(vs[1] - vs[0] >= 0.06 - 1e-6 && vs[2] - vs[1] >= 0.06 - 1e-6, `spaced ${vs.map((v) => v.toFixed(3))}`);
+  assert.deepEqual(spreadCluster(run, 0.06, [], { locked: ['a', 'b', 'c'] }), { changes: null, blocked: true });
+});
+
+test('blank names that would repeat are numbered, so a sentence never names two colours alike', async () => {
+  const { named } = await import('../src/renderer/tools/common/names.ts');
+  const list = [sw('a', [0.12, 0.01, 30]), sw('b', [0.14, 0.01, 30]), { ...sw('c', [0.13, 0.01, 30]), name: 'Black 2' }];
+  const names = named(list).map((w) => w.name);
+  assert.equal(new Set(names.map((n) => n.toLowerCase())).size, 3, names.join());
+  assert.equal(names[2], 'Black 2', 'a name the user gave is never changed');
+  assert.ok(names[0] !== names[1]);
 });

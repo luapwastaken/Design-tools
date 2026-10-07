@@ -1,18 +1,18 @@
 // Edits the row, the inspector and the keyboard share. Each is one history step (spec §8).
-import { hexToOklch, type Oklch } from '../../../shared/color/index.ts';
+import { contrast, hexToOklch, toHex, type Oklch } from '../../../shared/color/index.ts';
 import { holdValue, valueOf } from '../../../shared/color/value.ts';
 import type { DocController } from '../../../shared/doc-api.ts';
-import { buildRoles, completeRoles } from '../../../shared/palette/brand.ts';
+import { buildRoles, completeRoles, STYLE_LIST, styleGround } from '../../../shared/palette/brand.ts';
 import { gradientStops } from '../../../shared/palette/gradient.ts';
 import { ROLES, type Role } from '../../../shared/palette/roles.ts';
 import { fitChroma } from '../../../shared/palette/space.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { shell } from '../../shell/core/index.ts';
-import { copyColour, pickFromScreen, toast } from '../../ui/index.ts';
+import { copyColour, pickFromScreen, toast, type NumberGesture } from '../../ui/index.ts';
 import { nextV } from './adjust.ts';
 import { suggestRoles } from './artboard.ts';
 import { runComplete, runGenerate } from './build.ts';
-import { displayName, insertAfter, listNames, moveIds, newSwatch, plural, recolour, removeIds, type DesignDoc, type DesignView } from './doc.ts';
+import { displayName, insertAfter, listNames, moveIds, newSwatch, plural, recolour, removeIds, type BuildMethod, type DesignDoc, type DesignView } from './doc.ts';
 import { clearProposals, dropProposals, proposals, proposalsFrom, type Proposal } from './proposals.ts';
 import { armed, getView, patchView } from './view-state.ts';
 
@@ -101,29 +101,40 @@ export function deleteSelected(doc: Doc): void {
 }
 
 /**
- * Proposals into the palette, one step. A proposal made for a role (Complete the palette) takes it;
- * with `assign` (Keep all) the rest are given the roles the palette lacks (suggestRoles), and a role
- * the palette already uses is never taken from its owner.
+ * The role each proposal takes when it is kept: the one it was made for (Complete the palette) when
+ * the palette lacks it, and with `assign` (Keep all) the roles still missing, suggested from the
+ * colours. The ghost chips show these before the press, so Keep all does what the row said.
  */
-export function addProposals(doc: Doc, items: Proposal[], assign = false): void {
-  if (!items.length) return;
-  const used = new Set(doc.get().swatches.flatMap((w) => (w.role ? [w.role] : [])));
+export function proposedRoles(swatches: Swatch[], items: Proposal[], assign: boolean): { given: (string | null)[]; roles: (string | null)[] } {
+  const used = new Set(swatches.flatMap((w) => (w.role ? [w.role] : [])));
   const given = items.map((p) => (p.role && !used.has(p.role) ? p.role : null));
   const suggested = assign
     ? suggestRoles(items.map((p) => p.oklch), new Set([...used, ...given.filter((r): r is string => !!r)]), new Set(given.flatMap((r, i) => (r ? [i] : []))), items.map((p) => p.share))
     : [];
-  const roles = given.map((r, i) => r ?? suggested[i] ?? null);
+  return { given, roles: given.map((r, i) => r ?? suggested[i] ?? null) };
+}
+
+/**
+ * Proposals into the palette, one step. A proposal made for a role (Complete the palette) takes it;
+ * with `assign` (Keep all) the rest are given the roles the palette lacks (suggestRoles), and a role
+ * the palette already uses is never taken from its owner. Colours kept from a logo or SVG are the
+ * client's own and start locked (`from`); an image's or a paste's are not.
+ */
+export function addProposals(doc: Doc, items: Proposal[], assign = false, from?: BuildMethod): void {
+  if (!items.length) return;
+  const { given, roles } = proposedRoles(doc.get().swatches, items, assign);
   const add = items.map((p, i) => newSwatch(p.oklch, p.name ?? '', roles[i]));
   doc.transact(items.length === 1 ? 'Add colour' : `Add ${plural(items.length, 'colour')}`, (d) => insertAfter(d, null, add));
   dropProposals(items.map((p) => p.id));
-  // the first one, in the inspector: selecting all would read as editing all of them
-  select([add[0].id]);
+  // the brand colour in the inspector (the first one when none is): selecting all would read as editing all of them
+  const lead = add.find((w) => w.role === 'Primary') ?? add[0];
+  patchView({ selected: [lead.id], ...(from === 'logo' && { locked: [...new Set([...getView().locked, ...add.map((w) => w.id)])] }) });
   const guessed = add.filter((_, i) => roles[i] && !given[i]);
   if (!guessed.length) return;
   const after = doc.get();
   toast.show({
     icon: 'info',
-    message: `Roles suggested: ${listNames(guessed.map((w) => w.role!))}.`,
+    message: `Roles suggested: ${listNames(guessed.map((w) => w.role!))}.${from === 'logo' ? ' The logo colours are locked.' : ''}`,
     when: () => doc.get() === after,
     undo: () => void (doc.get() === after && doc.undo()),
   });
@@ -214,7 +225,21 @@ export function nudge(doc: Doc, dir: -1 | 1): void {
   const ids = selection(d);
   const at = d.swatches.map((w, i) => (ids.includes(w.id) ? i : -1)).filter((i) => i >= 0);
   if (!at.length || (dir < 0 ? at[0] === 0 : at.at(-1) === d.swatches.length - 1)) return;
-  doc.transact(ids.length === 1 ? 'Reorder swatch' : `Reorder ${ids.length} swatches`, (x) => moveIds(x, ids, dir < 0 ? at[0] - 1 : at.at(-1)! + 2));
+  // a run of Alt+arrows is one step
+  doc.transact(ids.length === 1 ? 'Reorder swatch' : `Reorder ${ids.length} swatches`, (x) => moveIds(x, ids, dir < 0 ? at[0] - 1 : at.at(-1)! + 2), 'reorder');
+}
+
+/** the swatches in role order (Background to Highlight), the colours with no role after them in the order they had */
+export const byRole = (swatches: Swatch[]): Swatch[] => {
+  const rank = (w: Swatch) => (w.role && (ROLES as readonly string[]).includes(w.role) ? (ROLES as readonly string[]).indexOf(w.role) : ROLES.length);
+  return swatches.map((w, i) => [w, i] as const).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(([w]) => w);
+};
+
+/** Sort by role: one step */
+export function sortByRole(doc: Doc): void {
+  const sorted = byRole(doc.get().swatches);
+  if (sorted.every((w, i) => w === doc.get().swatches[i])) return;
+  doc.transact('Sort by role', (d) => ({ ...d, swatches: byRole(d.swatches) }));
 }
 
 export function copySelected(doc: Doc): void {
@@ -225,14 +250,15 @@ export function copySelected(doc: Doc): void {
 /** A: every proposal on the board joins the palette, with the roles it lacks suggested */
 export function keepAll(doc: Doc): void {
   const p = proposals.get();
-  if (p) addProposals(doc, p.items, true);
+  if (p) addProposals(doc, p.items, true, p.from);
 }
 
-/** Esc: the armed Delete first, then the proposals, then the selection */
+/** Esc: the armed Delete first, then the proposals, then a many-colour selection back to its active colour (never an empty one: the picker would fall to the first swatch) */
 export function escape(): void {
   if (armed.get()) return armed.set(false);
   if (proposals.get()) return clearProposals();
-  select([]);
+  const sel = getView().selected;
+  if (sel.length > 1) select(sel.slice(0, 1));
 }
 
 /** 1 to 7 and 0: the selected swatch's role */
@@ -255,12 +281,20 @@ export function suggestMore(doc: Doc, seed = newSeed()): void {
   runGenerate(doc.get().swatches, getView());
 }
 
+/** a build from a typed colour is repeatable: its seed comes from the colour, and Reroll gives the variety */
+const seedOf = (o: Oklch): number => {
+  let h = 2166136261;
+  for (const c of toHex(o)) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return 1 + ((h >>> 0) % 99999);
+};
+
 /**
  * Build palette: the seven jobs as swatches with their roles, in the empty palette, one step. The brand
  * colour (typed, picked or pasted) is the Primary exactly as given and starts locked; with none, the
  * seed makes one. The first build shows Preview in use unless the user has chosen a tab themselves.
+ * A brand colour that cannot hold 3:1 on the style's ground builds on the other one, and says so.
  */
-export function buildNow(doc: Doc, brand?: { oklch: Oklch; name?: string | null }, seed = newSeed()): void {
+export function buildNow(doc: Doc, brand?: { oklch: Oklch; name?: string | null }, seed = brand ? seedOf(brand.oklch) : newSeed()): void {
   if (doc.get().swatches.length) return;
   patchView({ seed });
   const v = getView();
@@ -269,31 +303,135 @@ export function buildNow(doc: Doc, brand?: { oklch: Oklch; name?: string | null 
   const primary = swatches.find((w) => w.role === 'Primary')!;
   doc.transact('Build palette', (d) => ({ ...d, swatches }));
   patchView({ selected: [primary.id], locked: brand ? [primary.id] : [], ...(v.tabChosen ? {} : { tab: 'preview' as const }) });
+  const ground = made.Background[0] > 0.6 ? 'light' : 'dark';
+  const wanted = styleGround(v.preset);
+  if (brand && ground !== wanted) {
+    const on = contrast(brand.oklch, wanted === 'light' ? [0.97, 0, 0] : [0.23, 0, 0]);
+    toast.show({
+      icon: 'info',
+      message: `Built on a ${ground} ground: ${displayName({ name: brand.name ?? '', oklch: brand.oklch })} reads ${on.toFixed(1)}:1 on ${wanted === 'light' ? 'white' : 'the dark page'}, under the 3:1 a fill needs. Lock a ${wanted} Background to keep it.`,
+    });
+  }
 }
 
 /** the swatch that holds each of the seven jobs (the first, should an import give two the same one) */
 const jobHolders = (swatches: Swatch[]): [Role, Swatch][] =>
   ROLES.flatMap((role) => swatches.filter((w) => w.role === role).slice(0, 1).map((w): [Role, Swatch] => [role, w]));
 
+/** the view fields a reroll may change, as they were: what its Undo puts back */
+const rerollFields = (v: DesignView) => ({ preset: v.preset, accent: v.accent, seed: v.seed });
+
 /**
- * Reroll: every unlocked colour that has a job is made again from the locked ones (a new Accent and
- * neutrals round a locked Primary), in one step. A colour without a role has no job and stays.
- * `patch` is a changed Style, Accent or Seed, which rerolls in place the same way.
+ * What a reroll would change: every unlocked colour that has a job, made again from the locked ones
+ * (a new Accent and neutrals round a locked Primary), by swatch id. A colour without a role has no job
+ * and stays. Null, after saying why in a toast, when there is nothing to change.
  */
-export function rerollNow(doc: Doc, patch: Partial<DesignView> = {}): void {
-  patchView(patch);
+function planReroll(doc: Doc): { changes: Record<string, Oklch>; n: number } | null {
   const v = getView();
   const jobs = jobHolders(doc.get().swatches);
-  if (!jobs.length) return void toast.show({ icon: 'info', message: 'Nothing to reroll yet: no colour has a role. Give colours roles, or use Suggest more colours.' });
+  if (!jobs.length) {
+    toast.show({ icon: 'info', message: 'Nothing to reroll yet: no colour has a role. Press Give roles in the top bar, or give colours roles yourself.' });
+    return null;
+  }
   const free = jobs.filter(([, w]) => !v.locked.includes(w.id));
-  if (!free.length) return void toast.show({ icon: 'lock', message: 'Every colour with a role is locked. Press L on one to let it change.' });
+  if (!free.length) {
+    toast.show({ icon: 'lock', message: 'Every colour with a role is locked. Press L on one to let it change.' });
+    return null;
+  }
   const locked = Object.fromEntries(jobs.filter(([, w]) => v.locked.includes(w.id)).map(([role, w]) => [role, w.oklch]));
   const made = buildRoles({ seed: v.seed, style: v.preset, accent: v.accent, locked });
-  doc.transact('Reroll palette', (d) => recolour(d, Object.fromEntries(free.map(([role, w]) => [w.id, made[role]]))));
+  const changes = Object.fromEntries(free.map(([role, w]) => [w.id, made[role]]));
+  // a locked Text or Muted that no page can hold: the build cannot fix it, so say so
+  const unreadable = jobs.filter(([role, w]) => (role === 'Text' || role === 'Muted') && v.locked.includes(w.id) && Math.max(contrast(w.oklch, [0.97, 0, 0]), contrast(w.oklch, [0.15, 0, 0])) < 4.5);
+  if (unreadable.length) toast.show({ icon: 'lock', message: `Locked ${listNames(unreadable.map(([, w]) => displayName(w)))} cannot read on a light or a dark page.` });
+  return { changes, n: free.filter(([, w]) => changes[w.id].some((x, i) => x !== w.oklch[i])).length };
+}
+
+/** "Rerolled 5 colours", with an Undo that also puts the Style, Accent and Seed back */
+function announceReroll(doc: Doc, n: number, before: ReturnType<typeof rerollFields>): void {
+  if (!n) return;
+  const after = doc.get();
+  toast.show({
+    icon: 'casino',
+    message: `Rerolled ${plural(n, 'colour')}.`,
+    when: () => doc.get() === after,
+    undo: () => {
+      if (doc.get() !== after) return;
+      doc.undo();
+      patchView(before);
+    },
+  });
+}
+
+/**
+ * Reroll: the unlocked colours with a job are made again, in one step, and a toast says how many (with
+ * Undo). `patch` is a changed Style, Accent or Seed, which rerolls in place the same way. A Complete
+ * the palette that is still up is made again from the new colours.
+ */
+export function rerollNow(doc: Doc, patch: Partial<DesignView> = {}): void {
+  const before = rerollFields(getView());
+  patchView(patch);
+  const plan = planReroll(doc);
+  if (!plan) return;
+  doc.transact('Reroll palette', (d) => recolour(d, plan.changes));
+  if (proposalsFrom('complete')) completeNow(doc);
+  announceReroll(doc, plan.n, before);
+}
+
+/** the Seed field: one gesture, so a scrub or a run of arrow keys is one undo step and one toast */
+export function seedGesture(doc: Doc): Pick<NumberGesture, 'onBegin' | 'onChange' | 'onCommit' | 'onCancel'> {
+  let before: ReturnType<typeof rerollFields> | null = null;
+  let n = 0;
+  return {
+    onBegin() {
+      before = rerollFields(getView());
+      n = 0;
+      doc.begin();
+    },
+    onChange(seed) {
+      patchView({ seed });
+      const plan = planReroll(doc);
+      if (!plan || !doc.inGesture()) return;
+      n = plan.n;
+      doc.set((d) => recolour(d, plan.changes));
+    },
+    onCommit(fromKey) {
+      doc.commit('Reroll palette', fromKey ? 'reroll-seed' : undefined);
+      if (before && !fromKey) announceReroll(doc, n, before);
+      if (proposalsFrom('complete')) completeNow(doc);
+    },
+    onCancel() {
+      doc.cancel();
+      if (before) patchView(before);
+    },
+  };
 }
 
 /** a changed Style, Accent or Seed: rerolls the palette in place, or only sets what the next build uses while it is empty */
 export const restyle = (doc: Doc, patch: Partial<DesignView>): void => (doc.get().swatches.length ? rerollNow(doc, patch) : patchView(patch));
+
+/** a palette no colour of which has a role (an image, a paste, colours kept one by one): the roles suggested, in one step */
+export function giveRoles(doc: Doc): void {
+  const list = doc.get().swatches;
+  const roles = suggestRoles(list.map((w) => w.oklch));
+  if (!roles.some(Boolean)) return void toast.show({ icon: 'info', message: 'Add a lighter and a darker colour first: roles are suggested from the lightest, darkest and most colourful.' });
+  doc.transact('Give roles', (d) => ({ ...d, swatches: d.swatches.map((w, i) => (roles[i] ? { ...w, role: roles[i] } : w)) }));
+  const after = doc.get();
+  toast.show({ icon: 'info', message: `Roles suggested: ${listNames(roles.filter((r): r is string => !!r))}.`, when: () => doc.get() === after, undo: () => void (doc.get() === after && doc.undo()) });
+}
+
+/** true when some colour holds one of the seven jobs: Reroll has something to do */
+export const hasJobs = (swatches: Swatch[]): boolean => jobHolders(swatches).length > 0;
+
+/** a colour the user edited by hand: a role colour becomes locked, so a reroll never takes it back (Undo does not unlock) */
+export function lockEdited(doc: Doc, before: Swatch[]): void {
+  const v = getView();
+  const was = new Map(before.map((w) => [w.id, w.oklch]));
+  const edited = doc.get().swatches.filter((w) => w.role && (ROLES as readonly string[]).includes(w.role) && was.has(w.id) && was.get(w.id)!.some((x, i) => x !== w.oklch[i]) && !v.locked.includes(w.id));
+  if (!edited.length) return;
+  patchView({ locked: [...new Set([...v.locked, ...edited.map((w) => w.id)])] });
+  toast.show({ icon: 'lock', message: `Locked ${listNames(edited.map(displayName))}: you edited ${edited.length === 1 ? 'it' : 'them'}. L unlocks.` });
+}
 
 /** the jobs no swatch holds yet; none when the palette holds no job at all (nothing to complete from) */
 export function missingRoles(swatches: Swatch[]): Role[] {

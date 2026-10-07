@@ -3,7 +3,7 @@
 // ASE also writes back the values an import brought in.
 import { strToU8, zipSync } from 'fflate';
 import type { Swatch } from '../types.ts';
-import { hsb, rgb255, toHex, type Oklch } from '../color/index.ts';
+import { contrast, hsb, rgb255, toHex, type Oklch } from '../color/index.ts';
 
 export { writeSheetSvg, type SheetOptions } from './sheet.ts';
 
@@ -93,13 +93,30 @@ export function cssNames(swatches: Swatch[]): string[] {
   });
 }
 
-/** `--name: oklch()` with the full colour (it may be wider than sRGB), and `--name-hex` as the sRGB twin */
-export function writeCss(swatches: Swatch[]): string {
+/**
+ * The colour that reads on the Primary (a button label): the palette's Text or Background where one
+ * reads at 4.5:1, else black or white, whichever reads more. Null when the palette has no Primary.
+ */
+export function onPrimary(swatches: Swatch[]): Oklch | null {
+  const primary = swatches.find((s) => s.role === 'Primary');
+  if (!primary) return null;
+  const own = ['Text', 'Background'].flatMap((r) => swatches.filter((s) => s.role === r).slice(0, 1).map((s) => s.oklch));
+  const ratio = (o: Oklch) => contrast(o, primary.oklch);
+  return own.find((o) => ratio(o) >= 4.5) ?? ([[1, 0, 0], [0, 0, 0]] as Oklch[]).reduce((a, b) => (ratio(b) > ratio(a) ? b : a));
+}
+
+/**
+ * `--name: oklch()` with the full colour (it may be wider than sRGB), and `--name-hex` as the sRGB twin
+ * (`hex: false` leaves the twins out); a palette with a Primary also gets `--on-primary`, the colour a button label wears on it.
+ */
+export function writeCss(swatches: Swatch[], { hex = true }: { hex?: boolean } = {}): string {
   const keys = cssNames(swatches);
   const lines = swatches.flatMap((s, i) => {
     const named = slug(s.role ?? '') && s.name.trim() ? ` /* ${s.name.trim().replace(/\*\//g, '* /')} */` : '';
-    return [`  --${keys[i]}: ${oklchCss(s.oklch)};${named}`, `  --${keys[i]}-hex: ${toHex(s.oklch)};`];
+    return [`  --${keys[i]}: ${oklchCss(s.oklch)};${named}`, ...(hex ? [`  --${keys[i]}-hex: ${toHex(s.oklch)};`] : [])];
   });
+  const on = keys.includes('on-primary') ? null : onPrimary(swatches);
+  if (on) lines.push(`  --on-primary: ${oklchCss(on)};`, ...(hex ? [`  --on-primary-hex: ${toHex(on)};`] : []));
   return `:root {\n${lines.join('\n')}\n}\n`;
 }
 
@@ -107,6 +124,15 @@ export function writeTailwind(swatches: Swatch[]): string {
   const keys = cssNames(swatches);
   const rows = swatches.map((s, i) => `        ${JSON.stringify(keys[i])}: "${toHex(s.oklch)}",`);
   return ['module.exports = {', '  theme: {', '    extend: {', '      colors: {', ...rows, '      },', '    },', '  },', '};', ''].join('\n');
+}
+
+/** Tailwind 4: the colours as `--color-*` theme variables in the stylesheet, OKLCH as the CSS export has them */
+export function writeTailwind4(swatches: Swatch[]): string {
+  const keys = cssNames(swatches);
+  const lines = swatches.map((s, i) => `  --color-${keys[i]}: ${oklchCss(s.oklch)};`);
+  const on = keys.includes('on-primary') ? null : onPrimary(swatches);
+  if (on) lines.push(`  --color-on-primary: ${oklchCss(on)};`);
+  return `@theme {\n${lines.join('\n')}\n}\n`;
 }
 
 /** 5 decimals, as `cssColor`: 4 can move a colour one 8-bit step off its hex */

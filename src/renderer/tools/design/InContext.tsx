@@ -1,12 +1,14 @@
 // In context (plan unit X): the palette on a small website, a light and a dark version side by
-// side, with every text-on-fill pair in it checked by the shared grade. Pure presentation; which
-// colour plays which part is decided in context-slots.ts.
+// side. A palette is built for ONE ground: that half is graded (every text-on-fill pair, by the
+// shared grade) and counted; the other half is the same colours derived onto the opposite ground, a
+// picture only, labelled so and never counted. Pure presentation; which colour plays which part is
+// decided in context-slots.ts.
 import { createContext, memo, useContext, useMemo, useRef, type CSSProperties } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { Icon, Module, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { describe, scene, type Pair, type Scene, type Slot, type Status } from './context-slots.ts';
+import { describe, ownMode, scene, type Pair, type Scene, type Slot, type Status } from './context-slots.ts';
 import s from './InContext.module.css';
 
 const ORDERS: { name: string; meta: string; status: Status; label: string }[] = [
@@ -22,6 +24,8 @@ const css = (x: Slot) => cssColor(x.oklch);
 
 /** a failing marker selects the swatch it is about (the artboard's, in Design) */
 const PickSwatch = createContext<((id: string) => void) | null>(null);
+/** false on the half that is not the palette's own ground: it grades nothing, so it marks nothing */
+const Graded = createContext(true);
 
 /** `hidden`: behind the Checks switch, it keeps the last scenes it drew rather than work out new ones unseen */
 export const InContext = memo(function InContext({ swatches, hidden = false, onSelect }: { swatches: Swatch[]; hidden?: boolean; onSelect?(id: string): void }) {
@@ -32,23 +36,28 @@ export const InContext = memo(function InContext({ swatches, hidden = false, onS
   );
   // no colours: the tool keeps Preview shut (Build shows), so there is nothing to say here
   if (!light || !dark) return null;
+  const own = ownMode(swatches);
   return (
     <PickSwatch.Provider value={onSelect ?? null}>
       <div className={s.root}>
         <div className={s.pair}>
-          <Frame scene={light} />
-          <Frame scene={dark} />
+          <Frame scene={light} own={own === 'light'} />
+          <Frame scene={dark} own={own === 'dark'} />
         </div>
       </div>
     </PickSwatch.Provider>
   );
 });
 
-function Frame({ scene: sc }: { scene: Scene }) {
+export const DERIVED = 'Derived from your colours, not built for this ground';
+
+function Frame({ scene: sc, own }: { scene: Scene; own: boolean }) {
   const pairs = Object.values(sc.pairs);
   const failing = pairs.filter((p) => !p.ok);
   const title = sc.mode === 'light' ? 'Light' : 'Dark';
-  const readout = failing.length ? (
+  const readout = !own ? (
+    'PREVIEW ONLY'
+  ) : failing.length ? (
     <>
       <span className={s.fail}>{failing.length} FAIL</span> · {pairs.length} PAIRS
     </>
@@ -56,12 +65,20 @@ function Frame({ scene: sc }: { scene: Scene }) {
     `${pairs.length} PAIRS PASS`
   );
   // the page is a picture to sighted users; the failures are its words for everyone else
-  const label = `${title} website preview. ${failing.length ? failing.map(describe).join(' ') : 'Every text colour reads on its fill.'}`;
+  const label = `${title} website preview. ${!own ? `${DERIVED}.` : failing.length ? failing.map(describe).join(' ') : 'Every text colour reads on its fill.'}`;
   return (
-    <Module title={title} sub={`${sc.page.name} page · ${sc.text.name} text`} readout={readout} scroll className={s.frame}>
-      <div className={s.fit}>
-        <Site sc={sc} label={label} />
-      </div>
+    <Module title={title} sub={own ? `${sc.page.name} page · ${sc.text.name} text` : 'derived, not graded'} readout={readout} scroll className={s.frame}>
+      {!own && (
+        <p className={s.derived} data-derived="">
+          <Icon name="info" size={16} />
+          {DERIVED}. Not counted in the checks.
+        </p>
+      )}
+      <Graded.Provider value={own}>
+        <div className={s.fit}>
+          <Site sc={sc} label={label} />
+        </div>
+      </Graded.Provider>
     </Module>
   );
 }
@@ -76,6 +93,7 @@ function Site({ sc, label }: { sc: Scene; label: string }) {
     '--mu': css(sc.muted),
     '--pr': css(sc.primary),
     '--on-pr': css(sc.onPrimary),
+    '--lk': css(sc.link),
     '--ac': css(sc.accent),
     '--hl': css(sc.highlight),
     '--on-hl': css(sc.onHighlight),
@@ -93,7 +111,10 @@ function Site({ sc, label }: { sc: Scene; label: string }) {
           <span>Inks</span>
           <span>Studio</span>
         </span>
-        <span className={s.signin}>Sign in</span>
+        <span className={s.signin}>
+          Sign in
+          <Flag pair={p.link} inline />
+        </span>
       </div>
 
       <div className={s.hero}>
@@ -117,7 +138,7 @@ function Site({ sc, label }: { sc: Scene; label: string }) {
           </span>
           <span className={s.secondary}>
             See the inks
-            <Flag pair={p.link} />
+            <Flag pair={p.accent} />
           </span>
         </div>
       </div>
@@ -187,7 +208,8 @@ function Pill({ sc, status, label }: { sc: Scene; status: Status; label: string 
  */
 function Flag({ pair, inline }: { pair: Pair; inline?: boolean }) {
   const pick = useContext(PickSwatch);
-  if (pair.ok) return null;
+  const graded = useContext(Graded);
+  if (pair.ok || !graded) return null;
   const id = pair.fg.swatchId ?? pair.bg.swatchId;
   const go = pick && id ? () => pick(id) : undefined;
   return (

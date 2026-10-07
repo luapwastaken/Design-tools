@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { inSrgb, type Oklch } from '../src/shared/color/index.ts';
+import { deltaE, inSrgb, type Oklch } from '../src/shared/color/index.ts';
 import { valueOf } from '../src/shared/color/value.ts';
 import { valueCollisions } from '../src/shared/palette/checks.ts';
 import { generate, PRESETS } from '../src/shared/palette/generate.ts';
@@ -83,4 +83,16 @@ test('editorial and tech carry exactly one strong accent', () => {
 test('an unknown preset falls back to the first, and count 0 gives nothing', () => {
   assert.deepEqual(generate({ seed: 1, count: 3, preset: 'nope', locked: [] }), generate({ seed: 1, count: 3, preset: PRESETS[0].id, locked: [] }));
   assert.deepEqual(generate({ seed: 1, count: 0, preset: 'bold', locked: [] }), []);
+});
+
+test('Suggest follows the palette’s hues, not just its most colourful one, and never repeats a colour', () => {
+  const own: Oklch[] = [[0.5, 0.14, 250], [0.55, 0.1, 190], [0.6, 0.16, 25], [0.93, 0.02, 90]];
+  const seen = new Set<number>();
+  for (let seed = 1; seed <= 40; seed++) {
+    const made = generate({ seed, count: own.length + 6, preset: 'quiet', locked: own }).slice(own.length);
+    assert.ok(made.filter((o) => o[1] >= 0.03).length >= 3, `seed ${seed}: a chromatic palette gets colours with colour in them`);
+    made.forEach((o) => seen.add(Math.round(o[2] / 40)));
+    [...own, ...made].forEach((a, i, all) => all.slice(i + 1).forEach((b) => assert.ok(deltaE(a, b) > 3, `seed ${seed}: two colours alike`)));
+  }
+  assert.ok(seen.size >= 5, `hues spread over ${seen.size} bins`);
 });

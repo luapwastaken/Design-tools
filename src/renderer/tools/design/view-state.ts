@@ -21,6 +21,7 @@ export const DEFAULT_VIEW: DesignView = {
   cvd: 'deutan',
   sim: 'normal',
   locked: [],
+  intended: [],
   surround: 'plain',
   chipData: 'hex',
   paletteH: PALETTE_H.reset,
@@ -29,7 +30,9 @@ export const DEFAULT_VIEW: DesignView = {
   flagE: 10,
   format: 'ase',
   preset: PRESETS[0]?.id ?? '',
-  accent: 'analogous',
+  suggestStyle: 'bold',
+  suggestFrom: 'all',
+  accent: 'split',
   count: 6,
   seed: 1,
   k: 6,
@@ -40,6 +43,7 @@ export const DEFAULT_VIEW: DesignView = {
 const ENUMS: Partial<Record<keyof DesignView, readonly string[]>> = {
   tab: ['contrast', 'check', 'preview', 'harmonies', 'notes'],
   accent: ACCENTS.map((a) => a.value),
+  suggestFrom: ['all', 'selected'],
   surround: ['grey', 'ground', 'plain'],
   chipData: ['hex', 'lch', 'table'],
   cvd: ['protan', 'deutan', 'tritan', 'achromat'],
@@ -65,6 +69,7 @@ function sanitize(raw: unknown): DesignView {
   out.paletteH = clamp(out.paletteH as number, PALETTE_H);
   out.pickerW = clamp(out.pickerW as number, PICKER_W);
   if (!PRESETS.some((p) => p.id === out.preset)) out.preset = DEFAULT_VIEW.preset;
+  if (!PRESETS.some((p) => p.id === out.suggestStyle)) out.suggestStyle = DEFAULT_VIEW.suggestStyle;
   return out as DesignView;
 }
 

@@ -7,6 +7,7 @@ import { inSrgb, linearRgb, parseCss, rgb255, toHex, type Oklch } from './index.
 export const COPY_FORMATS = [
   { id: 'hex', label: 'Hex' },
   { id: 'rgb', label: 'RGB' },
+  { id: 'rgb255', label: 'RGB 0–255' },
   { id: 'hsl', label: 'HSL' },
   { id: 'oklch', label: 'OKLCH' },
   { id: 'oklab', label: 'OKLab' },
@@ -46,6 +47,8 @@ export function formatColour(o: Oklch, format: CopyFormat): string {
       return shown.toUpperCase();
     case 'rgb':
       return `rgb(${rgb255(o).join(' ')})`;
+    case 'rgb255':
+      return rgb255(o).join(', ');
     case 'hsl': {
       const { h = 0, s, l } = hslOf(shown)!;
       return shortest(o, (dp) => `hsl(${num(h, dp)} ${num(s * 100, dp)}% ${num(l * 100, dp)}%)`);

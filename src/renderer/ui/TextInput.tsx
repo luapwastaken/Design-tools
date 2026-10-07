@@ -29,6 +29,8 @@ export type TextInputProps = {
   error?: string;
   className?: string;
   ref?: Ref<HTMLInputElement>;
+  /** data-* attributes go to the input (a focus hook, a smoke selector) */
+  [data: `data-${string}`]: string | undefined;
 };
 
 /**
@@ -41,6 +43,7 @@ export function TextInput(p: TextInputProps) {
   const [problem, setProblem] = useState<string | null>(null);
   const errId = useId();
   const message = problem ?? p.error ?? null;
+  const data = Object.fromEntries(Object.entries(p).filter(([k]) => k.startsWith('data-')));
 
   const revert = () => {
     setText(null);
@@ -97,6 +100,7 @@ export function TextInput(p: TextInputProps) {
           aria-invalid={message ? true : undefined}
           aria-describedby={message ? errId : undefined}
           data-dirty={text !== null ? 'true' : undefined}
+          {...data}
           onChange={(e) => {
             setText(e.target.value);
             setProblem(null);

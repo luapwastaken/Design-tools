@@ -1,7 +1,7 @@
 // Seeded palettes from a style preset: a range of greys and a chroma shape (spec §6.2). Value (the
 // grey a colour becomes) is spread before anything else, then each colour is solved at its value, so
 // a generated palette passes the value check (v1's never did).
-import type { Oklch } from '../color/index.ts';
+import { deltaE, type Oklch } from '../color/index.ts';
 import { holdValue, valueOf } from '../color/value.ts';
 import { random } from './random.ts';
 import { wrapHue } from './space.ts';
@@ -41,9 +41,11 @@ const grey = (l: number) => valueOf([l, 0, 0]);
 
 /**
  * `count` colours; a non-null `locked[i]` stays at slot i unchanged and the others spread around
- * it. Free slots run dark to light. The same options always give the same palette.
+ * it. Free slots run dark to light. The same options always give the same palette. A style with no
+ * hues of its own follows the colourful ones among `hues` (the locked colours unless given): each new
+ * colour starts from a different one of them, so the set spreads over the palette's hues.
  */
-export function generate(opts: { seed: number; count: number; preset: string; locked: (Oklch | null)[] }): Oklch[] {
+export function generate(opts: { seed: number; count: number; preset: string; locked: (Oklch | null)[]; hues?: Oklch[] }): Oklch[] {
   const shape = SHAPES.find((s) => s.id === opts.preset) ?? SHAPES[0];
   const rnd = random(opts.seed);
   const slots = Array.from({ length: Math.max(0, Math.floor(opts.count)) }, (_, i) => opts.locked[i] ?? null);
@@ -52,17 +54,41 @@ export function generate(opts: { seed: number; count: number; preset: string; lo
   const range = rangeFor([grey(shape.l[0]), grey(shape.l[1])], slots.length);
   const vs = spreadValues(taken.map(valueOf), free.length, range, rnd);
   const base = baseHue(shape, taken, rnd);
+  const follow = shape.hues ? [] : colourful(opts.hues ?? taken);
+  // a soft style stays soft round a colourful palette, but not so soft that its colours read as grey
+  const lift = follow.length ? Math.min(2.5, Math.max(1, Math.min(0.1, follow[0][1] * 0.7) / shape.c[1])) : 1;
   const [lo, hi] = range;
   const at = shape.accent ? grey(shape.accent.at) : NaN;
   const accent = shape.accent ? vs.reduce((best, v, j) => (Math.abs(v - at) < Math.abs(vs[best] - at) ? j : best), 0) : -1;
   const made = vs.map((v, j): Oklch => {
     if (j === accent) return holdValue(v, shape.accent!.c * (0.85 + 0.3 * rnd()), between(shape.accent!.hues, rnd()));
     const t = Math.min(1, Math.max(0, (v - lo) / (hi - lo)));
-    const c = (shape.c[0] + (shape.c[1] - shape.c[0]) * Math.sin(Math.PI * t)) * (0.75 + 0.5 * rnd());
-    return holdValue(v, c, wrapHue(base + j * shape.step + (rnd() - 0.5) * shape.wander));
+    const c = (shape.c[0] + (shape.c[1] - shape.c[0]) * Math.sin(Math.PI * t)) * (0.75 + 0.5 * rnd()) * lift;
+    const from = follow.length ? follow[(j + Math.floor(rnd() * follow.length)) % follow.length][2] : base;
+    return holdValue(v, c, wrapHue(from + j * shape.step + (rnd() - 0.5) * shape.wander));
   });
+  apart(made, taken);
   free.forEach((slot, j) => (slots[slot] = made[j]));
   return slots as Oklch[];
+}
+
+/** the colours with colour in them, most colourful first, one per 25 degrees of hue */
+function colourful(list: Oklch[]): Oklch[] {
+  const out: Oklch[] = [];
+  for (const o of [...list].filter((x) => x[1] > 0.03).sort((a, b) => b[1] - a[1])) {
+    if (out.every((x) => Math.abs(((x[2] - o[2] + 540) % 360) - 180) > 25)) out.push(o);
+  }
+  return out;
+}
+
+/** no two colours (made, or made and kept) that read as the same one: a twin turns its hue and gains chroma at its value */
+function apart(made: Oklch[], taken: Oklch[]): void {
+  made.forEach((o, i) => {
+    for (let tries = 0, now = o; tries < 4 && [...taken, ...made.slice(0, i)].some((x) => deltaE(x, now) < 6); tries++) {
+      now = holdValue(valueOf(o), Math.max(now[1], 0.07) * 1.15, wrapHue(now[2] + 55));
+      made[i] = now;
+    }
+  });
 }
 
 const between = ([a, b]: [number, number], t: number) => a + (b - a) * t;

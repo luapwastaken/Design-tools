@@ -6,18 +6,22 @@ import type { ContrastPair } from '../../../shared/palette/checks.ts';
 import { isGround, isInk, ROLES } from '../../../shared/palette/roles.ts';
 import { cx } from '../../ui/cx.ts';
 import { Button, Icon, Tooltip } from '../../ui/index.ts';
+import { toastMoved } from '../common/fixes.ts';
 import { fmtL } from '../common/names.ts';
 import { activeSwatch, setColours, setRole, type Doc } from './actions.ts';
 import { displayName, listNames, named, nameIn, type DesignDoc, type DesignView } from './doc.ts';
 import type { Results } from './results.ts';
 import { pointAt } from './view-state.ts';
+import type { Swatch } from '../../../shared/types.ts';
 import s from './Tabs.module.css';
 
 type Tone = 'ok' | 'mid' | 'bad';
 const gradeOf = (ratio: number): { label: string; tone: Tone } =>
   ratio >= 7 ? { label: 'AAA', tone: 'ok' } : ratio >= 4.5 ? { label: 'AA', tone: 'ok' } : ratio >= 3 ? { label: 'Large only', tone: 'mid' } : { label: 'Fails', tone: 'bad' };
 
-const fixVerb = (p: ContrastPair) => (p.fix!.oklch[0] > p.text.oklch[0] ? 'Lift' : 'Darken');
+/** the swatch a pair's fix moves: the text, or the ground when the text is locked (a Highlight under its Text) */
+const moverOf = (p: ContrastPair) => (p.fix?.swatchId === p.ground.id ? p.ground : p.text);
+const fixVerb = (p: ContrastPair) => (p.fix!.oklch[0] > moverOf(p).oklch[0] ? 'Lift' : 'Darken');
 
 const LOG21 = Math.log(21);
 /** ratios 1 to 21 on a log scale, as WCAG's thresholds are spaced */
@@ -72,7 +76,9 @@ export function ContrastTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: Desig
   const worst = r.failing.reduce<ContrastPair | null>((a, b) => (!a || b.ratio < a.ratio ? b : a), null);
   // free roles (a Border, a Disabled grey) aren't text, so they aren't paired; say so rather than leave them out silently
   const paired = new Set(r.contrast.flatMap((p) => [p.text.id, p.ground.id]));
-  const free = r.shown.filter((x) => x.role !== null && !isGround(x.role) && !isInk(x.role) && !paired.has(x.id));
+  // and a colour with no role has no job to grade once the palette gives others one
+  const anyRole = r.shown.some((x) => x.role !== null && (ROLES as readonly string[]).includes(x.role));
+  const free = r.shown.filter((x) => !isGround(x.role) && !isInk(x.role) && !paired.has(x.id) && (x.role !== null || anyRole));
   const several = (p: ContrastPair) => r.contrast.filter((x) => x.text.id === p.text.id).length > 1;
   const held = ROLES.filter((role) => d.swatches.some((x) => x.role === role)).length;
   return (
@@ -113,7 +119,7 @@ export function ContrastTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: Desig
       ) : (
         <div className={s.pairs}>
           {r.contrast.map((p) => (
-            <RolePair key={`${p.text.id}:${p.ground.id}`} doc={doc} p={p} />
+            <RolePair key={`${p.text.id}:${p.ground.id}`} doc={doc} p={p} shown={r.shown} />
           ))}
         </div>
       )}
@@ -129,7 +135,10 @@ export function ContrastTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: Desig
       {free.length > 0 && (
         <p className={s.note}>
           <Icon name="info" size={16} />
-          <span>Not checked as text: {listNames(free.map((x) => `${displayName(x)} (${x.role})`))}.</span>
+          <span>
+            Not checked as text: {listNames(free.map((x) => `${displayName(x)} (${x.role ?? 'no role'})`))}.
+            {free.some((x) => x.role === null) && ' Give a colour a role to check it.'}
+          </span>
         </p>
       )}
 
@@ -160,9 +169,14 @@ export function ContrastTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: Desig
   );
 }
 
-function RolePair({ doc, p }: { doc: Doc; p: ContrastPair }) {
+function RolePair({ doc, p, shown }: { doc: Doc; p: ContrastPair; shown: Swatch[] }) {
   const g = p.ratio < p.target ? (p.grade === 'Fail' ? { label: 'Fails', tone: 'bad' as Tone } : { label: 'Large only', tone: 'mid' as Tone }) : gradeOf(p.ratio);
-  const fix = () => p.fix && setColours(doc, `${fixVerb(p)} ${displayName(p.text)} for contrast`, { [p.fix.swatchId]: p.fix.oklch });
+  const fix = () => {
+    if (!p.fix) return;
+    const changes = { [p.fix.swatchId]: p.fix.oklch };
+    setColours(doc, `${fixVerb(p)} ${displayName(moverOf(p))} for contrast`, changes);
+    toastMoved(doc, shown, changes, 'L');
+  };
   return (
     <div className={cx(s.pair, p.ratio < p.target && s.failing)} data-fixable={p.fix ? '' : undefined} {...pointAt([p.text.id, p.ground.id])}>
       <Specimen text={p.text.oklch} ground={p.ground.oklch} />
@@ -178,8 +192,13 @@ function RolePair({ doc, p }: { doc: Doc; p: ContrastPair }) {
       <Badge label={g.label} tone={g.tone} target={p.target} ratio={p.ratio} />
       <Gauge ratio={p.ratio} target={p.target} />
       {p.fix && (
-        <Button size="xs" onClick={fix} className={s.fix} tooltip={`${fixVerb(p)} ${displayName(p.text)} to L ${fmtL(p.fix.oklch[0])} for ${p.fix.ratio.toFixed(2)}:1`}>
+        <Button size="xs" onClick={fix} className={s.fix} tooltip={`${fixVerb(p)} ${displayName(moverOf(p))} to L ${fmtL(p.fix.oklch[0])} for ${p.fix.ratio.toFixed(2)}:1`}>
           {fixVerb(p)} to L {fmtL(p.fix.oklch[0])}
+        </Button>
+      )}
+      {p.blocked && (
+        <Button size="xs" disabled className={s.fix} tooltip="Every colour this fix could move is locked. Press L on one to let it move.">
+          Locked
         </Button>
       )}
     </div>

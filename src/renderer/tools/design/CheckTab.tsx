@@ -4,17 +4,18 @@
 import { useMemo } from 'react';
 import { cssColor, hexToOklch, simulateCvd, toSrgbGamut, type Cvd, type Oklch } from '../../../shared/color/index.ts';
 import { valueOf } from '../../../shared/color/value.ts';
-import { printInfo, type CvdClosest, type PrintInfo } from '../../../shared/palette/checks.ts';
+import { moveRank, printInfo, type CvdClosest, type PrintInfo } from '../../../shared/palette/checks.ts';
 import type { InkMatch } from '../../../shared/palette/inks.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
 import { Button, Icon, NumberField, toast, Tooltip } from '../../ui/index.ts';
-import { cvdFix } from '../common/adjust.ts';
+import { partPair, type FixRules } from '../common/adjust.ts';
+import { toastMoved } from '../common/fixes.ts';
 import { Value } from '../common/Value.tsx';
 import { VISIONS, type Kind } from '../common/Vision.tsx';
 import { setColours, type Doc } from './actions.ts';
 import { displayName, type DesignDoc, type DesignView, type Simulate } from './doc.ts';
-import type { Results, Verdict } from './results.ts';
+import { pairKey, type Results, type Verdict } from './results.ts';
 import { patchView, pointAt } from './view-state.ts';
 import s from './Tabs.module.css';
 
@@ -29,7 +30,12 @@ const fullInk = (m: InkMatch) => (inkLabel(m).startsWith(LIB[m.library]) ? inkLa
 
 export function CheckTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: DesignView; r: Results }) {
   const shown = r.shown;
-  const fix = (label: string, changes: Record<string, Oklch>) => setColours(doc, label, changes);
+  // a locked colour stays, the supporting colours move before the brand ones, and no contrast pair that passes breaks
+  const rules: FixRules = { locked: v.locked, rank: (w) => moveRank(w.role), contrast: r.contrast };
+  const fix = (label: string, changes: Record<string, Oklch>) => {
+    setColours(doc, label, changes);
+    toastMoved(doc, shown, changes, 'V');
+  };
   const few = shown.length < 2;
   return (
     <>
@@ -56,7 +62,7 @@ export function CheckTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: DesignVi
           </div>
           <VisionRow kind="typical" shown={shown} pair={r.vision.typical} sim={v.sim} />
           {CVDS.map((k) => (
-            <VisionRow key={k} kind={k} shown={shown} pair={r.vision[k]} sim={v.sim} r={r} flagE={v.flagE} onFix={fix} />
+            <VisionRow key={k} kind={k} shown={shown} pair={r.vision[k]} sim={v.sim} r={r} flagE={v.flagE} rules={rules} onFix={fix} />
           ))}
         </div>
       )}
@@ -65,8 +71,13 @@ export function CheckTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: DesignVi
           swatches={shown}
           onFix={fix}
           pointAt={pointAt}
+          rules={rules}
           collisions={r.collisions}
-          contrast={r.contrast}
+          intended={{
+            hidden: r.intended.length,
+            onMark: (pairs) => patchView({ intended: [...new Set([...v.intended, ...pairs.map(([a, b]) => pairKey(a, b))])] }),
+            onClear: () => patchView({ intended: [] }),
+          }}
           flagL={v.flagL}
           onFlagL={(flagL) => patchView({ flagL })}
         />
@@ -81,7 +92,7 @@ export function CheckTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: DesignVi
 function Verdicts({ list }: { list: Verdict[] }) {
   const rank = (x: Verdict) => (x.ok === false ? 0 : x.ok === undefined ? 1 : 2);
   const sorted = [...list].sort((a, b) => rank(a) - rank(b));
-  const go = (id: string) => (id === 'contrast' ? patchView({ tab: 'contrast' }) : document.querySelector(`[data-check="${id}"]`)?.scrollIntoView({ block: 'start' }));
+  const go = (id: string) => (id === 'contrast' || id === 'preview' ? patchView({ tab: id, tabChosen: true }) : document.querySelector(`[data-check="${id}"]`)?.scrollIntoView({ block: 'start' }));
   return (
     <div className={s.verdicts} role="list" aria-label="Checks">
       {sorted.map((x) => (
@@ -108,18 +119,11 @@ function Label({ text, to, sim }: { text: string; to: Simulate; sim: Simulate })
   );
 }
 
-function VisionRow({ kind, shown, pair, sim, r, flagE, onFix }: { kind: Kind; shown: Swatch[]; pair: CvdClosest | null; sim: Simulate; r?: Results; flagE?: number; onFix?(label: string, c: Record<string, Oklch>): void }) {
+function VisionRow({ kind, shown, pair, sim, r, flagE, rules, onFix }: { kind: Kind; shown: Swatch[]; pair: CvdClosest | null; sim: Simulate; r?: Results; flagE?: number; rules?: FixRules; onFix?(label: string, c: Record<string, Oklch>): void }) {
   const flagged = kind !== 'typical' && !!pair?.flag;
   // the same pair flagged under several simulations is one problem with one fix
   const kinds = flagged && r ? CVDS.filter((k) => r.vision[k]?.flag && samePair(r.vision[k], pair!)) : [];
-  const parted = (() => {
-    if (!flagged || !pair || flagE === undefined) return null;
-    let a = pair.a.oklch;
-    let b = pair.b.oklch;
-    const others = shown.filter((w) => w.id !== pair.a.id && w.id !== pair.b.id).map((w) => valueOf(w.oklch));
-    for (const k of kinds) [a, b] = cvdFix(a, b, k, flagE, others) ?? [a, b];
-    return a === pair.a.oklch && b === pair.b.oklch ? null : { [pair.a.id]: a, [pair.b.id]: b };
-  })();
+  const { changes: parted, blocked } = flagged && pair && flagE !== undefined ? partPair(pair.a, pair.b, kinds, flagE, shown, rules) : { changes: null, blocked: false };
   return (
     <div className={s.cv} {...(pair ? pointAt([pair.a.id, pair.b.id]) : {})}>
       <Label text={LABEL[kind]} to={kind === 'typical' ? 'normal' : kind} sim={sim} />
@@ -134,12 +138,17 @@ function VisionRow({ kind, shown, pair, sim, r, flagE, onFix }: { kind: Kind; sh
             <span>
               {displayName(pair.a)} and {displayName(pair.b)} look alike, ΔE {pair.deltaE.toFixed(1)}
             </span>
-            {parted && onFix && (
-              <Button size="xs" onClick={() => onFix(`Part ${displayName(pair.a)} and ${displayName(pair.b)}`, parted)} tooltip={`Spread them in value until ΔE reaches ${flagE!.toFixed(1)}`}>
+            {(parted || blocked) && onFix && (
+              <Button
+                size="xs"
+                disabled={blocked}
+                onClick={() => parted && onFix(`Part ${displayName(pair.a)} and ${displayName(pair.b)}`, parted)}
+                tooltip={blocked ? 'Both are locked. Press L on one to let it move.' : `Spread them in value until ΔE reaches ${flagE!.toFixed(1)}. Locked colours stay.`}
+              >
                 Part them
               </Button>
             )}
-            {!parted && <small>change one hue</small>}
+            {!parted && !blocked && <small>change one hue</small>}
           </>
         ) : (
           <span>

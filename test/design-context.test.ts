@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { contrast, type Oklch } from '../src/shared/color/index.ts';
+import { contrast, hexToOklch as hexOklch, type Oklch } from '../src/shared/color/index.ts';
 import { readPaletteFile } from '../src/shared/color/palette-readers.ts';
 import type { Swatch } from '../src/shared/types.ts';
 import { describe, scene, type Mode, type Scene } from '../src/renderer/tools/design/context-slots.ts';
@@ -54,7 +54,9 @@ test('a dark Background leads the dark page; the light page falls back to the li
   for (const s of [dark, light]) {
     assert.equal(s.primary.name, 'Moss');
     assert.equal(s.accent.name, 'Ember');
-    assert.equal(s.highlight.name, 'Sky');
+    // Sky where Text reads on it; else Sky carried toward the page (same hue), so the marker still shows
+    assert.ok(s.pairs.mark.ok);
+    assert.ok(s.highlight.name === 'Sky' || (s.highlight.name === 'highlight (derived)' && Math.abs(s.highlight.oklch[2] - 246.81) < 1), s.highlight.name);
   }
 });
 
@@ -113,8 +115,9 @@ test('pairs carry the shared ratio, grade and a hover text for failures', () => 
   assert.equal(p.ok, false); // Iron on Ground is 3.59:1 in the mockup
   assert.equal(p.grade, 'AA large · non-text');
   assert.match(describe(p), /^Iron on Ground: 3\.\d\d:1, AA large · non-text\. Body text needs 4\.5:1\.$/);
-  assert.equal(s.pairs.mark.need, 3);
-  assert.equal(s.pairs.bars.need, 3);
+  assert.equal(s.pairs.mark.need, 4.5, 'the Text on the marker');
+  assert.equal(s.pairs.bars.need, 3, 'a chart bar is a fill');
+  assert.equal(s.pairs.accent.need, 3);
 });
 
 test('an empty palette gives nothing; a single colour still gives a whole page', () => {
@@ -138,5 +141,18 @@ test('the fixture palettes resolve to finite colours and ratios in both versions
       for (const sl of slots) assert.ok(sl.oklch.every(Number.isFinite), `${file} ${mode} ${sl.name}`);
       for (const p of Object.values(s.pairs)) assert.ok(p.ratio >= 1 && p.ratio <= 21, `${file} ${mode}`);
     }
+  }
+});
+
+test('a mid-tone brand colour still gets a readable button label and pills (black or white when the palette has none)', () => {
+  const pal = [
+    sw('Page', [0.97, 0.005, 200], 'Background'),
+    sw('Ink', [0.2, 0.01, 200], 'Text'),
+    sw('Teal', hexOklch('#0E8C8C'), 'Primary'),
+  ];
+  for (const mode of MODES) {
+    const s = must(scene(pal, mode));
+    assert.ok(s.pairs.button.ok, `${mode}: button ${s.pairs.button.ratio.toFixed(2)}`);
+    for (const k of ['success', 'warning', 'error'] as const) assert.ok(s.pairs[k].ok, `${mode}: ${k} pill ${s.pairs[k].ratio.toFixed(2)}`);
   }
 });

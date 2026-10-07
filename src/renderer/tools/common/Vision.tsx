@@ -1,11 +1,10 @@
 import type { KeyboardEvent } from 'react';
 import { cssColor, simulateCvd, type Cvd } from '../../../shared/color/index.ts';
-import { valueOf } from '../../../shared/color/value.ts';
 import type { CvdClosest } from '../../../shared/palette/checks.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { Button, Icon, Module, NumberField, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { cvdFix } from './adjust.ts';
+import { partPair } from './adjust.ts';
 import { displayName } from './names.ts';
 import type { CheckHost } from './Value.tsx';
 import s from './Checks.module.css';
@@ -44,20 +43,13 @@ type VisionProps = CheckHost & {
   short?(w: Swatch): string;
 };
 
-export function Vision({ swatches, onFix, pointAt, className, vision, names = true, flagE, onFlagE, cvd, onCvd, short = displayName }: VisionProps) {
+export function Vision({ swatches, onFix, pointAt, rules, className, vision, names = true, flagE, onFlagE, cvd, onCvd, short = displayName }: VisionProps) {
   const chosen = vision[cvd];
   // the same pair flagged under several simulations is one problem with one fix
   const kinds = chosen?.flag ? CVDS.filter((k) => vision[k]?.flag && samePair(vision[k], chosen)) : [];
   const elsewhere = CVDS.filter((k) => k !== cvd && vision[k]?.flag);
-  // the spread that parts them under each simulation that merges them; null when none does
-  const parted = (() => {
-    if (!chosen?.flag) return null;
-    let a = chosen.a.oklch;
-    let b = chosen.b.oklch;
-    const others = swatches.filter((w) => w !== chosen.a && w !== chosen.b).map((w) => valueOf(w.oklch));
-    for (const k of kinds) [a, b] = cvdFix(a, b, k, flagE, others) ?? [a, b];
-    return a === chosen.a.oklch && b === chosen.b.oklch ? null : { [chosen.a.id]: a, [chosen.b.id]: b };
-  })();
+  // the spread that parts them under each simulation that merges them (a locked colour stays; no passing contrast pair breaks); null when none does
+  const { changes: parted, blocked } = chosen?.flag ? partPair(chosen.a, chosen.b, kinds, flagE, swatches, rules) : { changes: null, blocked: false };
   const fix = () => chosen && parted && onFix(`Part ${displayName(chosen.a)} and ${displayName(chosen.b)}`, parted);
   return (
     <Module
@@ -96,7 +88,7 @@ export function Vision({ swatches, onFix, pointAt, className, vision, names = tr
                       {displayName(chosen.a)} and {displayName(chosen.b)}
                     </b>{' '}
                     merge under {kinds.length === 4 ? 'every simulation' : kinds.map((k) => LABEL[k].toLowerCase()).join(', ')}.{' '}
-                    {parted ? 'Moving them apart in value parts them.' : 'No value spread parts them; change one of their hues.'}
+                    {parted ? 'Moving them apart in value parts them.' : blocked ? 'Both are locked.' : 'No value spread parts them; change one of their hues.'}
                   </>
                 ) : (
                   <>
@@ -105,8 +97,8 @@ export function Vision({ swatches, onFix, pointAt, className, vision, names = tr
                   </>
                 )}
               </span>
-              {parted && (
-                <Button size="xs" onClick={fix} tooltip={`Spread them in value until ΔE reaches ${flagE.toFixed(1)}`}>
+              {(parted || blocked) && (
+                <Button size="xs" onClick={fix} disabled={blocked} tooltip={blocked ? 'Both are locked. Press L on one to let it move.' : `Spread them in value until ΔE reaches ${flagE.toFixed(1)}. Locked colours stay.`}>
                   Part them
                 </Button>
               )}

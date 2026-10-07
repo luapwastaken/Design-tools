@@ -1,11 +1,11 @@
 import type { CSSProperties } from 'react';
-import { contrast, cssColor, type Oklch } from '../../../shared/color/index.ts';
+import { cssColor, type Oklch } from '../../../shared/color/index.ts';
 import { greyOf, valueOf } from '../../../shared/color/value.ts';
-import type { ContrastPair, ValueCollision } from '../../../shared/palette/checks.ts';
+import type { ValueCollision } from '../../../shared/palette/checks.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { Button, Icon, Module, NumberField, Ticks, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { valueFix } from './adjust.ts';
+import { spreadCluster, type FixRules } from './adjust.ts';
 import { displayName, fmtV, listNames, plural } from './names.ts';
 import { useWidth } from './useWidth.ts';
 import s from './Checks.module.css';
@@ -19,6 +19,8 @@ export type CheckHost = {
   /** one history step: new colours by swatch id */
   onFix(label: string, changes: Record<string, Oklch>): void;
   pointAt: PointAt;
+  /** which colours a one-click fix may not move, which move first, and what it must not break */
+  rules?: FixRules;
   className?: string;
 };
 
@@ -53,24 +55,29 @@ function laneOut(list: Swatch[], width: number) {
 // the value ramp is a measurement scale, drawn from the colour module like any content colour
 const RAMP = `linear-gradient(90deg in oklab, ${cssColor([0, 0, 0])}, ${cssColor([1, 0, 0])})`;
 
-/** the swatches that chain into the worst collision: together they read as one grey (lightest last) */
-function clusterOf(collisions: ValueCollision[]): Swatch[] {
-  const found = new Map([collisions[0].a, collisions[0].b].map((w) => [w.id, w]));
-  for (let grew = true; grew; ) {
-    grew = false;
-    for (const c of collisions) {
-      if (found.has(c.a.id) === found.has(c.b.id)) continue;
-      for (const w of [c.a, c.b]) found.set(w.id, w);
-      grew = true;
+/** the runs of swatches that chain together through collisions: each reads as one grey (lightest first), the worst run first */
+export function clustersOf(collisions: ValueCollision[]): Swatch[][] {
+  const runs: Map<string, Swatch>[] = [];
+  for (const c of collisions) {
+    const hit = runs.filter((r) => r.has(c.a.id) || r.has(c.b.id));
+    const [into, ...rest] = hit.length ? hit : [new Map<string, Swatch>()];
+    for (const w of [c.a, c.b]) into.set(w.id, w);
+    for (const r of rest) {
+      r.forEach((w, id) => into.set(id, w));
+      runs.splice(runs.indexOf(r), 1);
     }
+    if (!hit.length) runs.push(into);
   }
-  return [...found.values()].sort((a, b) => valueOf(a.oklch) - valueOf(b.oklch));
+  return runs.map((r) => [...r.values()].sort((a, b) => valueOf(a.oklch) - valueOf(b.oklch)));
 }
+
+/** the swatches that chain into the worst collision: together they read as one grey (lightest last) */
+const clusterOf = (collisions: ValueCollision[]): Swatch[] => clustersOf(collisions).find((r) => r.some((w) => w.id === collisions[0].a.id)) ?? [];
 
 type ValueProps = CheckHost & {
   collisions: ValueCollision[];
-  /** contrast pairs: a spread that breaks one which passes now isn't offered */
-  contrast?: ContrastPair[];
+  /** a pair meant to match in value (a painter's trick) can be marked: it leaves the check. `hidden` are the ones already marked */
+  intended?: { hidden: number; onMark(pairs: [string, string][]): void; onClear(): void };
   /** the flag gap, in value units (0..100) */
   flagL: number;
   onFlagL(v: number): void;
@@ -79,7 +86,7 @@ type ValueProps = CheckHost & {
 };
 
 /** The palette in greyscale by value (what greyscale shows) on a ruler; the worst run that reads as one grey is flagged. */
-export function Value({ swatches, onFix, pointAt, className, collisions, contrast: pairs = [], flagL, onFlagL, sub }: ValueProps) {
+export function Value({ swatches, onFix, pointAt, rules, className, collisions, intended, flagL, onFlagL, sub }: ValueProps) {
   const byV = [...swatches].sort((a, b) => valueOf(a.oklch) - valueOf(b.oklch));
   const hit = new Set(collisions.flatMap((c) => [c.a.id, c.b.id]));
   const { ref: ruler, width } = useWidth<HTMLDivElement>();
@@ -91,18 +98,13 @@ export function Value({ swatches, onFix, pointAt, className, collisions, contras
   // value runs 0 to 100: past a point a run can't all stand apart, only spread as evenly as it goes
   const fits = (cluster.length - 1) * gap <= 100;
 
+  // a locked colour stays, the supporting colours move before the brand ones, and no contrast pair that passes breaks
+  const others = swatches.filter((w) => !ids.has(w.id)).map((w) => valueOf(w.oklch));
+  const spread = cluster.length ? spreadCluster(cluster, flagL / 100, others, rules) : { changes: null, blocked: false };
   const fix = () => {
-    const others = swatches.filter((w) => !ids.has(w.id)).map((w) => valueOf(w.oklch));
-    // a spread that breaks a contrast pair which passes now just trades one problem for another
-    const passing = pairs.filter((p) => p.ratio >= p.target);
-    const ok = (next: Oklch[]) => {
-      const moved = new Map(cluster.map((w, i) => [w.id, next[i]]));
-      const now = (w: Swatch) => moved.get(w.id) ?? w.oklch;
-      return passing.every((p) => contrast(now(p.text), now(p.ground)) >= p.target);
-    };
-    const next = valueFix(cluster.map((w) => w.oklch), flagL / 100, others, ok);
+    if (!spread.changes) return;
     const names = cluster.map(displayName);
-    onFix(cluster.length === 2 ? `Spread ${names[0]} and ${names[1]} in value` : `Spread ${cluster.length} swatches in value`, Object.fromEntries(cluster.map((w, i) => [w.id, next[i]])));
+    onFix(cluster.length === 2 ? `Spread ${names[0]} and ${names[1]} in value` : `Spread ${cluster.length} swatches in value`, spread.changes);
   };
 
   return (
@@ -174,10 +176,40 @@ export function Value({ swatches, onFix, pointAt, className, collisions, contras
                 {!fits && ` ${cluster.length} colours can't all stand ${flagL.toFixed(1)} apart; spread evenly they sit ${(100 / (cluster.length - 1)).toFixed(1)} apart.`}
                 {elsewhere > 0 && ` ${plural(elsewhere, 'other pair')} collide${elsewhere === 1 ? 's' : ''} too.`}
               </span>
-              <Button size="xs" onClick={fix} tooltip={fits ? `Space them ${gap.toFixed(1)} apart in value, order and hues kept` : 'Space them evenly from black to white, order and hues kept'}>
+              <Button
+                size="xs"
+                onClick={fix}
+                disabled={!spread.changes}
+                tooltip={
+                  spread.blocked
+                    ? 'Every one of them is locked. Press L on one to let it move.'
+                    : !spread.changes
+                      ? 'No spread keeps the locked colours and the passing contrast pairs. Change a hue.'
+                      : fits
+                        ? `Space them ${gap.toFixed(1)} apart in value, order and hues kept. Locked colours stay.`
+                        : 'Space them evenly from black to white, order and hues kept'
+                }
+              >
                 {!fits ? 'Spread evenly' : cluster.length === 2 ? 'Spread apart' : `Spread these ${cluster.length}`}
               </Button>
+              {intended && (
+                <Button
+                  size="xs"
+                  onClick={() => intended.onMark(collisions.filter((c) => ids.has(c.a.id) && ids.has(c.b.id)).map((c): [string, string] => [c.a.id, c.b.id]))}
+                  tooltip="They are meant to match in value. Leave them out of this check."
+                >
+                  Intended
+                </Button>
+              )}
             </div>
+          )}
+          {intended && intended.hidden > 0 && (
+            <p className={s.none}>
+              {plural(intended.hidden, 'pair')} marked intended, not counted.{' '}
+              <Button size="xs" onClick={intended.onClear}>
+                Check again
+              </Button>
+            </p>
           )}
         </>
       )}

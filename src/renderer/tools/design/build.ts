@@ -25,15 +25,17 @@ export function runHarmony(base: Pick<Swatch, 'name' | 'oklch'>, kind: HarmonyKi
 
 /**
  * `v.count` new colours around the palette's own: its swatches go in as locked slots, so the
- * lightness spread leaves room for them (and a preset with no hues of its own follows theirs). A
+ * lightness spread leaves room for them (and a style with no hues of its own follows theirs). A
  * reroll keeps the locked ghosts in their slots.
  */
 export function runGenerate(palette: Swatch[], v: DesignView = getView()): void {
   const prev = proposalsFrom('generate')?.items ?? [];
   const locked = Array.from({ length: v.count }, (_, i) => (prev[i]?.locked ? prev[i].oklch : null));
   const own = palette.map((w) => w.oklch);
-  const made = generate({ seed: v.seed, count: own.length + v.count, preset: v.preset, locked: [...own, ...locked] }).slice(own.length);
-  const preset = PRESETS.find((p) => p.id === v.preset)?.label ?? 'Palette';
+  // the hues it follows: every colour's, or only the selected one's
+  const lead = v.suggestFrom === 'selected' ? palette.find((w) => w.id === v.selected[0]) : undefined;
+  const made = generate({ seed: v.seed, count: own.length + v.count, preset: v.suggestStyle, locked: [...own, ...locked], hues: lead && [lead.oklch] }).slice(own.length);
+  const preset = PRESETS.find((p) => p.id === v.suggestStyle)?.label ?? 'Palette';
   propose('generate', `${preset} · seed ${v.seed}`, made, [], locked.map(Boolean));
 }
 

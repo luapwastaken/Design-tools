@@ -26,8 +26,8 @@ const SOURCES: { kind: PopKind | 'library'; icon: IconName; title: string }[] = 
 function readBrand(text: string): { brand: { oklch: Oklch; name: string | null } | null; problem: string | null } {
   if (!text.trim()) return { brand: null, problem: null };
   const r = parseColours(text);
-  if (r.colours.length > 1) return { brand: null, problem: 'That is a list. Type one colour here, or use Paste codes.' };
-  if (!r.colours.length) return { brand: null, problem: 'Type a colour: a hex, an RGB, HSL or OKLCH value, or a colour name.' };
+  if (r.colours.length > 1) return { brand: null, problem: 'That is a list: use Paste codes for several.' };
+  if (!r.colours.length) return { brand: null, problem: 'Not a colour yet. Try a hex like E8643C.' };
   return { brand: { oklch: r.colours[0], name: r.names[0] }, problem: null };
 }
 
@@ -39,7 +39,7 @@ export function Empty({ doc, v, onPop }: { doc: Doc; v: DesignView; onPop: OpenP
     setTried(true);
     if (brand) buildNow(doc, brand);
   };
-  // a colour half typed is not an error until Build is tried
+  // a colour half typed is not an error until Enter tries it; Build itself waits for a colour
   const shown = tried ? (problem ?? (!text.trim() ? 'Type your brand colour, or press Surprise me.' : undefined)) : undefined;
   return (
     <div className={s.empty}>
@@ -50,7 +50,7 @@ export function Empty({ doc, v, onPop }: { doc: Doc; v: DesignView; onPop: OpenP
           label="Brand colour"
           mono
           value={text}
-          placeholder="E8643C"
+          placeholder="e.g. E8643C"
           onChange={(t) => (setText(t), setTried(false))}
           onCommit={() => {}}
           end={brand ? <i className={s.chip} data-colour style={{ background: cssColor(brand.oklch) }} /> : undefined}
@@ -58,7 +58,7 @@ export function Empty({ doc, v, onPop }: { doc: Doc; v: DesignView; onPop: OpenP
           className={s.field}
         />
         {CAN_PICK && <IconButton icon="colorize" label="Pick from screen" shortcut="I" onClick={() => void eyedrop(doc)} />}
-        <Button variant="primary" icon="star_shine" onClick={build}>
+        <Button variant="primary" icon="star_shine" onClick={build} disabled={!brand} tooltip={brand ? undefined : 'Type a colour first, or press Surprise me in the top bar'}>
           Build palette
         </Button>
       </div>
@@ -66,9 +66,6 @@ export function Empty({ doc, v, onPop }: { doc: Doc; v: DesignView; onPop: OpenP
         <StyleFields doc={doc} v={v} className={s.opt} />
       </div>
       <div className={s.cards}>
-        <Button icon="casino" shortcut="Space" tooltip="A palette from a random colour" onClick={() => buildNow(doc)}>
-          Surprise me
-        </Button>
         {SOURCES.map((c) => (
           <Button key={c.kind} icon={c.icon} onClick={(e) => (c.kind === 'library' ? shell.toggleLibrary(true) : onPop(c.kind, e.currentTarget))}>
             {c.title}

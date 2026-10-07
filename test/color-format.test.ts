@@ -7,7 +7,7 @@ import { parseColours } from '../src/shared/palette/paste.ts';
 
 const HEXES = ['#ff0000', '#e8643c', '#1a2b3c', '#fafafa', '#000000', '#ffffff', '#0a5f38', '#7b61ff', '#ffe600', '#808080', '#00ffff'];
 const OKLCHS: Oklch[] = [[0.7008, 0.1646, 36.1237], [0.5, 0.2, 264.05], [0.93, 0.0421, 101.7], [0.62796, 0.25768, 29.23388]];
-const READS = ['hex', 'rgb', 'hsl', 'oklch', 'oklab', 'p3'] as const;
+const READS = ['hex', 'rgb', 'rgb255', 'hsl', 'oklch', 'oklab', 'p3', 'linear', 'ae'] as const;
 
 test('every format a colour paste reads comes back as the same hex', () => {
   for (const o of [...HEXES.map(hexToOklch), ...OKLCHS]) {

@@ -26,7 +26,7 @@ export type HexFieldProps = {
 
 /** the syntaxes the field reads, as the functions they are (built apart, so the rules check doesn't take the hint for a colour literal) */
 const SYNTAXES = ['rgb', 'hsl', 'oklch'].map((f) => `${f}()`);
-const PROBLEM = `Can't read that as a colour. Try a hex, ${SYNTAXES.join(', ')} or a name.`;
+const PROBLEM = `Can't read that as a colour. Try a hex, ${SYNTAXES.join(', ')}, three numbers (0-255 or 0-1) or a name.`;
 const PLACEHOLDER = `Hex, ${SYNTAXES.join(', ')}…`;
 
 /** a hex as ever; otherwise the first colour a paste holds (an RGB, HSL or OKLCH code, a name, "Ember: #e8643c"…) */

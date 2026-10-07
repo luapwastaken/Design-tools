@@ -16,6 +16,7 @@ import {
   writeProcreate,
   writeSheetSvg,
   writeTailwind,
+  writeTailwind4,
 } from '../src/shared/palette/writers.ts';
 
 const fixture = (name: string) => new Uint8Array(readFileSync(new URL(`fixtures/${name}`, import.meta.url)));
@@ -379,4 +380,18 @@ test('KPL: a ramp longer than Krita’s 4096 columns wraps onto a second row', (
   const k = readKpl(writeKpl('Long', long));
   assert.deepEqual([k.columns, k.groups[0].rows], [4096, 2]);
   assert.deepEqual(k.groups[0].entries.slice(-2).map((e) => [e.name, e.row, e.column]), [['s4098', 1, 2], ['s4099', 1, 3]]);
+});
+
+test('CSS: --on-primary beside a Primary, hex twins optional; Tailwind 4 as an @theme block', () => {
+  const brand = [sw('#e8643c', 'Ember', 'Primary'), sw('#14161a', 'Ink', 'Text'), sw('#fbf7f0', 'Paper', 'Background')];
+  const css = writeCss(brand);
+  assert.match(css, /--on-primary: oklch\(/);
+  assert.match(css, /--on-primary-hex: #[0-9a-f]{6};/);
+  assert.match(writeCss(brand, { hex: false }), /--on-primary: oklch\(/);
+  assert.doesNotMatch(writeCss(brand, { hex: false }), /-hex/);
+  assert.doesNotMatch(writeCss(UI), /on-primary/, 'no Primary, no on-primary');
+  const tw = writeTailwind4(brand);
+  assert.ok(tw.startsWith('@theme {\n') && tw.endsWith('\n}\n'));
+  assert.match(tw, /^ {2}--color-primary: oklch\(/m);
+  assert.match(tw, /^ {2}--color-on-primary: oklch\(/m);
 });
