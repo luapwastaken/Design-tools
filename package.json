@@ -1,7 +1,7 @@
 {
   "name": "designtools",
   "productName": "Design Tools",
-  "version": "2.0.0-dev",
+  "version": "2.0.0",
   "private": true,
   "description": "Luap's design toolbox: colour, pattern, logo, dither, halftone and post effects",
   "author": "Luap",
