@@ -160,7 +160,8 @@ export function frame(light: Light, fin: Finish = DEFAULT_FINISH, ground = 0.28,
     lo: -0.06 - 0.55 * soft,
     hi: 0.22 + 0.2 * soft,
     wrap: 0.5 * soft,
-    core: CORE + (1 - CORE) * 0.7 * fin.sheen,
+    // with the light behind there is no lit side to end in a core shadow: the dip would only draw an arc across the shadowed face
+    core: 1 - (1 - CORE - (1 - CORE) * 0.7 * fin.sheen) * (1 - 0.85 * smooth(0.1, -0.5, l[2])),
     coreW: 0.25 + 0.25 * fin.sheen,
     amb: 2 * fin.ambient,
     amp: Math.min(1, 2.2 * fin.gloss) * (1 - 0.2 * fin.metal),
@@ -287,7 +288,7 @@ function lightPixel(nx: number, ny: number, nz: number, open: number, thick: num
     const trf = ndl < 0 ? 0.4 + 0.6 * toward : 0.5 * (1 - smooth(0, 0.35 + 0.3 * fin.softness, ndl));
     // a solid body is nearly a silhouette with a rim: the glow dies toward the middle of a ball or a block
     const sheet = 1 - thick;
-    wg = f.through * trf * 0.8 * sheet ** 0.8 * f.back * arrives;
+    wg = f.through * trf * sheet * f.back * arrives;
     tg = 0.38 + 0.55 * (toward * (0.35 + 0.65 * f.back) + 0.22 * (ndl < 0 ? 0 : 1 - smooth(0, 0.5, ndl)));
     v *= 1 - 0.4 * wg;
   }
