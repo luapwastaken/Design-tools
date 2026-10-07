@@ -3750,7 +3750,8 @@ async function modesUi(): Promise<void> {
   const ring = sun?.parentElement;
   if (check('Light shows the sun on its ring', !!ring && shows(ring)) && ring && sun) {
     const r = ring.getBoundingClientRect();
-    const [x, y] = [r.left + r.width * 0.25, r.top + r.height / 2];
+    // 0.85 of the way out to the ring: past the object's edge, where the sun is drawn when the light is 60 degrees up
+    const [x, y] = [r.left + r.width * (0.5 - 0.85 / 2), r.top + r.height / 2];
     const fire = (type: string) => ring.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerup' ? 0 : 1, clientX: x, clientY: y }));
     fire('pointerdown');
     fire('pointermove');
@@ -3764,7 +3765,7 @@ async function modesUi(): Promise<void> {
       return { x: ((sr.left + sr.width / 2 - rr.left) / rr.width - 0.5) * 2, y: (0.5 - (sr.top + sr.height / 2 - rr.top) / rr.height) * 2, round: rr.width / rr.height };
     };
     const drawn = at();
-    check('and it is drawn there, on a circle: the direction round it, cos(height) from the centre', Math.abs(drawn.round - 1) < 0.01 && Math.abs(Math.hypot(drawn.x, drawn.y) - 0.5) < 0.03 && drawn.x < -0.45 && Math.abs(drawn.y) < 0.05, drawn);
+    check('and it is drawn there, on a circle: the direction round it, 0.7 + 0.3 cos(height) of the way to the ring', Math.abs(drawn.round - 1) < 0.01 && Math.abs(Math.hypot(drawn.x, drawn.y) - 0.85) < 0.03 && drawn.x < -0.8 && Math.abs(drawn.y) < 0.05, drawn);
     // arrow keys move it the way they point on the screen: Right moves a sun on the left in toward the centre, Up moves it up
     sun.focus();
     const x0 = centre(sun)[0];
@@ -3909,7 +3910,7 @@ async function restoredUi(): Promise<void> {
   const hero0 = il.get().ramps[0].hero;
   patchIllustration({ tab: 'light', preview: { ...view().preview, shape: 'sphere', all: false } });
   await sleep(60);
-  const allShapes = () => [...ui.querySelectorAll<HTMLElement>('button[role="radio"]')].find((b) => b.textContent?.trim() === 'All three' && shows(b));
+  const allShapes = () => [...ui.querySelectorAll<HTMLElement>('button[role="radio"]')].find((b) => b.textContent?.trim() === 'All' && shows(b));
   allShapes()?.click();
   const three = await until(() => ui.querySelector('[data-three]'), 1500);
   check('Shape: All shows a sphere, a cube and a cloth fold together', !!three && ['sphere', 'cube', 'cloth'].every((n) => three!.querySelector(`canvas[aria-label$="a ${n}"], canvas[aria-label$="a cloth fold"]`)) && three!.querySelectorAll('canvas').length === 3, three?.innerHTML.length);
@@ -3927,8 +3928,9 @@ async function restoredUi(): Promise<void> {
     cells.find((c) => c.tabIndex === 0)?.focus();
     press('ArrowRight');
     const lookTitle = () => [...ui.querySelectorAll('h2, [role="heading"], button')].map((e) => e.textContent ?? '').find((t) => t.startsWith('Look of ')) ?? '';
-    check('and an arrow key picks the next ramp for the controls (Look of its name) without moving the picker', (await until(() => (view().preview as { ramp?: string }).ramp === il.get().ramps[1].id)) !== null && view().selected === sel0 && lookTitle().includes(rampName(il.get(), il.get().ramps[1])), [sel0, view().selected, lookTitle()]);
-    check('clicking a cell does the same, and the picker stays on its colour', (() => { cells[0].click(); return true; })() && (await until(() => (view().preview as { ramp?: string }).ramp === il.get().ramps[0].id)) !== null && view().selected === sel0, [sel0, view().selected]);
+    const selGroup = () => il.get().swatches.find((w) => w.id === view().selected)?.group;
+    check('and an arrow key selects the next ramp: the selected colour moves to one of its steps (the ramps list and the picker follow) and the Look group names it', (await until(() => selGroup() === il.get().ramps[1].id)) !== null && lookTitle().includes(rampName(il.get(), il.get().ramps[1])), [sel0, view().selected, lookTitle()]);
+    check('clicking a cell selects that ramp the same way, and the controls edit it', (() => { cells[0].click(); return true; })() && (await until(() => selGroup() === il.get().ramps[0].id)) !== null && lookTitle().includes(rampName(il.get(), il.get().ramps[0])) && cells[0].getAttribute('aria-checked') === 'true', [sel0, view().selected, lookTitle()]);
   }
   il.transact('Hero', (d) => setSpec(d, ramp0, { hero: hero0 }));
   patchIllustration({ preview: { ...view().preview, shape: 'sphere', all: false } });
@@ -4021,7 +4023,7 @@ async function lightUi(): Promise<void> {
   const spec = () => il.get().ramps[0];
   // the steps this leaves in the history, to take back at the end (the history is bounded, so its depth cannot be counted on)
   let made = 0;
-  patchIllustration({ tab: 'light', selected: baseOf(il.get(), id)!.id, preview: { ...view().preview, shape: 'cloth', all: false, banded: false, azimuth: 320, elevation: 35, ramp: '', rampFor: '' } });
+  patchIllustration({ tab: 'light', selected: baseOf(il.get(), id)!.id, preview: { ...view().preview, shape: 'cloth', all: false, banded: false, azimuth: 320, elevation: 35 } });
   il.transact('Cloth, a little translucent', (d) => setSpec(d, id, { material: 'cloth', surface: { translucency: 0.5 } }));
   made++;
   const canvas = () => ui.querySelector<HTMLCanvasElement>('canvas[role="img"][aria-label$="a cloth fold"]');
@@ -4057,7 +4059,8 @@ async function lightUi(): Promise<void> {
   // the sun dragged behind the cloth with Alt held: hollow, and the cloth glows where it faces the light
   const rad = Math.PI / 180;
   const r = ring!.getBoundingClientRect();
-  const [x, y] = [r.left + r.width * (0.5 + (Math.sin(300 * rad) * Math.cos(45 * rad)) / 2), r.top + r.height * (0.5 - (Math.cos(300 * rad) * Math.cos(45 * rad)) / 2)];
+  const drawnR = 0.7 + 0.3 * Math.cos(45 * rad);
+  const [x, y] = [r.left + r.width * (0.5 + (Math.sin(300 * rad) * drawnR) / 2), r.top + r.height * (0.5 - (Math.cos(300 * rad) * drawnR) / 2)];
   const fire = (type: string, alt: boolean) => ring!.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerup' ? 0 : 1, clientX: x, clientY: y, altKey: alt }));
   fire('pointerdown', true);
   fire('pointermove', true);
@@ -4095,8 +4098,30 @@ async function lightUi(): Promise<void> {
   check('the Side preset sets a raking light from the left', (await until(() => preview().azimuth === 270 && preview().elevation === 12)) !== null && pick('Side')?.getAttribute('aria-checked') === 'true', preview());
   pick('Back')?.click();
   check('Back puts the light behind, and is the one that shows as chosen', (await until(() => preview().elevation === -70)) !== null && pick('Back')?.getAttribute('aria-checked') === 'true' && pick('Side')?.getAttribute('aria-checked') === 'false', preview());
+  // the Back and Front set-ups draw the sun out by the object's edge, never over its middle
+  {
+    const away = () => {
+      const [rr, sr] = [ring!.getBoundingClientRect(), sun!.getBoundingClientRect()];
+      return Math.hypot(sr.left + sr.width / 2 - (rr.left + rr.width / 2), sr.top + sr.height / 2 - (rr.top + rr.height / 2)) / (rr.width / 2);
+    };
+    pick('Back')?.click();
+    await until(() => preview().elevation === -70);
+    check('Back draws the sun out by the object’s edge, hollow, not over its middle', away() > 0.69 && /behind the object/.test(sun!.getAttribute('aria-valuetext') ?? ''), [away(), sun!.getAttribute('aria-valuetext')]);
+    [...document.querySelectorAll<HTMLElement>('[role="group"][aria-label="Light presets"] button[role="radio"]')].find((b) => b.textContent?.trim() === 'Front' && shows(b))?.click();
+    await until(() => preview().elevation === 90);
+    check('Front does too, and the direction it has is where it sits', away() > 0.69 && preview().elevation === 90, [away(), preview()]);
+  }
   pick('Upper left')?.click();
   check('Upper left puts it back', (await until(() => preview().azimuth === 320 && preview().elevation === 35)) !== null, preview());
+
+  // every control in the tab is at least 24px to hit, and no segment is wider than its box (Shape: All fits)
+  {
+    const panel = ui.querySelector('[role="group"][aria-label="Light presets"]')?.closest('[class*="_tab_"]');
+    const small = [...(panel?.querySelectorAll<HTMLElement>('button,input,[role="slider"],[role="radio"],[role="checkbox"]') ?? [])].filter(shows).map((e) => ({ t: (e.getAttribute('aria-label') || e.textContent || e.tagName).trim().slice(0, 24), w: Math.round(e.getBoundingClientRect().width), h: Math.round(e.getBoundingClientRect().height) })).filter((x) => x.w < 24 || x.h < 24);
+    check('every control in Light & preview is at least 24px to hit, the colour chips and the segments included', !!panel && small.length === 0, small);
+    const cut = [...(panel?.querySelectorAll<HTMLElement>('[role="radiogroup"] button') ?? [])].filter((b) => shows(b) && b.scrollWidth > b.clientWidth).map((b) => `${b.textContent?.trim()} ${b.scrollWidth}>${b.clientWidth}`);
+    check('and no segment is wider than its box: the Shape row (Sphere, Cube, Cloth, All) and the Show row fit', !!panel && cut.length === 0 && !!pick('All'), cut);
+  }
 
   // Direction goes round: 370 is 10, -30 is 330 (typed)
   const direction = ui.querySelector<HTMLInputElement>('input[aria-label="Direction"]');
@@ -4135,14 +4160,32 @@ async function lightUi(): Promise<void> {
     check('and Behind sends it round again', (await until(() => (preview().elevation ?? 0) < 0)) !== null, preview());
     pick('Upper left')?.click();
     await until(() => preview().azimuth === 320 && preview().elevation === 35);
+    // let go outside the ring: it stays behind, on the rim, as the hint says
+    send('pointerdown', 0.6);
+    send('pointermove', 1.3);
+    send('pointerup', 1.3);
+    const rim = await until(() => ((preview().elevation ?? 0) < 0 ? preview() : null));
+    check('pulling the sun out past its ring and letting go outside leaves it behind the object, on the rim, in the direction it was pulled', !!rim && rim.elevation === -1 && rim.azimuth === 300 && /behind the object/.test(sun!.getAttribute('aria-valuetext') ?? ''), preview());
+    // the rule is in the hint under the presets (a narrow tab drops the hint; the sun's own tooltip says it there)
+    sun!.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+    const says = await until(() => document.querySelector('[role="tooltip"]')?.textContent ?? null, 2000);
+    sun!.dispatchEvent(new PointerEvent('pointerout', { bubbles: true, pointerType: 'mouse' }));
+    check('and the hint and the sun’s tooltip say so', (!/Drag the sun\./.test(ui.textContent ?? '') || /Pull it out past its ring to flip it behind the object, or back in front; let go outside and it stays on the rim/.test(ui.textContent ?? '')) && /Pull it out past the ring, or hold Alt, to flip it behind the object/.test(says ?? ''), says);
+    pick('Upper left')?.click();
+    await until(() => preview().azimuth === 320 && preview().elevation === 35);
   }
 
-  // with several objects the sun can be hidden, and its ring sits under them
+  // the sun can be hidden in every view (one object, three, every ramp), and its ring sits under several objects
   {
     const hide = () => [...ui.querySelectorAll<HTMLElement>('button[role="checkbox"]')].find((b) => b.textContent?.trim() === 'Hide the sun' && shows(b));
     const sunUp = () => !!ui.querySelector('[role="slider"][aria-label="Light direction"]');
-    check('with one object there is no Hide the sun', !hide());
-    pick('All three')?.click();
+    const h1 = hide();
+    check('with one object there is a Hide the sun too, and the sun is on show', !!h1 && sunUp());
+    h1?.click();
+    check('it takes the sun and its ring away, and keeps the direction', (await until(() => !sunUp())) !== null && preview().azimuth === 320, preview());
+    hide()?.click();
+    check('and it comes back', (await until(sunUp)) !== null);
+    pick('All')?.click();
     const h = await until(hide);
     check('with three there is, and the sun is on show', !!h && sunUp());
     h?.click();
@@ -4168,6 +4211,12 @@ async function lightUi(): Promise<void> {
     const satin = FINISH_PRESETS.find((f) => f.id === 'satin')!;
     check('Satin writes its Gloss, Grain and Sheen to the ramp’s Surface, one undo step', (await until(() => spec().surface?.grain === satin.surface.grain)) !== null && JSON.stringify(spec().surface) === JSON.stringify(satin.surface) && il.depth() === depth + 1 && finishNow() === 'Satin', [spec().surface, il.depth() - depth, finishNow()]);
     check('and the Surface group says what Grain and Streak are for', /Grain stretches the highlight/.test(ui.textContent ?? ''));
+    const streak = () => [...ui.querySelectorAll<HTMLElement>('[role="radiogroup"]')].some((g) => /Along folds/.test(g.textContent ?? ''));
+    check('a finish with a grain has the Streak control', streak());
+    il.transact('Skin', (d) => setSpec(d, id, { material: 'skin', surface: undefined }));
+    check('skin has no grain to stretch, so there is no Streak control', (await until(() => !streak())) !== null && !/Grain stretches the highlight/.test(ui.textContent ?? ''));
+    il.undo();
+    await until(streak);
     await choose('Gold');
     check('Gold makes it Metal as well', (await until(() => spec().material === 'metal')) !== null && finishNow() === 'Gold', [spec().material, finishNow()]);
     il.undo();
@@ -4175,16 +4224,28 @@ async function lightUi(): Promise<void> {
     check('and both are undone', spec().material === was.material && JSON.stringify(spec().surface) === surfaceBefore && il.depth() === depth, [spec(), il.depth() - depth]);
   }
 
-  // Apply look to every ramp, beside Use for every ramp
+  // Apply look to every ramp, beside Use for every ramp: only the look (Intensity, Push, Hue shift, Saturation), never the material or the finish
   if (il.get().ramps.length > 1) {
     const apply = () => [...ui.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Apply look to every ramp' && shows(b));
+    // the first ramp gets a look and a finish of its own, the second a different material, so a copy of either would show
+    il.transact('A look of its own', (d) => setSpec(setSpec(d, id, { material: 'metal', surface: { gloss: 0.7, grain: 0.2 }, intensity: 'extreme', push: 1.8, hueShift: 0.4, chromaCurve: -0.3 }), il.get().ramps[1].id, { material: 'skin', surface: { softness: 0.9 } }));
+    await sleep(60);
     const others = () => il.get().ramps.slice(1).map((r) => [r.material, JSON.stringify(r.surface ?? null)].join());
-    const [depth, before] = [il.depth(), others()];
-    check('Apply look to every ramp sits next to Use for every ramp, and is on while the ramps differ', !!apply() && !apply()!.disabled && !!button('illustration', 'Use for every ramp'), before);
+    const looks = () => il.get().ramps.slice(1).map((r) => [r.intensity, r.push, r.hueShift, r.chromaCurve].join());
+    const [depth, before, lookBefore] = [il.depth(), others(), looks()];
+    check('Apply look to every ramp sits next to Use for every ramp, and is on while the looks differ', !!(await until(apply)) && !apply()!.disabled && !!button('illustration', 'Use for every ramp'), lookBefore);
+    const applyTip = apply();
+    applyTip?.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+    const copies = await until(() => document.querySelector('[role="tooltip"]')?.textContent ?? null, 2000);
+    applyTip?.dispatchEvent(new PointerEvent('pointerout', { bubbles: true, pointerType: 'mouse' }));
+    check('its tooltip says exactly what it copies, and what each ramp keeps', /intensity, push, hue shift and saturation/.test(copies ?? '') && /keeps its own colour, material and finish/.test(copies ?? ''), copies);
     apply()?.click();
-    check('it gives every ramp this one’s material and Surface, as one undo step', (await until(() => others().every((o) => o === [spec().material, JSON.stringify(spec().surface ?? null)].join()))) !== null && il.depth() === depth + 1, [others(), il.depth() - depth]);
+    check('it gives every ramp this one’s intensity, push, hue shift and saturation, as one undo step', (await until(() => looks().every((o) => o === [spec().intensity, spec().push, spec().hueShift, spec().chromaCurve].join()))) !== null && il.depth() === depth + 1, [looks(), il.depth() - depth]);
+    check('and leaves each ramp its own material and finish: a mixed-material study stays mixed', others().join('|') === before.join('|') && il.get().ramps[1].material === 'skin', others());
     il.undo();
-    check('and undo gives the others their own back', others().join('|') === before.join('|') && il.depth() === depth, others());
+    check('undo gives the others their own look back', looks().join('|') === lookBefore.join('|') && il.depth() === depth, looks());
+    il.undo();
+    check('(put back)', il.depth() === depth - 1);
   }
 
   // Look: Intensity and Push, one undo step each, relighting

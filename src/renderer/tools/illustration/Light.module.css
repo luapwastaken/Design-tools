@@ -9,6 +9,9 @@
 .controls > * { flex: none; }
 /* three words in a segmented row (Grounded, Expressive, Extreme) need the room */
 .controls [role="radiogroup"] button { padding-inline: 5px; }
+/* every control in the tab is at least 24px to hit: the segments (the row's 3px padding takes 6px of the 28) and the colour chips */
+.tab [role="radiogroup"] { padding: 2px; }
+.tab button[aria-haspopup="dialog"] { width: 24px; height: 24px; }
 .every { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 6px; }
 .addAll { align-self: flex-end; }
 .hint { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
@@ -17,6 +20,9 @@
 .aim { display: flex; flex-direction: column; gap: 6px; }
 .aimRow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .aimRow > :not([role="radiogroup"]) { flex: 1 1 110px; min-width: 0; }
+/* Front | Behind hugs its words */
+.aimRow > [role="radiogroup"] { flex: none; }
+.aimRow > [role="radiogroup"] button { flex: none; padding-inline: 8px; }
 
 /* above the stage: what it shows, and what the pointer is over */
 .head { display: flex; align-items: baseline; gap: 12px; min-height: 18px; }
@@ -89,7 +95,9 @@
 .usePercent { flex: none; color: var(--ink-2); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
 
 .options { display: flex; flex-wrap: wrap; gap: 2px 16px; }
-.options > * { flex: 1 1 250px; min-width: 0; }
+/* wide enough for four words in a segmented row (Sphere, Cube, Cloth, All) beside its label */
+.options > * { flex: 1 1 340px; min-width: 0; }
+.options [role="radiogroup"] button { padding-inline: 6px; }
 
 /* colours the light needs */
 .needs { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }

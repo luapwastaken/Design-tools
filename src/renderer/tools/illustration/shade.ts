@@ -74,6 +74,8 @@ export function direction({ azimuth, elevation }: Light): V3 {
 const LOBE = 1023;
 /** the sky and the ground a shiny surface reflects, as how lit they are */
 const SKY = 0.8;
+/** how much of the room's fill is left at the terminator itself, before a sheen lifts it */
+const CORE = 0.3;
 /** a streak is stretched by using this share of the highlight's exponent across it */
 const STREAK = 0.14;
 
@@ -89,6 +91,9 @@ export type Frame = {
   lo: number;
   hi: number;
   wrap: number;
+  /** the core shadow: how much of the room's fill is left at the terminator, and how far past it the fill takes to come back. A sheen material (velvet, felt) scatters light into it, so its core is a soft dip, not a line */
+  core: number;
+  coreW: number;
   /** twice the ambient: 1 is the default fill */
   amb: number;
   /** the highlight's strength, its table (n.h to the exponent) and the streak's */
@@ -104,6 +109,8 @@ export type Frame = {
   ground: number;
   /** metal's soft environment: how soft its horizon is, which way its sky leans (toward the light's side) and how strong and broad the soft box where the light is */
   mblur: number;
+  /** 1 when a metal's environment has no horizon left (0 from half gloss up) */
+  flat: number;
   sky: V3;
   box: number;
   boxPow: number;
@@ -153,6 +160,9 @@ export function frame(light: Light, fin: Finish = DEFAULT_FINISH, ground = 0.28,
     lo: -0.06 - 0.55 * soft,
     hi: 0.22 + 0.2 * soft,
     wrap: 0.5 * soft,
+    // with the light behind there is no lit side to end in a core shadow: the dip would only draw an arc across the shadowed face
+    core: 1 - (1 - CORE - (1 - CORE) * 0.7 * fin.sheen) * (1 - 0.85 * smooth(0.1, -0.5, l[2])),
+    coreW: 0.25 + 0.25 * fin.sheen,
     amb: 2 * fin.ambient,
     amp: Math.min(1, 2.2 * fin.gloss) * (1 - 0.2 * fin.metal),
     lobe: lobe(e),
@@ -162,6 +172,7 @@ export function frame(light: Light, fin: Finish = DEFAULT_FINISH, ground = 0.28,
     blur: 0.12 + 0.5 * (1 - fin.gloss),
     ground,
     mblur: 0.7 + 0.6 * (1 - fin.gloss),
+    flat: 1 - smooth(0, 0.5, fin.gloss),
     sky: norm((0.45 * l[0]) / lh, 1 + (0.45 * l[1]) / lh, 0),
     box: 0.5 * (0.5 + 0.5 * fin.gloss),
     boxPow: 2 + 14 * fin.gloss ** 2,
@@ -188,7 +199,9 @@ const SHINE = 4;
  */
 function environment(rx: number, ry: number, rz: number, f: Frame): number {
   const t = rx * f.sky[0] + ry * f.sky[1];
-  const sky = smooth(-f.mblur, f.mblur, t);
+  // as the gloss drops the horizon is blurred away altogether: a matte metal has no sky over a ground, only a lit side
+  const sky0 = smooth(-f.mblur, f.mblur, t);
+  const sky = sky0 + (0.5 - sky0) * f.flat;
   const band = 1 - (2 * sky - 1) ** 2;
   // a metal is read mid-dark: its body is rich, the light is only where the room is bright
   const low = f.ground * 0.5;
@@ -223,7 +236,7 @@ function lightPixel(nx: number, ny: number, nz: number, open: number, thick: num
   const down = 1 - sky;
   const fill = f.amb * (0.07 + 0.06 * sky + 0.2 * down);
   // the core shadow is where the lit side ends; the room lifts the shadow again from there
-  const shadowSide = ndl < f.lo ? fill * open * smooth(f.lo, f.lo - 0.2, ndl) : 0;
+  const shadowSide = fill * open * (ndl < f.lo ? f.core + (1 - f.core) * smooth(f.lo, f.lo - f.coreW, ndl) : f.core);
   let v = shadowSide + (lightSide - shadowSide) * lit;
 
   // what a shiny surface reflects: sky over a horizon, the ground under it
@@ -232,7 +245,7 @@ function lightPixel(nx: number, ny: number, nz: number, open: number, thick: num
   if (fin.metal > 0) {
     env = environment(2 * nz * nx + 0.3 * px, ry + 0.45 * py, 2 * nz * nz - 1, f);
     // metal has no diffuse light: all it shows is the room
-    v += (env - v) * 0.94 * fin.metal;
+    v += (env - v) * (0.94 + 0.06 * f.flat) * fin.metal;
   } else if (f.fres > 0.02) env = f.ground + (SKY - f.ground) * smooth(-f.blur, f.blur, ry) + 0.12 * ry;
   if (f.fres > 0.02) {
     const x = nz > 0 ? 1 - nz : 1;
@@ -262,7 +275,8 @@ function lightPixel(nx: number, ny: number, nz: number, open: number, thick: num
       }
     }
   }
-  const shine = sp * f.amp * smooth(0, 0.12, ndl) * selfF;
+  // (a broad, low-gloss highlight fades in over a wide span, or it would end in a line along the terminator)
+  const shine = sp * f.amp * smooth(0, 0.12 + 0.6 * f.flat, ndl) * selfF;
   v += (1 - v) * shine;
 
   // light through: a thin sheet with the light behind it glows, and the more the thinner it is
@@ -274,7 +288,7 @@ function lightPixel(nx: number, ny: number, nz: number, open: number, thick: num
     const trf = ndl < 0 ? 0.4 + 0.6 * toward : 0.5 * (1 - smooth(0, 0.35 + 0.3 * fin.softness, ndl));
     // a solid body is nearly a silhouette with a rim: the glow dies toward the middle of a ball or a block
     const sheet = 1 - thick;
-    wg = f.through * trf * sheet * Math.sqrt(sheet) * f.back * arrives;
+    wg = f.through * trf * sheet * f.back * arrives;
     tg = 0.38 + 0.55 * (toward * (0.35 + 0.65 * f.back) + 0.22 * (ndl < 0 ? 0 : 1 - smooth(0, 0.5, ndl)));
     v *= 1 - 0.4 * wg;
   }
@@ -289,11 +303,13 @@ function lightPixel(nx: number, ny: number, nz: number, open: number, thick: num
     }
   }
 
+  // a metal's brightest spot stays in its own colour: it stops short of the ramp's near-white first step, and the glint's colour is laid over it
+  if (fin.metal > 0) v = Math.min(v, 1) - 0.16 * fin.metal * smooth(0.55, 1, v);
   S[TONE] = v < 0 ? 0 : v > 1 ? 1 : v;
   S[GLOW] = wg;
   S[GLOW_TONE] = tg > 1 ? 1 : tg;
-  S[BOUNCE] = f.tint > 0 ? Math.min(0.7, f.amb * 0.8 * down * (1 - lit)) * f.tint : 0;
-  S[SHINE] = shine * (1 - 0.6 * fin.metal);
+  S[BOUNCE] = f.tint > 0 ? Math.min(0.7, f.amb * 0.8 * down * (1 - lit)) * f.tint * (1 - f.flat * fin.metal) : 0;
+  S[SHINE] = shine * (1 - 0.3 * fin.metal);
 }
 
 /**
@@ -381,6 +397,12 @@ const turn = (a: number, b: number, f: number, most = 180): number => wrapHue(a 
 /** how far light through a material that does not scatter warm may turn the ramp's hue: it stays the ramp's colour, lighter and richer */
 const KEEP = 12;
 
+/** `f` of the way from a to b in OKLab */
+const mixOklch = (a: Oklch, b: Oklch, f: number): Oklch => {
+  const [x, y] = [toOklab(a), toOklab(b)];
+  return fromOklab([x[0] + (y[0] - x[0]) * f, x[1] + (y[1] - x[1]) * f, x[2] + (y[2] - x[2]) * f], b[2]);
+};
+
 export function lookOf(i: LookIn): Look {
   const banded = !!i.banded;
   const sub = MATERIALS.find((m) => m.id === i.material)?.sub ?? 0;
@@ -398,7 +420,11 @@ export function lookOf(i: LookIn): Look {
         return fromOklab([l, a + (s[1] - a) * 0.55, b + (s[2] - b) * 0.55], c[2]);
       })
     : i.steps;
-  const spec = rgb255(fitChroma([0.97, Math.min(i.light[1], 0.03), i.light[2]]));
+  // a metal's highlight is its own colour brightened (gold glints gold), a dielectric's is the light's, near white
+  const lightest = i.steps[0];
+  const glint = fitChroma([0.95, lightest ? Math.max(lightest[1], 0.09) : 0, lightest ? lightest[2] : 0]);
+  const white = fitChroma([0.97, Math.min(i.light[1], 0.03), i.light[2]]);
+  const spec = rgb255(finish.metal > 0 && lightest ? mixOklch(white, glint, finish.metal) : white);
   return {
     finish,
     banded,
@@ -443,7 +469,8 @@ export function horizonsOf(sf: Surface, upTo = AZIMUTHS): Horizons {
     const dx = Math.sin((k * 360 * RAD) / AZIMUTHS);
     const dy = -Math.cos((k * 360 * RAD) / AZIMUTHS);
     for (let p = 0; p < n; p++) {
-      if (cover[p] < 0.5) continue;
+      // the antialiased rim is worked out too: left clear, it would be lit between shaded neighbours and saw along a slanted edge
+      if (cover[p] <= 0) continue;
       const [i, j] = [p % size, (p / size) | 0];
       const z0 = height[p];
       let up = 0;
@@ -460,8 +487,31 @@ export function horizonsOf(sf: Surface, upTo = AZIMUTHS): Horizons {
       hz.front[k * n + p] = Math.min(90, Math.atan(up) / RAD);
       hz.back[k * n + p] = Math.min(90, Math.atan(down) / RAD);
     }
+    softenSlice(hz.front, k * n, size, cover);
+    softenSlice(hz.back, k * n, size, cover);
   }
   return hz;
+}
+
+/**
+ * A fold's horizon jumps from one pixel to the next where a ridge starts to hide the light, and a
+ * shadow edge that is one pixel wide saws along a slanted edge. A [1 2 1] blur twice each way over the
+ * pixels the cloth covers (never mixing in the empty backdrop) takes the stairs out of it.
+ */
+function softenSlice(a: Uint8Array, at: number, size: number, cover: Float32Array): void {
+  const n = size * size;
+  let from = Float32Array.from(a.subarray(at, at + n));
+  let to = new Float32Array(n);
+  for (const [step, edge] of [[1, (p: number) => p % size] as const, [size, (p: number) => (p / size) | 0] as const, [1, (p: number) => p % size] as const, [size, (p: number) => (p / size) | 0] as const]) {
+    for (let p = 0; p < n; p++) {
+      if (cover[p] <= 0) continue;
+      const c = from[p];
+      const [before, after] = [edge(p) > 0 && cover[p - step] > 0 ? from[p - step] : c, edge(p) < size - 1 && cover[p + step] > 0 ? from[p + step] : c];
+      to[p] = (2 * c + before + after) / 4;
+    }
+    [from, to] = [to, from];
+  }
+  for (let p = 0; p < n; p++) if (cover[p] > 0) a[at + p] = Math.round(from[p]);
 }
 
 // ── a frame ─────────────────────────────────────────────────────────────────────────────────────
@@ -599,7 +649,7 @@ export function shade(sf: Surface, look: Look, light: Light, out: Uint8ClampedAr
         g += (bounce[q + 1] + (bounce[q + 4] - bounce[q + 1]) * t - g) * bw;
         b += (bounce[q + 2] + (bounce[q + 5] - bounce[q + 2]) * t - b) * bw;
       }
-      const sw = hard(S[SHINE] * 0.6);
+      const sw = hard(S[SHINE] * (0.6 + 0.4 * look.finish.metal));
       if (sw > 0.02) {
         r += (spec[0] - r) * sw;
         g += (spec[1] - g) * sw;

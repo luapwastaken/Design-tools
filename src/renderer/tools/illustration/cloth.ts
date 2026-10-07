@@ -66,7 +66,8 @@ function fan(x: number, y: number, side: -1 | 1): number {
   const dy = PIN_Y - y;
   const r = Math.hypot(dx, dy);
   const turn = Math.atan2(dx, dy); // 0 straight down from the pin
-  return Math.cos(FANS * turn + 0.7) * smooth(0.02, 0.5, r);
+  // a fold's slope grows as 1/r toward the pin, so the height must grow with r to keep it from becoming a razor (the pinched corners sawed)
+  return Math.cos(FANS * turn + 0.7) * smooth(0.02, 1, r);
 }
 
 const drapeShape = (x: number, y: number) => {

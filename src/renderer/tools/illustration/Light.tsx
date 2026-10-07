@@ -27,15 +27,15 @@ import { lightAt, lightWords, nudge, PRESETS, presetOf, sunAt, type Arrow } from
 import { patchView, shaped, type IllustrationView } from './view-state.ts';
 import s from './Light.module.css';
 
-/** view state: the light, the shape, the cloth's drape, hard steps or blended, one ramp or all of them, the ramp picked from All ramps, and whether the sun is hidden (when there are several objects) */
-export type LitView = Light & { shape: Shape | 'all'; banded: boolean; all: boolean; fold: Fold; ramp: string; rampFor: string; hideSun: boolean };
-export const LIT_VIEW: LitView = { azimuth: 320, elevation: 35, shape: 'sphere', banded: false, all: false, fold: 'curtain', ramp: '', rampFor: '', hideSun: false };
+/** view state: the light, the shape, the cloth's drape, hard steps or blended, one ramp or all of them, and whether the sun is hidden */
+export type LitView = Light & { shape: Shape | 'all'; banded: boolean; all: boolean; fold: Fold; hideSun: boolean };
+export const LIT_VIEW: LitView = { azimuth: 320, elevation: 35, shape: 'sphere', banded: false, all: false, fold: 'curtain', hideSun: false };
 
 const SHAPES = [
   { value: 'sphere', label: 'Sphere' },
   { value: 'cube', label: 'Cube' },
   { value: 'cloth', label: 'Cloth' },
-  { value: 'all', label: 'All three' },
+  { value: 'all', label: 'All', tip: 'A sphere, a cube and a cloth fold together' },
 ] as const;
 const ALL_SHAPES: Shape[] = ['sphere', 'cube', 'cloth'];
 export const SHAPE_NAME: Record<Shape, string> = { sphere: 'a sphere', cube: 'a cube', cloth: 'a cloth fold' };
@@ -68,7 +68,7 @@ export function LightTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illus
   const view = shaped(v.preview, LIT_VIEW);
   if (view.shape !== 'all' && !ALL_SHAPES.includes(view.shape)) view.shape = 'sphere';
   if (!FOLDS.some((f) => f.value === view.fold)) view.fold = 'curtain';
-  // Show: All ramps draws one shape for each ramp, so "All three" is not one of its shapes
+  // Show: All ramps draws one shape for each ramp, so Shape: All is not one of its shapes
   const shape = view.all && view.shape === 'all' ? 'sphere' : view.shape;
   const onView = (patch: Partial<LitView>) => patchView({ preview: { ...view, ...patch } });
   const ramps: LitRamp[] = d.ramps
@@ -78,10 +78,16 @@ export function LightTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illus
     })
     .filter((r) => r.steps.length > 0);
   const sel = selected(d, v.selected);
-  // a ramp picked from All ramps is the one the controls edit, until the selection moves somewhere else
-  const picked = view.ramp && view.rampFor === (sel?.id ?? '') ? ramps.find((r) => r.id === view.ramp) : undefined;
-  const ramp = picked ?? ramps.find((r) => r.id === sel?.group) ?? ramps[0];
-  const strayed = !!sel && !!ramp && !picked && sel.group !== ramp.id;
+  // the ramp the controls edit is the selected colour's; a tile picked in All ramps moves the selection, so the two never disagree
+  const ramp = ramps.find((r) => r.id === sel?.group) ?? ramps[0];
+  const strayed = !!sel && !!ramp && sel.group !== ramp.id;
+  /** a tile of All ramps was clicked: select that ramp, at the step the selection is on (or its base) */
+  const pickRamp = (id: string) => {
+    const [to, from] = [stepsOf(d, id), sel?.group ? stepsOf(d, sel.group) : []];
+    const at = Math.max(0, from.findIndex((w) => w.id === sel?.id));
+    const swatch = to[Math.min(at, to.length - 1)];
+    if (swatch) select(swatch.id);
+  };
   const surround = surroundOf(v.surround, d.swatches);
   const ground = surroundColour(v.surround, d.swatches);
 
@@ -110,9 +116,9 @@ export function LightTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illus
 
   const loose = looseOf(d).length > 0;
   const spec = ramp?.spec;
-  // several objects on the stage: the sun can be hidden, and its ring stays behind them
+  // several objects on the stage: the sun is small and its ring stays behind them
   const multi = !!ramp && (view.all || shape === 'all');
-  const hideSun = multi && view.hideSun;
+  const hideSun = view.hideSun;
   // a narrow tab stacks the controls under the stage: the stage and the aim controls stay pinned while they scroll
   const { ref: tabRef, width } = useWidth<HTMLDivElement>();
   const narrow = width > 0 && width <= 700;
@@ -157,7 +163,7 @@ export function LightTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illus
         <Segmented label="Show" options={[...SHOWS]} value={view.all ? 'all' : 'one'} onChange={(m) => onView({ all: m === 'all' })} />
         {(shape === 'cloth' || shape === 'all') && <Segmented label="Drape" options={FOLDS.map((f) => ({ value: f.value, label: f.label, tip: f.tip }))} value={view.fold} onChange={(fold) => onView({ fold })} />}
         <Segmented label="Shading" options={[...SHADINGS]} value={view.banded ? 'banded' : 'smooth'} onChange={(m) => onView({ banded: m === 'banded' })} />
-        {multi && <Toggle label="Hide the sun" checked={view.hideSun} onChange={(hide) => onView({ hideSun: hide })} />}
+        <Toggle label="Hide the sun" checked={view.hideSun} onChange={(hide) => onView({ hideSun: hide })} />
       </div>
     </>
   );
@@ -189,7 +195,7 @@ export function LightTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illus
             ) : (
               <>
                 {view.all ? (
-                  <Grid ramps={ramps} shape={shape as Shape} fold={view.fold} selected={ramp.id} light={light} banded={view.banded} ground={ground} scale={k} onSelect={(id) => onView({ ramp: id, rampFor: sel?.id ?? '' })} />
+                  <Grid ramps={ramps} shape={shape as Shape} fold={view.fold} selected={ramp.id} light={light} banded={view.banded} ground={ground} scale={k} onSelect={pickRamp} />
                 ) : shape === 'all' ? (
                   <Three ramp={ramp} fold={view.fold} light={light} banded={view.banded} ground={ground} scale={k} />
                 ) : (
@@ -287,7 +293,7 @@ function Aim({ light, gesture, onView, compact, tight }: { light: Light; gesture
       </InspectorRow>
       {side}
       <Presets light={light} onPick={(l) => onView(l)} rows={2} />
-      <p className={s.hint}>Drag the sun. Pull it past its ring to put it behind the object.</p>
+      <p className={s.hint}>Drag the sun. Pull it out past its ring to flip it behind the object, or back in front; let go outside and it stays on the rim.</p>
     </>
   );
 }
@@ -338,7 +344,7 @@ function LightColours({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec
 function EveryRamp({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec }) {
   const name = rampName(d, r);
   const sharedLight = d.ramps.every((x) => same(x.light, r.light) && same(x.shadow, r.shadow));
-  const sharedLook = d.ramps.every((x) => x.material === r.material && x.intensity === r.intensity && x.push === r.push && x.hueShift === r.hueShift && x.chromaCurve === r.chromaCurve && JSON.stringify(x.surface ?? null) === JSON.stringify(r.surface ?? null));
+  const sharedLook = d.ramps.every((x) => x.intensity === r.intensity && x.push === r.push && x.hueShift === r.hueShift && x.chromaCurve === r.chromaCurve);
   return (
     <div className={s.every}>
       <Button size="xs" variant="ghost" icon="wb_sunny" disabled={sharedLight} onClick={() => lightEveryRamp(doc, r.id)} tooltip={sharedLight ? 'Every ramp is lit this way already' : 'One scene, one light: every ramp takes this light and shadow colour'}>
@@ -350,7 +356,7 @@ function EveryRamp({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec })
         icon="palette"
         disabled={sharedLook}
         onClick={() => doc.transact(`Give every ramp the look of ${name}`, (x) => lookForAll(x, r.id))}
-        tooltip={sharedLook ? 'Every ramp has this look already' : `Every ramp takes the material, finish, push, hue shift and saturation of ${name}; each keeps its own colour`}
+        tooltip={sharedLook ? 'Every ramp has this look already' : `Every ramp takes the intensity, push, hue shift and saturation of ${name}. Each keeps its own colour, material and finish`}
       >
         Apply look to every ramp
       </Button>
@@ -378,18 +384,22 @@ function Surface({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec }) {
       {SURFACE_SLIDERS.map((o) => (
         <SurfaceSlider key={o.key} doc={doc} r={r} name={name} spec={spec} item={o} />
       ))}
-      <Segmented
-        label="Streak"
-        info="Which way the grain stretches the highlight: along the folds, or across them."
-        options={[
-          { value: 'along', label: 'Along folds' },
-          { value: 'across', label: 'Across folds' },
-        ]}
-        value={finish.across ? 'across' : 'along'}
-        disabled={finish.grain < 0.01}
-        onChange={(m) => doc.transact(`Change the grain of ${name}`, (x) => setSpec(x, r.id, { surface: { ...spec(x).surface, across: m === 'across' } }))}
-      />
-      {finish.grain >= 0.01 && <p className={s.hint}>Grain stretches the highlight into a streak, as on satin, silk and brushed metal. Streak says which way it runs.</p>}
+      {/* a streak needs grain to stretch: satin, silk, brushed metal, wood and fur have it, skin and plastic do not */}
+      {finish.grain >= 0.01 && (
+        <>
+          <Segmented
+            label="Streak"
+            info="Which way the grain stretches the highlight: along the folds, or across them."
+            options={[
+              { value: 'along', label: 'Along folds' },
+              { value: 'across', label: 'Across folds' },
+            ]}
+            value={finish.across ? 'across' : 'along'}
+            onChange={(m) => doc.transact(`Change the grain of ${name}`, (x) => setSpec(x, r.id, { surface: { ...spec(x).surface, across: m === 'across' } }))}
+          />
+          <p className={s.hint}>Grain stretches the highlight into a streak, as on satin, silk and brushed metal. Streak says which way it runs.</p>
+        </>
+      )}
     </InspectorGroup>
   );
 }
@@ -465,7 +475,7 @@ function SunRing({ light, gesture, onKey, multi }: { light: Light; gesture: Gest
         <circle r="1" vectorEffect="non-scaling-stroke" className={s.track} />
         <line x1={at.x * 0.55} y1={-at.y * 0.55} x2={at.x} y2={-at.y} vectorEffect="non-scaling-stroke" className={s.ray} />
       </svg>
-      <Tooltip content="Drag to aim the light. Pull it out past the ring, or hold Alt, to put it behind the object. Shift holds one number; a double-click goes back to Upper left.">
+      <Tooltip content="Drag to aim the light. Pull it out past the ring, or hold Alt, to flip it behind the object. Shift holds one number; a double-click goes back to Upper left.">
         <span
           className={cx(s.sun, behind && s.behind)}
           style={{ left: `${50 + at.x * 50}%`, top: `${50 - at.y * 50}%` }}
@@ -544,7 +554,7 @@ function Three({ ramp, fold, light, banded, ground, scale }: { ramp: LitRamp; fo
   );
 }
 
-/** Show: All ramps: every ramp on the selected shape, a grid; picking one makes it the ramp the controls edit */
+/** Show: All ramps: every ramp on the selected shape, a grid; picking one selects it, so the controls edit it */
 function Grid({ ramps, shape, fold, selected, light, banded, ground, scale, onSelect }: { ramps: LitRamp[]; shape: Shape; fold: Fold; selected: string; light: Light; banded: boolean; ground: Oklch | null; scale: number; onSelect(id: string): void }) {
   // one Tab stop; arrows move between the ramps and pick
   const onArrows = (e: KeyboardEvent<HTMLDivElement>) => {
