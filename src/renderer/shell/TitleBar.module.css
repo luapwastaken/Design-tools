@@ -23,7 +23,7 @@
   letter-spacing: .005em;
   white-space: nowrap;
 }
-.app > :global(.ico) { color: var(--ink-2); }
+.mark { flex: none; color: var(--ink); }
 /* with the rail at 48px the mark is its icon alone, so the breadcrumb still starts where the Library does */
 @media (max-width: 1439.98px) {
   .app { width: 24px; }

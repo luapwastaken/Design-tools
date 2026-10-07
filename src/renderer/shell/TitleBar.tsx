@@ -1,4 +1,5 @@
 import { Icon, Tooltip } from '../ui/index.ts';
+import { AppMark } from './AppMark.tsx';
 import { shell, useShell } from './core/index.ts';
 import type { ToolDefinition } from './tool.ts';
 import s from './TitleBar.module.css';
@@ -18,7 +19,7 @@ export function TitleBar() {
   return (
     <header className={s.bar}>
       <div className={s.app}>
-        <Icon name="my_location" />
+        <AppMark className={s.mark} />
         <span className={s.appName}>Design Tools</span>
       </div>
       <nav className={s.crumbs} aria-label="Location">
