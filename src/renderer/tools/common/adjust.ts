@@ -117,6 +117,18 @@ export const holdsPairs =
   (moved: Map<string, Oklch>): boolean =>
     pairs.every((p) => p.ratio < p.target || contrast(moved.get(p.text.id) ?? p.text.oklch, moved.get(p.ground.id) ?? p.ground.oklch) >= p.target);
 
+/** `free` moved in value to the nearest place on either side of `stay` that parts them under every simulation in `kinds` (hue kept), or null */
+function leap(stay: Oklch, free: Oklch, kinds: Cvd[], minE: number, others: number[], ok: (next: Oklch) => boolean): Oklch | null {
+  const sv = valueOf(stay);
+  for (let gap = 0.01; gap <= 1; gap += 0.01) {
+    for (const v of [sv + gap, sv - gap].filter((x) => x >= 0 && x <= 1).sort((p, q) => Math.abs(p - valueOf(free)) - Math.abs(q - valueOf(free)))) {
+      const next = withV(free, v);
+      if (kinds.every((k) => deltaE(simulateCvd(stay, k), simulateCvd(next, k)) >= minE) && ok(next) && others.every((o) => Math.abs(o - v) >= 0.02)) return next;
+    }
+  }
+  return null;
+}
+
 /**
  * The colours that part `a` and `b` under every simulation in `kinds`, by swatch id: a locked one
  * stays, the colour that moves first (`rules.rank`) moves alone where that reaches, and no passing
@@ -134,6 +146,12 @@ export function partPair(a: Swatch, b: Swatch, kinds: Cvd[], minE: number, swatc
     let [x, y] = [a.oklch, b.oklch];
     for (const k of kinds) [x, y] = cvdFix(x, y, k, minE, others, (n) => holds(new Map([[a.id, n[0]], [b.id, n[1]]])), held) ?? [x, y];
     if (x !== a.oklch || y !== b.oklch) return { changes: { [a.id]: x, [b.id]: y }, blocked: false };
+    // one held and no room on its side: the free colour may cross to the other side of it
+    if (held[0] !== held[1]) {
+      const [stay, move] = held[0] ? [a, b] : [b, a];
+      const crossed = leap(stay.oklch, move.oklch, kinds, minE, others, (n) => holds(new Map([[stay.id, stay.oklch], [move.id, n]])));
+      if (crossed) return { changes: { [stay.id]: stay.oklch, [move.id]: crossed }, blocked: false };
+    }
   }
   return { changes: null, blocked: false };
 }

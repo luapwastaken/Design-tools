@@ -37,7 +37,7 @@ export function stepWord(step: number, lo: number, hi: number): string {
  * What export and the checks' sentences call each swatch: blank names filled in. A blank Illustration
  * ramp step reads "Cloth deep shadow" (its ramp's name, its word) wherever it shows, so two steps
  * never share a colour name; `ramps` gives the name of a ramp whose base is gone. A made-up name that
- * another swatch already carries gets a number ("Black 2"), so a sentence never names two colours alike.
+ * another swatch already carries gets the nearest unused name from the list, and a number ("Black 2") only when none is left, so a sentence never names two colours alike.
  */
 export function named(list: Swatch[], ramps: { id: string; name?: string }[] = []): Swatch[] {
   const groups = new Map<string, Swatch[]>();
@@ -53,7 +53,9 @@ export function named(list: Swatch[], ramps: { id: string; name?: string }[] = [
     const ramp = steps && rampName(w.group!);
     const at = steps && ramp ? steps.map((x) => x.step!) : [];
     const made = steps && ramp ? `${ramp} ${stepWord(w.step!, Math.min(...at), Math.max(...at))}` : displayName(w);
-    let name = made;
+    // a colour that no ramp names takes the nearest name nobody carries yet; numbers are the last resort
+    let name = !steps && taken.has(made.toLowerCase()) ? autoName(w.oklch, taken) : made;
+    if (taken.has(name.toLowerCase())) name = made;
     for (let n = 2; taken.has(name.toLowerCase()); n++) name = `${made} ${n}`;
     taken.add(name.toLowerCase());
     return { ...w, name };

@@ -38,7 +38,7 @@ export const contrastTarget = (role: string | null): number => (role === 'Primar
 const carriesText = (s: Swatch, marker: boolean, anyRole: boolean): boolean => (s.role === null ? !anyRole : isInk(s.role) && !(marker && s.role === 'Highlight'));
 
 /** how willingly a colour moves to fix a pair: the supporting colours before the brand and the type, the grounds last */
-const MOVE_RANK: Record<string, number> = { Highlight: 0, Accent: 1, Muted: 1, Primary: 2, Text: 2, Surface: 3, Background: 3 };
+const MOVE_RANK: Record<string, number> = { Highlight: 0, Accent: 1, Muted: 1, Primary: 2, Text: 2.5, Surface: 3, Background: 3 };
 export const moveRank = (role: string | null): number => (role === null ? 1 : (MOVE_RANK[role] ?? 1));
 
 /**
@@ -166,16 +166,17 @@ export type CvdClosest = { a: Swatch; b: Swatch; deltaE: number; flag: boolean }
 /**
  * The two swatches that look most alike to a viewer with `kind` ('typical' = no deficiency), by
  * CIEDE2000 of the simulated colours; `flag` when they are closer than `flagBelow`. Two grounds
- * aren't a pair here either.
+ * aren't a pair here either. `skip` leaves a pair out (a value pair marked intended, for Achromatopsia).
  */
 export function cvdClosest(
   swatches: Swatch[],
   kind: Cvd | 'typical',
-  { severity = 1, flagBelow = 10 }: { severity?: number; flagBelow?: number } = {},
+  { severity = 1, flagBelow = 10, skip }: { severity?: number; flagBelow?: number; skip?: (a: Swatch, b: Swatch) => boolean } = {},
 ): CvdClosest | null {
   const seen = new Map(swatches.map((s) => [s, kind === 'typical' ? s.oklch : simulateCvd(s.oklch, kind, severity)]));
   let best: CvdClosest | null = null;
   for (const [a, b] of checkedPairs(swatches)) {
+    if (skip?.(a, b)) continue;
     const e = deltaE(seen.get(a)!, seen.get(b)!);
     if (!best || e < best.deltaE) best = { a, b, deltaE: e, flag: e < flagBelow };
   }

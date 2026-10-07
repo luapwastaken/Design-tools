@@ -46,7 +46,7 @@ export function results(raw: Swatch[], ramps: RampSpec[] | undefined, flagL: num
   const every = valueCollisions(swatches, flagL / 100);
   const collisions = every.filter((c) => !intended.includes(pairKey(c.a.id, c.b.id)));
   const marked = every.filter((c) => intended.includes(pairKey(c.a.id, c.b.id)));
-  const vision = Object.fromEntries(VISIONS.map((k) => [k, cvdClosest(swatches, k, { flagBelow: flagE })])) as Results['vision'];
+  const vision = Object.fromEntries(VISIONS.map((k) => [k, cvdClosest(swatches, k, { flagBelow: flagE, ...(k === 'achromat' && { skip: (a, b) => intended.includes(pairKey(a.id, b.id)) }) })])) as Results['vision'];
   const outOfSrgb = swatches.filter((w) => !inSrgb(w.oklch));
   // one pair merging under several simulations is one problem with one fix (as Vision shows it)
   const merged = new Set(VISIONS.filter((k) => k !== 'typical' && vision[k]?.flag).map((k) => [vision[k]!.a.id, vision[k]!.b.id].sort().join())).size;

@@ -5,7 +5,7 @@
 // colour; Highlight is a clearly coloured marker fill that Text reads on. All keep their value apart
 // from each other. A colour in `locked` (the user's own) is never touched; the rest is derived from it.
 // One ground per build. Pure and seeded: the same options always give the same palette.
-import { contrast, type Oklch } from '../color/index.ts';
+import { contrast, deltaE, simulateCvd, type Cvd, type Oklch } from '../color/index.ts';
 import { valueOf } from '../color/value.ts';
 import { harmony } from './harmony.ts';
 import { random } from './random.ts';
@@ -121,16 +121,24 @@ export function buildRoles(o: BuildOptions): RoleColours {
   const primary = lock.Primary ?? randomPrimary(grounds, light, base, st, r);
   const pV = valueOf(primary);
 
-  const text = lock.Text ?? readable(grounds, light, TEXT_RATIO + MARGIN, hue, st.chroma * 1.5, light ? 0.15 + 0.08 * r[4] : 0.92 + 0.05 * r[4], [pV], light ? 0.08 : 0.985);
+  const highlightC = light ? clamp(0.05 + 0.05 * st.bold * (0.7 + 0.6 * r[6]), 0.05, 0.1) : clamp(0.1 + 0.05 * st.bold * (0.7 + 0.6 * r[6]), 0.1, 0.16);
   // Accent first, a lively fill; then Highlight, the marker Text reads on; then Muted in the room that is left: all keep their value apart
   const accentC = clamp(0.11 + 0.1 * st.bold * (0.7 + 0.6 * r[5]), 0.1, 0.22);
   // a harmony with two colours: the seed's pick, unless the other shows much more chroma on this page (yellows are olive at 3:1)
-  const options = hues(base, o.accent, turns, pick, side, r[9]).map((h) => ({ ...h, accent: livelyNear(grounds, light, h, accentC, [pV, valueOf(text)], r[11], r[12]) }));
-  const [first, ...rest] = options;
-  const chosen = rest.reduce((a, b) => (b.accent[1] > a.accent[1] * 1.25 ? b : a), first);
+  const choose = (keep: number[]) => {
+    const options = hues(base, o.accent, turns, pick, side, r[9]).map((h) => ({ ...h, accent: livelyNear(grounds, light, h, accentC, [pV, ...keep], r[11], r[12]) }));
+    const [first, ...rest] = options;
+    return rest.reduce((a, b) => (b.accent[1] > a.accent[1] * 1.25 ? b : a), first);
+  };
+  const readText = readable(grounds, light, TEXT_RATIO + MARGIN, hue, st.chroma * 1.5, light ? 0.15 + 0.08 * r[4] : 0.92 + 0.05 * r[4], [pV], light ? 0.08 : 0.985);
+  // the Text is kept apart from a pale Primary, as far as a marker of the Highlight's hue can still be read on it
+  const markerHue = (h: number) => (!light && (h < 125 || h > 340) ? 150 : h);
+  const hl0 = markerHue(wrapHue(choose([valueOf(readText)]).highlight + 20 * (r[13] - 0.5)));
+  const text = lock.Text ?? apartFrom(primary, grounds, light, readText, (c) => markerLs(c, grounds, light, markerBand(grounds, light, true), (l) => fitChroma([l, highlightC, hl0])).length > 0);
+  // a Text moved off the Primary leaves the Muted a thin band beside it: its value is kept clear of the Accent too
+  const chosen = choose(text === readText ? [valueOf(text)] : [valueOf(text), valueOf(text) + (light ? 0.09 : -0.09)]);
   const accent = lock.Accent ?? chosen.accent;
-  // a deep marker on a dark page needs more chroma than a pastel on a light one, or it is dusty
-  const highlightC = light ? clamp(0.05 + 0.05 * st.bold * (0.7 + 0.6 * r[6]), 0.05, 0.1) : clamp(0.1 + 0.05 * st.bold * (0.7 + 0.6 * r[6]), 0.1, 0.16);
+  // a deep marker on a dark page needs more chroma than a pastel on a light one, or it is dusty (highlightC)
   const highlight = lock.Highlight ?? marker(grounds, light, text, wrapHue(chosen.highlight + 20 * (r[13] - 0.5)), highlightC, [pV, valueOf(text), valueOf(accent)], r[8]);
   const muted = lock.Muted ?? readable(grounds, light, MUTED_RATIO + MARGIN, hue, st.chroma * 1.3, NaN, [pV, valueOf(text), valueOf(accent), valueOf(highlight)], light ? text[0] + 0.075 : text[0] - 0.075);
 
@@ -177,6 +185,37 @@ function hues(base: number, kind: Accent, turns: number[], pick: number, side: n
 function randomPrimary(grounds: Oklch[], light: boolean, hue: number, st: Style, r: number[]): Oklch {
   const c = clamp(0.09 + 0.1 * st.bold * (0.8 + 0.4 * r[7]), 0.08, 0.2);
   return readable(grounds, light, FILL_RATIO + MARGIN, hue, c, light ? 0.52 + 0.1 * r[8] : 0.6 + 0.1 * r[8], [], light ? 0.4 : 0.9);
+}
+
+/** how unlike the Primary the built Text is, by CIEDE2000, under every colour vision: clear of the check's flag (10) */
+export const TEXT_APART = 12;
+const CVDS: Cvd[] = ['protan', 'deutan', 'tritan', 'achromat'];
+/** the least ΔE between two colours as typical vision and each deficiency sees them */
+export const leastApart = (a: Oklch, b: Oklch): number => Math.min(deltaE(a, b), ...CVDS.map((k) => deltaE(simulateCvd(a, k), simulateCvd(b, k))));
+
+/**
+ * The Text: `readable` at 7:1, then, where it would look like the Primary (a pale brand colour on a
+ * dark page, both pale creams), the lightness in the passing band nearest the wanted one that is
+ * `TEXT_APART` from it under every simulation, else the band's most distinct. Chroma stays a neutral's.
+ */
+function apartFrom(primary: Oklch, grounds: Oklch[], light: boolean, first: Oklch, feasible: (text: Oklch) => boolean): Oklch {
+  if (leastApart(first, primary) >= TEXT_APART) return first;
+  const [hue, chroma] = [first[2], first[1]];
+  const at = (l: number): Oklch => fitChroma([l, chroma, hue]);
+  const limit = edgeOf((l) => grounds.every((g) => contrast(at(l), g) >= TEXT_RATIO + MARGIN), light, grounds);
+  const [lo, hi] = light ? [0, limit] : [limit, 1];
+  // nearest the wanted lightness first: the first that clears TEXT_APART and leaves a marker wins; else the most distinct that does
+  const ls: number[] = [];
+  for (let l = lo; l <= hi + 1e-9; l += 0.005) ls.push(l);
+  ls.sort((a, b) => Math.abs(a - first[0]) - Math.abs(b - first[0]));
+  let [pick, pickApart] = [first, leastApart(first, primary)];
+  for (const l of ls) {
+    const c = at(l);
+    const apart = leastApart(c, primary);
+    if (apart >= TEXT_APART && feasible(c)) return c;
+    if (apart > pickApart + 1e-9 && feasible(c)) [pick, pickApart] = [c, apart];
+  }
+  return pick;
 }
 
 /** the lightness (bisected) where `ok` stops holding, starting from the end that always passes */
@@ -250,6 +289,28 @@ function livelyNear(grounds: Oklch[], light: boolean, h: Hues, chroma: number, a
 }
 
 /**
+ * The lightness range a marker is searched in, on the ground's side of the palette and clear of both
+ * grounds; `wide` closes up to the page a little more (the fallback when the Text is too dim for the
+ * usual band, which a pale brand colour makes it).
+ */
+function markerBand(grounds: Oklch[], light: boolean, wide = false): [number, number] {
+  const [gmin, gmax] = [Math.min(...grounds.map((g) => g[0])), Math.max(...grounds.map((g) => g[0]))];
+  if (wide) return light ? [0.78, Math.max(0.8, Math.min(0.98, gmin - 0.07))] : [Math.min(0.5, Math.max(0.28, gmax + 0.07)), 0.56];
+  return light ? [0.78, Math.max(0.8, Math.min(0.97, gmin - 0.125))] : [Math.min(0.5, Math.max(0.34, gmax + 0.125)), 0.56];
+}
+
+/** the lightnesses in a band where a marker of this hue and chroma reads under `text` and keeps GAP in value from the grounds */
+function markerLs(text: Oklch, grounds: Oklch[], light: boolean, band: [number, number], at: (l: number) => Oklch): number[] {
+  const gv = grounds.map(valueOf);
+  const ls: number[] = [];
+  for (let l = band[0]; l <= band[1] + 1e-9; l += 0.005) {
+    const v = valueOf(at(l));
+    if (contrast(text, at(l)) >= ON_FILL_RATIO + MARGIN && (light ? v <= Math.min(...gv) - GAP : v >= Math.max(...gv) + GAP)) ls.push(l);
+  }
+  return ls;
+}
+
+/**
  * A marker: a clearly coloured fill on the ground's side of the palette (light on a light page, deep
  * on a dark one) that Text reads on at 4.5:1 and that stays GAP apart in value from both grounds,
  * so it shows as a marker and not as more page.
@@ -258,14 +319,12 @@ function marker(grounds: Oklch[], light: boolean, text: Oklch, wanted: number, c
   // deep, a warm hue is brown, olive or wine: on a dark page the marker takes the green-teal instead
   const hue = !light && (wanted < 125 || wanted > 340) ? 150 : wanted;
   const at = (l: number): Oklch => fitChroma([l, chroma, hue]);
-  const gv = grounds.map(valueOf);
   // far enough from the page in lightness (0.125) that it still reads as a marker under colour-blind simulations and in greyscale
-  const [lo, hi] = light ? [0.78, Math.max(0.8, Math.min(0.97, Math.min(...grounds.map((g) => g[0])) - 0.125))] : [Math.min(0.5, Math.max(0.34, Math.max(...grounds.map((g) => g[0])) + 0.125)), 0.56];
-  const ls: number[] = [];
-  for (let l = lo; l <= hi + 1e-9; l += 0.005) {
-    const c = at(l);
-    const v = valueOf(c);
-    if (contrast(text, c) >= ON_FILL_RATIO + MARGIN && (light ? v <= Math.min(...gv) - GAP : v >= Math.max(...gv) + GAP)) ls.push(l);
+  let [lo, hi] = markerBand(grounds, light);
+  let ls = markerLs(text, grounds, light, [lo, hi], at);
+  if (!ls.length) {
+    [lo, hi] = markerBand(grounds, light, true);
+    ls = markerLs(text, grounds, light, [lo, hi], at);
   }
   if (!ls.length) return at(light ? 0.86 : 0.42);
   // a pastel on a light page, a bright-ish tint (the upper part of its range) on a dark one: the deep end of the range is wine and brown

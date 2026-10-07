@@ -13,9 +13,10 @@ type Undoable = { get(): unknown; undo(): void };
  * wrote, by swatch id. "Moved Wine L 21 to 27." for a contrast fix (`measure` L), V for value moves.
  */
 export function toastMoved(doc: Undoable, before: Swatch[], changes: Record<string, Oklch>, measure: 'L' | 'V' = 'L', extra = ''): void {
-  const moved = before.filter((w) => changes[w.id] && changes[w.id].some((x, i) => x !== w.oklch[i]));
-  if (!moved.length) return;
   const num = (o: Oklch) => Math.round((measure === 'L' ? o[0] : valueOf(o)) * 100);
+  // only colours whose number moved: a hue-only nudge is no "V 41 to 41"
+  const moved = before.filter((w) => changes[w.id] && num(changes[w.id]) !== num(w.oklch));
+  if (!moved.length) return;
   const one = (w: Swatch) => `${w.name || toHex(w.oklch)} ${measure} ${num(w.oklch)} to ${num(changes[w.id])}`;
   const after = doc.get();
   toast.show({

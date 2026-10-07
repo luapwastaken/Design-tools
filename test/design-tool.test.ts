@@ -4,6 +4,7 @@ import { deltaE, hexToOklch, simulateCvd, type Oklch } from '../src/shared/color
 import { greyOf, holdValue, valueOf } from '../src/shared/color/value.ts';
 import type { RampSpec, Swatch } from '../src/shared/types.ts';
 import { cvdFix, partPair, spreadCluster, spreadV, spreadVs, valueFix } from '../src/renderer/tools/common/adjust.ts';
+import { moveRank } from '../src/shared/palette/checks.ts';
 import { nextV } from '../src/renderer/tools/design/adjust.ts';
 import { fromPayload, moveIds, recolour, toPayload, type DesignDoc } from '../src/renderer/tools/design/doc.ts';
 
@@ -151,6 +152,13 @@ test('partPair: a locked colour stays, the colour that moves first moves alone, 
   assert.deepEqual(partPair(red, green, ['deutan'], 12, both, { locked: ['red', 'green'] }), { changes: null, blocked: true });
 });
 
+test('partPair: a look-alike pair that involves the Text moves the other colour, not the Text', () => {
+  const text = { ...sw('text', [0.89, 0.01, 100]), role: 'Text' };
+  const primary = { ...sw('primary', [0.96, 0.1, 100]), role: 'Primary' };
+  const fix = partPair(text, primary, ['achromat'], 12, [text, primary], { rank: (w) => moveRank(w.role) });
+  assert.ok(fix.changes && fix.changes.text === text.oklch && fix.changes.primary !== primary.oklch, 'the Text stays, the Primary moves');
+});
+
 test('spreadCluster: a run that reads as one grey spreads round its locked colours, the supporting ones first', () => {
   const run = [sw('a', greyOf(0.5)), sw('b', greyOf(0.52)), sw('c', greyOf(0.54))].map((w, i) => ({ ...w, role: i === 1 ? 'Highlight' : 'Primary' }));
   const moved = spreadCluster(run, 0.06, [], { locked: ['a'], rank: (w) => (w.role === 'Highlight' ? 0 : 2) });
@@ -168,4 +176,7 @@ test('blank names that would repeat are numbered, so a sentence never names two 
   assert.equal(new Set(names.map((n) => n.toLowerCase())).size, 3, names.join());
   assert.equal(names[2], 'Black 2', 'a name the user gave is never changed');
   assert.ok(names[0] !== names[1]);
+  // a second near-white takes another colour name, not "White 2"
+  const pale = named([sw('x', [0.99, 0, 0]), sw('y', [0.985, 0.002, 90])]).map((w) => w.name);
+  assert.ok(!/\d$/.test(pale[1]) && pale[0] !== pale[1], pale.join());
 });

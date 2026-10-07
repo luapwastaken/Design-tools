@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { contrast, hexToOklch, inSrgb, toHex, type Oklch } from '../src/shared/color/index.ts';
 import { valueOf } from '../src/shared/color/value.ts';
-import { ACCENTS, buildRoles, completeRoles, STYLE_LIST, type Accent, type RoleColours } from '../src/shared/palette/brand.ts';
+import { ACCENTS, buildRoles, completeRoles, leastApart, STYLE_LIST, type Accent, type RoleColours } from '../src/shared/palette/brand.ts';
 import { contrastPairs, valueCollisions } from '../src/shared/palette/checks.ts';
 import { ROLES } from '../src/shared/palette/roles.ts';
 import type { Swatch } from '../src/shared/types.ts';
@@ -223,6 +223,23 @@ test('the Highlight is a clearly coloured marker, clear of the page in lightness
       const dark = c.Background[0] < 0.5;
       assert.ok(c.Highlight[1] >= (dark ? 0.07 : 0.04), `${why}: Highlight chroma ${c.Highlight[1].toFixed(3)}`);
       assert.ok(dark ? c.Highlight[0] - pageL >= 0.1 : Math.min(c.Background[0], c.Surface[0]) - c.Highlight[0] >= 0.1, `${why}: Highlight L ${c.Highlight[0].toFixed(3)} on a page at ${pageL.toFixed(3)}`);
+    }
+  }
+});
+
+test('a pale brand colour never gets a Text that looks like it: a neutral, clear of the Primary under every colour vision', () => {
+  const pale = ['#FFF3A3', '#FFE9F0', '#E8FFF1', '#F4F8FF', '#FFF8E0', '#F7E6C4', '#D9F2FF'].map(hexToOklch);
+  for (const st of STYLE_LIST) {
+    for (const accent of ACCENTS.map((a) => a.value)) {
+      for (const [i, brand] of pale.entries()) {
+        for (const seed of [1, 2, 3]) {
+          const c = buildRoles({ seed: seed + i, style: st.id, accent, locked: { Primary: brand } });
+          const why = `${st.id}/${accent}/${toHex(brand)}/${seed + i}`;
+          assert.ok(leastApart(c.Text, brand) >= 12, `${why}: Text ${toHex(c.Text)} is ΔE ${leastApart(c.Text, brand).toFixed(1)} from the Primary`);
+          assert.ok(c.Text[1] <= 0.03, `${why}: Text chroma ${c.Text[1].toFixed(3)} is not a neutral`);
+          assertReads(c, why);
+        }
+      }
     }
   }
 });
