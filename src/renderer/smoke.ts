@@ -4325,7 +4325,7 @@ async function lightZonesUi(): Promise<void> {
   // the lights: a strength slider and number for each, a Kelvin field on the key, a Ground colour for the bounce
   const strengths = () => [...(panel()?.querySelectorAll<HTMLInputElement>('input[aria-label="Strength"]') ?? [])];
   check('each of the four lights has a strength number field', strengths().length === 4, strengths().length);
-  check('the Key has a Kelvin field and says what its colour reads as', !!panel()?.querySelector('input[aria-label="Kelvin"]') && /about \d+ K|off the blackbody line/.test(panel()?.textContent ?? ''));
+  check('the Key has a Kelvin field and says what its colour reads as', !!panel()?.querySelector('input[aria-label="Kelvin"]') && /about \d+ K|not a lamp colour/.test(panel()?.textContent ?? ''));
   check('the Bounce has a Ground colour', (panel()?.textContent ?? '').includes('Ground'));
 
   // a strength typed in the field moves the zones and the view, and is not an undo step
@@ -4340,6 +4340,26 @@ async function lightZonesUi(): Promise<void> {
   check('and the value rule still holds on the hexes at that strength', gaps().every((g) => g >= 0.02 - 0.006), gaps());
   check('the lights are saved in the workspace view', ['zoneStrengths', 'zoneRim', 'zoneGround', 'zoneValues'].every((k) => k in ((shell.view('illustration') as object) ?? {})));
   check('a saved view that is odd is made sound', cleanStrengths([9, -3, 'x']).join() === '1,0.3,0.25,0.5' && cleanStrengths([9, -3, NaN, 0.5]).join() === '2,0,0.25,0.5' && cleanColour([2, 'x', 3], null) === null && cleanColour([0.6, 0.9, 140], null)!.every(Number.isFinite));
+
+  // the Key's Kelvin writes the palette's light (an undo step); Ground and Rim are the view's, and are not
+  const d3 = il.depth();
+  const keyBefore = il.get().ramps[0].light.join();
+  const kelvin = panel()?.querySelector<HTMLInputElement>('input[aria-label="Kelvin"]');
+  if (kelvin) {
+    typeInto(kelvin, '2700');
+    press('Enter', { code: 'Enter' });
+  }
+  check('typing 2700 in Kelvin lights every ramp warmer as one undo step, and the read-back says about 2700 K', !!(await until(() => il.get().ramps[0].light.join() !== keyBefore)) && il.depth() === d3 + 1 && il.get().ramps.every((r) => r.light.join() === il.get().ramps[0].light.join()) && !!(await until(() => /about 2700 K/.test(panel()?.textContent ?? ''))), [il.depth(), d3, panel()?.textContent?.match(/about \d+ K|not a lamp colour/)?.[0]]);
+  const colourFields = () => [...(panel()?.querySelectorAll<HTMLInputElement>('input[aria-label$=", colour"]') ?? [])];
+  const groundBefore = hexOf(cell(0, 'reflected'));
+  const ground = colourFields()[2];
+  if (ground) typeInto(ground, '1E8A3A');
+  press('Enter', { code: 'Enter' });
+  check('a green Ground changes the Reflected light and is kept in the view, not in undo', !!(await until(() => hexOf(cell(0, 'reflected')) !== groundBefore)) && illustrationView().zoneGround.join() !== '' && il.depth() === d3 + 1, [il.depth(), d3, colourFields().length]);
+  const rim = colourFields()[3];
+  if (rim) typeInto(rim, 'FF6A3C');
+  press('Enter', { code: 'Enter' });
+  check('a Rim colour is kept in the view and is not an undo step', !!(await until(() => illustrationView().zoneRim !== null)) && il.depth() === d3 + 1, [illustrationView().zoneRim, il.depth()]);
 
   // G greys the swatches and the ball, never the chrome
   const filterOf = (el: Element | null | undefined) => (el ? getComputedStyle(el).filter : '');

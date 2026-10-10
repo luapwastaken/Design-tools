@@ -10,8 +10,8 @@ import { baseOf, looseOf, MAX_RAMPS, type IllustrationDoc } from './doc.ts';
 export type LightPair = { light: Oklch; shadow: Oklch };
 /** [key, fill, bounce, rim]: how strong each of the four lights is (Light zones) */
 export type Strengths = [number, number, number, number];
-/** `kelvin`: set where a preset is a colour temperature (the Kelvin field shows it); `strengths`: what Light zones starts its four lights at */
-export type LightPreset = LightPair & { id: string; label: string; kelvin?: number; strengths?: Strengths };
+/** `strengths`: what Light zones starts its four lights at */
+export type LightPreset = LightPair & { id: string; label: string; strengths?: Strengths };
 
 /**
  * The scene lights: the colour the lit side leans to, and the colour its shadow does (warm light, cool

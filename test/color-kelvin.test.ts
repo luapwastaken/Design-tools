@@ -50,7 +50,7 @@ test('reading back gives the temperature it came from', () => {
 });
 
 test('a colour well off the line says so', () => {
-  assert.equal(kelvinWords([0.675, 0.16, 1.5]), 'off the blackbody line');
-  assert.equal(kelvinWords([0.7, 0.15, 150]), 'off the blackbody line');
+  assert.equal(kelvinWords([0.675, 0.16, 1.5]), 'not a lamp colour');
+  assert.equal(kelvinWords([0.7, 0.15, 150]), 'not a lamp colour');
   assert.ok(colourToKelvin([0.8, 0.12, 330]).off);
 });

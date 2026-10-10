@@ -89,6 +89,6 @@ export function colourToKelvin(o: Oklch): { k: number; off: boolean } {
   return { k, off: away(k) > ON_LINE };
 }
 
-/** "about 3200 K", or "off the blackbody line" */
-export const kelvinWordsOf = ({ k, off }: { k: number; off: boolean }): string => (off ? 'off the blackbody line' : `about ${Math.round(k / 100) * 100} K`);
+/** "about 3200 K", or "not a lamp colour" for one no temperature makes */
+export const kelvinWordsOf = ({ k, off }: { k: number; off: boolean }): string => (off ? 'not a lamp colour' : `about ${Math.round(k / 100) * 100} K`);
 export const kelvinWords = (o: Oklch): string => kelvinWordsOf(colourToKelvin(o));

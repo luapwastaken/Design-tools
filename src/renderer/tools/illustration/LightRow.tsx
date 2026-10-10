@@ -6,15 +6,18 @@ import { ColorField, Select, Tooltip, useDocColour } from '../../ui/index.ts';
 import { selected, type Doc } from './actions.ts';
 import { setScene, type IllustrationDoc } from './doc.ts';
 import { LIGHTS, sceneLight, type LightPair } from './scene.ts';
-import { type IllustrationView } from './view-state.ts';
+import { cleanStrengths } from './light-zones.ts';
+import { patchView, type IllustrationView } from './view-state.ts';
 import s from './LightRow.module.css';
 
 const MIXED = 'The ramps are not all lit the same, so these are the selected ramp’s colours. Choose a light, or change a colour, to light every ramp alike.';
 
-/** a preset chosen: its light and shadow on every ramp, one undo step (Light zones writes the same pair through here) */
+/** a preset chosen: its light and shadow on every ramp, one undo step; Light zones' four strengths follow it, and the rim goes back to the key's colour */
 export function chooseLight(doc: Doc, id: string): void {
   const l = LIGHTS.find((x) => x.id === id);
-  if (l) doc.transact(`Light the scene: ${l.label}`, (x) => setScene(x, l.light, l.shadow));
+  if (!l) return;
+  doc.transact(`Light the scene: ${l.label}`, (x) => setScene(x, l.light, l.shadow));
+  patchView({ zoneStrengths: cleanStrengths(l.strengths), zoneRim: null });
 }
 
 /** a chip edits one end of the pair for every ramp, as one undo step per gesture */

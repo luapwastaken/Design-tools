@@ -146,7 +146,7 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
                 </Tooltip>
               ))}
             </div>
-            <p className={s.fine}>Click one to make its ramp. Colours you pick on the paint canvas land here too.</p>
+            <p className={s.fine}>Click one to make its ramp. Colours picked on the paint canvas or offered from Light zones land here too.</p>
             <div className={s.ghostFoot}>
               <Button size="xs" icon="add" onClick={() => addProposals(doc, ghosts.items)}>
                 Keep all

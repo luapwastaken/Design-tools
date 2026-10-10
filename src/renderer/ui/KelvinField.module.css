@@ -1,4 +1,4 @@
 /* the number, and what the colour reads as beside it; "off the line" is dimmer, not a warning */
 .kelvin { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.words { min-width: 0; overflow: hidden; color: var(--ink-2); font: 400 var(--fs-unit)/1.2 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.words { min-width: 0; color: var(--ink-2); font: 400 var(--fs-unit)/1.2 var(--font-mono); }
 .words[data-off] { color: var(--ink-3); }

@@ -70,10 +70,13 @@ export const nextBase = (d: IllustrationDoc): Oklch => {
  * Only after an add from the button, a menu row or the hex field: Shift+A, repeated, keeps the keys.
  */
 export function focusPickerColour(): void {
+  const find = () => [...document.querySelectorAll('[data-tool="illustration"] section')].find((x) => x.querySelector('h2')?.textContent === 'Colour picker');
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
-      const section = [...document.querySelectorAll('[data-tool="illustration"] section')].find((x) => x.querySelector('h2')?.textContent === 'Colour picker');
-      section?.querySelector<HTMLInputElement>('input[aria-label$="colour" i]')?.focus({ preventScroll: true });
+      if (find()) return void find()!.querySelector<HTMLInputElement>('input[aria-label$="colour" i]')?.focus({ preventScroll: true });
+      // Variations and Light zones hide the picker: go back to the first tab, where it is, and focus it there
+      patchView({ tab: 'settings' });
+      requestAnimationFrame(() => find()?.querySelector<HTMLInputElement>('input[aria-label$="colour" i]')?.focus({ preventScroll: true }));
     }),
   );
 }

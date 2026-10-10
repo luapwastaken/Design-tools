@@ -9,6 +9,8 @@ import { plural } from '../common/names.ts';
 import { select, selected, type Doc } from './actions.ts';
 import { baseOf, rampName, rampOf, recolour, type IllustrationDoc } from './doc.ts';
 import { applyCell, cellsOf, fitsPicture, makeRamps, MAX_DEPTH, openCell, pictureOf, toggled, type Cell } from './variations.ts';
+import { cleanStrengths } from './light-zones.ts';
+import { LIGHTS } from './scene.ts';
 import { getView, patchView, type IllustrationView } from './view-state.ts';
 
 /** Use this palette: one step, and a toast offers Undo (Ctrl+Z does the same) */
@@ -18,6 +20,9 @@ export function adoptCell(doc: Doc, cell: Cell): void {
   patchView({ varOpen: 0 });
   if (applyCell(doc.get(), v, cell) === doc.get()) return void toast.show({ icon: 'info', message: 'The palette already has these.' });
   doc.transact(`Use variation ${cell.n}`, (d) => applyCell(d, getView(), cell));
+  // a light that is a preset brings Light zones' strengths with it, as choosing the preset does
+  const preset = v.varMode === 'light' && 'presetId' in cell ? LIGHTS.find((l) => l.id === cell.presetId) : undefined;
+  if (preset) patchView({ zoneStrengths: cleanStrengths(preset.strengths), zoneRim: null });
   const after = doc.get();
   toast.show({
     icon: 'palette',

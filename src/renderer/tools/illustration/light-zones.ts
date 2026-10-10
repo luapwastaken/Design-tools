@@ -112,7 +112,9 @@ export function zoneMap(light: Light, sharp: number): ZoneMap {
   const thr = 1 - 0.04 / sharp ** 0.8;
   // the limb opposite the key, in the picture's plane
   const rim2 = unit2(-kd[0], kd[1] * 0.3 + 0.2);
-  const cast = { x: Math.max(-0.9, Math.min(0.9, -kd[0] * 0.9)), rx: 0.4 + 0.35 * Math.abs(kd[0]), ry: 0.1 };
+  const rx = 0.4 + 0.35 * Math.abs(kd[0]);
+  // the ellipse stays inside the picture, so its ring is never cut by the frame
+  const cast = { x: Math.max(rx - 0.96, Math.min(0.96 - rx, -kd[0] * 0.9)), rx, ry: 0.1 };
   const background = (x: number, y: number) => {
     if (y >= HORIZON) return 0;
     return ((x - cast.x) / cast.rx) ** 2 + ((y - FOOT_Y) / cast.ry) ** 2 <= 1 ? ZONE_ID.cast : GROUND_ID;
@@ -196,16 +198,18 @@ export function renderZones(out: Uint8ClampedArray, m: ZoneMap, colours: readonl
   }
 }
 
-/** a ring round a zone: a dark outline under a light line, drawn into the pixels so it reads on any colour */
+/** a ring round a zone: a one-pixel light line on a one-pixel dark halo, drawn into the pixels so it reads on any colour */
 export function drawRing(out: Uint8ClampedArray, ring: readonly number[]): void {
   const dot = (x: number, y: number, r: number, v: number) => {
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
-        const p = ((y + dy) * PREVIEW + x + dx) * 4;
-        if (p >= 0 && p < out.length) out[p] = out[p + 1] = out[p + 2] = v;
+        const [px, py] = [x + dx, y + dy];
+        if (px < 0 || py < 0 || px >= PREVIEW || py >= PREVIEW) continue;
+        const p = (py * PREVIEW + px) * 4;
+        out[p] = out[p + 1] = out[p + 2] = v;
       }
     }
   };
-  for (let k = 0; k < ring.length; k += 2) dot(ring[k], ring[k + 1], 2, 0);
-  for (let k = 0; k < ring.length; k += 2) dot(ring[k], ring[k + 1], 1, 255);
+  for (let k = 0; k < ring.length; k += 2) dot(ring[k], ring[k + 1], 1, 0);
+  for (let k = 0; k < ring.length; k += 2) dot(ring[k], ring[k + 1], 0, 255);
 }

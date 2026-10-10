@@ -8,7 +8,7 @@ import s from './KelvinField.module.css';
 /**
  * A light colour as a colour temperature (plan #10): type or drag 2700 and the colour becomes what a
  * 2700 K light gives at the colour's own lightness. Under it, what the colour reads as: "about 3200 K",
- * or "off the blackbody line" for one (a pink, a green) no temperature makes. Any light colour can use it.
+ * or "not a lamp colour" for one (a pink, a green) off the blackbody line, which no temperature makes. Any light colour can use it.
  */
 export function KelvinField({ value, onBegin, onChange, onCommit, onCancel }: { value: Oklch } & ColourGesture) {
   const read = useMemo(() => colourToKelvin(value), [value]);

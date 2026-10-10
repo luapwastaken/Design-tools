@@ -235,7 +235,10 @@ export function zonesOf(local: Oklch, material: MaterialId, rig: Rig): ZoneResul
   // the value rule
   const held: ZoneId[] = [];
   for (const id of LIT) {
-    if (valueOf(zones[id]) < LIT_FLOOR) zones[id] = holdValue(LIT_FLOOR, zones[id][1], zones[id][2]);
+    if (valueOf(zones[id]) < LIT_FLOOR) {
+      zones[id] = holdValue(LIT_FLOOR, zones[id][1], zones[id][2]);
+      held.push(id);
+    }
   }
   const litMin = Math.min(...vals(zones, LIT));
   for (const id of SHADOWS) {
@@ -248,7 +251,7 @@ export function zonesOf(local: Oklch, material: MaterialId, rig: Rig): ZoneResul
   // the cast shadow is the deepest: never lighter than the core
   const vc = valueOf(zones.core);
   if (valueOf(zones.cast) > vc) {
-    zones.cast = holdValue(vc, zones.cast[1], zones.cast[2]);
+    zones.cast = holdValue(vc - SETTLE, zones.cast[1], zones.cast[2]);
     if (!held.includes('cast')) held.push('cast');
   }
   return { zones, held, split: splitOf(zones) };
