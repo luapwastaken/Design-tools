@@ -10,7 +10,7 @@ import type { Doc } from './actions.ts';
 import type { IllustrationDoc } from './doc.ts';
 import { LIT_VIEW, LitCanvas } from './Light.tsx';
 import { adoptCell, backToAll, closeCell, moreLikeThis, newSet, setMode, showCell, stepCell } from './variation-actions.ts';
-import { cellRamps, cellsOf, inUse, lightName, lockedIn, lookFor, openCell, pictureOf, type Cell } from './variations.ts';
+import { ballName, cellRamps, cellsOf, fitsPicture, inUse, lightName, lockedIn, lookFor, openCell, pictureOf, type Cell } from './variations.ts';
 import type { IllustrationView } from './view-state.ts';
 import s from './Variations.module.css';
 
@@ -29,7 +29,7 @@ function statusOf(d: IllustrationDoc, v: IllustrationView): string {
   if (colours && lockedIn(d, v).length >= d.ramps.length) return 'Every ramp is locked, so all six are the same. Unlock a ramp to see variations.';
   if (v.varPath.length) {
     const times = v.varPath.length === 1 ? 'once' : `${v.varPath.length} times`;
-    return `Narrowed ${times}. Cell 1 is the palette you narrowed from; the other five are close to it. Press M on one to narrow further.`;
+    return `Narrowed ${times}. Cell 1 is the palette you narrowed from; the other five are close to it. Open one and press M to narrow further.`;
   }
   if (!colours) return 'The same colours under five lights and one in between. Space makes a new in-between light.';
   const picked = pictureOf(v).length;
@@ -43,6 +43,7 @@ export function VariationsTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: 
   const open = openCell(cells, v);
   const region = useRef<HTMLDivElement>(null);
   const was = useRef(0);
+  const wasPath = useRef(0);
   // an opened cell takes the focus, so its keys have a home and a clicked cell is not clicked again by Enter;
   // a closed one hands it back to its cell
   useEffect(() => {
@@ -50,9 +51,11 @@ export function VariationsTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: 
       region.current?.focus({ preventScroll: true });
       region.current?.scrollIntoView({ block: 'nearest' });
     } else if (was.current && (!document.activeElement || document.activeElement === document.body || region.current?.contains(document.activeElement))) {
-      document.querySelector<HTMLElement>(`[data-cell="${was.current}"]`)?.focus();
+      // after More like this the grid is new and cell 1 is the palette narrowed from, so the focus goes there
+      document.querySelector<HTMLElement>(`[data-cell="${v.varPath.length !== wasPath.current ? 1 : was.current}"]`)?.focus();
     }
     was.current = open ? open.n : 0;
+    wasPath.current = v.varPath.length;
   }, [open?.n]);
   return (
     <>
@@ -132,6 +135,7 @@ function CellView({ d, cell, on, now, parent }: { d: IllustrationDoc; cell: Cell
 /** the open cell, large: every ramp on a 120 px lit ball with its step codes, and the light pair with its name */
 function Large({ doc, d, v, cell, count }: { doc: Doc; d: IllustrationDoc; v: IllustrationView; cell: Cell; count: number }) {
   const ramps = cellRamps(d, cell);
+  const fits = fitsPicture(d, v);
   return (
     <>
       <div className={s.lhead}>
@@ -139,7 +143,7 @@ function Large({ doc, d, v, cell, count }: { doc: Doc; d: IllustrationDoc; v: Il
           Variation {cell.n} · {cell.label}
         </h3>
         <div className={s.lacts}>
-          <Button variant="primary" onClick={() => adoptCell(doc, cell)} shortcut="Enter">
+          <Button variant="primary" disabled={!fits} onClick={() => adoptCell(doc, cell)} shortcut="Enter" tooltip={fits ? undefined : 'Press Make ramps first, so the ramps match what is ticked'}>
             Use this palette
             <Kbd>Enter</Kbd>
           </Button>
@@ -170,9 +174,9 @@ function Large({ doc, d, v, cell, count }: { doc: Doc; d: IllustrationDoc; v: Il
       <div className={s.balls}>
         {ramps.map((r, i) => (
           <figure key={i} className={s.fig} data-ramp>
-            <LitCanvas shape="sphere" size={BIG} look={lookFor(r, cell.light)} azimuth={LIT_VIEW.azimuth} elevation={LIT_VIEW.elevation} label={`${r.name} on a ball`} className={s.big} />
+            <LitCanvas shape="sphere" size={BIG} look={lookFor(r, cell.light)} azimuth={LIT_VIEW.azimuth} elevation={LIT_VIEW.elevation} label={`${ballName(cell, r, v)} on a ball`} className={s.big} />
             <figcaption>
-              <b>{r.name}</b>
+              <b>{ballName(cell, r, v)}</b>
               {cell.bases[i]?.locked && <Lock />}
             </figcaption>
             <ul className={s.codes}>

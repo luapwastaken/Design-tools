@@ -13,7 +13,7 @@ const ID = 'illustration';
 export type IllustrationView = {
   /** the selected step or loose swatch (swatch id); null: the first ramp's base */
   selected: string | null;
-  /** the tab of the tabbed section (Alt+1-4) */
+  /** the tab of the tabbed section (Alt+1-5) */
   tab: 'settings' | 'light' | 'check' | 'paint' | 'variations' | 'notes';
   /** the Ramps section's width, the Selected ramp section's height and the Colour picker's width, in px (drag handles) */
   rampsWidth: number;

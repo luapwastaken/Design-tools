@@ -11,7 +11,7 @@ import { emptyDoc, fromPayload, toPayload, type DesignDoc } from './doc.ts';
 import { clearProposals } from './proposals.ts';
 import { takeImage, takeSvg } from './sources.ts';
 import { StatusSlot } from './StatusSlot.tsx';
-import { variationKeys } from './variation-actions.ts';
+import { swapSelected, variationKeys } from './variation-actions.ts';
 import { View } from './View.tsx';
 
 export const tool: ToolDefinition<DesignDoc> = {
@@ -74,6 +74,7 @@ export const tool: ToolDefinition<DesignDoc> = {
     ...variationKeys(doc),
     { keys: 'Space', label: 'Reroll the unlocked colours (build a palette when empty)', run: () => spaceNow(doc) },
     { keys: 'L', label: 'Lock or unlock the selected swatches: a locked colour stays through Space and Delete', run: () => toggleLocked(doc) },
+    { keys: 'S', label: 'Show other colours for the selected role', run: () => swapSelected(doc) },
     { keys: 'V', label: 'Hold value', run: toggleValueLock },
     { keys: 'Delete', label: 'Delete swatches', run: () => armDelete(doc) },
     { keys: 'Ctrl+D', label: 'Duplicate', run: () => duplicate(doc) },

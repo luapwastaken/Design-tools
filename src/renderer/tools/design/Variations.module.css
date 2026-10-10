@@ -48,7 +48,7 @@
 /* the open cell */
 .large { flex: none; min-width: 0; padding: 12px; border-radius: 10px; background: var(--well); }
 .large:focus, .large:focus-visible { outline: none; }
-.lhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 12px; }
+.lhead { position: sticky; top: 0; z-index: 1; padding: 12px; border-radius: 10px; background: var(--well); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin: -12px -12px 12px; }
 .lhead h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin: 0; color: var(--ink); font: 500 14px/1.2 var(--font-sans); }
 .lacts { display: flex; flex-wrap: wrap; gap: 6px; }
 .page { height: 520px; min-width: 0; }

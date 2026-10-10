@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, typ
 import { createPortal } from 'react-dom';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { isTextField } from '../../shell/core/keys.ts';
+import { cx } from '../../ui/cx.ts';
 import { Button } from '../../ui/index.ts';
 import { DocBar } from '../common/DocBar.tsx';
 import { ExportPalette } from '../common/ExportPalette.tsx';
@@ -121,11 +122,14 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
             <SelectedRamp doc={doc} d={d} v={v} />
             <ResizeHandle edge="bottom" label="Selected ramp height" value={v.rampHeight} min={SIZES.rampHeight[0]} max={SIZES.rampHeight[1]} reset={SIZES.rampHeight[2]} onChange={(rampHeight) => patchView({ rampHeight })} />
           </div>
-          <div className={s.lower}>
-            <div className={s.cell}>
-              <PickerSection doc={doc} d={d} v={v} />
-              <ResizeHandle label="Colour picker width" value={v.pickerWidth} min={SIZES.pickerWidth[0]} max={SIZES.pickerWidth[1]} reset={SIZES.pickerWidth[2]} onChange={(pickerWidth) => patchView({ pickerWidth })} />
-            </div>
+          <div className={cx(s.lower, tab === 'variations' && s.wide)}>
+            {/* Variations has no use for the picker, so the tab takes its width: six palettes need the room */}
+            {tab !== 'variations' && (
+              <div className={s.cell}>
+                <PickerSection doc={doc} d={d} v={v} />
+                <ResizeHandle label="Colour picker width" value={v.pickerWidth} min={SIZES.pickerWidth[0]} max={SIZES.pickerWidth[1]} reset={SIZES.pickerWidth[2]} onChange={(pickerWidth) => patchView({ pickerWidth })} />
+              </div>
+            )}
             <TabbedSection tabs={tabs} value={tab} onChange={(id) => patchView({ tab: id as Tab })} bodyClassName={tab === 'paint' ? s.flush : tab === 'variations' ? s.variations : undefined} />
           </div>
         </div>

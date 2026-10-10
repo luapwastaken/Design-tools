@@ -1,7 +1,8 @@
 /* sections on the ground, 6px apart: the doc bar, the palette (~300px), then the picker beside the tabs.
    Smaller windows shrink the sections and their contents scroll inside; nothing overlaps. */
-.view { display: grid; grid-template-rows: var(--docbar) minmax(160px, min(var(--palh, 300px), 60vh)) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
+.view { display: grid; grid-template-rows: var(--docbar) minmax(160px, calc(min(var(--palh, 300px), 60vh) + var(--swaph, 0px))) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
 .bottom { display: grid; grid-template-columns: minmax(340px, min(var(--pw, 560px), calc(100% - 340px - var(--gap)))) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
+.bottom.wide { grid-template-columns: minmax(0, 1fr); }
 .tabBody { container-type: inline-size; }
 .quiet { margin: 0; color: var(--ink-3); font-size: var(--fs-base); line-height: 1.45; }
 .gen { display: inline-flex; align-items: center; gap: 2px; }

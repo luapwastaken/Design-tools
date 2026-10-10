@@ -5,29 +5,23 @@ import type { Role } from '../../../shared/palette/roles.ts';
 import { nextSeed, type DesignCell } from '../../../shared/palette/variations.ts';
 import type { Shortcut } from '../../shell/tool.ts';
 import { toast } from '../../ui/index.ts';
-import type { Doc } from './actions.ts';
+import { activeSwatch, type Doc } from './actions.ts';
 import { jobHolders, recolour, type DesignDoc } from './doc.ts';
 import { applyRoles, cellsOf, MAX_DEPTH, openCell } from './variations.ts';
 import { getView, patchView } from './view-state.ts';
 
-/** Use this palette: one step, the Style and Accent it was built with come along, and a toast offers Undo that takes them back too */
+/** Use this palette: one step, and a toast offers Undo (Ctrl+Z does the same). Style and Accent stay as they are: only the seven colours move */
 export function adoptCell(doc: Doc, cell: DesignCell): void {
   const v = getView();
-  const before = { preset: v.preset, accent: v.accent };
   patchView({ varOpen: 0 });
   if (applyRoles(doc.get(), cell.roles, v.locked) === doc.get()) return void toast.show({ icon: 'info', message: 'The palette already has these colours.' });
   doc.transact(`Use variation ${cell.n}`, (d) => applyRoles(d, cell.roles, getView().locked));
-  patchView({ preset: cell.style, accent: cell.accent });
   const after = doc.get();
   toast.show({
     icon: 'palette',
     message: `Using variation ${cell.n}, ${cell.label}.`,
     when: () => doc.get() === after,
-    undo: () => {
-      if (doc.get() !== after) return;
-      doc.undo();
-      patchView(before);
-    },
+    undo: () => void (doc.get() === after && doc.undo()),
   });
 }
 
@@ -71,7 +65,7 @@ const onControl = (): boolean => !!document.activeElement?.closest('button, a[hr
  */
 export function variationKeys(doc: Doc): Shortcut[] {
   const v = getView();
-  const swap: Shortcut[] = v.swapRole ? [{ keys: 'Escape', label: 'Close the other-colours row', run: closeSwap }] : [];
+  const swap: Shortcut[] = v.swapRole && jobHolders(doc.get().swatches).some(([role]) => role === v.swapRole) ? [{ keys: 'Escape', label: 'Close the other-colours row', run: closeSwap }] : [];
   const d = doc.get();
   if (v.tab !== 'variations' || !d.swatches.length) return swap;
   const cells = cellsOf(d, v);
@@ -97,6 +91,13 @@ export function variationKeys(doc: Doc): Shortcut[] {
 
 export const toggleSwap = (role: Role): void => patchView({ swapRole: getView().swapRole === role ? '' : role });
 export const closeSwap = (): void => patchView({ swapRole: '' });
+
+/** S: the other-colours row for the selected swatch, when it holds a role */
+export function swapSelected(doc: Doc): void {
+  const w = activeSwatch(doc.get());
+  const role = w && jobHolders(doc.get().swatches).find(([, h]) => h.id === w.id)?.[0];
+  if (role) toggleSwap(role);
+}
 
 /** a swapped colour: one step, the row stays open on the new palette so several can be tried */
 export function swapTo(doc: Doc, role: Role, colour: Oklch): void {

@@ -8,6 +8,7 @@ import {
   type Base, type ColourCell, type LightCell, type Ramp, type RampAlt,
 } from '../../../shared/palette/variations.ts';
 import type { RampSpec } from '../../../shared/types.ts';
+import { displayName } from '../common/names.ts';
 import { baseOf, rampName, rampOf, recolour, replaceRamps, setScene, type IllustrationDoc } from './doc.ts';
 import { lookOf, type Look } from './shade.ts';
 import { presetOf, sceneLight, type LightPair } from './scene.ts';
@@ -94,6 +95,18 @@ export function cellsOf(d: IllustrationDoc, v: IllustrationView): Cell[] {
   made = { key, cells };
   return cells;
 }
+
+/**
+ * A picture cell has one colour per ticked subject, so it can only go onto ramps that are those subjects. True
+ * when nothing is ticked (the cells are the palette's own ramps) or the ramps match the ticks in number and material.
+ */
+export function fitsPicture(d: IllustrationDoc, v: IllustrationView): boolean {
+  const subjects = v.varMode === 'colours' ? pictureOf(v) : [];
+  return !subjects.length || (d.ramps.length === subjects.length && subjectBases(subjects).every((b, i) => b.material === d.ramps[i].material));
+}
+
+/** what a large ball is called: its colour's own name, since a cell's colours are not the palette's; a picture cell keeps its subject, a light cell its ramp */
+export const ballName = (cell: Cell, r: Ramp, v: Pick<IllustrationView, 'varMode'>): string => (v.varMode === 'light' || !('kind' in cell) || cell.kind === 'picture' ? r.name : displayName({ name: '', oklch: r.base }));
 
 /** the cell shown large, if one is and still exists */
 export const openCell = (cells: Cell[], v: Pick<IllustrationView, 'varOpen'>): Cell | null => cells[v.varOpen - 1] ?? null;

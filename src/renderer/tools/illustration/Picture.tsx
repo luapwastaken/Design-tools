@@ -1,8 +1,9 @@
 // What's in the picture: tick what the scene holds (Skin and Hair take a tone), and Make ramps replaces the
 // scene's ramps with one per ticked subject, under the light it has, each with its material. While anything is
 // ticked, Vary the colours keeps one ramp per ticked subject and varies within each. The ticks are view state.
+import { useState } from 'react';
 import { KINDS } from '../../../shared/palette/variations.ts';
-import { Button, Icon, Select, Toggle } from '../../ui/index.ts';
+import { Button, ConfirmInline, Icon, Select, Toggle } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { makeFromPicture, setTone, toggleKind } from './variation-actions.ts';
@@ -10,8 +11,10 @@ import { pictureOf } from './variations.ts';
 import { patchView, type IllustrationView } from './view-state.ts';
 import s from './Picture.module.css';
 
-export function Picture({ doc, v }: { doc: Doc; v: IllustrationView }) {
+/** `ramps` is how many the palette has now: Make ramps asks before it replaces any */
+export function Picture({ doc, v, ramps }: { doc: Doc; v: IllustrationView; ramps: number }) {
   const n = pictureOf(v).length;
+  const [asking, setAsking] = useState(false);
   return (
     <div className={s.pic} role="group" aria-label="What's in the picture">
       <button type="button" className={s.head} aria-expanded={v.pictureOpen} onClick={() => patchView({ pictureOpen: !v.pictureOpen })}>
@@ -33,12 +36,28 @@ export function Picture({ doc, v }: { doc: Doc; v: IllustrationView }) {
               );
             })}
           </div>
-          <div className={s.foot}>
-            <Button size="xs" icon="auto_awesome_motion" disabled={!n} onClick={() => makeFromPicture(doc)} tooltip="Replace the ramps with one for each thing ticked, lit as the scene is">
-              Make ramps
-            </Button>
-            <span className={s.fine}>{n ? `${plural(n, 'ramp')} for what is ticked.` : 'Tick what the picture holds.'}</span>
-          </div>
+          {asking && ramps > 0 ? (
+            <ConfirmInline
+              compact
+              icon="auto_awesome_motion"
+              title={`Replace the ${plural(ramps, 'ramp')} with ${plural(n, 'new one')}?`}
+              detail="Hand-edited steps and ramp locks go too. Undo brings them back."
+              confirmLabel="Replace"
+              danger
+              onConfirm={() => {
+                setAsking(false);
+                makeFromPicture(doc);
+              }}
+              onKeep={() => setAsking(false)}
+            />
+          ) : (
+            <div className={s.foot}>
+              <Button size="xs" icon="auto_awesome_motion" disabled={!n} onClick={() => (ramps ? setAsking(true) : makeFromPicture(doc))} tooltip="Replace the ramps with one for each thing ticked, lit as the scene is">
+                Make ramps
+              </Button>
+              <span className={s.fine}>{n ? `${plural(n, 'ramp')} for what is ticked.` : 'Tick what the picture holds.'}</span>
+            </div>
+          )}
         </>
       )}
     </div>

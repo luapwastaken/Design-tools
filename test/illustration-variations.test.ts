@@ -7,7 +7,7 @@ import { KINDS, subjectBases } from '../src/shared/palette/variations.ts';
 import { addRamp, baseOf, emptyDoc, looseOf, recolour, stepsOf, type IllustrationDoc } from '../src/renderer/tools/illustration/doc.ts';
 import { LIGHTS, sceneLight, SUBJECTS } from '../src/renderer/tools/illustration/scene.ts';
 import {
-  alternatives, applyCell, cellRamps, cellsOf, cleanCell, cleanLocks, cleanPath, cleanPicture, inUse, lockedIn, makeRamps, pictureOf, toggled,
+  alternatives, applyCell, cellRamps, cellsOf, cleanCell, cleanLocks, cleanPath, cleanPicture, fitsPicture, inUse, lockedIn, makeRamps, pictureOf, toggled,
 } from '../src/renderer/tools/illustration/variations.ts';
 import type { IllustrationView } from '../src/renderer/tools/illustration/view-state.ts';
 
@@ -206,4 +206,14 @@ test('swapping a ramp\'s colour is one undo step and the ramp follows', () => {
   assert.deepEqual(stepsOf(doc.get(), id).find((w) => w.step === 0)!.oklch, alt.base);
   doc.undo();
   assert.equal(doc.get(), d);
+});
+
+test('a picture cell fits only ramps that are the ticked subjects', () => {
+  const d = palette();
+  const v = view({ pictureOn: ['foliage', 'skin', 'cloth', 'metal'] });
+  assert.ok(fitsPicture(d, view()), 'nothing ticked: the cells are the ramps themselves');
+  assert.ok(!fitsPicture(d, v), 'four loose-material ramps are not the four subjects');
+  assert.ok(!fitsPicture(d, view({ pictureOn: ['skin'] })), 'a different count never fits');
+  assert.ok(fitsPicture(makeRamps(d, v), v), 'Make ramps makes ramps that fit');
+  assert.ok(fitsPicture(d, view({ ...v, varMode: 'light' })), 'the light grid never reads the ticks');
 });

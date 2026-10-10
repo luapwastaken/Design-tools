@@ -34,7 +34,7 @@
 /* the open cell */
 .large { flex: none; min-width: 0; padding: 12px; border-radius: 10px; background: var(--well); }
 .large:focus, .large:focus-visible { outline: none; }
-.lhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 8px; }
+.lhead { position: sticky; top: 0; z-index: 1; padding: 12px; border-radius: 10px; background: var(--well); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin: -12px -12px 8px; }
 .lhead h3 { margin: 0; color: var(--ink); font: 500 14px/1.2 var(--font-sans); }
 .lacts { display: flex; flex-wrap: wrap; gap: 6px; }
 .light { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0 0 12px; color: var(--ink-2); font: 400 var(--fs-unit)/1.2 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }

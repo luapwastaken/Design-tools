@@ -27,7 +27,7 @@ function statusOf(v: DesignView, cells: DesignCell[], locks: number): string {
   if (locks >= ROLES.length) return 'Everything is locked, so all six are the same. Unlock a colour to see variations.';
   if (v.varPath.length) {
     const times = v.varPath.length === 1 ? 'once' : `${v.varPath.length} times`;
-    return `Narrowed ${times}. Cell 1 is the palette you narrowed from; the other ${cells.length - 1} are close to it. Press M on one to narrow further.`;
+    return `Narrowed ${times}. Cell 1 is the palette you narrowed from; the other ${cells.length - 1} are close to it. Open one and press M to narrow further.`;
   }
   if (!v.varStyle && !v.varAccent && !v.varGround) return 'Only the hues change now. Tick a box to vary more.';
   return 'Six whole palettes. Click one or press 1 to 6 to see it large. Locked colours are the same in each.';
@@ -39,6 +39,7 @@ export function VariationsTab({ doc, d, v }: { doc: Doc; d: DesignDoc; v: Design
   const locks = d.swatches.filter((w) => w.role && v.locked.includes(w.id)).length;
   const region = useRef<HTMLDivElement>(null);
   const was = useRef(0);
+  const wasPath = useRef(0);
   // an opened cell takes the focus, so its keys have a home and a clicked cell is not clicked again by Enter;
   // a closed one hands it back to its cell
   useEffect(() => {
@@ -46,9 +47,11 @@ export function VariationsTab({ doc, d, v }: { doc: Doc; d: DesignDoc; v: Design
       region.current?.focus({ preventScroll: true });
       region.current?.scrollIntoView({ block: 'nearest' });
     } else if (was.current && (!document.activeElement || document.activeElement === document.body || region.current?.contains(document.activeElement))) {
-      document.querySelector<HTMLElement>(`[data-cell="${was.current}"]`)?.focus();
+      // after More like this the grid is new and cell 1 is the palette narrowed from, so the focus goes there
+      document.querySelector<HTMLElement>(`[data-cell="${v.varPath.length !== wasPath.current ? 1 : was.current}"]`)?.focus();
     }
     was.current = open ? open.n : 0;
+    wasPath.current = v.varPath.length;
   }, [open?.n]);
   return (
     <>

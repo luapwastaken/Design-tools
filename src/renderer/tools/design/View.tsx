@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { shell } from '../../shell/core/index.ts';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { isTextField } from '../../shell/core/keys.ts';
+import { cx } from '../../ui/cx.ts';
 import { Button, IconButton, Kbd, menu, toast } from '../../ui/index.ts';
 import { DocBar } from '../common/DocBar.tsx';
 import { ExportPalette } from '../common/ExportPalette.tsx';
@@ -26,7 +27,7 @@ import { VariationsTab } from './VariationsTab.tsx';
 import { NotesModule } from '../common/Notes.tsx';
 import { hot, PALETTE_H, patchView, PICKER_W, useView } from './view-state.ts';
 import type { CSSProperties } from 'react';
-import { named } from './doc.ts';
+import { jobHolders, named } from './doc.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import s from './View.module.css';
 
@@ -93,6 +94,9 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   useEffect(() => void (!active && setPop(null)), [active]);
   const openPop: OpenPop = (kind, anchor, ends) => setPop({ kind, anchor, ends });
   const empty = d.swatches.length === 0;
+  // the other-colours row is extra height for the palette, so it never squeezes the swatches it is about
+  const wide = v.tab === 'variations';
+  const swapping = !!v.swapRole && jobHolders(d.swatches).some(([role]) => role === v.swapRole);
   const r = results(settled.swatches, settled.ramps, v.flagL, v.flagE, v.locked, v.intended);
 
   const quiet = (what: string) => <p className={s.quiet}>{what}</p>;
@@ -108,7 +112,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   ];
 
   return (
-    <div className={s.view} style={{ '--palh': `${v.paletteH}px`, '--pw': `${v.pickerW}px` } as CSSProperties}>
+    <div className={s.view} style={{ '--palh': `${v.paletteH}px`, '--pw': `${v.pickerW}px`, '--swaph': swapping ? '136px' : '0px' } as CSSProperties}>
       <DocBar
         tool="design"
         doc={doc}
@@ -122,11 +126,14 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         <PaletteSection doc={doc} d={d} v={v} onPop={openPop} />
         <ResizeHandle edge="bottom" label="Palette height" value={v.paletteH} min={PALETTE_H.min} max={PALETTE_H.max} reset={PALETTE_H.reset} onChange={(paletteH) => patchView({ paletteH })} />
       </div>
-      <div className={s.bottom}>
-        <div className={s.cell}>
-          <PickerSection doc={pickerDoc} d={d} v={v} />
-          <ResizeHandle edge="right" label="Colour picker width" value={v.pickerW} min={PICKER_W.min} max={PICKER_W.max} reset={PICKER_W.reset} onChange={(pickerW) => patchView({ pickerW })} />
-        </div>
+      <div className={cx(s.bottom, wide && s.wide)}>
+        {/* Variations has no use for the picker, so the tab takes its width: six palettes need the room */}
+        {!wide && (
+          <div className={s.cell}>
+            <PickerSection doc={pickerDoc} d={d} v={v} />
+            <ResizeHandle edge="right" label="Colour picker width" value={v.pickerW} min={PICKER_W.min} max={PICKER_W.max} reset={PICKER_W.reset} onChange={(pickerW) => patchView({ pickerW })} />
+          </div>
+        )}
         <TabbedSection tabs={tabs} value={v.tab} onChange={(tab) => patchView({ tab: tab as DesignTab, tabChosen: true })} bodyClassName={s.tabBody} />
       </div>
       {pop && (

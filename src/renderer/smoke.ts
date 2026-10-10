@@ -444,10 +444,10 @@ async function variationsUi(): Promise<void> {
   press('Enter', { code: 'Enter' });
   check('Enter uses the open palette: one history step, the roles hold its seven colours, the large view closes', !!(await until(() => dd.depth() === depth + 1)) && ROLES.every((r) => toHex(held(r).oklch) === toHex(grid[2].roles[r])) && designView().varOpen === 0 && !large(), [dd.depth(), depth, designView().varOpen]);
   check('the extra swatch with no role is left alone', dd.get().swatches.length === swatches.length && dd.get().swatches.at(-1) === swatches.at(-1), dd.get().swatches.length);
-  check('the Style and Accent it was built with come along', designView().preset === grid[2].style && designView().accent === grid[2].accent, [designView().preset, designView().accent]);
+  check('the Style and Accent stay as they were', designView().preset === preset && designView().accent === accent, [designView().preset, designView().accent]);
   check('the cell now says it is in use', !!(await until(() => cellButtons()[2]?.textContent?.includes('in use'))));
   ctrlZ();
-  check('Ctrl+Z restores the palette exactly, and the Style and Accent', !!(await until(() => dd.get() === beforeUse)) && designView().preset === preset && designView().accent === accent && dd.depth() === depth, [dd.depth(), depth]);
+  check('Ctrl+Z restores the palette exactly', !!(await until(() => dd.get() === beforeUse)) && designView().preset === preset && designView().accent === accent && dd.depth() === depth, [dd.depth(), depth]);
 
   // More like this: the parent is cell 1
   check('the grid is as it was after the undo', all().join() === wide.join());
@@ -802,11 +802,26 @@ async function variationsIllustrationUi(): Promise<void> {
   patchIllustration({ tab: 'variations' });
   await until(() => cellButtons().length === 6);
   check('while subjects are ticked, Vary the colours shows one ramp per subject in every cell, and says to Make ramps first', cellButtons().every((b) => b.querySelectorAll('[data-ramp]').length === 4) && !!panel()?.textContent?.includes('Make ramps so they match'), cellButtons().map((b) => b.querySelectorAll('[data-ramp]').length));
-  patchIllustration({ tab: 'settings' });
+  // Use this palette will not write a picture cell over ramps that are not those subjects
+  const oldDepth = il.depth();
+  patchIllustration({ varOpen: 3 });
+  await until(() => document.querySelector('[data-variations-large]'));
+  const useBtn = [...document.querySelectorAll<HTMLButtonElement>('[data-variations-large] button')].find((x) => x.textContent?.trim().startsWith('Use this palette'));
+  check('Use this palette is off while the ramps are not the ticked subjects', useBtn?.disabled === true);
+  press('Enter', { code: 'Enter' });
+  await new Promise((r) => setTimeout(r, 150));
+  check('and Enter changes no ramp', il.depth() === oldDepth, [il.depth(), oldDepth]);
+  patchIllustration({ varOpen: 0, tab: 'settings' });
   const old = il.get();
   const oldLocks = lockedIn(old, illustrationView());
   depth = il.depth();
   makeBtn()?.click();
+  const sure = await until(() => group()?.querySelector('[role="alertdialog"]'));
+  check('Make ramps over existing ramps asks first, and changes nothing yet', !!sure && il.depth() === depth, [sure?.textContent, il.depth(), depth]);
+  [...(sure?.querySelectorAll('button') ?? [])].find((x) => x.textContent?.trim() === 'Keep')?.click();
+  check('Keep closes the question and leaves the ramps', !!(await until(() => !group()?.querySelector('[role="alertdialog"]'))) && il.get() === old);
+  makeBtn()?.click();
+  [...((await until(() => group()?.querySelector('[role="alertdialog"]')))?.querySelectorAll('button') ?? [])].find((x) => x.textContent?.trim() === 'Replace')?.click();
   const made = await until(() => (il.depth() === depth + 1 ? il.get() : null));
   check('Make ramps replaces the ramps with one per ticked subject, in order, with their materials, as one step', !!made && made.ramps.length === 4 && made.ramps.map((r) => r.material).join() === 'skin,foliage,paper,wood' && made.ramps.every((r) => !old.ramps.some((o) => o.id === r.id)), made?.ramps.map((r) => r.material));
   check('and the old ramp locks are gone: no Lock button is pressed', !!(await until(() => pressed() === 0)) && lockedIn(il.get(), illustrationView()).length === 0, [pressed(), illustrationView().lockedRamps]);

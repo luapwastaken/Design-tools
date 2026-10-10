@@ -27,7 +27,7 @@ export function SwapRamp({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illus
   return (
     <div className={s.row} role="group" aria-label={`Other colours for ${name}`} data-swap-row>
       <div className={s.head}>
-        <span className={s.title}>Other colours for {name}, at the same grey value</span>
+        <span className={s.title}>Same grey value as {name}</span>
         {!list.length && <span className={s.few}>No other colours at this grey value</span>}
         <Button size="xs" shortcut="Escape" onClick={closeSwap}>
           Close

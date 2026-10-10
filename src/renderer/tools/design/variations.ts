@@ -6,6 +6,7 @@ import { completeRoles, styleGround, type RoleColours } from '../../../shared/pa
 import { ROLES, type Role } from '../../../shared/palette/roles.ts';
 import { designAlternatives, designCells, MAX_DEPTH, relatives, rolesKey, type DesignAlt, type DesignCell, type Ground } from '../../../shared/palette/variations.ts';
 import type { Swatch } from '../../../shared/types.ts';
+import { displayName } from '../common/names.ts';
 import { jobHolders, newSwatch, recolour, type DesignDoc, type DesignView } from './doc.ts';
 
 export { MAX_DEPTH };
@@ -47,7 +48,7 @@ export const openCell = (cells: DesignCell[], v: DesignView): DesignCell | null 
 const swatchesFor = new WeakMap<DesignCell, Swatch[]>();
 export function cellSwatches(cell: DesignCell): Swatch[] {
   let list = swatchesFor.get(cell);
-  if (!list) swatchesFor.set(cell, (list = ROLES.map((role): Swatch => ({ id: role, name: role, role, oklch: cell.roles[role], type: 'process' }))));
+  if (!list) swatchesFor.set(cell, (list = ROLES.map((role): Swatch => ({ id: role, name: displayName({ name: '', oklch: cell.roles[role] }), role, oklch: cell.roles[role], type: 'process' }))));
   return list;
 }
 

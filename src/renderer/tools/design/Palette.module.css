@@ -2,7 +2,7 @@
 .section { position: relative; }
 .body { position: relative; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 /* the surround the colours are judged on fills the whole body */
-.stage { display: flex; flex: 1; min-width: 0; min-height: 0; padding: 12px 14px 14px; }
+.stage { display: flex; flex: 1; min-width: 0; min-height: 140px; padding: 12px 14px 14px; }
 .ctl.ctl { flex: none; width: 160px; }
 .hint { color: var(--ink-3); font: 400 var(--fs-row)/1 var(--font-sans); white-space: nowrap; }
 .sim { color: var(--signal); }

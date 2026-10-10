@@ -392,7 +392,7 @@ export function relatives(cell: Parent, depth: number, seed: number, o: { locks?
         });
         if (seen.has(basesKey(bases))) continue;
         seen.add(basesKey(bases));
-        out.push({ ...cell, n: out.length + 1, label: `${most} turned most`, detail: 'Hue and chroma nudged, same grey values', bases });
+        out.push({ ...cell, n: out.length + 1, label: `${most} changed most`, detail: 'Hue and chroma nudged, same grey values', bases });
         break;
       }
     }

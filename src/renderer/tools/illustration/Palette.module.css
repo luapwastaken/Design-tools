@@ -10,6 +10,8 @@
 .item { position: relative; display: flex; flex: none; flex-direction: column; gap: 8px; padding: 10px 12px 12px; border-radius: var(--r-ctl); }
 .item:hover { background: var(--well-hover); }
 .item.on { background: var(--surface-4, var(--raise)); }
+.rowActs { display: none; flex: none; gap: 2px; }
+.item:hover .rowActs, .item:focus-within .rowActs, .item.on .rowActs, .rowActs.keep { display: inline-flex; }
 .dragging { outline: 1px dashed var(--tick); outline-offset: -1px; }
 .item[data-insert]::before { content: ""; position: absolute; right: 6px; left: 6px; z-index: 2; height: 2px; border-radius: 1px; background: var(--signal); }
 .item[data-insert="before"]::before { top: -2px; }

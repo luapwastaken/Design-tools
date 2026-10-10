@@ -8,12 +8,13 @@ import { toast } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
 import { select, selected, type Doc } from './actions.ts';
 import { baseOf, rampName, rampOf, recolour, type IllustrationDoc } from './doc.ts';
-import { applyCell, cellsOf, makeRamps, MAX_DEPTH, openCell, pictureOf, toggled, type Cell } from './variations.ts';
+import { applyCell, cellsOf, fitsPicture, makeRamps, MAX_DEPTH, openCell, pictureOf, toggled, type Cell } from './variations.ts';
 import { getView, patchView, type IllustrationView } from './view-state.ts';
 
 /** Use this palette: one step, and a toast offers Undo (Ctrl+Z does the same) */
 export function adoptCell(doc: Doc, cell: Cell): void {
   const v = getView();
+  if (!fitsPicture(doc.get(), v)) return void toast.show({ icon: 'info', message: 'Press Make ramps first, so the ramps match what is ticked.' });
   patchView({ varOpen: 0 });
   if (applyCell(doc.get(), v, cell) === doc.get()) return void toast.show({ icon: 'info', message: 'The palette already has these.' });
   doc.transact(`Use variation ${cell.n}`, (d) => applyCell(d, getView(), cell));
@@ -119,11 +120,11 @@ export function swapTo(doc: Doc, id: string, colour: Oklch): void {
 /** tick or untick one subject */
 export function toggleKind(kind: string): void {
   const { pictureOn } = getView();
-  patchView({ pictureOn: pictureOn.includes(kind) ? pictureOn.filter((k) => k !== kind) : [...pictureOn, kind] });
+  patchView({ pictureOn: pictureOn.includes(kind) ? pictureOn.filter((k) => k !== kind) : [...pictureOn, kind], varPath: [], varOpen: 0 });
 }
 
-/** the tone skin or hair takes */
-export const setTone = (kind: string, tone: string): void => patchView({ pictureTones: { ...getView().pictureTones, [kind]: tone } });
+/** the tone skin or hair takes (a changed picture makes a new grid, which no open cell or narrowing belongs to) */
+export const setTone = (kind: string, tone: string): void => patchView({ pictureTones: { ...getView().pictureTones, [kind]: tone }, varPath: [], varOpen: 0 });
 
 /**
  * Make ramps: the scene's ramps replaced by one per ticked subject, one undo step. The locks are not touched:
@@ -141,7 +142,7 @@ export function makeFromPicture(doc: Doc): void {
   select(baseOf(after, after.ramps[0]?.id)?.id ?? null);
   toast.show({
     icon: 'auto_awesome_motion',
-    message: `Made ${plural(picked.length, 'ramp')} for what is in the picture.${before.ramps.length ? ` The ${plural(before.ramps.length, 'ramp')} before are one Undo away.` : ''}`,
+    message: `Made ${plural(picked.length, 'ramp')}.${before.ramps.length ? ` Undo brings back the ${before.ramps.length} before.` : ''}`,
     when: () => doc.get() === after,
     undo: () => void (doc.get() === after && doc.undo()),
   });

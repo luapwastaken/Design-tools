@@ -93,7 +93,7 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
       actions={d.swatches.length > 0 ? <GreyscaleButton /> : undefined}
     >
       <SwapRamp doc={doc} d={d} v={v} />
-      <Picture doc={doc} v={v} />
+      <Picture doc={doc} v={v} ramps={d.ramps.length} />
       <LightRow doc={doc} d={d} v={v} />
       <AddColour doc={doc} d={d} />
       <div
@@ -259,26 +259,29 @@ function RampItem(p: ItemProps) {
           </Tooltip>
         )}
         <span className={s.grow} />
-        <IconButton
-          icon="swap_horiz"
-          label="Swap colour"
-          tip="Show other colours at this grey value"
-          size="sm"
-          latched={p.v.swapRamp === r.id}
-          onClick={() => {
-            if (!on) select(baseId);
-            toggleSwap(r.id);
-          }}
-        />
-        <IconButton
-          icon={p.locked ? 'lock' : 'lock_open'}
-          label="Lock ramp"
-          tip={p.locked ? 'Unlock: Variations may change it' : 'Lock: it keeps its colour in every Variations cell'}
-          shortcut="L"
-          size="sm"
-          latched={p.locked}
-          onClick={() => toggleRampLock(r.id)}
-        />
+        {/* swap and lock show on hover, focus or selection, and stay while they are on, so a row is not four icons all the time */}
+        <span className={cx(s.rowActs, (p.v.swapRamp === r.id || p.locked) && s.keep)}>
+          <IconButton
+            icon="swap_horiz"
+            label="Swap colour"
+            tip="Show other colours at this grey value"
+            size="sm"
+            latched={p.v.swapRamp === r.id}
+            onClick={() => {
+              if (!on) select(baseId);
+              toggleSwap(r.id);
+            }}
+          />
+          <IconButton
+            icon={p.locked ? 'lock' : 'lock_open'}
+            label="Lock ramp"
+            tip={p.locked ? 'Unlock: Variations may change it' : 'Lock: it keeps its colour in every Variations cell'}
+            shortcut="L"
+            size="sm"
+            latched={p.locked}
+            onClick={() => toggleRampLock(r.id)}
+          />
+        </span>
         <IconButton
           icon="star"
           label={r.hero ? 'Hero colour: the other ramps stay quieter. Click to end it' : 'Make this the hero colour'}
