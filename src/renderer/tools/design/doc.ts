@@ -1,6 +1,7 @@
 // The Design tool's document and view state (plan: Document and view).
 import type { Cvd, Oklch } from '../../../shared/color/index.ts';
 import type { Accent } from '../../../shared/palette/brand.ts';
+import { ROLES, type Role } from '../../../shared/palette/roles.ts';
 import type { PalettePayload, RampSpec, Swatch } from '../../../shared/types.ts';
 import type { ExportFormat } from '../common/ExportPalette.tsx';
 
@@ -14,7 +15,7 @@ export type DesignDoc = { swatches: Swatch[]; notes: string; ramps?: RampSpec[];
 
 export type BuildMethod = 'harmony' | 'generate' | 'image' | 'logo' | 'gradient' | 'paste' | 'complete';
 /** the tabs under the palette and picker; the active one is saved in the view */
-export type DesignTab = 'contrast' | 'check' | 'preview' | 'harmonies' | 'notes';
+export type DesignTab = 'contrast' | 'check' | 'preview' | 'harmonies' | 'variations' | 'notes';
 /** what each palette chip says: Hex; Hex and L C H; the Table adds RGB and ≈CMYK */
 export type ChipData = 'hex' | 'lch' | 'table';
 /** the view filter over the artboard and the In use page; never written to the document */
@@ -61,6 +62,17 @@ export type DesignView = {
   k: number;
   stops: number;
   space: 'oklch' | 'oklab';
+  /** Variations: the grid's seed, and what may change from cell to cell (the Style, the Accent, a light or dark page) */
+  varSeed: number;
+  varStyle: boolean;
+  varAccent: boolean;
+  varGround: boolean;
+  /** the cell More like this was pressed on, once per step (so its length is the depth); the grid is worked out from these */
+  varPath: number[];
+  /** the cell shown large (1 to 6), 0 for none */
+  varOpen: number;
+  /** the role whose other-colours row is open under the Palette title, '' for none */
+  swapRole: string;
 };
 
 export const emptyDoc = (): DesignDoc => ({ swatches: [], notes: '' });
@@ -123,3 +135,7 @@ export function moveIds(d: DesignDoc, ids: string[], index: number): DesignDoc {
   const after = d.swatches.slice(index).filter((w) => !ids.includes(w.id));
   return { ...d, swatches: [...before, ...moving, ...after] };
 }
+
+/** the swatch that holds each of the seven jobs (the first, should an import give two the same one) */
+export const jobHolders = (swatches: Swatch[]): [Role, Swatch][] =>
+  ROLES.flatMap((role) => swatches.filter((w) => w.role === role).slice(0, 1).map((w): [Role, Swatch] => [role, w]));

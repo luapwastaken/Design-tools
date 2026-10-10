@@ -27,9 +27,12 @@ import { decodeImage } from './lib/load.ts';
 import type { Rgba8 } from './lib/png-indexed.ts';
 import { rgbaPng } from './lib/png.ts';
 import { shell } from './shell/core/index.ts';
+import { buildRoles } from '../shared/palette/brand.ts';
+import { ROLES } from '../shared/palette/roles.ts';
 import { select as selectInDesign } from './tools/design/actions.ts';
 import { newSwatch as designSwatch, recolour as recolourInDesign, type DesignDoc } from './tools/design/doc.ts';
 import { clearProposals, proposals } from './tools/design/proposals.ts';
+import { cellsOf } from './tools/design/variations.ts';
 import { results as designResults } from './tools/design/results.ts';
 import { toastMoved } from './tools/common/fixes.ts';
 import { armed as armedInDesign, getView as designView, patchView as patchDesign } from './tools/design/view-state.ts';
@@ -331,6 +334,7 @@ async function full(): Promise<void> {
   await dither(dir);
   await postfx(dir);
   await illustration();
+  await variationsUi();
   await greyscale();
 
   // brief §8: nothing loops, and there is no spinner to run: no running animation repeats, and no loaded
@@ -348,11 +352,217 @@ async function full(): Promise<void> {
   // left on, so the relaunch pass sees it came back
   await shell.setPicker({ valueLock: true });
   // and a workspace saved before the lock moved app-wide still holds Design's old L and H lock keys, which the restore drops
-  shell.setView('design', { ...designView(), lockL: true, lockH: true });
+  // and a Variations path, open cell and swap role that a hand-edited file could hold
+  shell.setView('design', { ...designView(), lockL: true, lockH: true, varPath: [9, 2, 'x'], varOpen: 99, swapRole: 'Nonsense' });
 
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
   // pending delete is trashed after it (scripts/smoke.mjs checks both)
   void shell.runBusy(() => new Promise(() => {}));
+}
+
+/**
+ * Design's Variations tab and Swap one colour: six cells, a number key opens one, Enter uses it as one step
+ * (Ctrl+Z restores it), More like this keeps the parent as cell 1, Space refills, the arrows step, Esc closes
+ * the swap row and then the large view; and on every other tab the keys are Design's own. The view state
+ * for it is saved and, read back odd, sanitised (the quiet pass checks that).
+ */
+async function variationsUi(): Promise<void> {
+  shell.setActive('design');
+  const dd = designDoc();
+  const [was, snap] = [dd.get(), { ...designView() }];
+  const roles = buildRoles({ seed: 17, style: 'warm', accent: 'triad' });
+  const swatches = [...ROLES.map((r) => designSwatch(roles[r], `Smoke ${r}`, r)), designSwatch([0.5, 0.05, 100], 'Smoke loose')];
+  dd.transact('Smoke palette', (d) => ({ ...d, swatches }));
+  const held = (role: string) => dd.get().swatches.find((w) => w.role === role)!;
+  const panel = () => designPanel();
+  const cellButtons = () => [...(panel()?.querySelectorAll<HTMLButtonElement>('[data-cell]') ?? [])];
+  const large = () => panel()?.querySelector<HTMLElement>('[data-variations-large]') ?? null;
+  const sig = (n: number) => [...(panel()?.querySelectorAll(`[data-cell="${n}"] [role="img"]`) ?? [])].map((e) => e.getAttribute('aria-label')).join('|');
+  const swapRow = () => host('design')?.querySelector<HTMLElement>('[data-swap-row]') ?? null;
+  const swapBtn = (role: string) => host('design')?.querySelector<HTMLButtonElement>(`[data-swatch="${held(role).id}"] button[aria-label="Swap colour"]`) ?? null;
+  const blur = () => (document.activeElement as HTMLElement | null)?.blur?.();
+  const all = () => [1, 2, 3, 4, 5, 6].map(sig);
+  patchDesign({ tab: 'contrast', tabChosen: true, selected: [swatches[0].id], locked: [], varSeed: 4242, varStyle: true, varAccent: true, varGround: true, varPath: [], varOpen: 0, swapRole: '' });
+  blur();
+
+  // the tab, after Harmonies
+  const order = [...(host('design')?.querySelectorAll('[role="tab"]') ?? [])].map((t) => t.getAttribute('data-tab'));
+  check('Design has a Variations tab right after Harmonies', order.indexOf('variations') === order.indexOf('harmonies') + 1 && order.indexOf('harmonies') >= 0, order);
+
+  // keys on another tab are Design's own: an arrow steps the swatch, a number sets its role, Space rerolls
+  press('ArrowRight', { code: 'ArrowRight' });
+  check('on the Contrast tab the arrow keys still step through the swatches', designView().selected[0] === swatches[1].id, designView().selected);
+  press('3', { code: 'Digit3' });
+  check('and a number key still gives the selected swatch its role (3 is Text), opening no cell', held('Text').id === swatches[1].id && designView().varOpen === 0, [dd.get().swatches.map((w) => w.role), designView().varOpen]);
+  ctrlZ();
+  await until(() => held('Text').id === swatches[2].id);
+  let depth = dd.depth();
+  press(' ', { code: 'Space' });
+  check('and Space still rerolls the palette in place, as one step', !!(await until(() => dd.depth() === depth + 1)) && designView().varSeed === 4242, [dd.depth(), depth]);
+  ctrlZ();
+  await until(() => dd.depth() === depth);
+  selectInDesign([swatches[0].id]);
+
+  // the grid: six cells, each a small page, seven role chips and its pairs line
+  designTab('variations')?.click();
+  const six = await until(() => (cellButtons().length === 6 ? cellButtons() : null));
+  check('the Variations tab shows six cells', !!six && designView().tab === 'variations', cellButtons().length);
+  check('each cell has its number, a small page, seven role chips and a pairs line', !!six && six.every((b, i) => b.textContent!.includes(String(i + 1)) && b.querySelector('[data-colour]') && b.querySelectorAll('[role="img"]').length === 7 + 0 && /\d\/9 pairs pass/.test(b.textContent!)), six?.map((b) => b.textContent?.slice(0, 60)));
+  check('the bar offers Let these change (Style, Accent, Light or dark page), New set and the seed in mono', ['Let these change', 'Style', 'Accent', 'Light or dark page', 'New set', 'Seed 4242'].every((t) => panel()?.textContent?.includes(t)), panel()?.textContent?.slice(0, 160));
+  const wide = all();
+  check('the six palettes are all different', new Set(wide).size === 6);
+
+  // on this tab a number opens a cell and the role keys are not there
+  const plain = dd.get();
+  press('3', { code: 'Digit3' });
+  const big = await until(() => large());
+  check('3 opens the third cell large above the grid, and sets no role', !!big && big.getAttribute('aria-label') === 'Variation 3 larger' && designView().varOpen === 3 && dd.get() === plain && cellButtons()[2].getAttribute('aria-pressed') === 'true', [designView().varOpen, big?.getAttribute('aria-label')]);
+  check('the large view holds the app’s Preview in use page, the seven colours with hex and the nine contrast checks', !!big && !!big.querySelector('[role="img"][aria-label*="website preview"]') && ROLES.every((r) => big.textContent!.includes(r)) && (big.textContent!.match(/#[0-9A-F]{6}/g)?.length ?? 0) >= 7 && big.querySelectorAll('li').length === 9, big?.querySelectorAll('li').length);
+  const names = ['Use this palette', 'More like this', 'Previous', 'Next', 'Close'];
+  check('with Use this palette Enter, More like this M, Previous, Next and Close Esc', !!big && names.every((n) => [...big.querySelectorAll('button')].some((b) => b.textContent?.trim().startsWith(n))) && big.textContent!.includes('Enter') && big.textContent!.includes('Esc'));
+  check('the region has the focus and draws no ring', document.activeElement === big && getComputedStyle(big!).outlineStyle === 'none', [document.activeElement?.tagName, big && getComputedStyle(big).outlineStyle]);
+  const raised = getComputedStyle(cellButtons()[2]);
+  check('the open cell has a raised background in the grid, no edge stripe', raised.backgroundColor !== getComputedStyle(cellButtons()[0]).backgroundColor && raised.boxShadow === 'none', [raised.backgroundColor, raised.boxShadow]);
+
+  // the arrows step round the cells while it is open
+  press('ArrowRight', { code: 'ArrowRight' });
+  check('the right arrow shows the next cell', !!(await until(() => designView().varOpen === 4)) && large()?.getAttribute('aria-label') === 'Variation 4 larger');
+  for (let i = 0; i < 4; i++) press('ArrowLeft', { code: 'ArrowLeft' });
+  check('the left arrow steps back, and round from the first to the sixth', !!(await until(() => designView().varOpen === 6)), designView().varOpen);
+  check('the swatch selection did not move meanwhile', designView().selected[0] === swatches[0].id, designView().selected);
+  press('3', { code: 'Digit3' });
+
+  // Enter uses the open cell: one step, Ctrl+Z restores it
+  const grid = cellsOf(dd.get(), designView());
+  depth = dd.depth();
+  const beforeUse = dd.get();
+  const [preset, accent] = [designView().preset, designView().accent];
+  press('Enter', { code: 'Enter' });
+  check('Enter uses the open palette: one history step, the roles hold its seven colours, the large view closes', !!(await until(() => dd.depth() === depth + 1)) && ROLES.every((r) => toHex(held(r).oklch) === toHex(grid[2].roles[r])) && designView().varOpen === 0 && !large(), [dd.depth(), depth, designView().varOpen]);
+  check('the extra swatch with no role is left alone', dd.get().swatches.length === swatches.length && dd.get().swatches.at(-1) === swatches.at(-1), dd.get().swatches.length);
+  check('the Style and Accent it was built with come along', designView().preset === grid[2].style && designView().accent === grid[2].accent, [designView().preset, designView().accent]);
+  check('the cell now says it is in use', !!(await until(() => cellButtons()[2]?.textContent?.includes('in use'))));
+  ctrlZ();
+  check('Ctrl+Z restores the palette exactly, and the Style and Accent', !!(await until(() => dd.get() === beforeUse)) && designView().preset === preset && designView().accent === accent && dd.depth() === depth, [dd.depth(), depth]);
+
+  // More like this: the parent is cell 1
+  check('the grid is as it was after the undo', all().join() === wide.join());
+  press('3', { code: 'Digit3' });
+  press('m', { code: 'KeyM' });
+  const narrowed = await until(() => (designView().varPath.join() === '3' ? panel() : null));
+  check('M narrows once: the status says so and cell 1 is the palette it came from', !!narrowed && !!(await until(() => panel()?.textContent?.includes('Narrowed once'))) && sig(1) === wide[2] && !large(), [designView().varPath, sig(1) === wide[2]]);
+  check('and Back to all appears', [...(panel()?.querySelectorAll('button') ?? [])].some((b) => b.textContent?.trim() === 'Back to all'));
+  const second = all();
+  check('the other five are close relatives, all different', new Set(second).size === 6);
+  press('2', { code: 'Digit2' });
+  press('m', { code: 'KeyM' });
+  check('M again narrows twice: the depth note appears and cell 1 is the cell it came from', !!(await until(() => designView().varPath.join() === '3,2')) && !!(await until(() => panel()?.textContent?.includes('Narrowed 2 times'))) && sig(1) === second[1], [designView().varPath]);
+  // using cell 1 on a palette that already holds it changes nothing
+  press('1', { code: 'Digit1' });
+  await until(() => large());
+  press('Enter', { code: 'Enter' });
+  await until(() => !large());
+  const used = dd.depth();
+  const once = dd.get();
+  press('1', { code: 'Digit1' });
+  await until(() => large());
+  press('Enter', { code: 'Enter' });
+  await until(() => !large());
+  check('using cell 1 twice changes the palette once: the second time there is nothing to change', used === depth + 1 && dd.get() === once && dd.depth() === used, [used, depth]);
+  ctrlZ();
+  await until(() => dd.get() === beforeUse);
+  [...(panel()?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((b) => b.textContent?.trim() === 'Back to all')?.click();
+  check('Back to all brings the first six back', !!(await until(() => designView().varPath.length === 0)) && all().join() === wide.join());
+
+  // Space on this tab renews the grid and rerolls nothing; Esc closes the large view
+  press(' ', { code: 'Space' });
+  const fresh = await until(() => (designView().varSeed !== 4242 && all().join() !== wide.join() ? all() : null));
+  check('Space makes a new set: a new seed, six new cells, the palette untouched', !!fresh && fresh.join() !== wide.join() && dd.get() === beforeUse, [designView().varSeed]);
+  press('5', { code: 'Digit5' });
+  await until(() => large());
+  press('Escape', { code: 'Escape' });
+  check('Esc closes the large view', !!(await until(() => !large() && designView().varOpen === 0)));
+
+  // Let these change: a box makes a new grid
+  const styleOf = (n: number) => cellButtons()[n].querySelector('b')?.textContent?.split(' · ')[0];
+  const toggle = (label: string) => [...(panel()?.querySelectorAll<HTMLElement>('[role="checkbox"]') ?? [])].find((c) => c.textContent?.trim() === label);
+  toggle('Style')?.click();
+  const one = await until(() => !designView().varStyle && new Set([0, 1, 2, 3, 4, 5].map(styleOf)).size === 1);
+  check('unticking Style gives six cells in the one style', !!one, [0, 1, 2, 3, 4, 5].map(styleOf));
+  toggle('Style')?.click();
+  await until(() => designView().varStyle);
+
+  // a locked colour is the same in all six
+  const primary = `Primary ${toHex(held('Primary').oklch).toUpperCase()}`;
+  patchDesign({ locked: [held('Primary').id] });
+  const lockedOk = await until(() => all().every((x) => x.includes(primary)));
+  check('a locked Primary is the same in every cell', !!lockedOk, all()[0]);
+  patchDesign({ locked: [] });
+
+  // G greys colour content only
+  press('g', { code: 'KeyG' });
+  await until(() => document.documentElement.dataset.greyscale === 'true');
+  const content = [...(panel()?.querySelectorAll<HTMLElement>('[data-colour]') ?? [])];
+  const chrome = [...(panel()?.querySelectorAll<HTMLElement>('button, p, h3') ?? [])];
+  check('G greys the cells’ pages and chips and nothing else on the tab', content.length >= 12 && content.every((e) => getComputedStyle(e).filter.includes('dt-grey')) && chrome.every((e) => getComputedStyle(e).filter === 'none'), [content.length, chrome.filter((e) => getComputedStyle(e).filter !== 'none').length]);
+  press('g', { code: 'KeyG' });
+  await until(() => document.documentElement.dataset.greyscale !== 'true');
+
+  // Swap one colour, from any tab
+  patchDesign({ tab: 'contrast', varOpen: 0 });
+  selectInDesign([held('Accent').id]);
+  const btn = await until(() => swapBtn('Accent'));
+  const box = btn?.getBoundingClientRect();
+  check('Accent has a Swap button, 24 px, in the same group as the lock', !!btn && Math.round(box!.width) === 24 && Math.round(box!.height) === 24 && btn.parentElement?.querySelector('[aria-label="Lock swatch"]') !== null && btn.querySelector('.ico') !== null, [box?.width, box?.height]);
+  check('and a swatch with no role has none', !host('design')?.querySelector(`[data-swatch="${swatches[7].id}"] button[aria-label="Swap colour"]`));
+  const accentBefore = held('Accent').oklch;
+  depth = dd.depth();
+  btn!.click();
+  const row = await until(() => swapRow());
+  const alts = () => [...(swapRow()?.querySelectorAll<HTMLButtonElement>('button[aria-label^="Use "]') ?? [])];
+  check('it opens the row under the Palette title: its sentence, Now first, then about eight', !!row && row.textContent!.startsWith('Other Accents that fit: each still passes 3:1 on both backgrounds') && row.textContent!.includes('Now') && alts().length >= 4 && alts().length <= 8 && designView().swapRole === 'Accent', [alts().length, row?.textContent?.slice(0, 80)]);
+  check('each alternative shows its hex and its lowest ratio', alts().every((a) => /#[0-9A-F]{6}/.test(a.textContent!) && /\d+\.\d:1/.test(a.textContent!)), alts().map((a) => a.textContent));
+  const pick = alts()[1] ?? alts()[0];
+  const hex = pick.getAttribute('aria-label')!.match(/#[0-9A-F]{6}/)![0];
+  pick.click();
+  check('a click uses it: the Accent is that hex, one undo step, the row stays open', !!(await until(() => dd.depth() === depth + 1)) && toHex(held('Accent').oklch).toUpperCase() === hex && !!swapRow(), [toHex(held('Accent').oklch), hex, dd.depth(), depth]);
+  alts()[0]?.click();
+  check('another click tries another, and each is a step of its own', !!(await until(() => dd.depth() === depth + 2)));
+  ctrlZ();
+  ctrlZ();
+  check('two Ctrl+Z put the first Accent back exactly', !!(await until(() => dd.depth() === depth)) && held('Accent').oklch === accentBefore);
+  press('Escape', { code: 'Escape' });
+  check('Esc hides the row', !!(await until(() => !swapRow() && designView().swapRole === '')));
+  btn!.click();
+  await until(() => swapRow());
+  [...(swapRow()?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Close'))?.click();
+  check('so does Close', !!(await until(() => !swapRow())));
+
+  // Esc: the row first, then the large view
+  patchDesign({ tab: 'variations' });
+  await until(() => cellButtons().length === 6);
+  press('2', { code: 'Digit2' });
+  await until(() => large());
+  btn!.click();
+  await until(() => swapRow());
+  press('Escape', { code: 'Escape' });
+  check('on the Variations tab Esc closes the swap row first and leaves the large view', !!(await until(() => !swapRow())) && !!large() && designView().varOpen === 2);
+  press('Escape', { code: 'Escape' });
+  check('and the next Esc closes the large view', !!(await until(() => !large())));
+
+  // Surface: few pale colours pass every pair, and the row says how many
+  selectInDesign([held('Surface').id]);
+  (await until(() => swapBtn('Surface')))?.click();
+  const few = await until(() => swapRow());
+  check('the Surface row shows its alternatives or says how few there are', !!few && (alts().length >= 8 || /Only \d+ fit\.|No other colours fit\./.test(few.textContent!)), few?.textContent?.slice(0, 120));
+  press('Escape', { code: 'Escape' });
+  await until(() => !swapRow());
+  check('the Variations state is saved in the workspace view', ['varSeed', 'varStyle', 'varAccent', 'varGround', 'varPath', 'varOpen', 'swapRole'].every((k) => k in ((shell.view('design') as object) ?? {})));
+
+  // back as it was, with a seed and a path left in the view for the relaunch to find (the odd parts are added at the end of the pass)
+  dd.transact('Smoke palette back', () => was);
+  patchDesign({ ...snap, varSeed: 5150, varPath: [2] });
+  clearProposals();
 }
 
 /**
@@ -913,7 +1123,7 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     selectInDesign([accent.id]);
     press('l', { code: 'KeyL' });
     check('L locks the selected swatch', designView().locked.includes(accent.id) && !!(await until(() => host('design')?.querySelector(`[data-swatch="${accent.id}"] button[aria-pressed="true"]`))), designView().locked);
-    const lockBadge = host('design')?.querySelector(`[data-swatch="${accent.id}"] button[aria-pressed]`);
+    const lockBadge = host('design')?.querySelector(`[data-swatch="${accent.id}"] button[aria-label="Lock swatch"]`);
     check('the lock badge keeps one accessible name, Lock swatch, and shows its state in aria-pressed', lockBadge?.getAttribute('aria-label') === 'Lock swatch' && lockBadge.getAttribute('aria-pressed') === 'true', [lockBadge?.getAttribute('aria-label'), lockBadge?.getAttribute('aria-pressed')]);
     (document.activeElement as HTMLElement | null)?.blur?.();
     press(' ', { code: 'Space' });
@@ -4606,7 +4816,8 @@ async function quiet(): Promise<void> {
   const prefs = shell.getState().settings;
   check('the greyscale view left on in the first pass came back, on the root', prefs?.greyscale === true && document.documentElement.dataset.greyscale === 'true', [prefs?.greyscale, document.documentElement.dataset.greyscale]);
   shell.setActive('design');
-  check('Design’s old lockL and lockH keys are dropped from the restored view, the rest of it kept', !('lockL' in designView()) && !('lockH' in designView()) && ['contrast', 'check', 'preview', 'harmonies', 'notes'].includes(designView().tab), Object.keys(designView()));
+  check('Design’s old lockL and lockH keys are dropped from the restored view, the rest of it kept', !('lockL' in designView()) && !('lockH' in designView()) && ['contrast', 'check', 'preview', 'harmonies', 'variations', 'notes'].includes(designView().tab), Object.keys(designView()));
+  check('Variations: the seed came back, and an out-of-range cell, a stray path entry and an unknown role were dropped', designView().varSeed === 5150 && designView().varPath.join() === '2' && designView().varOpen === 0 && designView().swapRole === '', [designView().varSeed, designView().varPath, designView().varOpen, designView().swapRole]);
   check('the value lock left on in the first pass came back', prefs?.valueLock === true && prefs.hueLock === false, [prefs?.valueLock, prefs?.hueLock]);
   check('the picker style and model chosen in the first pass came back', prefs?.pickerStyle === 'wheel' && prefs.pickerModel === 'rgb' && (await until(() => host('design')?.querySelector('[data-picker="wheel"]'), 5000)), [prefs?.pickerStyle, prefs?.pickerModel]);
   // the GIF comes back from the workspace, as it was left, and every frame dithers again

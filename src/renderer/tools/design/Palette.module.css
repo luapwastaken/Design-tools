@@ -1,6 +1,6 @@
 /* the Palette section: ~300px tall, the swatches filling it; many colours scroll the row sideways */
 .section { position: relative; }
-.body { position: relative; display: flex; flex-direction: row; padding: 0; overflow: hidden; }
+.body { position: relative; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 /* the surround the colours are judged on fills the whole body */
 .stage { display: flex; flex: 1; min-width: 0; min-height: 0; padding: 12px 14px 14px; }
 .ctl.ctl { flex: none; width: 160px; }
@@ -33,9 +33,12 @@
 .proposed { background: var(--module); color: var(--agent-ink); }
 .tags { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
 .tags .proposed { max-width: 100%; }
-.lock { display: none; width: 24px; height: 24px; flex: none; align-items: center; justify-content: center; border-radius: 6px; background: var(--on-content-bg); color: var(--on-content-ink); cursor: pointer; }
-.lock:hover { color: var(--cross); }
-.sw:hover .lock, .sw:focus-within .lock, .sel .lock, .lock.on { display: inline-flex; }
+.tools { display: flex; flex: none; gap: 4px; }
+.lock, .swap { display: none; width: 24px; height: 24px; flex: none; align-items: center; justify-content: center; border-radius: 6px; background: var(--on-content-bg); color: var(--on-content-ink); cursor: pointer; }
+.lock:hover, .swap:hover { color: var(--cross); }
+.sw:hover .lock, .sw:focus-within .lock, .sel .lock, .lock.on, .sw:hover .swap, .sw:focus-within .swap, .sel .swap, .swap.on { display: inline-flex; }
+/* the row is open for this colour: the button turns over (ink and ground swapped), never a mark on an edge */
+.swap.on { background: var(--on-content-ink); color: var(--on-content-bg); }
 
 .foot { display: flex; flex: none; flex-direction: column; gap: 3px; min-width: 0; padding: 4px 6px; border-radius: 6px; background: var(--module); }
 .line { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }

@@ -14,8 +14,10 @@ import { SURROUNDS, surroundOf } from '../common/surround.ts';
 import { addProposals, addSwatch, armDelete, byRole, clickSelect, completeNow, copyColourOf, duplicate, groundFlip, missingRoles, proposedRoles, select, selection, setRole, sortByRole, toggleLocked, type Doc } from './actions.ts';
 import { inkOn, simulated } from './artboard.ts';
 import { DeleteConfirm } from './DeleteConfirm.tsx';
-import { displayName, listNames, moveIds, namesOf, plural, type ChipData, type DesignDoc, type DesignView, mapSwatch } from './doc.ts';
+import { displayName, jobHolders, listNames, moveIds, namesOf, plural, type ChipData, type DesignDoc, type DesignView, mapSwatch } from './doc.ts';
 import { Empty } from './Empty.tsx';
+import { SwapRow } from './SwapRow.tsx';
+import { toggleSwap } from './variation-actions.ts';
 import type { OpenPop } from './Popovers.tsx';
 import { clearProposals, proposals, toggleLock, type Proposal } from './proposals.ts';
 import { armed, hot, patchView } from './view-state.ts';
@@ -42,6 +44,8 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
   const sel = selection(d, v);
   const [drag, setDrag] = useState<{ ids: string[]; at: number | null } | null>(null);
   const names = useMemo(() => namesOf(d), [d.swatches, d.ramps]);
+  // the swatch that holds each job is the one Swap works on
+  const jobOf = useMemo(() => new Map(jobHolders(d.swatches).map(([role, w]) => [w.id, role])), [d.swatches]);
   // the confirm belongs to the swatch it was armed on: another anchor disarms it
   useEffect(() => armed.set(false), [sel[0]]);
   // a new set of proposals lands at the end of the row, maybe past the fold: bring its first into view
@@ -175,6 +179,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
         </>
       }
     >
+      <SwapRow doc={doc} d={d} v={v} />
       <div className={s.stage} data-colour={!empty && v.surround !== 'plain' ? '' : undefined} style={empty ? undefined : { background: surroundOf(v.surround, d.swatches) }}>
       {empty ? (
         <Empty doc={doc} v={v} onPop={onPop} />
@@ -199,6 +204,8 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
               anchor={sel[0] === w.id}
               hot={lit.includes(w.id)}
               locked={v.locked.includes(w.id)}
+              swapOpen={!!jobOf.get(w.id) && v.swapRole === jobOf.get(w.id)}
+              onSwap={jobOf.has(w.id) ? () => (select([w.id]), toggleSwap(jobOf.get(w.id)!)) : undefined}
               dragging={!!drag?.ids.includes(w.id)}
               data={v.chipData}
               insert={insertOf(i)}
@@ -249,6 +256,9 @@ type TileProps = {
   anchor: boolean;
   hot: boolean;
   locked: boolean;
+  /** the other-colours row is open for this swatch's role; `onSwap` is absent on a swatch with no job */
+  swapOpen: boolean;
+  onSwap?(): void;
   dragging: boolean;
   data: ChipData;
   insert: 'before' | 'after' | undefined;
@@ -309,21 +319,40 @@ function Tile(p: TileProps) {
         >
           {w.role ?? 'Add role'}
         </button>
-        <Tooltip content={p.locked ? 'Unlock' : 'Lock: a re-roll and Delete leave it'} shortcut="L" side="below">
-          <button
-            type="button"
-            className={cx(s.lock, p.locked && s.on)}
-            aria-label="Lock swatch"
-            aria-pressed={p.locked}
-            tabIndex={-1}
-            onClick={(e) => {
-              e.stopPropagation();
-              p.onLock();
-            }}
-          >
-            <Icon name={p.locked ? 'lock' : 'lock_open'} size={14} fill={p.locked} />
-          </button>
-        </Tooltip>
+        <span className={s.tools}>
+          {p.onSwap && (
+            <Tooltip content="Show colours that could replace this one" side="below">
+              <button
+                type="button"
+                className={cx(s.swap, p.swapOpen && s.on)}
+                aria-label="Swap colour"
+                aria-pressed={p.swapOpen}
+                tabIndex={-1}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  p.onSwap!();
+                }}
+              >
+                <Icon name="swap_horiz" size={16} />
+              </button>
+            </Tooltip>
+          )}
+          <Tooltip content={p.locked ? 'Unlock' : 'Lock: a re-roll and Delete leave it'} shortcut="L" side="below">
+            <button
+              type="button"
+              className={cx(s.lock, p.locked && s.on)}
+              aria-label="Lock swatch"
+              aria-pressed={p.locked}
+              tabIndex={-1}
+              onClick={(e) => {
+                e.stopPropagation();
+                p.onLock();
+              }}
+            >
+              <Icon name={p.locked ? 'lock' : 'lock_open'} size={14} fill={p.locked} />
+            </button>
+          </Tooltip>
+        </span>
       </div>
       <Foot name={p.name} oklch={w.oklch} auto={!w.name.trim()} data={p.data} />
     </div>

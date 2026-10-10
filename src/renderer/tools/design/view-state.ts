@@ -2,6 +2,9 @@
 import { useSyncExternalStore } from 'react';
 import { ACCENTS } from '../../../shared/palette/brand.ts';
 import { PRESETS } from '../../../shared/palette/generate.ts';
+import { ROLES } from '../../../shared/palette/roles.ts';
+import { COUNT } from '../../../shared/palette/variations.ts';
+import { MAX_DEPTH } from './variations.ts';
 import { shell } from '../../shell/core/index.ts';
 import { EXPORT_FORMATS } from '../common/ExportPalette.tsx';
 import { createStore } from '../common/store.ts';
@@ -38,10 +41,18 @@ export const DEFAULT_VIEW: DesignView = {
   k: 6,
   stops: 3,
   space: 'oklch',
+  varSeed: 4242,
+  varStyle: true,
+  varAccent: true,
+  varGround: true,
+  varPath: [],
+  varOpen: 0,
+  swapRole: '',
 };
 
+
 const ENUMS: Partial<Record<keyof DesignView, readonly string[]>> = {
-  tab: ['contrast', 'check', 'preview', 'harmonies', 'notes'],
+  tab: ['contrast', 'check', 'preview', 'harmonies', 'variations', 'notes'],
   accent: ACCENTS.map((a) => a.value),
   suggestFrom: ['all', 'selected'],
   surround: ['grey', 'ground', 'plain'],
@@ -50,6 +61,7 @@ const ENUMS: Partial<Record<keyof DesignView, readonly string[]>> = {
   sim: ['normal', 'protan', 'deutan', 'tritan', 'achromat'],
   format: EXPORT_FORMATS,
   space: ['oklch', 'oklab'],
+  swapRole: ['', ...ROLES],
 };
 
 /** what a saved workspace holds, field by field; anything odd falls back to the default (a dropped field, like `picker`, is left behind) */
@@ -70,6 +82,11 @@ function sanitize(raw: unknown): DesignView {
   out.pickerW = clamp(out.pickerW as number, PICKER_W);
   if (!PRESETS.some((p) => p.id === out.preset)) out.preset = DEFAULT_VIEW.preset;
   if (!PRESETS.some((p) => p.id === out.suggestStyle)) out.suggestStyle = DEFAULT_VIEW.suggestStyle;
+  // Variations: the path is a list of cells, not of ids; the seed and the open cell are whole numbers in range
+  const cell = (n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= COUNT;
+  out.varPath = Array.isArray(r.varPath) ? r.varPath.filter(cell).slice(0, MAX_DEPTH) : [];
+  out.varOpen = cell(out.varOpen) ? out.varOpen : 0;
+  out.varSeed = Math.abs(Math.floor(out.varSeed as number)) || (DEFAULT_VIEW.varSeed as number);
   return out as DesignView;
 }
 

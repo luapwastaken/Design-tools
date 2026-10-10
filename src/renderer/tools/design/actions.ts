@@ -12,7 +12,7 @@ import { copyColour, pickFromScreen, toast, type NumberGesture } from '../../ui/
 import { nextV } from './adjust.ts';
 import { suggestRoles } from './artboard.ts';
 import { runComplete, runGenerate } from './build.ts';
-import { displayName, insertAfter, listNames, moveIds, newSwatch, plural, recolour, removeIds, type BuildMethod, type DesignDoc, type DesignView } from './doc.ts';
+import { displayName, insertAfter, jobHolders, listNames, moveIds, newSwatch, plural, recolour, removeIds, type BuildMethod, type DesignDoc, type DesignView } from './doc.ts';
 import { clearProposals, dropProposals, proposals, proposalsFrom, type Proposal } from './proposals.ts';
 import { armed, getView, patchView } from './view-state.ts';
 
@@ -318,10 +318,6 @@ export function groundFlip(background: Oklch, preset: string, brand: { name: str
   const on = contrast(brand.oklch, wanted === 'light' ? [0.97, 0, 0] : [0.23, 0, 0]);
   return `Built on a ${ground} ground: ${displayName(brand)} reads ${on.toFixed(1)}:1 on ${wanted === 'light' ? 'white' : 'the dark page'}, under the 3:1 a fill needs.`;
 }
-
-/** the swatch that holds each of the seven jobs (the first, should an import give two the same one) */
-const jobHolders = (swatches: Swatch[]): [Role, Swatch][] =>
-  ROLES.flatMap((role) => swatches.filter((w) => w.role === role).slice(0, 1).map((w): [Role, Swatch] => [role, w]));
 
 /** the view fields a reroll may change, as they were: what its Undo puts back */
 const rerollFields = (v: DesignView) => ({ preset: v.preset, accent: v.accent, seed: v.seed });

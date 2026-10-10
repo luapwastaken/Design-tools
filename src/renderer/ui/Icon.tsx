@@ -1,5 +1,5 @@
 import {
-  AppWindow, ArrowBendDownRight, ArrowBendUpLeft, ArrowBendUpRight, ArrowCounterClockwise, ArrowDown, ArrowSquareOut, ArrowUp, ArrowsClockwise, ArrowsDownUp,
+  AppWindow, ArrowBendDownRight, ArrowLeft, ArrowRight, ArrowBendUpLeft, ArrowBendUpRight, ArrowCounterClockwise, ArrowDown, ArrowSquareOut, ArrowUp, ArrowsClockwise, ArrowsDownUp,
   ArrowsHorizontal, ArrowsLeftRight, ArrowsVertical, BookmarkSimple, BookmarksSimple, BoundingBox, Browser, Cards, CaretDown, CaretRight, CaretUpDown, ChartLine, Check,
   CheckSquare, CircleDashed, CircleHalf, ClockCounterClockwise, Clipboard, Copy, Crosshair, DotsNine, DotsSixVertical, DotsThree, DownloadSimple, WarningDiamond, Eye,
   Eyedropper, FilePlus, FilmSlate, Folder, FolderDashed, FolderOpen, FolderPlus, Gear, Gradient, Grains, Image, ImageBroken, ImageSquare, Images, Info, Intersect, Link,
@@ -16,6 +16,8 @@ import s from './Icon.module.css';
 /** Material Symbols name -> Phosphor glyph. The names stay (callers don't change); Bone Ember draws them in Phosphor. */
 const GLYPHS = {
   add: Plus,
+  arrow_back: ArrowLeft,
+  arrow_forward: ArrowRight,
   wall: Wall,
   view_column: Columns,
   change_history: Triangle,

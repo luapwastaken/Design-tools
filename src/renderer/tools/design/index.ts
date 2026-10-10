@@ -11,6 +11,7 @@ import { emptyDoc, fromPayload, toPayload, type DesignDoc } from './doc.ts';
 import { clearProposals } from './proposals.ts';
 import { takeImage, takeSvg } from './sources.ts';
 import { StatusSlot } from './StatusSlot.tsx';
+import { variationKeys } from './variation-actions.ts';
 import { View } from './View.tsx';
 
 export const tool: ToolDefinition<DesignDoc> = {
@@ -69,6 +70,8 @@ export const tool: ToolDefinition<DesignDoc> = {
 
   // the shell leaves bare keys to a focused text field (foundation 9), so none of these needs to look
   shortcuts: (doc) => [
+    // first, so the Variations tab's 1 to 6, Space, arrows and Esc win while it shows (and are not there on any other tab)
+    ...variationKeys(doc),
     { keys: 'Space', label: 'Reroll the unlocked colours (build a palette when empty)', run: () => spaceNow(doc) },
     { keys: 'L', label: 'Lock or unlock the selected swatches: a locked colour stays through Space and Delete', run: () => toggleLocked(doc) },
     { keys: 'V', label: 'Hold value', run: toggleValueLock },

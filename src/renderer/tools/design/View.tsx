@@ -1,6 +1,6 @@
 // The Design tool's screen: sections, not a canvas and an inspector. The doc bar over a Palette
 // section, then the Colour picker beside a tabbed section (Contrast, Check palette, Preview in use,
-// Tints & harmonies). Adding a tab later is one more entry in the array below.
+// Harmonies, Variations). Adding a tab later is one more entry in the array below.
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { shell } from '../../shell/core/index.ts';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
@@ -22,6 +22,7 @@ import { proposals } from './proposals.ts';
 import { results } from './results.ts';
 import { takeText } from './sources.ts';
 import { HarmoniesTab } from './HarmoniesTab.tsx';
+import { VariationsTab } from './VariationsTab.tsx';
 import { NotesModule } from '../common/Notes.tsx';
 import { hot, PALETTE_H, patchView, PICKER_W, useView } from './view-state.ts';
 import type { CSSProperties } from 'react';
@@ -101,6 +102,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
     { id: 'check', label: 'Check palette', badge: empty ? 0 : r.toLookAt - r.failing.length, render: when(() => <CheckTab doc={doc} d={settled} v={v} r={r} />) },
     { id: 'preview', label: 'Preview in use', badge: empty ? 0 : r.preview.failing.length, render: when(() => <PreviewTab v={v} r={r} />) },
     { id: 'harmonies', label: 'Harmonies', render: when(() => <HarmoniesTab d={d} v={v} />) },
+    { id: 'variations', label: 'Variations', render: when(() => <VariationsTab doc={doc} d={d} v={v} />) },
     // the file's own notes (an import's warnings): a tab only while there are any
     ...(d.notes ? [{ id: 'notes', label: 'Notes', render: () => <NotesModule doc={doc} /> }] : []),
   ];
