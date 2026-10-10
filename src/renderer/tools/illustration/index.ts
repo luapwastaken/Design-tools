@@ -10,6 +10,7 @@ import { emptyDoc, fromPayload, rampOf, setSpec, toPayload, type IllustrationDoc
 import { paintSettings, SIZE, LOAD, type PaintSettings } from './paint-sources.ts';
 import { clearProposals, takeImage, takeSvg } from './proposals.ts';
 import { StatusSlot } from './StatusSlot.tsx';
+import { lockSelected, variationKeys } from './variation-actions.ts';
 import { View } from './View.tsx';
 import { getView, patchView, type IllustrationView } from './view-state.ts';
 
@@ -87,10 +88,13 @@ export const tool: ToolDefinition<IllustrationDoc> = {
       if (r) doc.transact(r.hero ? 'End the hero colour' : 'Make the hero colour', (d) => setSpec(d, r.id, { hero: !r.hero }));
     };
     return [
+      // first, so the Variations tab's 1 to 6, Space, arrows and Esc win while it shows (and are not there on any other tab)
+      ...variationKeys(doc),
       { keys: 'Alt+1', label: 'Ramp settings', run: mode('settings') },
       { keys: 'Alt+2', label: 'Light & preview', run: mode('light') },
       { keys: 'Alt+3', label: 'Check values', run: mode('check') },
       { keys: 'Alt+4', label: 'Paint', run: mode('paint') },
+      { keys: 'Alt+5', label: 'Variations', run: mode('variations') },
       { keys: 'Shift+A', label: 'Add a colour', run: () => addBase(doc) },
       { keys: 'Delete', label: 'Delete ramp', run: () => arm(doc) },
       { keys: 'Ctrl+D', label: 'Duplicate ramp', run: () => duplicate(doc) },
@@ -98,6 +102,7 @@ export const tool: ToolDefinition<IllustrationDoc> = {
       { keys: 'ArrowLeft', label: 'Lighter step', run: () => move(doc, -1, 0) },
       { keys: 'ArrowRight', label: 'Darker step', run: () => move(doc, 1, 0) },
       { keys: 'H', label: 'Hero colour', run: hero },
+      { keys: 'L', label: 'Lock or unlock the selected ramp: it keeps its colour in every Variations cell', run: () => lockSelected(doc) },
       { keys: 'G', label: 'Greyscale', run: () => void toggleGreyscale() },
       { keys: 'V', label: 'Hold value', run: toggleValueLock },
       // I picks: on the paper in Paint, anywhere on screen otherwise

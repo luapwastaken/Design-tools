@@ -151,13 +151,25 @@ const baseSwatch = (id: string, oklch: Oklch, name: string): Swatch => ({ id: cr
  * is, so a scene keeps one light; returns the base swatch's id too. A full palette comes back as it
  * was, with no base.
  */
-export function addRamp(d: IllustrationDoc, oklch: Oklch, name = '', after: string | null = null, material?: MaterialId): { doc: IllustrationDoc; base: string } {
+export function addRamp(d: IllustrationDoc, oklch: Oklch, name = '', after: string | null = null, material?: MaterialId, fallback?: RampSpec | null): { doc: IllustrationDoc; base: string } {
   if (d.ramps.length >= MAX_RAMPS) return { doc: d, base: '' };
-  const spec = spawn(d, oklch, rampOf(d, after ?? undefined) ?? d.ramps.at(-1), material);
+  const spec = spawn(d, oklch, rampOf(d, after ?? undefined) ?? d.ramps.at(-1) ?? fallback, material);
   const at = d.ramps.findIndex((r) => r.id === after);
   const ramps = at < 0 ? [...d.ramps, spec] : [...d.ramps.slice(0, at + 1), spec, ...d.ramps.slice(at + 1)];
   const base = baseSwatch(spec.id, oklch, name);
   return { doc: ordered(regen({ ...d, ramps, swatches: [...d.swatches, base] }, spec.id)), base: base.id };
+}
+
+/**
+ * The ramps replaced by one per pick, in order, each with its material and its name on the base, lit as the
+ * scene is (`light`) and built like the ramp that was last (steps, intensity, push, hue shift, saturation).
+ * Colours in no ramp stay. Every ramp is new, so nothing of the old ones is kept, and an undo brings them back whole.
+ */
+export function replaceRamps(d: IllustrationDoc, picks: { name: string; base: Oklch; material: MaterialId }[], light: SceneLight): IllustrationDoc {
+  const last = d.ramps.at(-1);
+  const like = last && { ...last, light: [...light.light] as Oklch, shadow: [...light.shadow] as Oklch };
+  const bare: IllustrationDoc = { ...d, ramps: [], swatches: looseOf(d), scene: { light: [...light.light], shadow: [...light.shadow] } };
+  return picks.reduce((x, p) => addRamp(x, p.base, p.name, null, p.material, like).doc, bare);
 }
 
 /** loose swatches become ramp bases, each keeping its id, name and role, lit as the last ramp is (plan: "Make ramps from these"); as many as the palette has room for */

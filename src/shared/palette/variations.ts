@@ -20,6 +20,9 @@ import { fitChroma, wrapHue } from './space.ts';
 
 export const COUNT = 6;
 
+/** More like this narrows this many times at most (the spread stops shrinking after three), and a saved path is cut to this */
+export const MAX_DEPTH = 6;
+
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 function shuffled<T>(list: T[], rnd: () => number): T[] {
   const a = [...list];

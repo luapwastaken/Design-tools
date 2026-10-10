@@ -4,12 +4,11 @@
 import { toHex, type Oklch } from '../../../shared/color/index.ts';
 import { completeRoles, styleGround, type RoleColours } from '../../../shared/palette/brand.ts';
 import { ROLES, type Role } from '../../../shared/palette/roles.ts';
-import { designAlternatives, designCells, relatives, rolesKey, type DesignAlt, type DesignCell, type Ground } from '../../../shared/palette/variations.ts';
+import { designAlternatives, designCells, MAX_DEPTH, relatives, rolesKey, type DesignAlt, type DesignCell, type Ground } from '../../../shared/palette/variations.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { jobHolders, newSwatch, recolour, type DesignDoc, type DesignView } from './doc.ts';
 
-/** More like this narrows this many times at most (the spread stops shrinking after three), and a saved path is cut to this */
-export const MAX_DEPTH = 6;
+export { MAX_DEPTH };
 
 // ── the cells ────────────────────────────────────────────────────────────────────────────────────
 

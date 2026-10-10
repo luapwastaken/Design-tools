@@ -1,0 +1,10 @@
+/* What's in the picture: a line that opens to nine ticks, a tone for skin and hair, and Make ramps. Closed, it is one line at the top of the Ramps panel. */
+.pic { display: flex; flex: none; flex-direction: column; gap: 8px; min-width: 0; padding: 6px 12px 0; }
+.head { display: flex; align-items: center; gap: 6px; min-height: 24px; border-radius: var(--r-ctl); color: var(--ink-2); text-align: left; }
+.head:hover { color: var(--ink); }
+.cap { font-size: var(--fs-row); }
+.count { color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); }
+.ticks { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; min-width: 0; }
+.tick { display: inline-flex; align-items: center; gap: 6px; }
+.foot { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.fine { min-width: 0; color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.35; }

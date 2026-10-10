@@ -61,6 +61,7 @@ import { drawSvg } from './tools/logo/raster.ts';
 import { getView as logoView, patchView as patchLogo } from './tools/logo/view-state.ts';
 import { clearProposals as clearBases, proposals as bases, sourcePop } from './tools/illustration/proposals.ts';
 import { select as selectInIllustration } from './tools/illustration/actions.ts';
+import { cellsOf as illustrationCells, lockedIn } from './tools/illustration/variations.ts';
 import { getView as illustrationView, patchView as patchIllustration } from './tools/illustration/view-state.ts';
 import { PX_PER, toPayload, withUnit, type PatternDoc } from './tools/pattern/doc.ts';
 import { patchView as patchPattern } from './tools/pattern/view-state.ts';
@@ -335,6 +336,7 @@ async function full(): Promise<void> {
   await postfx(dir);
   await illustration();
   await variationsUi();
+  await variationsIllustrationUi();
   await greyscale();
 
   // brief §8: nothing loops, and there is no spinner to run: no running animation repeats, and no loaded
@@ -354,6 +356,8 @@ async function full(): Promise<void> {
   // and a workspace saved before the lock moved app-wide still holds Design's old L and H lock keys, which the restore drops
   // and a Variations path, open cell and swap role that a hand-edited file could hold
   shell.setView('design', { ...designView(), lockL: true, lockH: true, varPath: [9, 2, 'x'], varOpen: 99, swapRole: 'Nonsense' });
+  // Illustration's Variations state likewise: a stray path entry, an out-of-range cell, a lock list with a number in it, subjects that do not exist
+  shell.setView('illustration', { ...illustrationView(), varSeed: 5150, varPath: [9, 2, 'x'], varOpen: 99, lockedRamps: ['keep-1', 4, 'keep-1'], pictureOn: ['sky', 'unicorn', 'skin'], pictureTones: { skin: 'skin-deep', hair: 'nonsense' } });
 
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
   // pending delete is trashed after it (scripts/smoke.mjs checks both)
@@ -563,6 +567,261 @@ async function variationsUi(): Promise<void> {
   dd.transact('Smoke palette back', () => was);
   patchDesign({ ...snap, varSeed: 5150, varPath: [2] });
   clearProposals();
+}
+
+/**
+ * Illustration's Variations tab, ramp locks, Swap one colour on ramps and What's in the picture: six cells of
+ * ramps on lit balls, a number key opens one, Enter uses it as one step (Ctrl+Z restores it), More like this
+ * keeps the parent as cell 1; a locked ramp is the same in all six; Vary the light keeps the bases and Space
+ * renews only the in-between light; Swap lists ramps at the same grey value; Make ramps replaces the ramps with
+ * the ticked subjects and one undo brings ramps and locks back together. On the other tabs the keys are the
+ * tool's own.
+ */
+async function variationsIllustrationUi(): Promise<void> {
+  shell.setActive('illustration');
+  const il = illustrationDoc();
+  const [was, snap] = [il.get(), { ...illustrationView() }];
+  const bases: Oklch[] = [[0.74, 0.075, 55], [0.6, 0.12, 140], [0.7, 0.09, 240], [0.5, 0.1, 25], [0.82, 0.06, 90]];
+  il.transact('Smoke ramps', (d) => bases.reduce<IllustrationDoc>((x, b, i) => addRamp(x, b, `Smoke ${i + 1}`).doc, { ...d, ramps: [], swatches: [] }));
+  const ids = () => il.get().ramps.map((r) => r.id);
+  const baseHex = (d = il.get()) => d.ramps.map((r) => toHex(baseOf(d, r.id)!.oklch));
+  const panel = () => host('illustration')?.querySelector<HTMLElement>('[role="tabpanel"]') ?? null;
+  const cellButtons = () => [...(panel()?.querySelectorAll<HTMLButtonElement>('[data-cell]') ?? [])];
+  const large = () => panel()?.querySelector<HTMLElement>('[data-variations-large]') ?? null;
+  const sig = (n: number) => [...(panel()?.querySelectorAll<HTMLElement>(`[data-cell="${n}"] [data-steps] i`) ?? [])].map((e) => e.style.background).join('|');
+  const all = () => [1, 2, 3, 4, 5, 6].map(sig);
+  const swapRow = () => host('illustration')?.querySelector<HTMLElement>('[data-swap-row]') ?? null;
+  const rowBtn = (id: string, label: string) => host('illustration')?.querySelector<HTMLButtonElement>(`[data-row="${id}"] button[aria-label="${label}"]`) ?? null;
+  const pressed = () => host('illustration')?.querySelectorAll('button[aria-label="Lock ramp"][aria-pressed="true"]').length ?? 0;
+  const barButton = (text: string) => [...(panel()?.querySelectorAll<HTMLElement>('button, [role="radio"]') ?? [])].find((b) => b.textContent?.trim().startsWith(text));
+  const blur = () => (document.activeElement as HTMLElement | null)?.blur?.();
+  const reset = () => patchIllustration({ tab: 'settings', selected: null, varSeed: 4242, varMode: 'colours', varPath: [], varOpen: 0, swapRamp: '', lockedRamps: [], pictureOn: [], pictureTones: {}, pictureOpen: false });
+  reset();
+  blur();
+
+  // the tab, after Paint; Alt+5 opens it
+  const order = [...(host('illustration')?.querySelectorAll('[role="tab"]') ?? [])].map((t) => t.getAttribute('data-tab'));
+  check('Illustration has a Variations tab right after Paint', order.indexOf('variations') === order.indexOf('paint') + 1 && order.indexOf('paint') >= 0, order);
+
+  // keys on another tab are the tool's own: an arrow steps along the ramp, a number opens nothing, Space makes nothing
+  press('ArrowRight', { code: 'ArrowRight' });
+  check('on Ramp settings the arrow key still steps to the next swatch', illustrationView().selected !== null, illustrationView().selected);
+  press('3', { code: 'Digit3' });
+  press(' ', { code: 'Space' });
+  check('and 3 and Space open no cell and make no set', illustrationView().varOpen === 0 && illustrationView().varSeed === 4242, [illustrationView().varOpen, illustrationView().varSeed]);
+  reset();
+  press('5', { code: 'Digit5', altKey: true });
+  const six = await until(() => (cellButtons().length === 6 ? cellButtons() : null));
+  check('Alt+5 opens the Variations tab, and it shows six cells', !!six && illustrationView().tab === 'variations', [cellButtons().length, illustrationView().tab]);
+  check('each cell has its number, a light and shadow band, and one row per ramp: a small ball and its steps', !!six && six.every((b, i) => b.textContent!.includes(String(i + 1)) && !!b.querySelector('[data-colour][aria-hidden="true"]') && b.querySelectorAll('[data-ramp]').length === 5 && b.querySelectorAll('canvas').length === 5 && b.querySelectorAll('[data-steps] i').length === 25), six?.map((b) => [b.querySelectorAll('[data-ramp]').length, b.querySelectorAll('canvas').length]));
+  check('each step strip has one dot, the base’s', !!six && six.every((b) => [...b.querySelectorAll('[data-ramp]')].every((r) => r.querySelectorAll('[data-steps] i b').length === 1)));
+  check('the bar offers Vary the colours and Vary the light, New set and the seed in mono', ['Vary the colours', 'Vary the light', 'New set', 'Seed 4242'].every((t) => panel()?.textContent?.includes(t)), panel()?.textContent?.slice(0, 120));
+  const wide = all();
+  check('the six palettes are all different', new Set(wide).size === 6);
+
+  // 3 opens the third cell large: every ramp on a 120 px ball with its codes, and the light pair with its name
+  const plain = il.get();
+  press('3', { code: 'Digit3' });
+  const big = await until(() => large());
+  check('3 opens the third cell large above the grid, and changes nothing', !!big && big.getAttribute('aria-label') === 'Variation 3 larger' && illustrationView().varOpen === 3 && il.get() === plain && cellButtons()[2].getAttribute('aria-pressed') === 'true', [illustrationView().varOpen, big?.getAttribute('aria-label')]);
+  const balls = [...(big?.querySelectorAll('canvas') ?? [])];
+  check('it holds every ramp on a 120 px ball, drawn by the app’s own shade', balls.length === 5 && balls.every((c) => c.width === 120 && Math.round(c.getBoundingClientRect().width) === 120) && balls.every((c) => c.getContext('2d')!.getImageData(60, 60, 1, 1).data[3] > 0), balls.map((c) => [c.width, c.getBoundingClientRect().width]));
+  check('with each step’s hex, the light pair and its name', !!big && (big.textContent!.match(/#[0-9A-F]{6}/g)?.length ?? 0) >= 25 + 2 && big.textContent!.includes('Light #') && big.textContent!.includes('Shadow #') && !!big.querySelector('[data-light] [class*="name"]')?.textContent, big?.querySelector('[data-light]')?.textContent);
+  const names = ['Use this palette', 'More like this', 'Previous', 'Next', 'Close'];
+  check('with Use this palette Enter, More like this M, Previous, Next and Close Esc', !!big && names.every((n) => [...big.querySelectorAll('button')].some((b) => b.textContent?.trim().startsWith(n))) && big.textContent!.includes('Enter') && big.textContent!.includes('Esc'));
+  check('the region has the focus and draws no ring', document.activeElement === big && getComputedStyle(big!).outlineStyle === 'none', [document.activeElement?.tagName, big && getComputedStyle(big).outlineStyle]);
+  const raised = getComputedStyle(cellButtons()[2]);
+  check('the open cell has a raised background in the grid, no edge stripe', raised.backgroundColor !== getComputedStyle(cellButtons()[0]).backgroundColor && raised.boxShadow === 'none', [raised.backgroundColor, raised.boxShadow]);
+  press('ArrowRight', { code: 'ArrowRight' });
+  check('the right arrow shows the next cell', !!(await until(() => illustrationView().varOpen === 4)) && large()?.getAttribute('aria-label') === 'Variation 4 larger');
+  for (let i = 0; i < 4; i++) press('ArrowLeft', { code: 'ArrowLeft' });
+  check('the left arrow steps back, and round from the first to the sixth', !!(await until(() => illustrationView().varOpen === 6)), illustrationView().varOpen);
+  check('the selection did not move meanwhile', illustrationView().selected === null, illustrationView().selected);
+  press('3', { code: 'Digit3' });
+
+  // Enter uses the open cell: one step, Ctrl+Z restores it
+  const grid = illustrationCells(il.get(), illustrationView());
+  let depth = il.depth();
+  const beforeUse = il.get();
+  press('Enter', { code: 'Enter' });
+  check('Enter uses the open palette: one history step, every base is the cell’s, the large view closes', !!(await until(() => il.depth() === depth + 1)) && baseHex().join() === grid[2].bases.map((b) => toHex(b.base)).join() && illustrationView().varOpen === 0 && !large(), [baseHex(), grid[2].bases.map((b) => toHex(b.base)), il.depth(), depth]);
+  check('the ramps follow their new bases, steps and all', il.get().ramps.every((r) => stepsOf(il.get(), r.id).length === r.steps && stepsOf(il.get(), r.id).find((w) => w.step === 0)!.oklch === baseOf(il.get(), r.id)!.oklch));
+  check('the cell now says it is in use', !!(await until(() => cellButtons()[2]?.textContent?.includes('in use'))));
+  ctrlZ();
+  check('Ctrl+Z restores the palette exactly', !!(await until(() => il.get() === beforeUse)) && il.depth() === depth, [il.depth(), depth]);
+
+  // More like this: the parent is cell 1
+  check('the grid is as it was after the undo', all().join() === wide.join());
+  press('3', { code: 'Digit3' });
+  press('m', { code: 'KeyM' });
+  check('M narrows once: the status says so and cell 1 is the palette it came from', !!(await until(() => illustrationView().varPath.join() === '3')) && !!(await until(() => panel()?.textContent?.includes('Narrowed once'))) && sig(1) === wide[2] && !large(), [illustrationView().varPath, sig(1) === wide[2]]);
+  check('and Back to all appears', !!barButton('Back to all'));
+  const second = all();
+  check('the other five are close relatives, all different', new Set(second).size === 6);
+  press('2', { code: 'Digit2' });
+  press('m', { code: 'KeyM' });
+  check('M again narrows twice: the depth note appears and cell 1 is the cell it came from', !!(await until(() => illustrationView().varPath.join() === '3,2')) && !!(await until(() => panel()?.textContent?.includes('Narrowed 2 times'))) && sig(1) === second[1], [illustrationView().varPath]);
+  press('1', { code: 'Digit1' });
+  await until(() => large());
+  press('Enter', { code: 'Enter' });
+  await until(() => !large());
+  const used = il.depth();
+  const once = il.get();
+  press('1', { code: 'Digit1' });
+  await until(() => large());
+  press('Enter', { code: 'Enter' });
+  await until(() => !large());
+  check('using cell 1 twice changes the palette once: the second time there is nothing to change', used === depth + 1 && il.get() === once && il.depth() === used, [used, depth]);
+  ctrlZ();
+  await until(() => il.get() === beforeUse);
+  barButton('Back to all')?.click();
+  check('Back to all brings the first six back', !!(await until(() => illustrationView().varPath.length === 0)) && all().join() === wide.join());
+
+  // Space renews the grid and changes no ramp; Esc closes the large view
+  press(' ', { code: 'Space' });
+  const fresh = await until(() => (illustrationView().varSeed !== 4242 && all().join() !== wide.join() ? all() : null));
+  check('Space makes a new set: a new seed, six new cells, the palette untouched', !!fresh && fresh.join() !== wide.join() && il.get() === beforeUse, [illustrationView().varSeed]);
+  press('5', { code: 'Digit5' });
+  await until(() => large());
+  press('Escape', { code: 'Escape' });
+  check('Esc closes the large view', !!(await until(() => !large() && illustrationView().varOpen === 0)));
+  patchIllustration({ varSeed: 4242 });
+
+  // ramp locks: a button on each ramp row (a background change), key L on the selected ramp
+  const first = ids()[0];
+  const lock = rowBtn(first, 'Lock ramp');
+  const off = lock && getComputedStyle(lock).backgroundColor;
+  check('each ramp row has a Lock button, 24 px, not pressed', !!lock && Math.round(lock.getBoundingClientRect().width) === 24 && lock.getAttribute('aria-pressed') === 'false', lock?.getBoundingClientRect().width);
+  lock?.click();
+  const on = await until(() => (rowBtn(first, 'Lock ramp')?.getAttribute('aria-pressed') === 'true' ? rowBtn(first, 'Lock ramp') : null));
+  check('a click locks the ramp: pressed, and the state is a background change, not an edge mark', !!on && illustrationView().lockedRamps.includes(first) && getComputedStyle(on).backgroundColor !== off && getComputedStyle(on).boxShadow === 'none', [off, on && getComputedStyle(on).backgroundColor]);
+  const lockedBase = toHex(baseOf(il.get(), first)!.oklch);
+  const cellsNow = illustrationCells(il.get(), illustrationView());
+  check('the locked ramp is the same in all six cells, with a lock mark on its row', cellsNow.length === 6 && cellsNow.every((c) => toHex(c.bases[0].base) === lockedBase && c.bases[0].locked) && cellButtons().every((b) => b.querySelectorAll('[role="img"][aria-label="Locked"]').length === 1), [lockedBase, cellsNow.map((c) => toHex(c.bases[0].base))]);
+  const baseDot = (b: HTMLElement) => (b.querySelector('[data-ramp] [data-steps] i:nth-child(3)') as HTMLElement | null)?.style.background;
+  check('and its base step is drawn the same in every cell', !!baseDot(cellButtons()[0]) && cellButtons().every((b) => baseDot(b) === baseDot(cellButtons()[0])));
+  press('3', { code: 'Digit3' });
+  await until(() => large());
+  check('the large view marks the locked ramp too', !!large()?.querySelector('[role="img"][aria-label="Locked"]'));
+  press('Escape', { code: 'Escape' });
+  await until(() => !large());
+  selectInIllustration(baseOf(il.get(), ids()[1])!.id);
+  press('l', { code: 'KeyL' });
+  check('L locks the selected ramp, a second one', !!(await until(() => lockedIn(il.get(), illustrationView()).length === 2)) && illustrationView().lockedRamps.includes(ids()[1]), illustrationView().lockedRamps);
+  press('l', { code: 'KeyL' });
+  check('and L again unlocks it', !!(await until(() => lockedIn(il.get(), illustrationView()).length === 1)) && pressed() === 1, illustrationView().lockedRamps);
+
+  // Vary the light: the same bases under five presets and one in-between light; Space renews only the last
+  barButton('Vary the light')?.click();
+  const lit = await until(() => (illustrationView().varMode === 'light' && cellButtons().length === 6 ? illustrationCells(il.get(), illustrationView()) : null));
+  check('Vary the light shows six cells with the bases unchanged in each', !!lit && lit.every((c) => c.bases.map((b) => toHex(b.base)).join() === baseHex().join()) && new Set(lit.map((c) => JSON.stringify(c.light))).size === 6, lit?.map((c) => c.label));
+  check('five are presets and the sixth is an in-between light', !!lit && lit.slice(0, 5).every((c) => 'presetId' in c && !!c.presetId) && lit[5].label.endsWith('nudged') && cellButtons()[5].textContent!.includes('nudged'), lit?.map((c) => c.label));
+  check('the status says Space renews the in-between light', !!panel()?.textContent?.includes('Space makes a new in-between light'));
+  press(' ', { code: 'Space' });
+  const renewed = await until(() => (illustrationView().varSeed !== 4242 ? illustrationCells(il.get(), illustrationView()) : null));
+  check('Space renews only the in-between light: the five presets stay', !!renewed && !!lit && renewed.slice(0, 5).every((c, i) => JSON.stringify(c.light) === JSON.stringify(lit[i].light)) && JSON.stringify(renewed[5].light) !== JSON.stringify(lit[5].light), renewed?.map((c) => c.label));
+  press('2', { code: 'Digit2' });
+  await until(() => large());
+  const lightCell = illustrationCells(il.get(), illustrationView())[1];
+  const litBefore = il.get();
+  depth = il.depth();
+  press('Enter', { code: 'Enter' });
+  check('Enter under Vary the light gives the light pair to every ramp as one step, bases unchanged', !!(await until(() => il.depth() === depth + 1)) && il.get().ramps.every((r) => JSON.stringify([r.light, r.shadow]) === JSON.stringify([lightCell.light.light, lightCell.light.shadow])) && baseHex().join() === baseHex(litBefore).join(), il.get().ramps[0]);
+  ctrlZ();
+  check('Ctrl+Z restores them', !!(await until(() => il.get() === litBefore)));
+  barButton('Vary the colours')?.click();
+  await until(() => illustrationView().varMode === 'colours');
+  patchIllustration({ varSeed: 4242 });
+
+  // G greys colour content only
+  press('g', { code: 'KeyG' });
+  await until(() => document.documentElement.dataset.greyscale === 'true');
+  const content = [...(panel()?.querySelectorAll<HTMLElement>('[data-colour]') ?? [])];
+  const chrome = [...(panel()?.querySelectorAll<HTMLElement>('button, p, h3') ?? [])];
+  check('G greys the balls, step strips and bands and nothing else on the tab', content.length >= 60 && content.every((e) => getComputedStyle(e).filter.includes('dt-grey')) && chrome.every((e) => getComputedStyle(e).filter === 'none'), [content.length, chrome.filter((e) => getComputedStyle(e).filter !== 'none').length]);
+  press('g', { code: 'KeyG' });
+  await until(() => document.documentElement.dataset.greyscale !== 'true');
+
+  // Swap one colour on a ramp, from any tab
+  patchIllustration({ tab: 'settings' });
+  const second1 = ids()[1];
+  const swapBtn = await until(() => rowBtn(second1, 'Swap colour'));
+  const box = swapBtn?.getBoundingClientRect();
+  check('each ramp row has a Swap button, 24 px, beside its lock', !!swapBtn && Math.round(box!.width) === 24 && Math.round(box!.height) === 24 && swapBtn.parentElement === rowBtn(second1, 'Lock ramp')?.parentElement && !!swapBtn.querySelector('.ico'), [box?.width, box?.height]);
+  const baseBefore = baseOf(il.get(), second1)!.oklch;
+  depth = il.depth();
+  swapBtn!.click();
+  const row = await until(() => swapRow());
+  const alts = () => [...(swapRow()?.querySelectorAll<HTMLButtonElement>('button[aria-label^="Use "]') ?? [])];
+  check('it opens the row under the Ramps title: Now first, then about eight, each shown as its ramp', !!row && row.textContent!.includes('Now') && alts().length >= 3 && alts().length <= 8 && alts().every((a) => a.querySelectorAll('i').length === il.get().ramps[1].steps) && illustrationView().swapRamp === second1, [alts().length, row?.textContent?.slice(0, 80)]);
+  check('each alternative shows its hex', alts().every((a) => /#[0-9A-F]{6}/.test(a.textContent!)), alts().map((a) => a.textContent));
+  const pick = alts()[1] ?? alts()[0];
+  const hex = pick.getAttribute('aria-label')!.match(/#[0-9A-F]{6}/)![0];
+  pick.click();
+  check('a click uses it: the base is that hex, one undo step, the row stays open', !!(await until(() => il.depth() === depth + 1)) && toHex(baseOf(il.get(), second1)!.oklch).toUpperCase() === hex && !!swapRow(), [toHex(baseOf(il.get(), second1)!.oklch), hex, il.depth(), depth]);
+  ctrlZ();
+  check('Ctrl+Z puts the first colour back exactly', !!(await until(() => il.depth() === depth)) && baseOf(il.get(), second1)!.oklch === baseBefore);
+  press('Escape', { code: 'Escape' });
+  check('Esc hides the row', !!(await until(() => !swapRow() && illustrationView().swapRamp === '')));
+  // a near-black ramp has nothing at its grey value
+  il.transact('Smoke near black', (d) => addRamp(d, [0.03, 0, 0], 'Smoke dark').doc);
+  const dark = ids().at(-1)!;
+  (await until(() => rowBtn(dark, 'Swap colour')))?.click();
+  check('a near-black ramp says No other colours at this grey value', !!(await until(() => swapRow()?.textContent?.includes('No other colours at this grey value'))), swapRow()?.textContent);
+  [...(swapRow()?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Close'))?.click();
+  check('Close hides the row', !!(await until(() => !swapRow())));
+  il.undo();
+  await until(() => ids().length === 5);
+
+  // Esc on the Variations tab: the swap row first, then the large view
+  patchIllustration({ tab: 'variations', varOpen: 0 });
+  await until(() => cellButtons().length === 6);
+  press('2', { code: 'Digit2' });
+  await until(() => large());
+  rowBtn(second1, 'Swap colour')?.click();
+  await until(() => swapRow());
+  press('Escape', { code: 'Escape' });
+  check('on the Variations tab Esc closes the swap row first and leaves the large view', !!(await until(() => !swapRow())) && !!large() && illustrationView().varOpen === 2);
+  press('Escape', { code: 'Escape' });
+  check('and the next Esc closes the large view', !!(await until(() => !large())));
+
+  // What's in the picture: tick four, Make ramps
+  patchIllustration({ tab: 'settings' });
+  const group = () => host('illustration')?.querySelector<HTMLElement>('[role="group"][aria-label="What\'s in the picture"]') ?? null;
+  const tick = (label: string) => [...(group()?.querySelectorAll<HTMLElement>('[role="checkbox"]') ?? [])].find((c) => c.textContent?.trim() === label);
+  check('What’s in the picture is one closed line at the top of the Ramps panel', !!group() && group()!.querySelector('button')?.getAttribute('aria-expanded') === 'false' && !group()!.querySelector('[role="checkbox"]'), group()?.textContent);
+  group()?.querySelector('button')?.click();
+  await until(() => group()?.querySelector('[role="checkbox"]'));
+  const kinds = [...(group()?.querySelectorAll('[role="checkbox"]') ?? [])].map((c) => c.textContent?.trim());
+  check('the Ramps panel opens with What’s in the picture: Skin, Hair, Cloth, Foliage, Sky, Stone, Wood, Water and Metal', kinds.join() === 'Skin,Hair,Cloth,Foliage,Sky,Stone,Wood,Water,Metal' && !!group()?.textContent?.includes('Make ramps'), kinds);
+  const makeBtn = () => [...(group()?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((b) => b.textContent?.trim() === 'Make ramps');
+  check('Make ramps waits until something is ticked', makeBtn()?.disabled === true);
+  for (const k of ['Skin', 'Foliage', 'Sky', 'Wood']) tick(k)?.click();
+  check('ticking four subjects saves them in the view, and Skin shows its tone select', !!(await until(() => illustrationView().pictureOn.length === 4)) && !!(await until(() => group()?.querySelector('button[aria-label^="Skin tone"]'))) && !group()?.querySelector('button[aria-label^="Hair tone"]'), illustrationView().pictureOn);
+  // the colours grid now keeps one ramp per ticked subject
+  patchIllustration({ tab: 'variations' });
+  await until(() => cellButtons().length === 6);
+  check('while subjects are ticked, Vary the colours shows one ramp per subject in every cell, and says to Make ramps first', cellButtons().every((b) => b.querySelectorAll('[data-ramp]').length === 4) && !!panel()?.textContent?.includes('Make ramps so they match'), cellButtons().map((b) => b.querySelectorAll('[data-ramp]').length));
+  patchIllustration({ tab: 'settings' });
+  const old = il.get();
+  const oldLocks = lockedIn(old, illustrationView());
+  depth = il.depth();
+  makeBtn()?.click();
+  const made = await until(() => (il.depth() === depth + 1 ? il.get() : null));
+  check('Make ramps replaces the ramps with one per ticked subject, in order, with their materials, as one step', !!made && made.ramps.length === 4 && made.ramps.map((r) => r.material).join() === 'skin,foliage,paper,wood' && made.ramps.every((r) => !old.ramps.some((o) => o.id === r.id)), made?.ramps.map((r) => r.material));
+  check('and the old ramp locks are gone: no Lock button is pressed', !!(await until(() => pressed() === 0)) && lockedIn(il.get(), illustrationView()).length === 0, [pressed(), illustrationView().lockedRamps]);
+  patchIllustration({ tab: 'variations' });
+  await until(() => cellButtons().length === 6);
+  check('the grid is now a picture of that scene: four rows in every cell, labelled This picture', cellButtons().every((b) => b.querySelectorAll('[data-ramp]').length === 4 && b.textContent!.includes('This picture')), cellButtons().map((b) => b.querySelectorAll('[data-ramp]').length));
+  patchIllustration({ tab: 'settings' });
+  ctrlZ();
+  check('one Ctrl+Z brings the ramps and their locks back together', !!(await until(() => il.get() === old)) && !!(await until(() => pressed() === oldLocks.length)) && oldLocks.length === 1 && lockedIn(il.get(), illustrationView()).join() === oldLocks.join(), [pressed(), lockedIn(il.get(), illustrationView()), oldLocks]);
+  check('the ticks stay (they are the view’s, not the palette’s)', illustrationView().pictureOn.length === 4);
+  check('the Variations state is saved in the workspace view', ['varSeed', 'varMode', 'varPath', 'varOpen', 'swapRamp', 'lockedRamps', 'pictureOn', 'pictureTones'].every((k) => k in ((shell.view('illustration') as object) ?? {})));
+
+  // back as it was
+  il.transact('Smoke ramps back', () => was);
+  patchIllustration({ ...snap });
 }
 
 /**
@@ -4818,6 +5077,10 @@ async function quiet(): Promise<void> {
   shell.setActive('design');
   check('Design’s old lockL and lockH keys are dropped from the restored view, the rest of it kept', !('lockL' in designView()) && !('lockH' in designView()) && ['contrast', 'check', 'preview', 'harmonies', 'variations', 'notes'].includes(designView().tab), Object.keys(designView()));
   check('Variations: the seed came back, and an out-of-range cell, a stray path entry and an unknown role were dropped', designView().varSeed === 5150 && designView().varPath.join() === '2' && designView().varOpen === 0 && designView().swapRole === '', [designView().varSeed, designView().varPath, designView().varOpen, designView().swapRole]);
+  shell.setActive('illustration');
+  const iv = illustrationView();
+  check('Illustration Variations: the seed, the real path entry, the lock list and the real ticks came back; the odd ones were dropped', iv.varSeed === 5150 && iv.varPath.join() === '2' && iv.varOpen === 0 && iv.lockedRamps.join() === 'keep-1' && iv.pictureOn.join() === 'skin,sky' && JSON.stringify(iv.pictureTones) === '{"skin":"skin-deep"}' && iv.swapRamp === '', [iv.varSeed, iv.varPath, iv.varOpen, iv.lockedRamps, iv.pictureOn, iv.pictureTones, iv.swapRamp]);
+  shell.setActive('design');
   check('the value lock left on in the first pass came back', prefs?.valueLock === true && prefs.hueLock === false, [prefs?.valueLock, prefs?.hueLock]);
   check('the picker style and model chosen in the first pass came back', prefs?.pickerStyle === 'wheel' && prefs.pickerModel === 'rgb' && (await until(() => host('design')?.querySelector('[data-picker="wheel"]'), 5000)), [prefs?.pickerStyle, prefs?.pickerModel]);
   // the GIF comes back from the workspace, as it was left, and every frame dithers again

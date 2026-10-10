@@ -1,6 +1,6 @@
 // The Illustration tool's screen: sections, not a canvas and an inspector. Ramps (left, full height),
 // the Selected ramp (top right), the Colour picker (bottom left of the right column) and a tabbed
-// section (Ramp settings | Light & preview | Check values | Paint, Alt+1-4). A new tab is one more
+// section (Ramp settings | Light & preview | Check values | Paint | Variations, Alt+1-5). A new tab is one more
 // entry in TABS. Paint stays mounted while another tab shows, so it keeps its engine and its painting.
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
@@ -22,6 +22,7 @@ import { PaintPane } from './PaintPane.tsx';
 import { PickerSection } from './PickerSection.tsx';
 import { sourcePop } from './proposals.ts';
 import { SelectedRamp } from './Ramps.tsx';
+import { VariationsTab } from './VariationsTab.tsx';
 import { RampSettings } from './RampSettings.tsx';
 import { sceneLight } from './scene.ts';
 import { pasteColours } from './starts.ts';
@@ -38,6 +39,8 @@ const TABS: { id: Tab; label: string; needsColour?: boolean; when?(c: Ctx): bool
   // mounted only while it shows
   { id: 'check', label: 'Check values', needsColour: true, badge: (c) => c.checks.problems, render: (c) => <CheckTab key={c.source} doc={c.doc} d={c.d} v={c.v} checks={c.checks} /> },
   { id: 'paint', label: 'Paint', render: (c) => <PaintSlot host={c.paint} /> },
+  // mounted only while it shows; its grid is worked out from the ramps and the view
+  { id: 'variations', label: 'Variations', needsColour: true, render: (c) => <VariationsTab doc={c.doc} d={c.d} v={c.v} /> },
   // only while the file has notes (an imported palette's warnings); clearing them closes it
   { id: 'notes', label: 'Notes', when: (c) => !!c.d.notes, render: (c) => <NotesModule doc={c.doc} /> },
 ];
@@ -123,7 +126,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
               <PickerSection doc={doc} d={d} v={v} />
               <ResizeHandle label="Colour picker width" value={v.pickerWidth} min={SIZES.pickerWidth[0]} max={SIZES.pickerWidth[1]} reset={SIZES.pickerWidth[2]} onChange={(pickerWidth) => patchView({ pickerWidth })} />
             </div>
-            <TabbedSection tabs={tabs} value={tab} onChange={(id) => patchView({ tab: id as Tab })} bodyClassName={tab === 'paint' ? s.flush : undefined} />
+            <TabbedSection tabs={tabs} value={tab} onChange={(id) => patchView({ tab: id as Tab })} bodyClassName={tab === 'paint' ? s.flush : tab === 'variations' ? s.variations : undefined} />
           </div>
         </div>
       </div>

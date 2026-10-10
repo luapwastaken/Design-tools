@@ -15,6 +15,10 @@ import { addProposals, arm, deleteLoose, deleteRamp, duplicate, focusStep, move,
 import { brokenSteps, looseOf, nameOf, rampName, regen, revertRamp, setSpec, stepsOf, wordOf, type IllustrationDoc } from './doc.ts';
 import { AddColour } from './AddColour.tsx';
 import { LightRow } from './LightRow.tsx';
+import { Picture } from './Picture.tsx';
+import { SwapRamp } from './SwapRamp.tsx';
+import { toggleRampLock, toggleSwap } from './variation-actions.ts';
+import { lockedIn } from './variations.ts';
 import { openSource } from './starts.ts';
 import { Start } from './Start.tsx';
 import { clearProposals, proposals, sourcePop } from './proposals.ts';
@@ -42,6 +46,7 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
   const sel = selected(d, v.selected);
   const [drag, setDrag] = useState<{ id: string; at: number | null } | null>(null);
   const loose = looseOf(d);
+  const locks = lockedIn(d, v);
   // the confirm belongs to the ramp (or loose colour) it was armed on
   const at = sel && d.ramps.some((r) => r.id === sel.group) ? sel.group : sel?.id;
   useEffect(() => armed.set(null), [at]);
@@ -87,6 +92,8 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
       bodyClassName={s.pbody}
       actions={d.swatches.length > 0 ? <GreyscaleButton /> : undefined}
     >
+      <SwapRamp doc={doc} d={d} v={v} />
+      <Picture doc={doc} v={v} />
       <LightRow doc={doc} d={d} v={v} />
       <AddColour doc={doc} d={d} />
       <div
@@ -112,6 +119,7 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
             d={d}
             v={v}
             r={r}
+            locked={locks.includes(r.id)}
             index={i}
             sel={sel}
             lit={lit}
@@ -163,6 +171,7 @@ type ItemProps = {
   d: IllustrationDoc;
   v: IllustrationView;
   r: RampSpec;
+  locked: boolean;
   index: number;
   sel: Swatch | null;
   lit: string[];
@@ -250,6 +259,26 @@ function RampItem(p: ItemProps) {
           </Tooltip>
         )}
         <span className={s.grow} />
+        <IconButton
+          icon="swap_horiz"
+          label="Swap colour"
+          tip="Show other colours at this grey value"
+          size="sm"
+          latched={p.v.swapRamp === r.id}
+          onClick={() => {
+            if (!on) select(baseId);
+            toggleSwap(r.id);
+          }}
+        />
+        <IconButton
+          icon={p.locked ? 'lock' : 'lock_open'}
+          label="Lock ramp"
+          tip={p.locked ? 'Unlock: Variations may change it' : 'Lock: it keeps its colour in every Variations cell'}
+          shortcut="L"
+          size="sm"
+          latched={p.locked}
+          onClick={() => toggleRampLock(r.id)}
+        />
         <IconButton
           icon="star"
           label={r.hero ? 'Hero colour: the other ramps stay quieter. Click to end it' : 'Make this the hero colour'}

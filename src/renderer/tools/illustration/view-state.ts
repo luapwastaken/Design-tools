@@ -6,6 +6,7 @@ import { shell } from '../../shell/core/index.ts';
 import { EXPORT_FORMATS, type ExportFormat } from '../common/ExportPalette.tsx';
 import { createStore } from '../common/store.ts';
 import type { Surround } from '../common/surround.ts';
+import { cleanCell, cleanLocks, cleanPath, cleanPicture } from './variations.ts';
 
 const ID = 'illustration';
 
@@ -13,7 +14,7 @@ export type IllustrationView = {
   /** the selected step or loose swatch (swatch id); null: the first ramp's base */
   selected: string | null;
   /** the tab of the tabbed section (Alt+1-4) */
-  tab: 'settings' | 'light' | 'check' | 'paint' | 'notes';
+  tab: 'settings' | 'light' | 'check' | 'paint' | 'variations' | 'notes';
   /** the Ramps section's width, the Selected ramp section's height and the Colour picker's width, in px (drag handles) */
   rampsWidth: number;
   rampHeight: number;
@@ -45,6 +46,19 @@ export type IllustrationView = {
   canvas: Record<string, unknown>;
   /** the painting kept for each palette: item id → its PNG workspace asset url (dt://asset/illustration/<sha256>.png) */
   paintings: Record<string, string>;
+  /** Variations: the grid's seed, what it varies, the narrowing path (cell numbers), the open cell (0: none) and the ramp whose other-colours row is open */
+  varSeed: number;
+  varMode: 'colours' | 'light';
+  varPath: number[];
+  varOpen: number;
+  swapRamp: string;
+  /** ramp ids locked in every cell; an id with no ramp does nothing (see lockedIn) */
+  lockedRamps: string[];
+  /** What's in the picture: the subjects ticked, and the tone chosen for skin and hair */
+  pictureOn: string[];
+  pictureTones: Record<string, string>;
+  /** What's in the picture shows its ticks (closed, it is one line that says how many are ticked) */
+  pictureOpen: boolean;
 };
 
 /** [min, max, default] of the three panel sizes */
@@ -73,10 +87,20 @@ export const DEFAULT_VIEW: IllustrationView = {
   preview: {},
   canvas: {},
   paintings: {},
+  varSeed: 4242,
+  varMode: 'colours',
+  varPath: [],
+  varOpen: 0,
+  swapRamp: '',
+  lockedRamps: [],
+  pictureOn: [],
+  pictureTones: {},
+  pictureOpen: false,
 };
 
 const ENUMS: Partial<Record<keyof IllustrationView, readonly unknown[]>> = {
-  tab: ['settings', 'light', 'check', 'paint', 'notes'],
+  tab: ['settings', 'light', 'check', 'paint', 'variations', 'notes'],
+  varMode: ['colours', 'light'],
   show: ['hex', 'name', 'off'],
   proof: ['off', 'protan', 'deutan', 'tritan', 'achromat'],
   surround: ['grey', 'ground', 'plain'],
@@ -123,6 +147,12 @@ function sanitize(raw: unknown): IllustrationView {
   for (const k of ['rampsWidth', 'rampHeight', 'pickerWidth'] as const) out[k] = Math.round(Math.min(SIZES[k][1], Math.max(SIZES[k][0], out[k] as number)));
   out.custom = customOf(r.custom);
   out.paintings = Object.fromEntries(Object.entries(out.paintings as object).filter(([, h]) => typeof h === 'string'));
+  // Variations: the path is a list of cells, not of ids; the seed and the open cell are whole numbers in range; the ticks are the nine subjects
+  out.varPath = cleanPath(r.varPath);
+  out.varOpen = cleanCell(out.varOpen);
+  out.varSeed = Math.abs(Math.floor(out.varSeed as number)) || DEFAULT_VIEW.varSeed;
+  out.lockedRamps = cleanLocks(r.lockedRamps);
+  Object.assign(out, cleanPicture(r.pictureOn, r.pictureTones));
   return out as IllustrationView;
 }
 
