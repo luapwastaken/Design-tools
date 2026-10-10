@@ -4,8 +4,7 @@
 // v1's value lock). Not OKLCH L: at one L a saturated magenta and yellow sit up to a quarter of the
 // scale apart in grey.
 import { heldEdge, LUMA } from './fast.ts';
-import { displayRgb, toOklch, type Oklch } from './index.ts';
-import { maxChroma } from './picker.ts';
+import { displayRgb, inSrgb, toOklch, type Oklch } from './index.ts';
 
 export { LUMA };
 
@@ -51,12 +50,18 @@ export function holdValue(target: number, c: number, h: number): Oklch {
   };
   const cc = Math.max(0, c);
   const l = solve(cc);
-  if (cc <= maxChroma(l, h, 'srgb')) return [l, cc, h];
+  if (inSrgb([l, cc, h])) return [l, cc, h];
   // past the most chroma sRGB has at this value, chroma gives way: to that edge, which bisection finds exactly
-  const edge = heldEdge(t, h).c;
-  const le = solve(edge);
-  // the last solve may leave a hair outside; trimming it moves the value by far less than a hex step
-  return [le, Math.min(edge, maxChroma(le, h, 'srgb')), h];
+  let edge = heldEdge(t, h).c;
+  let le = solve(edge);
+  // the last solve may leave a hair outside: then step chroma in and solve L again, so the value holds.
+  // Both checks ask sRGB directly, not maxChroma: at the blue corner (h about 264) the in-gamut chroma at
+  // one L is not one run out from grey, so its bisection can cut a colour that is inside (0.10 became 0.18).
+  for (let i = 0; i < 40 && !inSrgb([le, edge, h]); i++) {
+    edge *= 0.995;
+    le = solve(edge);
+  }
+  return [le, edge, h];
 }
 
 /** Rec. 709 luma of the pure HSB hue `h` (S and B 100%), 0..1 */

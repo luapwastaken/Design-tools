@@ -175,6 +175,15 @@ test('holdValue is the OKLCH hold: a value the hue cannot reach at that chroma g
   assert.ok(o[1] < 0.2);
 });
 
+test('holdValue holds at the blue corner, where the in-gamut chroma at one L is not one run out from grey', () => {
+  // these landed at 0.184, 0.149, 0.189 and 0.043 when the edge was trimmed with maxChroma
+  for (const [v, c, h] of [[0.1, 0.2702, 264.18], [0.0666, 0.2981, 264.18], [0.0818, 0.3262, 264.15], [0.0241, 0.3012, 264.15]] as const) {
+    const o = holdValue(v, c, h);
+    near(o, v, `${v} ${c} ${h}`);
+    assert.ok(inSrgb(o), `${v} ${c} ${h} inside`);
+  }
+});
+
 test('the held edge is the real end of sRGB for dark saturated blues and violets (a missed secant solve cut it short)', () => {
   // at value 12.4 and hue 279 sRGB has chroma to 0.271; the old solve stopped at 0.250
   assert.ok(heldEdge(0.124, 279).c > 0.27);
