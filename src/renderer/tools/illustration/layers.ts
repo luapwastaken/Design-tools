@@ -137,7 +137,7 @@ export function flatOf(d: IllustrationDoc, r: RampSpec, v: Pick<LayersView, 'lay
     material: r.material,
     star: v.layerStar.includes(r.id),
     background: v.layerBg.includes(r.id),
-    targets: targetsFrom(r, stepsOf(d, r.id).map((w) => ({ step: w.step ?? 0, oklch: w.oklch }))),
+    targets: targetsFrom({ ...r, base }, stepsOf(d, r.id).map((w) => ({ step: w.step ?? 0, oklch: w.oklch }))),
   };
 }
 
@@ -193,7 +193,7 @@ export function rowsOf(r: Recipe, flats: FlatIn[], pair: LightPair, v: Pick<Laye
   const above = r.shadow2 ? `; the layer above adjusts ${r.shadow2.clip.map(name).join(' and ')}` : '';
   if (r.shadow2) {
     const f = r.shadow2;
-    rows.push(solved('shadow2', 'Shadow 2', f, eyes.shadow2 && eyes.shadow, `clipped to: ${f.clip.map(name).join(', ')}`, eyes.shadow ? `${fitWord(f.worst.dist, name(f.worst.id))}, with the Shadow under it` : 'needs the Shadow under it'));
+    rows.push(solved('shadow2', 'Shadow 2', f, eyes.shadow2 && eyes.shadow, `clipped to: ${f.clip.map(name).join(', ')}`, eyes.shadow ? `${fitWord(f.worst.dist, name(f.worst.id))}, Shadow under it` : 'needs the Shadow under it'));
   }
   const sw = fitWord(r.shadow.worst.dist, name(r.shadow.worst.id));
   rows.push(solved('shadow', 'Shadow', r.shadow, eyes.shadow, 'clipped to the character', `${sw}${above}`, r.shadow2 ? null : fitTone(r.shadow.worst.dist)));

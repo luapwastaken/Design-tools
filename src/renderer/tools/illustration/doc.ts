@@ -146,6 +146,12 @@ function spawn(d: IllustrationDoc, base: Oklch, like: RampSpec | null | undefine
 
 const baseSwatch = (id: string, oklch: Oklch, name: string): Swatch => ({ id: crypto.randomUUID(), name, role: null, oklch, type: 'process', group: id, step: 0 });
 
+/** a colour in no ramp, named as given: the layer colours kept from the Layers tab */
+export const addLoose = (d: IllustrationDoc, oklch: Oklch, name: string): { doc: IllustrationDoc; id: string } => {
+  const w: Swatch = { id: crypto.randomUUID(), name, role: null, oklch, type: 'process' };
+  return { doc: { ...d, swatches: [...d.swatches, w] }, id: w.id };
+};
+
 /**
  * A new ramp from a base colour, after `after` (the end when null), lit as that ramp (or the last)
  * is, so a scene keeps one light; returns the base swatch's id too. A full palette comes back as it

@@ -46,6 +46,8 @@
 .ghosts { display: flex; flex: none; flex-direction: column; gap: 8px; margin-top: 12px; padding: 10px; border-radius: var(--r-ctl); background: var(--agent-soft); box-shadow: inset 0 0 0 1px var(--agent-ring); }
 .ghostHead { display: flex; align-items: center; gap: 6px; color: var(--agent-ink); font: 500 var(--fs-meta)/1.2 var(--font-sans); }
 .ghostChips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ghostList { flex-direction: column; gap: 6px; }
+.ghostRow { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: var(--fs-meta); }
 .ghost { position: relative; width: 30px; height: 30px; padding: 0; border-radius: 6px; outline: 1px dashed var(--agent-line); outline-offset: 2px; }
 .ghost i { display: block; width: 100%; height: 100%; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--edge); }
 .ghost:hover { outline: 1.5px solid var(--agent); }

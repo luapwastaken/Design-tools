@@ -6,8 +6,7 @@
 // The maths is shared/palette/recipe.ts; the words and the compositing are layers.ts; the picture is bust.ts.
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
-import { MATERIALS } from '../../../shared/palette/ramp.ts';
-import { ALL_ON, hexRgb, MODE_NAME, muddyAll, shadeFlat, shadowStack, solveRecipe, typedHex, type Eyes, type FlatIn, type Recipe, type Rgb, type Space } from '../../../shared/palette/recipe.ts';
+import { ALL_ON, hexRgb, MODE_NAME, muddyAll, recipeText, solveRecipe, typedHex, type Eyes, type FlatIn, type Recipe, type Rgb, type Space } from '../../../shared/palette/recipe.ts';
 import { cx } from '../../ui/cx.ts';
 import { Button, copyText, IconButton, InspectorGroup, NumberField, Segmented, Select, Toggle } from '../../ui/index.ts';
 import { GreyscaleButton } from '../common/Greyscale.tsx';
@@ -16,7 +15,7 @@ import { useSettled } from '../common/settled.ts';
 import { selected, type Doc } from './actions.ts';
 import { bustOf, PART_IDS, type PartId } from './bust.ts';
 import { offerLayers, SHOWS, setFlag, setPart } from './layer-actions.ts';
-import { allFlats, allTogether, hintOf, paintRecipe, paintTargets, PARTS, partRamps, recipeFlats, rowsOf, type Row } from './layers.ts';
+import { allFlats, allTogether, hintOf, paintRecipe, paintTargets, PARTS, partRamps, recipeFlats, rowsOf, shadowIn, type Row } from './layers.ts';
 import { sceneLight } from './scene.ts';
 import { patchView, type IllustrationView } from './view-state.ts';
 import type { IllustrationDoc } from './doc.ts';
@@ -40,7 +39,7 @@ export function LayersTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illu
   const everyFlat = useMemo(() => allFlats(settled, v), [settled, v.layerBg, v.layerStar]);
   const flats = useMemo(() => recipeFlats(everyFlat, v), [everyFlat, v.layerOut]);
   // the same flats and targets solve to the same layers: a change that touches none of them (a rename, the pointer) solves nothing
-  const key = JSON.stringify(flats);
+  const key = JSON.stringify(flats.map(({ id, hex, star, background, targets, share }) => [id, hex, star, background, targets, share]));
   const recipe = useMemo(() => (flats.length ? solveRecipe(flats, { space: v.layerSpace, lightMode: v.layerLight }) : null), [key, v.layerSpace, v.layerLight]);
   const group = selected(d, v.selected)?.group;
   const { pair, preset } = sceneLight(settled, group);
@@ -51,38 +50,40 @@ export function LayersTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illu
   const muddyParts = PART_IDS.filter((p) => warnings.some((w) => w.id === parts[p]));
 
   const eye = (k: keyof Eyes) => setEyes((e) => ({ ...e, [k]: !e[k] }));
-  const flip = (r: Row) => (r.key === 'rim' ? patchView({ layerRimOn: !v.layerRimOn }) : r.key === 'mood' ? patchView({ layerMoodOn: !v.layerMoodOn }) : eye(r.key));
+  // the Shadow 2 eye with the Shadow off turns both on, so a click always shows
+  const flip = (r: Row) =>
+    r.key === 'rim' ? patchView({ layerRimOn: !v.layerRimOn }) : r.key === 'mood' ? patchView({ layerMoodOn: !v.layerMoodOn }) : r.key === 'shadow2' && !eyes.shadow ? setEyes((e) => ({ ...e, shadow: true, shadow2: true })) : eye(r.key);
   const header = `Layer recipe: ${preset ? `${preset.label} light` : 'your light'}, blended in ${SPACE_NAME[v.layerSpace]}`;
-  const text = useMemo(() => [header, ...rows.filter((r) => r.on).map((r) => `${r.name}: ${MODE_NAME[r.mode]} ${r.hex} at ${r.pct}%, ${r.note}`)].join(String.fromCharCode(10)), [rows, header]);
+  const text = useMemo(() => recipeText(rows, header), [rows, header]);
 
   return (
     <div className={s.tab}>
       <div className={s.layout}>
         <div className={s.left}>
-          <section className={s.stage} aria-label="The bust">
+          <section className={cx(s.stage, s.o1)} aria-label="The bust">
             <div className={s.bar}>
               <Segmented options={SHOWS.map((o, i) => ({ value: o.id, label: o.label, tip: `Press ${i + 1}` }))} value={v.layerShow} onChange={(layerShow) => patchView({ layerShow })} fit />
               <GreyscaleButton />
             </div>
-            <Preview show={v.layerShow} flats={everyFlat} parts={parts} rows={rows} recipe={recipe} space={v.layerSpace} muddy={v.layerShow === 'recipe' ? muddyParts : []} />
+            <Preview show={v.layerShow} flats={everyFlat} inRecipe={flats} parts={parts} rows={rows} recipe={recipe} space={v.layerSpace} muddy={v.layerShow === 'recipe' ? muddyParts : []} />
             <p className={s.caption}>{caption(v.layerShow, v.layerSpace, muddyParts.length > 0)}</p>
-            <div className={s.parts} role="group" aria-label="Parts">
-              {PARTS.map((p) => (
-                <label key={p.id} className={s.part}>
-                  <span className={s.lab}>{p.label}</span>
-                  <Select
-                    options={d.ramps.map((r) => ({ value: r.id, label: everyFlat.find((f) => f.id === r.id)?.name ?? '', swatch: everyFlat.find((f) => f.id === r.id)?.hex }))}
-                    value={parts[p.id] ?? ''}
-                    onChange={(ramp) => setPart(p.id, ramp)}
-                  />
-                </label>
-              ))}
-            </div>
           </section>
-          <InspectorGroup title="Goes muddy" meta={warnings.length ? `${warnings.length} to look at` : undefined} id="illustration.layers.muddy">
+          <div className={cx(s.parts, s.o3)} role="group" aria-label="Parts">
+            {PARTS.map((p) => (
+              <label key={p.id} className={s.part}>
+                <span className={s.lab}>{p.label}</span>
+                <Select
+                  options={d.ramps.map((r) => ({ value: r.id, label: everyFlat.find((f) => f.id === r.id)?.name ?? '', swatch: everyFlat.find((f) => f.id === r.id)?.hex }))}
+                  value={parts[p.id] ?? ''}
+                  onChange={(ramp) => setPart(p.id, ramp)}
+                />
+              </label>
+            ))}
+          </div>
+          <InspectorGroup className={s.o4} title="Goes muddy" meta={warnings.length ? `${warnings.length} to look at` : undefined} id="illustration.layers.muddy">
             {recipe ? <Muddy warnings={warnings} /> : <p className={s.hint}>Put a flat in the recipe to see what goes muddy.</p>}
           </InspectorGroup>
-          <InspectorGroup title="Advanced" defaultOpen={false} id="illustration.layers.advanced">
+          <InspectorGroup className={s.o6} title="Advanced" defaultOpen={false} id="illustration.layers.advanced">
             <div className={s.adv}>
               <Segmented label="Blend in" options={SPACES} value={v.layerSpace} onChange={(layerSpace) => patchView({ layerSpace })} fit />
               <p className={s.hint}>
@@ -97,9 +98,17 @@ export function LayersTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illu
         </div>
 
         <div className={s.right}>
-          <InspectorGroup title="Layers" meta={recipe ? plural(rows.length, 'layer') : undefined} id="illustration.layers.stack">
+          <InspectorGroup className={s.o2} title="Layers" meta={recipe ? plural(rows.length, 'layer') : undefined} id="illustration.layers.stack">
             {recipe ? (
               <>
+                <div className={s.acts}>
+                  <Button icon="palette" onClick={() => offerLayers(rows)} tooltip="Offer each layer that is on to the palette as a proposal, named like “Shadow · Multiply 80%”. Keep them and they travel with the .kpl and .swatches exports as loose swatches.">
+                    Add layer colours to palette
+                  </Button>
+                  <Button size="xs" icon="content_copy" onClick={() => void copyText(text, 'Copied the recipe.')}>
+                    Copy recipe
+                  </Button>
+                </div>
                 <div className={s.stack}>
                   {rows.map((r) => (
                     <LayerRow key={r.key} r={r} lightMode={v.layerLight} flip={() => flip(r)} />
@@ -116,24 +125,16 @@ export function LayersTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illu
                 <p className={s.hint}>
                   Add is called Addition in Krita (it also lists Linear Dodge), Linear Dodge (Add) in Photoshop, and Add in Clip Studio and Procreate. It is not Add (Glow), which behaves differently. These numbers are exact for Krita and Photoshop; Clip Studio and Procreate are not yet checked.
                 </p>
-                <div className={s.recipeHead}>
-                  <span className={s.lab}>The recipe as text</span>
-                  <Button size="xs" icon="content_copy" onClick={() => void copyText(text, 'Copied the recipe.')}>
-                    Copy recipe
-                  </Button>
-                </div>
+                <span className={s.lab}>The recipe as text</span>
                 <pre className={s.recipe} tabIndex={0} aria-label="The recipe as text">
                   {text}
                 </pre>
-                <Button icon="palette" onClick={() => offerLayers(doc, rows)} tooltip="Offer each layer’s colour to the palette as a proposal, named like “Shadow · Multiply 80%”. Keep them and they travel with the .kpl and .swatches exports.">
-                  Add layer colours to palette
-                </Button>
               </>
             ) : (
               <p className={s.hint}>{everyFlat.length ? 'Every flat is out of the recipe. Turn one on under Flats.' : 'Each ramp is a flat here. Make a ramp to see its layers.'}</p>
             )}
           </InspectorGroup>
-          <InspectorGroup title="Flats" meta={`${flats.length} of ${everyFlat.length} in the recipe`} id="illustration.layers.flats">
+          <InspectorGroup className={s.o5} title="Flats" meta={`${flats.length} of ${everyFlat.length} in the recipe`} id="illustration.layers.flats">
             <div className={s.flats}>
               {everyFlat.map((f) => (
                 <FlatRow key={f.id} f={f} out={v.layerOut.includes(f.id)} />
@@ -159,6 +160,8 @@ const caption = (show: IllustrationView['layerShow'], space: Space, muddy: boole
 type PreviewProps = {
   show: IllustrationView['layerShow'];
   flats: FlatIn[];
+  /** the flats the layers were fitted to */
+  inRecipe: FlatIn[];
   parts: Record<PartId, string | null>;
   rows: Row[];
   recipe: Recipe | null;
@@ -167,7 +170,7 @@ type PreviewProps = {
 };
 
 /** the bust: flats painted, then (Recipe) the layers through the shading shapes, or (Target) the ramps' own steps; redrawn only when one of these changes */
-function Preview({ show, flats, parts, rows, recipe, space, muddy }: PreviewProps) {
+function Preview({ show, flats, inRecipe, parts, rows, recipe, space, muddy }: PreviewProps) {
   const ref = useRef<HTMLCanvasElement>(null);
   useLayoutEffect(() => {
     const ctx = ref.current?.getContext('2d', { willReadFrequently: true });
@@ -185,7 +188,7 @@ function Preview({ show, flats, parts, rows, recipe, space, muddy }: PreviewProp
         paintTargets(bust, img.data, Object.fromEntries(PART_IDS.map((p) => [p, rgb(p)])) as Record<PartId, [Rgb, Rgb, Rgb] | null>);
       } else if (recipe) {
         // the Shadow is clipped to the character, the Cast shadow lands on the background: the two never share a pixel
-        const onCast = (p: PartId) => !!recipe.cast && !!flat(p)?.background;
+        const onCast = (p: PartId) => !!recipe.cast && !!flat(p)?.background && inRecipe.some((f) => f.id === parts[p]);
         const second = recipe.shadow2 ? PART_IDS.filter((p) => recipe.shadow2!.clip.includes(parts[p] ?? '')) : null;
         const clips = { character: bust.coverage(PART_IDS.filter((p) => !onCast(p))), background: bust.coverage(PART_IDS.filter(onCast)), second: second && bust.coverage(second) };
         paintRecipe(bust, img.data, rows, clips, space);
@@ -194,7 +197,7 @@ function Preview({ show, flats, parts, rows, recipe, space, muddy }: PreviewProp
     }
     bust.face(ctx);
     if (muddy.length) bust.outline(ctx, muddy, getComputedStyle(document.documentElement).getPropertyValue('--danger').trim());
-  }, [show, flats, parts, rows, recipe, space, muddy.join()]);
+  }, [show, flats, inRecipe, parts, rows, recipe, space, muddy.join()]);
   return <canvas ref={ref} width={SIZE} height={SIZE} className={s.canvas} data-colour="" role="img" aria-label="A cel-shaded bust drawn from the flat colours" />;
 }
 
@@ -224,7 +227,7 @@ const LayerRow = memo(function LayerRow({ r, lightMode, flip }: { r: Row; lightM
             <span className={s.mode}>{MODE_NAME[r.mode]}</span>
           )}
         </span>
-        <span className={s.note}>{r.note}</span>
+        <span className={s.note}>{r.key === 'light' ? `${r.note}, aimed at the ramps’ light steps` : r.note}</span>
       </div>
       <div className={s.lcol}>
         <i className={s.chip} data-colour="" style={{ background: r.hex }} />
@@ -292,11 +295,10 @@ function Compare({ flats, recipe, eyes, space }: { flats: FlatIn[]; recipe: Reci
       <span className={s.h}>{NAME[space]} (now)</span>
       <span className={s.h}>{NAME[other]}</span>
       {flats.map((f) => {
-        const stack = shadowStack(f, recipe, eyes);
         return (
           <div key={f.id} className={s.crow}>
             <span>{f.name}</span>
-            {[shadeFlat(f.hex, stack, space), shadeFlat(f.hex, stack, other)].map((hex, i) => (
+            {[shadowIn(f, recipe, eyes, space), shadowIn(f, recipe, eyes, other)].map((hex, i) => (
               <span key={i} className={s.cell2}>
                 <i className={s.chip} data-colour="" style={{ background: hex }} />
                 {hex}
@@ -318,9 +320,8 @@ const FlatRow = memo(function FlatRow({ f, out }: { f: FlatIn; out: boolean }) {
       <i className={s.chip} data-colour="" style={{ background: f.hex }} />
       <div className={s.fname}>
         <b>{f.name}</b>
-        <small>{MATERIALS.find((m) => m.id === f.material)?.label}</small>
+        <IconButton icon="star" label={`${f.name} matters most`} tip="Matters most: counts three times in the fit" size="sm" latched={f.star} onClick={() => setFlag('layerStar', f.id, !f.star)} />
       </div>
-      <IconButton icon="star" label={`${f.name} matters most`} tip="Matters most: counts three times in the fit" size="sm" latched={f.star} onClick={() => setFlag('layerStar', f.id, !f.star)} />
       <div className={s.flags}>
         <Toggle quiet label="In the recipe" checked={!out} onChange={(on) => setFlag('layerOut', f.id, !on)} />
         <Toggle quiet label="Background" checked={!!f.background} onChange={(on) => setFlag('layerBg', f.id, on)} />

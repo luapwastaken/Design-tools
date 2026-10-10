@@ -6,9 +6,9 @@ import type { MaterialId, Swatch } from '../../../shared/types.ts';
 import { shell } from '../../shell/core/index.ts';
 import { pickFromScreen, toast } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
-import { addRamp, baseOf, carryLight, duplicateRamp, lightForAll, looseOf, makeRamps, MAX_RAMPS, moveRamp, nameOf, rampName, rampOf, removeLoose, removeRamp, stepsOf, type IllustrationDoc } from './doc.ts';
+import { addLoose, addRamp, baseOf, carryLight, duplicateRamp, lightForAll, looseOf, makeRamps, MAX_RAMPS, moveRamp, nameOf, rampName, rampOf, removeLoose, removeRamp, stepsOf, type IllustrationDoc } from './doc.ts';
 import { sceneLight } from './scene.ts';
-import { clearProposals, dropProposals, proposals, restoreProposals, type Proposal } from './proposals.ts';
+import { clearProposals, dropProposals, LAYERS_LABEL, proposals, restoreProposals, type Proposal } from './proposals.ts';
 import { armed, getView, patchView } from './view-state.ts';
 
 export type Doc = DocController<IllustrationDoc>;
@@ -74,7 +74,7 @@ export function focusPickerColour(): void {
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
       if (find()) return void find()!.querySelector<HTMLInputElement>('input[aria-label$="colour" i]')?.focus({ preventScroll: true });
-      // Variations and Light zones hide the picker: go back to the first tab, where it is, and focus it there
+      // Variations, Light zones and Layers hide the picker: go back to the first tab, where it is, and focus it there
       patchView({ tab: 'settings' });
       requestAnimationFrame(() => find()?.querySelector<HTMLInputElement>('input[aria-label$="colour" i]')?.focus({ preventScroll: true }));
     }),
@@ -103,17 +103,19 @@ export function addBase(doc: Doc, oklch: Oklch = nextBase(doc.get()), name = '',
 }
 
 export function addProposals(doc: Doc, all: Proposal[]): void {
+  // the layer colours are blend colours, not flats: they land as loose swatches (they still travel in the exports) and never feed the recipe
+  const loose = proposals.get()?.label === LAYERS_LABEL;
   const room = MAX_RAMPS - doc.get().ramps.length;
-  const items = all.slice(0, Math.max(0, room));
+  const items = loose ? all : all.slice(0, Math.max(0, room));
   if (items.length < all.length) toast.show({ kind: 'error', message: room > 0 ? `A palette holds ${MAX_RAMPS} ramps: ${plural(items.length, 'colour')} added, ${all.length - items.length} left out.` : `This palette already holds ${MAX_RAMPS} ramps. Delete one to add more.` });
   if (!items.length) return;
   const was = proposals.get();
   const before = doc.get();
   let first = '';
-  doc.transact(items.length === 1 ? 'Add base colour' : `Add ${plural(items.length, 'base colour')}`, (d) =>
+  doc.transact(loose ? `Add ${plural(items.length, 'layer colour')}` : items.length === 1 ? 'Add base colour' : `Add ${plural(items.length, 'base colour')}`, (d) =>
     items.reduce((x, p, i) => {
-      const r = addRamp(x, p.oklch, p.name ?? '', null, p.material);
-      if (!i) first = r.base;
+      const r = loose ? addLoose(x, p.oklch, p.name ?? '') : addRamp(x, p.oklch, p.name ?? '', null, p.material);
+      if (!i) first = 'base' in r ? r.base : r.id;
       return r.doc;
     }, d),
   );

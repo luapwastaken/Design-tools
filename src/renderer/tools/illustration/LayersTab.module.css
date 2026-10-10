@@ -1,9 +1,10 @@
-/* Layers: the bust and what goes muddy on the left, the layer stack and the flats on the right. Only the picture
+/* Layers: the bust and what goes muddy on the left, the layer stack and the flats on the right, the whole tab
+   scrolling as one so nothing sits behind a second scrollbar. Only the picture
    and the colour chips carry content colour. A layer that is off is shown in a quieter ink and an off eye, never a
    stripe on an edge; the muddy flats are outlined in the picture itself. Nothing animates. */
 .tab { flex: 1; display: flex; flex-direction: column; min-height: 0; container-type: inline-size; }
-.layout { flex: 1; display: grid; grid-template-columns: minmax(300px, 440px) minmax(0, 1fr); gap: 12px; min-height: 0; }
-.left, .right { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
+.layout { flex: 1; display: grid; grid-template-columns: minmax(300px, 440px) minmax(0, 1fr); align-items: start; gap: 12px; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
+.left, .right { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
 .left > *, .right > * { flex: none; }
 .hint { margin: 0; color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
 .hint b { color: var(--ink-2); font-weight: 500; }
@@ -14,12 +15,13 @@
 .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .canvas { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; border-radius: 8px; aspect-ratio: 1; box-shadow: inset 0 0 0 1px var(--edge); }
 .caption { min-height: 2.8em; margin: 0; color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.4; }
-.parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 10px; }
+.parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px 10px; }
 .part { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 
 .chip { display: inline-block; flex: none; width: 22px; height: 22px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--edge); }
 
 /* the stack: eye, name and mode, colour, opacity, fit */
+.acts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 8px; }
 .stack { display: flex; flex-direction: column; gap: 2px; }
 .lrow { display: grid; grid-template-columns: 28px minmax(130px, 1.5fr) minmax(112px, 1fr) 72px minmax(90px, 1.2fr); gap: 4px 8px; align-items: center; padding: 6px 4px; border-radius: var(--r-field); }
 .lrow:nth-child(odd) { background: var(--well); }
@@ -32,7 +34,7 @@
 .note { color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.3; }
 .lcol { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .hex { color: var(--ink-2); font: 400 var(--fs-unit)/1.3 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
-.lpct { display: flex; align-items: center; }
+.lpct { display: flex; align-items: center; justify-content: flex-end; }
 .fit { color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.3; }
 .good { color: var(--ok); }
 .bad { color: var(--danger); }
@@ -44,12 +46,11 @@
 
 /* the flats */
 .flats { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
-.flat { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; padding: 5px 4px; border-radius: var(--r-field); }
+.flat { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 3px 4px; border-radius: var(--r-field); }
 .flat:nth-child(odd) { background: var(--well); }
-.fname { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.fname { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .fname b { overflow: hidden; color: var(--ink); font: 500 var(--fs-row)/1.2 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
-.fname small { color: var(--ink-3); font-size: var(--fs-meta); white-space: nowrap; }
-.flags { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.flags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; }
 
 /* goes muddy */
 .warns { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
@@ -68,10 +69,13 @@
 .crow { display: contents; }
 .cell2 { display: flex; align-items: center; gap: 6px; font: 400 var(--fs-unit)/1.3 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
 
-/* narrow, the tab scrolls as one */
+/* narrow, one column: the stack follows the picture at once, then the parts, what goes muddy, the flats and Advanced */
 @container (max-width: 759px) {
-  .layout { grid-template-columns: minmax(0, 1fr); grid-auto-rows: min-content; overflow: auto; }
-  .left, .right { overflow: visible; }
+  .layout { grid-template-columns: minmax(0, 1fr); grid-auto-rows: min-content; }
+  .left, .right { display: contents; }
+  .o1 { order: 1; } .o2 { order: 2; } .o3 { order: 3; } .o4 { order: 4; } .o5 { order: 5; } .o6 { order: 6; }
+  .canvas { max-width: 260px; }
+  .caption { min-height: 0; }
 }
 @container (max-width: 559px) {
   .lrow { grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-areas: "eye name pct" ". col col" ". fit fit"; }

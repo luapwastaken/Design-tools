@@ -1,7 +1,7 @@
 // The Palette panel (left, every mode): the scene light, Add colour, one item per ramp as a chip strip, reorder by dragging,
 // the hero star; colours in no ramp; and proposed colours in periwinkle.
 // Selection here is the selection everywhere: it carries across the modes.
-import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type PointerEvent } from 'react';
+import { Fragment, useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type PointerEvent } from 'react';
 import { cssColor, toHex } from '../../../shared/color/index.ts';
 import { greyOf, valueOf } from '../../../shared/color/value.ts';
 import { MATERIALS } from '../../../shared/palette/ramp.ts';
@@ -21,7 +21,7 @@ import { toggleRampLock, toggleSwap } from './variation-actions.ts';
 import { lockedIn } from './variations.ts';
 import { openSource } from './starts.ts';
 import { Start } from './Start.tsx';
-import { clearProposals, proposals, sourcePop } from './proposals.ts';
+import { clearProposals, LAYERS_LABEL, proposals, sourcePop } from './proposals.ts';
 import { addToWell, paintSettings } from './paint-sources.ts';
 import { armed, clicked, getView, hot, patchView, type IllustrationView } from './view-state.ts';
 import s from './Palette.module.css';
@@ -41,6 +41,7 @@ function toWell(id: string): void {
 
 export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: IllustrationView }) {
   const ghosts = proposals.use();
+  const layered = ghosts?.label === LAYERS_LABEL;
   const lit = hot.use();
   const armedId = armed.use();
   const sel = selected(d, v.selected);
@@ -137,16 +138,27 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
               <Icon name="wand_stars" size={14} />
               {ghosts.label}
             </h3>
-            <div className={s.ghostChips}>
-              {ghosts.items.map((it) => (
-                <Tooltip key={it.id} content={`Add ${toHex(it.oklch).toUpperCase()} as a ramp`}>
-                  <button type="button" className={s.ghost} data-ghost={it.id} aria-label={`Add ${toHex(it.oklch)} as a ramp`} onClick={() => addProposals(doc, [it])}>
-                    <i data-colour style={{ background: cssColor(it.oklch) }} />
-                  </button>
-                </Tooltip>
-              ))}
+            <div className={cx(s.ghostChips, layered && s.ghostList)}>
+              {ghosts.items.map((it) => {
+                const chip = (
+                  <Tooltip content={`Add ${toHex(it.oklch).toUpperCase()}`}>
+                    <button type="button" className={s.ghost} data-ghost={it.id} aria-label={`Add ${toHex(it.oklch)}`} onClick={() => addProposals(doc, [it])}>
+                      <i data-colour style={{ background: cssColor(it.oklch) }} />
+                    </button>
+                  </Tooltip>
+                );
+                // layer colours are told apart by name, so each chip carries its own
+                return layered ? (
+                  <span key={it.id} className={s.ghostRow}>
+                    {chip}
+                    <span>{it.name}</span>
+                  </span>
+                ) : (
+                  <Fragment key={it.id}>{chip}</Fragment>
+                );
+              })}
             </div>
-            <p className={s.fine}>Click one to make its ramp. Colours picked on the paint canvas or offered from Light zones land here too.</p>
+            <p className={s.fine}>{layered ? 'Click one to keep it as a loose swatch. Layer colours never become ramps.' : 'Click one to make its ramp. Colours picked on the paint canvas or offered from Light zones land here too.'}</p>
             <div className={s.ghostFoot}>
               <Button size="xs" icon="add" onClick={() => addProposals(doc, ghosts.items)}>
                 Keep all

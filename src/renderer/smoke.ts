@@ -4564,14 +4564,24 @@ async function layersUi(): Promise<void> {
   // Add layer colours to palette: proposals, named like “Shadow · Multiply 80%”, and nothing written
   const doc0 = il.get();
   const d2 = il.depth();
+  const eyeOn = (k: string) => layer(k)?.querySelector('button')?.getAttribute('aria-pressed') === 'true';
   button('illustration', 'Add layer colours to palette')?.click();
-  const want = layerKeys();
+  const want = layerKeys().filter((k) => eyeOn(k));
   const offered = await until(() => (bases.get()?.label === 'From Layers' ? bases.get() : null));
   const names = offered?.items.map((p) => p.name ?? '') ?? [];
-  check('Add layer colours to palette offers a proposal for each layer, named with its mode and opacity', !!offered && offered.items.length === want.length && want.length >= 5 && names.some((n) => /^Shadow · Multiply \d+%$/.test(n)) && names.some((n) => /^Cast shadow · Multiply \d+%$/.test(n)) && names.some((n) => /^Light · Screen \d+%$/.test(n)) && names.some((n) => /^Rim · Add \d+%$/.test(n)) && names.some((n) => /^Mood · Overlay \d+%$/.test(n)), names);
+  check('Add layer colours to palette offers a proposal for each layer that is on (not the Mood, which is off), named with its mode and opacity', !!offered && offered.items.length === want.length && want.length >= 4 && names.some((n) => /^Shadow · Multiply \d+%$/.test(n)) && names.some((n) => /^Cast shadow · Multiply \d+%$/.test(n)) && names.some((n) => /^Light · Screen \d+%$/.test(n)) && names.some((n) => /^Rim · Add \d+%$/.test(n)) && !names.some((n) => n.startsWith('Mood')), names);
   check('and the colours are the hexes shown, with a toast that says what was offered, and the palette and its undo untouched', !!offered && offered.items.every((p, i) => toHex(p.oklch).toUpperCase() === hexOf(want[i])) && !!(await until(() => toastSays('Offered'))) && il.get() === doc0 && il.depth() === d2, [offered?.items.map((p) => toHex(p.oklch)), want.map(hexOf)]);
   button('illustration', 'Add layer colours to palette')?.click();
   check('offering the same set again says it was already offered', !!(await until(() => toastSays('Already offered'))) && bases.get()?.items.length === want.length);
+  // kept, they are loose swatches: no ramp, so no flat, and the recipe does not move
+  const [ramps0, text0, flats0] = [il.get().ramps.length, recipeText(), flatRows().length];
+  button('illustration', 'Keep all')?.click();
+  await until(() => il.get().swatches.length === doc0.swatches.length + want.length);
+  check('keeping the layer colours adds loose swatches, no ramps, no new flats, and the recipe is as it was', il.get().ramps.length === ramps0 && il.get().swatches.length === doc0.swatches.length + want.length && flatRows().length === flats0 && recipeText() === text0, [ramps0, il.get().ramps.length, flats0, flatRows().length]);
+  ctrlZ();
+  await until(() => il.get() === doc0);
+  check('and undo gives them back as proposals', il.get() === doc0 && bases.get()?.label === 'From Layers');
+  check('the bust’s masks are built once per size', bustOf(520) === bustOf(520));
   clearBases();
 
   // solve on commit: a picker drag moves nothing until it ends
