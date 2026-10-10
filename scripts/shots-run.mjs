@@ -138,7 +138,7 @@ export async function illustrationShots({ page, ev, shot, clickText, rail, key, 
     for (let i = 0; i <= 30; i++) await page.mouse.move(r.x + r.width * (0.2 + i * 0.02), r.y + r.height * (0.4 + Math.sin(i / 4) * 0.1));
     await page.mouse.up(); await sleep(1200); await shot('02-illustration-paint-stroked');
   }
-  // Layers: the bust under the recipe, then the ramps' own steps it aims at (key 3), then back (key 2)
+  // Layers: the still life under the recipe, then the ramps' own steps it aims at (key 3), then back (key 2)
   await tab('Layers'); await shot('02-illustration-layers');
   await key('3'); await sleep(600); await shot('02-illustration-layers-target'); await key('2'); await sleep(400);
   await tab('Ramp settings');

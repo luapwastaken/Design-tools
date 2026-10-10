@@ -1,9 +1,9 @@
 // Tab 7, Layers: your flat colours, plus the few blend layers that shade them the way you would in Krita,
-// Clip Studio or Procreate, each with an exact colour and opacity to type in. Left, a bust painted from the
+// Clip Studio or Procreate, each with an exact colour and opacity to type in. Left, a still life painted from the
 // flats (Flats | Recipe | Target), what goes muddy, and Advanced; right, the layer stack, the recipe as text, and
 // a row of switches per ramp. The flats are the ramps' bases and the targets their own steps. The recipe is
 // solved when the palette settles (never per drag frame) and kept while only the pointer moves.
-// The maths is shared/palette/recipe.ts; the words and the compositing are layers.ts; the picture is bust.ts.
+// The maths is shared/palette/recipe.ts; the words and the compositing are layers.ts; the picture is still-life.ts.
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
 import { ALL_ON, hexRgb, MODE_NAME, muddyAll, recipeText, solveRecipe, typedHex, type Eyes, type FlatIn, type Recipe, type Rgb, type Space } from '../../../shared/palette/recipe.ts';
@@ -13,15 +13,15 @@ import { GreyscaleButton } from '../common/Greyscale.tsx';
 import { plural } from '../common/names.ts';
 import { useSettled } from '../common/settled.ts';
 import { selected, type Doc } from './actions.ts';
-import { bustOf, PART_IDS, type PartId } from './bust.ts';
 import { offerLayers, SHOWS, setFlag, setPart } from './layer-actions.ts';
 import { allFlats, allTogether, hintOf, paintRecipe, paintTargets, PARTS, partRamps, recipeFlats, rowsOf, shadowIn, type Row } from './layers.ts';
 import { sceneLight } from './scene.ts';
+import { PART_IDS, stillLifeOf, type PartId } from './still-life.ts';
 import { patchView, type IllustrationView } from './view-state.ts';
 import type { IllustrationDoc } from './doc.ts';
 import s from './LayersTab.module.css';
 
-/** the picture is drawn this many pixels square and shown smaller; it is the bust's masks that are sized once */
+/** the picture is drawn this many pixels wide and shown smaller; it is the still life's masks that are sized once */
 const SIZE = 520;
 /** a part with no ramp to show (an empty palette never gets here) */
 const NONE = cssColor([0.6, 0, 0]);
@@ -60,7 +60,7 @@ export function LayersTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illu
     <div className={s.tab}>
       <div className={s.layout}>
         <div className={s.left}>
-          <section className={cx(s.stage, s.o1)} aria-label="The bust">
+          <section className={cx(s.stage, s.o1)} aria-label="The still life">
             <div className={s.bar}>
               <Segmented options={SHOWS.map((o, i) => ({ value: o.id, label: o.label, tip: `Press ${i + 1}` }))} value={v.layerShow} onChange={(layerShow) => patchView({ layerShow })} fit />
               <GreyscaleButton />
@@ -150,7 +150,7 @@ export function LayersTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illu
 
 const caption = (show: IllustrationView['layerShow'], space: Space, muddy: boolean): string =>
   show === 'flats'
-    ? 'The flat colours, nothing else. The face is drawn the same in every view.'
+    ? 'The flat colours, nothing else.'
     : show === 'target'
       ? 'What the ramps say the shading should be: each flat’s shadow, light and lightest step, painted into the same shapes. The recipe tries to match this.'
       : `The flats with the layers applied, blended in ${space === 'srgb' ? 'sRGB, as the apps do' : 'linear light'}.${muddy ? ' Dashed outlines mark flats that go muddy.' : ''}`;
@@ -169,36 +169,35 @@ type PreviewProps = {
   muddy: PartId[];
 };
 
-/** the bust: flats painted, then (Recipe) the layers through the shading shapes, or (Target) the ramps' own steps; redrawn only when one of these changes */
+/** the still life: flats painted, then (Recipe) the layers through the shading shapes, or (Target) the ramps' own steps; redrawn only when one of these changes */
 function Preview({ show, flats, inRecipe, parts, rows, recipe, space, muddy }: PreviewProps) {
   const ref = useRef<HTMLCanvasElement>(null);
   useLayoutEffect(() => {
     const ctx = ref.current?.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
-    const bust = bustOf(SIZE);
+    const still = stillLifeOf(SIZE);
     const flat = (p: PartId) => flats.find((f) => f.id === parts[p]);
-    bust.paint(ctx, (p) => flat(p)?.hex ?? NONE);
+    still.paint(ctx, (p) => flat(p)?.hex ?? NONE);
     if (show !== 'flats') {
-      const img = ctx.getImageData(0, 0, SIZE, SIZE);
+      const img = ctx.getImageData(0, 0, still.width, still.height);
       if (show === 'target') {
         const rgb = (p: PartId): [Rgb, Rgb, Rgb] | null => {
           const t = flat(p)?.targets;
           return t ? [hexRgb(typedHex(t.shadow)), hexRgb(typedHex(t.light)), hexRgb(typedHex(t.rim))] : null;
         };
-        paintTargets(bust, img.data, Object.fromEntries(PART_IDS.map((p) => [p, rgb(p)])) as Record<PartId, [Rgb, Rgb, Rgb] | null>);
+        paintTargets(still, img.data, Object.fromEntries(PART_IDS.map((p) => [p, rgb(p)])) as Record<PartId, [Rgb, Rgb, Rgb] | null>);
       } else if (recipe) {
         // the Shadow is clipped to the character, the Cast shadow lands on the background: the two never share a pixel
         const onCast = (p: PartId) => !!recipe.cast && !!flat(p)?.background && inRecipe.some((f) => f.id === parts[p]);
         const second = recipe.shadow2 ? PART_IDS.filter((p) => recipe.shadow2!.clip.includes(parts[p] ?? '')) : null;
-        const clips = { character: bust.coverage(PART_IDS.filter((p) => !onCast(p))), background: bust.coverage(PART_IDS.filter(onCast)), second: second && bust.coverage(second) };
-        paintRecipe(bust, img.data, rows, clips, space);
+        const clips = { character: still.coverage(PART_IDS.filter((p) => !onCast(p))), background: still.coverage(PART_IDS.filter(onCast)), second: second && still.coverage(second) };
+        paintRecipe(still, img.data, rows, clips, space);
       }
       ctx.putImageData(img, 0, 0);
     }
-    bust.face(ctx);
-    if (muddy.length) bust.outline(ctx, muddy, getComputedStyle(document.documentElement).getPropertyValue('--danger').trim());
+    if (muddy.length) still.outline(ctx, muddy, getComputedStyle(document.documentElement).getPropertyValue('--danger').trim());
   }, [show, flats, inRecipe, parts, rows, recipe, space, muddy.join()]);
-  return <canvas ref={ref} width={SIZE} height={SIZE} className={s.canvas} data-colour="" role="img" aria-label="A cel-shaded bust drawn from the flat colours" />;
+  return <canvas ref={ref} width={SIZE} height={Math.round((SIZE * 3) / 4)} className={s.canvas} data-colour="" role="img" aria-label="A box, a ball and a can on a table in front of a wall, drawn from the flat colours" />;
 }
 
 // ── the layer stack ─────────────────────────────────────────────────────────────────────────────

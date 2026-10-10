@@ -1,4 +1,4 @@
-/* Layers: the bust and what goes muddy on the left, the layer stack and the flats on the right, the whole tab
+/* Layers: the picture and what goes muddy on the left, the layer stack and the flats on the right, the whole tab
    scrolling as one so nothing sits behind a second scrollbar. Only the picture
    and the colour chips carry content colour. A layer that is off is shown in a quieter ink and an off eye, never a
    stripe on an edge; the muddy flats are outlined in the picture itself. Nothing animates. */
@@ -13,7 +13,7 @@
 
 .stage { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--r-mod); background: var(--module); box-shadow: inset 0 0 0 1px var(--line); }
 .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
-.canvas { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; border-radius: 8px; aspect-ratio: 1; box-shadow: inset 0 0 0 1px var(--edge); }
+.canvas { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; border-radius: 8px; aspect-ratio: 4 / 3; box-shadow: inset 0 0 0 1px var(--edge); }
 .caption { min-height: 2.8em; margin: 0; color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.4; }
 .parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px 10px; }
 .part { display: flex; flex-direction: column; gap: 3px; min-width: 0; }

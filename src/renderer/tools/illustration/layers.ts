@@ -1,5 +1,5 @@
 // What the Layers tab shows, apart from how it is drawn: the flats and targets the palette's ramps make,
-// which ramp each part of the bust shows, the view state's own part (sanitised on load), the words of the
+// which ramp each part of the picture shows, the view state's own part (sanitised on load), the words of the
 // layer panel, and the preview's compositing. Pure (the picture is drawn into arrays it is handed), so it is
 // unit tested. The maths is shared/palette/recipe.ts.
 import { toHex } from '../../../shared/color/index.ts';
@@ -24,25 +24,25 @@ import {
   type Space,
 } from '../../../shared/palette/recipe.ts';
 import type { MaterialId, RampSpec } from '../../../shared/types.ts';
-import type { Bust, PartId } from './bust.ts';
-import { PART_IDS } from './bust.ts';
+import type { PartId, StillLife } from './still-life.ts';
+import { PART_IDS } from './still-life.ts';
 import { baseOf, rampName, stepsOf, type IllustrationDoc } from './doc.ts';
 import type { LightPair } from './scene.ts';
 
-// ── the parts of the bust ───────────────────────────────────────────────────────────────────────
+// ── the parts of the still life ───────────────────────────────────────────────────────────────────────
 
 /** `likes`: the materials a ramp for this part usually has, best first */
 export const PARTS: { id: PartId; label: string; likes: MaterialId[] }[] = [
-  { id: 'skin', label: 'Skin', likes: ['skin'] },
-  { id: 'hair', label: 'Hair', likes: ['fur'] },
-  { id: 'top', label: 'Top', likes: ['cloth'] },
-  { id: 'under', label: 'Under-top', likes: ['cloth'] },
-  { id: 'bg', label: 'Background', likes: ['paper', 'water', 'foliage', 'stone', 'wood'] },
+  { id: 'box', label: 'Box', likes: [] },
+  { id: 'ball', label: 'Ball', likes: [] },
+  { id: 'can', label: 'Can', likes: [] },
+  { id: 'table', label: 'Table', likes: ['wood', 'stone', 'paper'] },
+  { id: 'wall', label: 'Wall', likes: ['paper', 'stone', 'wood'] },
 ];
 
 /**
  * The ramp each part shows when nothing was chosen. First each part takes an unused ramp of a material it likes
- * (skin to Skin, hair to the fur ramp); then the parts still without one take the unused ramps in palette order;
+ * (the table to a wood ramp, the wall to a paper one); then the parts still without one take the unused ramps in palette order;
  * with fewer ramps than parts, a part takes a ramp of its material even if another part has it, else the palette
  * in order round again. With no ramps, no part has one.
  */
@@ -234,19 +234,19 @@ export const proposalName = (row: Pick<Row, 'name' | 'mode' | 'pct'>): string =>
 type Step = { rgb: Rgb; mode: Mode; pct: number; mask: Float32Array | null; clip?: Float32Array };
 
 /** The recipe laid over the flats in `px`, bottom first: the Cast shadow, the Shadow, the second Shadow, the Light, the Mood, the Rim. */
-export function paintRecipe(bust: Bust, px: Uint8ClampedArray, rows: Row[], clips: { character: Float32Array; background: Float32Array; second: Float32Array | null }, space: Space): void {
+export function paintRecipe(still: StillLife, px: Uint8ClampedArray, rows: Row[], clips: { character: Float32Array; background: Float32Array; second: Float32Array | null }, space: Space): void {
   const by = Object.fromEntries(rows.map((r) => [r.key, r])) as Partial<Record<LayerKey, Row>>;
   const steps: (Step | null)[] = [
-    by.cast?.on ? { ...stepOf(by.cast), mask: bust.shadow, clip: clips.background } : null,
-    by.shadow?.on ? { ...stepOf(by.shadow), mask: bust.shadow, clip: clips.character } : null,
-    by.shadow2?.on && clips.second ? { ...stepOf(by.shadow2), mask: bust.shadow, clip: clips.second } : null,
-    by.light?.on ? { ...stepOf(by.light), mask: bust.light, clip: clips.character } : null,
+    by.cast?.on ? { ...stepOf(by.cast), mask: still.shadow, clip: clips.background } : null,
+    by.shadow?.on ? { ...stepOf(by.shadow), mask: still.shadow, clip: clips.character } : null,
+    by.shadow2?.on && clips.second ? { ...stepOf(by.shadow2), mask: still.shadow, clip: clips.second } : null,
+    by.light?.on ? { ...stepOf(by.light), mask: still.light, clip: clips.character } : null,
     by.mood?.on ? { ...stepOf(by.mood), mask: null } : null,
-    by.rim?.on ? { ...stepOf(by.rim), mask: bust.rim } : null,
+    by.rim?.on ? { ...stepOf(by.rim), mask: still.rim } : null,
   ];
   for (const s of steps) {
     if (!s) continue;
-    for (let p = 0; p < bust.part.length; p++) {
+    for (let p = 0; p < still.part.length; p++) {
       const c = (s.mask ? s.mask[p] : 1) * (s.clip ? s.clip[p] : 1);
       if (c > 0) compositeAt(px, p * 4, s.rgb, s.mode, s.pct, space, c);
     }
@@ -255,16 +255,16 @@ export function paintRecipe(bust: Bust, px: Uint8ClampedArray, rows: Row[], clip
 const stepOf = (r: Row) => ({ rgb: hexRgb(r.hex), mode: r.mode, pct: r.pct });
 
 /** The ramps' own shadow, light and rim steps painted through the same shapes, to see what the recipe is aiming at. `targets[part]`: [shadow, light, rim] as 8-bit colours. */
-export function paintTargets(bust: Bust, px: Uint8ClampedArray, targets: Record<PartId, [Rgb, Rgb, Rgb] | null>): void {
+export function paintTargets(still: StillLife, px: Uint8ClampedArray, targets: Record<PartId, [Rgb, Rgb, Rgb] | null>): void {
   const mix = (p: number, cov: number, rgb: Rgb) => {
     if (cov > 0) for (let c = 0; c < 3; c++) px[p * 4 + c] = Math.round(px[p * 4 + c] + (rgb[c] - px[p * 4 + c]) * cov);
   };
-  for (let p = 0; p < bust.part.length; p++) {
-    const t = targets[PART_IDS[bust.part[p]]];
+  for (let p = 0; p < still.part.length; p++) {
+    const t = targets[PART_IDS[still.part[p]]];
     if (!t) continue;
-    mix(p, bust.shadow[p], t[0]);
-    mix(p, bust.light[p], t[1]);
-    mix(p, bust.rim[p], t[2]);
+    mix(p, still.shadow[p], t[0]);
+    mix(p, still.light[p], t[1]);
+    mix(p, still.rim[p], t[2]);
   }
 }
 

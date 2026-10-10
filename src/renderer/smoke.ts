@@ -51,9 +51,9 @@ import { eyedrop, rampsFromLoose } from './tools/illustration/actions.ts';
 import { carryLight, addRamp, baseOf, rampName, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
 import { FINISH_PRESETS } from './tools/illustration/finish.ts';
 import { cleanColour, cleanStrengths, readout as splitText, zoneRig, zoneRows } from './tools/illustration/light-zones.ts';
-import { bustOf } from './tools/illustration/bust.ts';
 import { allFlats, DEFAULT_LAYERS, recipeFlats } from './tools/illustration/layers.ts';
 import { LIGHTS as SCENE_LIGHTS, sceneLight } from './tools/illustration/scene.ts';
+import { stillLifeOf } from './tools/illustration/still-life.ts';
 import type { PaintEngine } from './tools/illustration/paint/index.ts';
 import { liveEngine, liveSaves } from './tools/illustration/paint/live.ts';
 import { paintEngineChecks } from './tools/illustration/paint/smoke-checks.ts';
@@ -365,7 +365,7 @@ async function full(): Promise<void> {
   // and a Variations path, open cell and swap role that a hand-edited file could hold
   shell.setView('design', { ...designView(), lockL: true, lockH: true, varPath: [9, 2, 'x'], varOpen: 99, swapRole: 'Nonsense' });
   // Illustration's Variations state likewise: a stray path entry, an out-of-range cell, a lock list with a number in it, subjects that do not exist
-  shell.setView('illustration', { ...illustrationView(), varSeed: 5150, varPath: [9, 2, 'x'], varOpen: 99, lockedRamps: ['keep-1', 4, 'keep-1'], pictureOn: ['sky', 'unicorn', 'skin'], pictureTones: { skin: 'skin-deep', hair: 'nonsense' }, zoneStrengths: [9, 0.5, 'x', 0.25], zoneRim: [0.7, 0.1, 30], zoneGround: [2, 'x', 140], zoneValues: true, layerRim: 140.4, layerMood: 'x', layerOut: ['gone', 'gone', 4], layerStar: 'x', layerParts: { skin: 'r1', nonsense: 'r2', hair: 7 }, layerLight: 'nope', layerSpace: 'linear', layerRimOn: false });
+  shell.setView('illustration', { ...illustrationView(), varSeed: 5150, varPath: [9, 2, 'x'], varOpen: 99, lockedRamps: ['keep-1', 4, 'keep-1'], pictureOn: ['sky', 'unicorn', 'skin'], pictureTones: { skin: 'skin-deep', hair: 'nonsense' }, zoneStrengths: [9, 0.5, 'x', 0.25], zoneRim: [0.7, 0.1, 30], zoneGround: [2, 'x', 140], zoneValues: true, layerRim: 140.4, layerMood: 'x', layerOut: ['gone', 'gone', 4], layerStar: 'x', layerParts: { box: 'r1', skin: 'r2', nonsense: 'r3', ball: 7 }, layerLight: 'nope', layerSpace: 'linear', layerRimOn: false });
 
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
   // pending delete is trashed after it (scripts/smoke.mjs checks both)
@@ -4455,23 +4455,24 @@ async function layersUi(): Promise<void> {
   // the picture: painted, and a preview pixel is the typed hex and percent worked by hand
   check('Flats | Recipe | Target start on Recipe', radio(panel(), 'Recipe')?.getAttribute('aria-checked') === 'true' && !!radio(panel(), 'Flats') && !!radio(panel(), 'Target'));
   const recipeSig = sig();
-  const bust = bustOf(520);
+  const still = stillLifeOf(520);
+  const [w, h] = [still.width, still.height];
   let at = -1;
-  // under the chin, on the neck: all shadow and nothing else, a few pixels clear of any edge or outline
-  const near = [-5, 0, 5].flatMap((dy) => [-5, 0, 5].map((dx) => dy * 520 + dx));
-  scan: for (let y = 318; y < 335; y++) {
-    for (let x = 230; x < 250; x++) {
-      const p = y * 520 + x;
-      const same = near.every((o) => bust.part[p + o] === 0 && bust.shadow[p + o] > 0.999 && bust.light[p + o] === 0 && bust.rim[p + o] === 0);
+  // on the box's shadowed side: all shadow and nothing else, a few pixels clear of any edge or outline
+  const near = [-4, 0, 4].flatMap((dy) => [-4, 0, 4].map((dx) => dy * w + dx));
+  scan: for (let y = 20; y < h - 20; y++) {
+    for (let x = 20; x < w - 20; x++) {
+      const p = y * w + x;
+      const same = near.every((o) => still.part[p + o] === 0 && still.shadow[p + o] > 0.999 && still.light[p + o] === 0 && still.rim[p + o] === 0);
       if (same) {
         at = p;
         break scan;
       }
     }
   }
-  const px = (p: number) => rgbHex([...canvas()!.getContext('2d')!.getImageData(p % 520, Math.floor(p / 520), 1, 1).data]);
+  const px = (p: number) => rgbHex([...canvas()!.getContext('2d')!.getImageData(p % w, Math.floor(p / w), 1, 1).data]);
   const skin = m0.flats.find((f) => f.name === 'Skin')!;
-  check('a pixel in the neck’s shadow is the skin flat under the Shadow layer, exactly as the typed hex and percent give it', at >= 0 && px(at) === shadeFlat(skin.hex, shadowStack(skin, m0.r)), [at, at >= 0 && px(at), shadeFlat(skin.hex, shadowStack(skin, m0.r))]);
+  check('a pixel on the box’s shadowed side is the Skin flat under the Shadow layer, exactly as the typed hex and percent give it', at >= 0 && px(at) === shadeFlat(skin.hex, shadowStack(skin, m0.r)), [at, at >= 0 && px(at), shadeFlat(skin.hex, shadowStack(skin, m0.r))]);
   bare('1', 'Digit1');
   const flatsSig = (await until(() => illustrationView().layerShow === 'flats' && sig() !== recipeSig && sig())) || 0;
   check('1 shows the Flats: the picture changes, the view keeps it, and it is the flat colour at that pixel', illustrationView().layerShow === 'flats' && !!flatsSig && px(at) === skin.hex, [illustrationView().layerShow, px(at), skin.hex]);
@@ -4483,11 +4484,11 @@ async function layersUi(): Promise<void> {
 
   // Parts: five selects, a default by material, and a choice that moves the picture
   const partSelects = () => [...(panel()?.querySelectorAll<HTMLButtonElement>('[role="group"][aria-label="Parts"] button[aria-haspopup="listbox"]') ?? [])];
-  check('five Parts selects name the ramp each part shows, skin on Skin, top on Shirt and the background on Wall', partSelects().length === 5 && partSelects()[0].textContent!.includes('Skin') && partSelects()[2].textContent!.includes('Shirt') && partSelects()[4].textContent!.includes('Wall'), partSelects().map((b) => b.textContent));
+  check('five Parts selects name the ramp each part shows: Box on Skin, Ball on Leaf, Can on Shirt, Table and Wall on Wall', partSelects().length === 5 && ['Box', 'Ball', 'Can', 'Table', 'Wall'].every((n, i) => partSelects()[i].closest('label')?.textContent?.startsWith(n)) && ['Skin', 'Leaf', 'Shirt', 'Wall', 'Wall'].every((n, i) => partSelects()[i].textContent!.includes(n)), partSelects().map((b) => b.textContent));
   const d0 = il.depth();
   partSelects()[0].click();
   (await until(() => optionRow('Shirt')))?.click();
-  check('choosing Shirt for the Skin part changes the picture and is kept in the view, not in undo', !!(await until(() => sig() !== recipeSig)) && Object.values(illustrationView().layerParts).length === 1 && il.depth() === d0, [illustrationView().layerParts, il.depth()]);
+  check('choosing Shirt for the Box part changes the picture and is kept in the view, not in undo', !!(await until(() => sig() !== recipeSig)) && Object.values(illustrationView().layerParts).length === 1 && il.depth() === d0, [illustrationView().layerParts, il.depth()]);
   patchIllustration({ layerParts: {} });
   await until(() => sig() === recipeSig);
 
@@ -4581,7 +4582,7 @@ async function layersUi(): Promise<void> {
   ctrlZ();
   await until(() => il.get() === doc0);
   check('and undo gives them back as proposals', il.get() === doc0 && bases.get()?.label === 'From Layers');
-  check('the bust’s masks are built once per size', bustOf(520) === bustOf(520));
+  check('the still life’s masks are built once per size', stillLifeOf(520) === stillLifeOf(520));
   clearBases();
 
   // solve on commit: a picker drag moves nothing until it ends
@@ -5496,7 +5497,7 @@ async function quiet(): Promise<void> {
   const iv = illustrationView();
   check('Illustration Variations: the seed, the real path entry, the lock list and the real ticks came back; the odd ones were dropped', iv.varSeed === 5150 && iv.varPath.join() === '2' && iv.varOpen === 0 && iv.lockedRamps.join() === 'keep-1' && iv.pictureOn.join() === 'skin,sky' && JSON.stringify(iv.pictureTones) === '{"skin":"skin-deep"}' && iv.swapRamp === '', [iv.varSeed, iv.varPath, iv.varOpen, iv.lockedRamps, iv.pictureOn, iv.pictureTones, iv.swapRamp]);
   check('Light zones: the strengths came back (the odd one default, the high one pulled in), the rim colour kept, a bad ground dropped for the default, Values still on', iv.zoneStrengths.join() === '2,0.5,0.25,0.25' && iv.zoneRim?.join() === '0.7,0.1,30' && iv.zoneGround.join() === '0.55,0.07,60' && iv.zoneValues === true, [iv.zoneStrengths, iv.zoneRim, iv.zoneGround, iv.zoneValues]);
-  check('Layers: the Rim came back pulled in to 100, the odd Mood the default, the list once, only the real part choice, the odd light mode the default, Linear light and the Rim being off kept', iv.layerRim === 100 && iv.layerMood === 15 && iv.layerOut.join() === 'gone' && iv.layerStar.length === 0 && JSON.stringify(iv.layerParts) === '{"skin":"r1"}' && iv.layerLight === 'screen' && iv.layerSpace === 'linear' && iv.layerRimOn === false, [iv.layerRim, iv.layerMood, iv.layerOut, iv.layerStar, iv.layerParts, iv.layerLight, iv.layerSpace, iv.layerRimOn]);
+  check('Layers: the Rim came back pulled in to 100, the odd Mood the default, the list once, only the real part choice (a key from the old picture dropped), the odd light mode the default, Linear light and the Rim being off kept', iv.layerRim === 100 && iv.layerMood === 15 && iv.layerOut.join() === 'gone' && iv.layerStar.length === 0 && JSON.stringify(iv.layerParts) === '{"box":"r1"}' && iv.layerLight === 'screen' && iv.layerSpace === 'linear' && iv.layerRimOn === false, [iv.layerRim, iv.layerMood, iv.layerOut, iv.layerStar, iv.layerParts, iv.layerLight, iv.layerSpace, iv.layerRimOn]);
   shell.setActive('design');
   check('the value lock left on in the first pass came back', prefs?.valueLock === true && prefs.hueLock === false, [prefs?.valueLock, prefs?.hueLock]);
   check('the picker style and model chosen in the first pass came back', prefs?.pickerStyle === 'wheel' && prefs.pickerModel === 'rgb' && (await until(() => host('design')?.querySelector('[data-picker="wheel"]'), 5000)), [prefs?.pickerStyle, prefs?.pickerModel]);

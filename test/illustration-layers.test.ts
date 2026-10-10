@@ -3,61 +3,57 @@ import { test } from 'node:test';
 import type { Oklch } from '../src/shared/color/index.ts';
 import { ALL_ON, composite8, hexRgb, solveRecipe } from '../src/shared/palette/recipe.ts';
 import type { MaterialId } from '../src/shared/types.ts';
-import type { Bust } from '../src/renderer/tools/illustration/bust.ts';
-import { PART_IDS } from '../src/renderer/tools/illustration/bust.ts';
 import { addRamp, emptyDoc, recolour, stepsOf, type IllustrationDoc } from '../src/renderer/tools/illustration/doc.ts';
 import { allFlats, allTogether, cleanLayers, cleanPct, DEFAULT_LAYERS, defaultParts, hintOf, paintRecipe, paintTargets, partRamps, proposalName, recipeFlats, rowsOf } from '../src/renderer/tools/illustration/layers.ts';
 import { sceneLight } from '../src/renderer/tools/illustration/scene.ts';
+import type { StillLife } from '../src/renderer/tools/illustration/still-life.ts';
+import { PART_IDS } from '../src/renderer/tools/illustration/still-life.ts';
 
 const FIXTURE: [Oklch, string, MaterialId][] = [[[0.74, 0.075, 55], 'Skin', 'skin'], [[0.78, 0.09, 85], 'Hair', 'fur'], [[0.55, 0.09, 250], 'Shirt', 'cloth'], [[0.6, 0.12, 140], 'Leaf', 'foliage']];
 const palette = (list = FIXTURE): IllustrationDoc => list.reduce((d, [b, n, m]) => addRamp(d, b, n, null, m).doc, emptyDoc());
 const flags = (o: Partial<Record<'layerBg' | 'layerStar' | 'layerOut', string[]>> = {}) => ({ layerBg: [], layerStar: [], layerOut: [], ...o });
 
-test('parts default by material, then to the ramps no part has, then to the palette in order', () => {
+test('parts default: the table and wall to background-like materials, the objects to the rest in palette order', () => {
   const d = palette();
   const ids = d.ramps.map((r) => r.id);
-  // skin to Skin, hair to Hair (fur), top to Shirt (cloth), the background to Leaf; with no second cloth the under-top shares the Shirt
-  assert.deepEqual(defaultParts(d.ramps), { skin: ids[0], hair: ids[1], top: ids[2], under: ids[2], bg: ids[3] });
-  // two cloths: the second is the under-top
-  const two = palette([FIXTURE[0], FIXTURE[2], [[0.5, 0.1, 20], 'Coat', 'cloth']]);
-  const t = two.ramps.map((r) => r.id);
-  assert.equal(defaultParts(two.ramps).top, t[1]);
-  assert.equal(defaultParts(two.ramps).under, t[2]);
-  // a ramp no part likes goes to the first part without one, in palette order
-  const odd = palette([FIXTURE[0], FIXTURE[1], FIXTURE[2], [[0.6, 0.03, 70], 'Rock', 'stone'], [[0.5, 0.1, 20], 'Coat', 'cloth']]);
-  const o = odd.ramps.map((r) => r.id);
-  assert.deepEqual(defaultParts(odd.ramps), { skin: o[0], hair: o[1], top: o[2], under: o[4], bg: o[3] });
+  // no ramp is background-like: the parts take the palette in order, and the wall shares the first
+  assert.deepEqual(defaultParts(d.ramps), { box: ids[0], ball: ids[1], can: ids[2], table: ids[3], wall: ids[0] });
+  // a paper ramp is the wall's and the table's first choice, and the objects take the others
+  const wall = palette([...FIXTURE.slice(0, 3), [[0.78, 0.08, 235], 'Wall', 'paper']]);
+  const w = wall.ramps.map((r) => r.id);
+  assert.deepEqual(defaultParts(wall.ramps), { box: w[0], ball: w[1], can: w[2], table: w[3], wall: w[3] });
+  // wood for the table, then paper for the wall, ahead of an object that comes first in the palette
+  const room = palette([FIXTURE[0], [[0.78, 0.08, 235], 'Wall', 'paper'], [[0.5, 0.08, 60], 'Oak', 'wood'], FIXTURE[2]]);
+  const r = room.ramps.map((x) => x.id);
+  assert.deepEqual(defaultParts(room.ramps), { box: r[0], ball: r[3], can: r[2], table: r[2], wall: r[1] });
   // one ramp: every part shows it; none: no part has one
   const one = palette([FIXTURE[0]]);
   assert.ok(PART_IDS.every((p) => defaultParts(one.ramps)[p] === one.ramps[0].id));
   assert.ok(PART_IDS.every((p) => defaultParts([])[p] === null));
-  // a paper ramp is the background's first choice
-  const wall = palette([FIXTURE[0], [[0.78, 0.08, 235], 'Wall', 'paper']]);
-  assert.equal(defaultParts(wall.ramps).bg, wall.ramps[1].id);
-  // and ahead of a foliage ramp that comes first in the palette: the materials a part likes are ranked
-  const both = palette([FIXTURE[0], FIXTURE[3], [[0.78, 0.08, 235], 'Wall', 'paper']]);
-  assert.equal(defaultParts(both.ramps).bg, both.ramps[2].id);
 });
 
 test('a chosen ramp holds for its part while the palette has it, and is dropped when it is gone', () => {
   const d = palette();
   const [a, b] = d.ramps.map((r) => r.id);
-  assert.equal(partRamps(d, { skin: b }).skin, b);
-  assert.equal(partRamps(d, { skin: 'gone' }).skin, a);
-  assert.equal(partRamps(d, {}).skin, a);
+  assert.equal(partRamps(d, { box: b }).box, b);
+  assert.equal(partRamps(d, { box: 'gone' }).box, a);
+  assert.equal(partRamps(d, {}).box, a);
 });
 
 test('the view’s Layers part is made sound: percents whole and in range, lists once, only real parts', () => {
   const out: Record<string, unknown> = {};
-  cleanLayers({ layerRim: 140.4, layerMood: -3, layerOut: ['a', 'a', 4, 'b'], layerBg: 'x', layerStar: null, layerParts: { skin: 'r1', hair: 4, nonsense: 'r2', bg: 'r3' } }, out);
-  assert.deepEqual(out, { layerRim: 100, layerMood: 0, layerOut: ['a', 'b'], layerBg: [], layerStar: [], layerParts: { skin: 'r1', bg: 'r3' } });
+  cleanLayers({ layerRim: 140.4, layerMood: -3, layerOut: ['a', 'a', 4, 'b'], layerBg: 'x', layerStar: null, layerParts: { box: 'r1', ball: 4, nonsense: 'r2', wall: 'r3' } }, out);
+  assert.deepEqual(out, { layerRim: 100, layerMood: 0, layerOut: ['a', 'b'], layerBg: [], layerStar: [], layerParts: { box: 'r1', wall: 'r3' } });
   cleanLayers({ layerRim: 'x', layerMood: NaN, layerParts: [1] }, out);
   assert.equal(out.layerRim, DEFAULT_LAYERS.layerRim);
   assert.equal(out.layerMood, DEFAULT_LAYERS.layerMood);
   assert.deepEqual(out.layerParts, {});
+  // a view saved when the picture was a bust: its part keys are gone, not carried along
+  cleanLayers({ layerParts: { skin: 'r1', hair: 'r2', top: 'r3', 'under-top': 'r4', under: 'r5', background: 'r6', bg: 'r7', can: 'r8' } }, out);
+  assert.deepEqual(out.layerParts, { can: 'r8' });
   assert.equal(cleanPct(33.6, 1), 34);
   // what is saved comes back: a round trip through JSON
-  const saved = { layerRim: 20, layerMood: 80, layerOut: ['a'], layerBg: ['b'], layerStar: ['c'], layerParts: { top: 'r9' } };
+  const saved = { layerRim: 20, layerMood: 80, layerOut: ['a'], layerBg: ['b'], layerStar: ['c'], layerParts: { can: 'r9' } };
   const back: Record<string, unknown> = {};
   cleanLayers(JSON.parse(JSON.stringify(saved)), back);
   assert.deepEqual(back, saved);
@@ -130,11 +126,12 @@ test('proposals are named like “Shadow · Multiply 80%”', () => {
   assert.equal(proposalName({ name: 'Mood', mode: 'overlay', pct: 15 }), 'Mood · Overlay 15%');
 });
 
-// ── the picture, on a tiny bust made by hand ─────────────────────────────────────────────────
+// ── the picture, on a tiny picture made by hand ─────────────────────────────────────────────────
 
-/** four pixels: skin, hair, top, background; the shadow covers the first and last, the light the second, the rim the third */
-const tiny = (): Bust => ({
-  size: 2,
+/** four pixels: box, ball, can, wall; the shadow covers the first and last, the light the second, the rim the third */
+const tiny = (): StillLife => ({
+  width: 2,
+  height: 2,
   shadow: Float32Array.from([1, 0, 0, 0.5]),
   light: Float32Array.from([0, 1, 0, 0]),
   rim: Float32Array.from([0, 0, 1, 0]),
@@ -142,7 +139,6 @@ const tiny = (): Bust => ({
   paint: () => {},
   coverage: () => new Float32Array(4),
   outline: () => {},
-  face: () => {},
 });
 
 test('the recipe is laid over the flats through the masks, clipped, and matches shading each flat by hand', () => {
@@ -177,13 +173,13 @@ test('the recipe is laid over the flats through the masks, clipped, and matches 
 test('the target view paints each flat’s own steps through the same masks', () => {
   const px = new Uint8ClampedArray(16).fill(100);
   const t = (n: number): [[number, number, number], [number, number, number], [number, number, number]] => [[n, n, n], [n + 1, n + 1, n + 1], [n + 2, n + 2, n + 2]];
-  paintTargets(tiny(), px, { skin: t(10), hair: t(20), top: t(30), under: null, bg: t(40) });
-  assert.deepEqual([...px.slice(0, 3)], [10, 10, 10]); // skin in shadow: its shadow step
-  assert.deepEqual([...px.slice(4, 7)], [21, 21, 21]); // hair in the light: its light step
-  assert.deepEqual([...px.slice(8, 11)], [32, 32, 32]); // top on the rim: its lightest
-  assert.deepEqual([...px.slice(12, 15)], [70, 70, 70]); // background at half shadow: half way to its shadow step (100 to 40)
+  paintTargets(tiny(), px, { box: t(10), ball: t(20), can: t(30), table: null, wall: t(40) });
+  assert.deepEqual([...px.slice(0, 3)], [10, 10, 10]); // box in shadow: its shadow step
+  assert.deepEqual([...px.slice(4, 7)], [21, 21, 21]); // ball in the light: its light step
+  assert.deepEqual([...px.slice(8, 11)], [32, 32, 32]); // can on the rim: its lightest
+  assert.deepEqual([...px.slice(12, 15)], [70, 70, 70]); // wall at half shadow: half way to its shadow step (100 to 40)
   // a part with no ramp is left as it is
   const px2 = new Uint8ClampedArray(16).fill(100);
-  paintTargets(tiny(), px2, { skin: null, hair: null, top: null, under: null, bg: null });
+  paintTargets(tiny(), px2, { box: null, ball: null, can: null, table: null, wall: null });
   assert.ok(px2.every((x) => x === 100));
 });
