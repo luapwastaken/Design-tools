@@ -34,7 +34,7 @@ function remember(next: CopyFormat) {
 }
 
 /** text on the clipboard through main (a test run writes to memory), and the toast that says so */
-async function put(text: string, said: ReactNode): Promise<void> {
+export async function copyText(text: string, said: ReactNode): Promise<void> {
   try {
     await ipc.invoke('clipboard.copy', { kind: 'text', data: text });
     toast.show({ icon: 'content_copy', message: said });
@@ -46,13 +46,13 @@ async function put(text: string, said: ReactNode): Promise<void> {
 /** The colour as text on the clipboard, in this format or the remembered one. */
 export function copyColour(o: Oklch, as: CopyFormat = format): Promise<void> {
   const text = formatColour(o, as);
-  return put(text, <>Copied <b>{text}</b></>);
+  return copyText(text, <>Copied <b>{text}</b></>);
 }
 
 /** Several colours, one to a line, in the remembered format; `what` names them in the toast ("Terracotta's 5 colours"). */
 export function copyColours(list: Oklch[], what: string): Promise<void> {
   const label = COPY_FORMATS.find((f) => f.id === format)!.label;
-  return put(list.map((o) => formatColour(o, format)).join('\n'), `Copied ${what} as ${label}.`);
+  return copyText(list.map((o) => formatColour(o, format)).join('\n'), `Copied ${what} as ${label}.`);
 }
 
 export function CopyAs({ value }: { value: Oklch }) {

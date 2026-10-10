@@ -1,6 +1,6 @@
 // The Illustration tool's screen: sections, not a canvas and an inspector. Ramps (left, full height),
 // the Selected ramp (top right), the Colour picker (bottom left of the right column) and a tabbed
-// section (Ramp settings | Light & preview | Light zones | Check values | Paint | Variations, Alt+1-6). A new tab is one more
+// section (Ramp settings | Light & preview | Light zones | Check values | Paint | Variations | Layers, Alt+1-7). A new tab is one more
 // entry in TABS. Paint stays mounted while another tab shows, so it keeps its engine and its painting.
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
@@ -17,6 +17,7 @@ import { newPalette, type Doc } from './actions.ts';
 import { CheckTab } from './Check.tsx';
 import { useChecks, type Checks } from './CheckPane.tsx';
 import { named, type IllustrationDoc } from './doc.ts';
+import { LayersTab } from './LayersTab.tsx';
 import { LightTab } from './Light.tsx';
 import { ZonesTab } from './LightZones.tsx';
 import { Palette } from './Palette.tsx';
@@ -45,6 +46,8 @@ const TABS: { id: Tab; label: string; needsColour?: boolean; when?(c: Ctx): bool
   { id: 'paint', label: 'Paint', render: (c) => <PaintSlot host={c.paint} /> },
   // mounted only while it shows; its grid is worked out from the ramps and the view
   { id: 'variations', label: 'Variations', needsColour: true, render: (c) => <VariationsTab doc={c.doc} d={c.d} v={c.v} /> },
+  // mounted only while it shows; the recipe is solved for the settled ramps
+  { id: 'layers', label: 'Layers', needsColour: true, render: (c) => <LayersTab doc={c.doc} d={c.d} v={c.v} /> },
   // only while the file has notes (an imported palette's warnings); clearing them closes it
   { id: 'notes', label: 'Notes', when: (c) => !!c.d.notes, render: (c) => <NotesModule doc={c.doc} /> },
 ];
@@ -100,7 +103,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
     render: () => t.render(ctx),
   }));
   const tab = (tabs.find((t) => t.id === v.tab && !t.disabled) ?? tabs[0]).id as Tab;
-  const wide = tab === 'variations' || tab === 'zones';
+  const wide = tab === 'variations' || tab === 'zones' || tab === 'layers';
   return (
     <div className={s.view}>
       <DocBar
@@ -127,7 +130,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
             <ResizeHandle edge="bottom" label="Selected ramp height" value={v.rampHeight} min={SIZES.rampHeight[0]} max={SIZES.rampHeight[1]} reset={SIZES.rampHeight[2]} onChange={(rampHeight) => patchView({ rampHeight })} />
           </div>
           <div className={cx(s.lower, wide && s.wide)}>
-            {/* Variations and Light zones have no use for the picker, so the tab takes its width: six palettes, or seven zones in a row, need the room */}
+            {/* Variations, Light zones and Layers have no use for the picker, so the tab takes its width: six palettes, seven zones in a row, or a picture beside its layer stack, need the room */}
             {!wide && (
               <div className={s.cell}>
                 <PickerSection doc={doc} d={d} v={v} />

@@ -32,6 +32,8 @@ const MAX_ZONES = 28;
 export const CANVAS_LABEL = 'Picked from the canvas';
 /** colours clicked in the Light zones grid gather in one set too */
 export const ZONES_LABEL = 'From Light zones';
+/** the layer colours offered from the Layers tab: one set, replaced when offered again */
+export const LAYERS_LABEL = 'From Layers';
 
 /** one set at a time: a new source replaces the last; picks off the canvas add to theirs. `sort`: light to dark, names and materials along */
 export function propose(label: string, colours: Oklch[], names: (string | null)[] = [], more: { from?: Source; sort?: boolean; note?: string; materials?: (MaterialId | undefined)[] } = {}): void {

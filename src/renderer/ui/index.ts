@@ -31,7 +31,7 @@ export { ViewStrip, type ViewStripProps, type ZoomControls } from './ViewStrip.t
 export { SectionHeader, type SectionHeaderProps } from './SectionHeader.tsx';
 export { ConfirmInline, type ConfirmInlineProps } from './ConfirmInline.tsx';
 export { Tooltip } from './Tooltip.tsx';
-export { CopyAs, copyColour, copyColours } from './CopyAs.tsx';
+export { CopyAs, copyColour, copyColours, copyText } from './CopyAs.tsx';
 export { SrgbFix } from './PickerOklch.tsx';
 export { EmptyState, type EmptyStateProps } from './EmptyState.tsx';
 export { Progress, type ProgressProps } from './Progress.tsx';

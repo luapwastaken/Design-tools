@@ -10,6 +10,7 @@ import { emptyDoc, fromPayload, rampOf, setSpec, toPayload, type IllustrationDoc
 import { paintSettings, SIZE, LOAD, type PaintSettings } from './paint-sources.ts';
 import { clearProposals, takeImage, takeSvg } from './proposals.ts';
 import { StatusSlot } from './StatusSlot.tsx';
+import { layerKeys } from './layer-actions.ts';
 import { lockSelected, variationKeys } from './variation-actions.ts';
 import { View } from './View.tsx';
 import { getView, patchView, type IllustrationView } from './view-state.ts';
@@ -88,14 +89,16 @@ export const tool: ToolDefinition<IllustrationDoc> = {
       if (r) doc.transact(r.hero ? 'End the hero colour' : 'Make the hero colour', (d) => setSpec(d, r.id, { hero: !r.hero }));
     };
     return [
-      // first, so the Variations tab's 1 to 6, Space, arrows and Esc win while it shows (and are not there on any other tab)
+      // first, so the Variations tab's 1 to 6, Space, arrows and Esc win while it shows, and the Layers tab's 1 to 3 (and are not there on any other tab)
       ...variationKeys(doc),
+      ...layerKeys(doc),
       { keys: 'Alt+1', label: 'Ramp settings', run: mode('settings') },
       { keys: 'Alt+2', label: 'Light & preview', run: mode('light') },
       { keys: 'Alt+3', label: 'Light zones', run: mode('zones') },
       { keys: 'Alt+4', label: 'Check values', run: mode('check') },
       { keys: 'Alt+5', label: 'Paint', run: mode('paint') },
       { keys: 'Alt+6', label: 'Variations', run: mode('variations') },
+      { keys: 'Alt+7', label: 'Layers', run: mode('layers') },
       { keys: 'Shift+A', label: 'Add a colour', run: () => addBase(doc) },
       { keys: 'Delete', label: 'Delete ramp', run: () => arm(doc) },
       { keys: 'Ctrl+D', label: 'Duplicate ramp', run: () => duplicate(doc) },

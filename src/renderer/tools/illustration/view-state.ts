@@ -7,6 +7,7 @@ import { EXPORT_FORMATS, type ExportFormat } from '../common/ExportPalette.tsx';
 import { createStore } from '../common/store.ts';
 import type { Surround } from '../common/surround.ts';
 import { cleanColour, cleanStrengths, DEFAULT_GROUND } from './light-zones.ts';
+import { cleanLayers, DEFAULT_LAYERS, LAYER_ENUMS, type LayersView } from './layers.ts';
 import { cleanCell, cleanLocks, cleanPath, cleanPicture } from './variations.ts';
 
 const ID = 'illustration';
@@ -14,8 +15,8 @@ const ID = 'illustration';
 export type IllustrationView = {
   /** the selected step or loose swatch (swatch id); null: the first ramp's base */
   selected: string | null;
-  /** the tab of the tabbed section (Alt+1-6) */
-  tab: 'settings' | 'light' | 'zones' | 'check' | 'paint' | 'variations' | 'notes';
+  /** the tab of the tabbed section (Alt+1-7) */
+  tab: 'settings' | 'light' | 'zones' | 'check' | 'paint' | 'variations' | 'layers' | 'notes';
   /** the Ramps section's width, the Selected ramp section's height and the Colour picker's width, in px (drag handles) */
   rampsWidth: number;
   rampHeight: number;
@@ -65,7 +66,7 @@ export type IllustrationView = {
   zoneRim: Oklch | null;
   zoneGround: Oklch;
   zoneValues: boolean;
-};
+} & LayersView; // Layers: which flats are in the recipe, in the background or starred, the parts' ramps, the light mode and blend space, the Rim and Mood
 
 /** [min, max, default] of the three panel sizes */
 export const SIZES = { rampsWidth: [260, 520, 320], rampHeight: [200, 520, 300], pickerWidth: [420, 900, 560] } as const;
@@ -106,10 +107,12 @@ export const DEFAULT_VIEW: IllustrationView = {
   zoneRim: null,
   zoneGround: DEFAULT_GROUND,
   zoneValues: false,
+  ...DEFAULT_LAYERS,
 };
 
 const ENUMS: Partial<Record<keyof IllustrationView, readonly unknown[]>> = {
-  tab: ['settings', 'light', 'zones', 'check', 'paint', 'variations', 'notes'],
+  tab: ['settings', 'light', 'zones', 'check', 'paint', 'variations', 'layers', 'notes'],
+  ...LAYER_ENUMS,
   varMode: ['colours', 'light'],
   show: ['hex', 'name', 'off'],
   proof: ['off', 'protan', 'deutan', 'tritan', 'achromat'],
@@ -167,6 +170,7 @@ function sanitize(raw: unknown): IllustrationView {
   out.zoneStrengths = cleanStrengths(r.zoneStrengths);
   out.zoneRim = cleanColour(r.zoneRim, null);
   out.zoneGround = cleanColour(r.zoneGround, DEFAULT_GROUND);
+  cleanLayers(r, out);
   return out as IllustrationView;
 }
 

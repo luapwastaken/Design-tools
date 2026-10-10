@@ -19,6 +19,7 @@ import { layoutTile, reachOf } from '../shared/pattern/layout.ts';
 import { parseSize } from '../shared/svg/index.ts';
 import { ALGORITHMS } from '../shared/dither/algorithms.ts';
 import type { LibraryItemRef, MaterialId, PatternPayload, Swatch, ToolId } from '../shared/types.ts';
+import { muddyAll, parseRecipeLine, rgbHex, shadeFlat, shadowStack, solveRecipe } from '../shared/palette/recipe.ts';
 import { ZONES } from '../shared/palette/zones.ts';
 import { saveFile, saveToFolder } from './lib/export.ts';
 import type { ExportFormat } from './tools/common/ExportPalette.tsx';
@@ -50,6 +51,8 @@ import { eyedrop, rampsFromLoose } from './tools/illustration/actions.ts';
 import { carryLight, addRamp, baseOf, rampName, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
 import { FINISH_PRESETS } from './tools/illustration/finish.ts';
 import { cleanColour, cleanStrengths, readout as splitText, zoneRig, zoneRows } from './tools/illustration/light-zones.ts';
+import { bustOf } from './tools/illustration/bust.ts';
+import { allFlats, DEFAULT_LAYERS, recipeFlats } from './tools/illustration/layers.ts';
 import { LIGHTS as SCENE_LIGHTS, sceneLight } from './tools/illustration/scene.ts';
 import type { PaintEngine } from './tools/illustration/paint/index.ts';
 import { liveEngine, liveSaves } from './tools/illustration/paint/live.ts';
@@ -341,6 +344,7 @@ async function full(): Promise<void> {
   await variationsUi();
   await variationsIllustrationUi();
   await lightZonesUi();
+  await layersUi();
   await greyscale();
 
   // brief §8: nothing loops, and there is no spinner to run: no running animation repeats, and no loaded
@@ -361,7 +365,7 @@ async function full(): Promise<void> {
   // and a Variations path, open cell and swap role that a hand-edited file could hold
   shell.setView('design', { ...designView(), lockL: true, lockH: true, varPath: [9, 2, 'x'], varOpen: 99, swapRole: 'Nonsense' });
   // Illustration's Variations state likewise: a stray path entry, an out-of-range cell, a lock list with a number in it, subjects that do not exist
-  shell.setView('illustration', { ...illustrationView(), varSeed: 5150, varPath: [9, 2, 'x'], varOpen: 99, lockedRamps: ['keep-1', 4, 'keep-1'], pictureOn: ['sky', 'unicorn', 'skin'], pictureTones: { skin: 'skin-deep', hair: 'nonsense' }, zoneStrengths: [9, 0.5, 'x', 0.25], zoneRim: [0.7, 0.1, 30], zoneGround: [2, 'x', 140], zoneValues: true });
+  shell.setView('illustration', { ...illustrationView(), varSeed: 5150, varPath: [9, 2, 'x'], varOpen: 99, lockedRamps: ['keep-1', 4, 'keep-1'], pictureOn: ['sky', 'unicorn', 'skin'], pictureTones: { skin: 'skin-deep', hair: 'nonsense' }, zoneStrengths: [9, 0.5, 'x', 0.25], zoneRim: [0.7, 0.1, 30], zoneGround: [2, 'x', 140], zoneValues: true, layerRim: 140.4, layerMood: 'x', layerOut: ['gone', 'gone', 4], layerStar: 'x', layerParts: { skin: 'r1', nonsense: 'r2', hair: 7 }, layerLight: 'nope', layerSpace: 'linear', layerRimOn: false });
 
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
   // pending delete is trashed after it (scripts/smoke.mjs checks both)
@@ -3908,7 +3912,7 @@ async function emptyUi(): Promise<void> {
   check('Add colour and From… are two full-size buttons side by side, both at least 24px tall', !!addBtn && !!fromBtn && addBtn.getBoundingClientRect().height >= 24 && fromBtn.getBoundingClientRect().height >= 24 && fromBtn.getBoundingClientRect().left >= addBtn.getBoundingClientRect().right && !document.querySelector('[data-tool="illustration"] [aria-label^="Add colours from"]'), [addBtn?.getBoundingClientRect().height, fromBtn?.getBoundingClientRect().left]);
   check('the New button has a text label', !!button('illustration', 'New'));
   const off = (id: string) => illusTab(id)?.disabled;
-  check('and holds Light, Light zones and Check back until there is a colour, but not Ramp settings or Paint', off('light') === true && off('zones') === true && off('check') === true && off('settings') === false && off('paint') === false, [off('light'), off('zones'), off('check'), off('settings'), off('paint')]);
+  check('and holds Light, Light zones, Check and Layers back until there is a colour, but not Ramp settings or Paint', off('light') === true && off('zones') === true && off('check') === true && off('layers') === true && off('settings') === false && off('paint') === false, [off('light'), off('zones'), off('check'), off('layers'), off('settings'), off('paint')]);
   patchIllustration({ tab: 'light' });
   await sleep(100);
   check('a saved Light tab on an empty palette still shows the start and a usable tab, not an empty lit pane', shows(host('illustration')?.querySelector('section[aria-label="Start"]')));
@@ -4375,6 +4379,227 @@ async function lightZonesUi(): Promise<void> {
   check('G greys every swatch and the ball, and no chrome', sw.length === 28 && sw.every((e) => filterOf(e).includes('dt-grey')) && filterOf(ball()).includes('dt-grey') && filterOf(cell(0, 'core')) === 'none' && filterOf(rowEls()[0].querySelector('p')) === 'none', [sw.length, filterOf(ball()), filterOf(cell(0, 'core'))]);
   bare('g', 'KeyG');
   check('and G turns it off again', !!(await until(() => !greyPref() && document.documentElement.dataset.greyscale !== 'true')), [document.activeElement?.tagName, document.activeElement?.getAttribute('aria-label'), greyPref()]);
+
+  // back as it was
+  clearBases();
+  il.transact('Smoke ramps back', () => was);
+  patchIllustration({ ...snap });
+}
+
+/**
+ * Illustration's Layers tab: a row per ramp in Flats, the layer stack top first (no Cast shadow until a flat is the
+ * background), Flats | Recipe | Target on the keys 1 to 3 only while it shows, a preview pixel that is the typed hex
+ * and percent worked by hand, a star that moves the recipe, Add | Screen, Copy recipe, the layer colours offered as
+ * proposals (and nothing written), a solve that waits for a drag to end, the view kept and never in undo, and G greying
+ * the picture and the chips only.
+ */
+async function layersUi(): Promise<void> {
+  shell.setActive('illustration');
+  const il = illustrationDoc();
+  const [was, snap] = [il.get(), { ...illustrationView() }];
+  const fixture: [Oklch, string, MaterialId][] = [[[0.74, 0.075, 55], 'Skin', 'skin'], [[0.6, 0.12, 140], 'Leaf', 'foliage'], [[0.55, 0.09, 250], 'Shirt', 'cloth'], [[0.78, 0.08, 235], 'Wall', 'paper']];
+  il.transact('Smoke ramps', (d) => fixture.reduce<IllustrationDoc>((x, [b, name, m]) => addRamp(x, b, name, null, m).doc, { ...d, ramps: [], swatches: [], scene: undefined }));
+  patchIllustration({ tab: 'settings', selected: null, proof: 'off', ...DEFAULT_LAYERS });
+  clearBases();
+  const panel = () => host('illustration')?.querySelector<HTMLElement>('[role="tabpanel"]') ?? null;
+  const layer = (k: string) => panel()?.querySelector<HTMLElement>(`[data-layer="${k}"]`) ?? null;
+  const layerKeys = () => [...(panel()?.querySelectorAll('[data-layer]') ?? [])].map((e) => e.getAttribute('data-layer') ?? '');
+  const flatRows = () => [...(panel()?.querySelectorAll<HTMLElement>('[role="group"]') ?? [])].filter((g) => g.querySelector('button[role="checkbox"]'));
+  const flatRow = (name: string) => flatRows().find((g) => g.getAttribute('aria-label') === name) ?? null;
+  const recipeText = () => panel()?.querySelector('pre')?.textContent ?? '';
+  const canvas = () => panel()?.querySelector<HTMLCanvasElement>('canvas') ?? null;
+  const sig = () => {
+    const c = canvas();
+    if (!c) return 0;
+    const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+    let h = 0;
+    for (let i = 0; i < d.length; i += 3) h = (h * 31 + d[i]) | 0;
+    return h;
+  };
+  const model = () => {
+    const v = illustrationView();
+    const flats = recipeFlats(allFlats(il.get(), v), v);
+    return { flats, r: solveRecipe(flats, { space: v.layerSpace, lightMode: v.layerLight }) };
+  };
+  const hexOf = (k: string) => layer(k)?.querySelector('code')?.textContent ?? '';
+  const pctOf = (k: string) => layer(k)?.textContent?.replace(/#[0-9A-F]{6}/, '').match(/(\d+)%/)?.[1] ?? '';
+  const radio = (root: Element | null, text: string) => [...(root?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [])].find((b) => b.textContent?.trim() === text) ?? null;
+  const bare = (key: string, code: string) => {
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    press(key, { code });
+  };
+
+  // the tab sits right after Variations; 1 to 3 do nothing on another tab; Alt+7 opens it
+  const order = [...(host('illustration')?.querySelectorAll('[role="tab"]') ?? [])].map((t) => t.getAttribute('data-tab'));
+  check('Illustration has a Layers tab right after Variations', order.indexOf('layers') === order.indexOf('variations') + 1 && order.indexOf('variations') >= 0, order);
+  bare('3', 'Digit3');
+  await sleep(60);
+  check('the keys 1 to 3 do nothing while another tab shows', illustrationView().layerShow === 'recipe' && illustrationView().tab === 'settings', illustrationView().layerShow);
+  press('7', { code: 'Digit7', altKey: true });
+  const rows0 = await until(() => (flatRows().length === 4 ? flatRows() : null));
+  check('Alt+7 opens it, with one Flats row for each of the four ramps', !!rows0 && illustrationView().tab === 'layers', [flatRows().length, illustrationView().tab]);
+  const boxes = (g: Element) => [...g.querySelectorAll('button[role="checkbox"]')];
+  check('the Flats rows are named for the ramps and offer In the recipe, Background and Matters most', fixture.every(([, n]) => !!flatRow(n)) && flatRows().every((g) => ['In the recipe', 'Background'].every((t) => boxes(g).some((b) => b.textContent === t)) && !!g.querySelector('button[aria-label$="matters most"]')));
+  check('every flat is in the recipe to start, none is the background, none is starred', flatRows().every((g) => boxes(g)[0].getAttribute('aria-checked') === 'true' && boxes(g)[1].getAttribute('aria-checked') === 'false' && g.querySelector('button[aria-label$="matters most"]')?.getAttribute('aria-pressed') === 'false'));
+
+  // the stack, top first; no Cast shadow until a flat is the background
+  const m0 = model();
+  check('the layers read top first: Rim, Mood, Light, then Shadow (a second only if needed), and no Cast shadow', layerKeys().join() === ['rim', 'mood', 'light', ...(m0.r.shadow2 ? ['shadow2'] : []), 'shadow'].join(), layerKeys());
+  check('Shadow is Multiply clipped to the character, with its hex and whole percent from the solve', hexOf('shadow') === m0.r.shadow.hex && pctOf('shadow') === String(m0.r.shadow.pct) && !!layer('shadow')?.textContent?.includes('Multiply') && !!layer('shadow')?.textContent?.includes('clipped to the character'), [hexOf('shadow'), pctOf('shadow'), m0.r.shadow.hex]);
+  check('Rim is Add and Mood is Overlay with typable opacities, the Mood off', !!layer('rim')?.textContent?.includes('Add') && !!layer('mood')?.textContent?.includes('Overlay') && !!layer('rim')?.querySelector('input[aria-label="Rim opacity"]') && !!layer('mood')?.querySelector('input[aria-label="Mood opacity"]') && layer('mood')?.querySelector('button[aria-label="Show Mood"]')?.getAttribute('aria-pressed') === 'false' && layer('rim')?.querySelector('button[aria-label="Show Rim"]')?.getAttribute('aria-pressed') === 'true');
+  check('each layer has a colour chip of content colour, a hex, an opacity and the fit in words', ['rim', 'mood', 'light', 'shadow'].every((k) => !!layer(k)?.querySelector('i[data-colour]') && /^#[0-9A-F]{6}$/.test(hexOf(k)) && /\d+%/.test(layer(k)!.textContent!)) && /close|near|off on/.test(layer('shadow')!.textContent!));
+  const text = panel()?.textContent ?? '';
+  check('under the stack: the all-layers-together fit, the hint, the mode names per app and the recipe as text', text.includes('Shadow, all layers together') && text.includes('Addition in Krita') && text.includes('Linear Dodge (Add) in Photoshop') && text.includes('Add in Clip Studio and Procreate') && text.includes('Add (Glow)') && /^Layer recipe: /.test(recipeText()) && /Shadow: Multiply #[0-9A-F]{6} at \d+%, clipped to the character/.test(recipeText()), recipeText());
+  check('the recipe text does not list the Mood, which is off', !recipeText().includes('Mood:') && recipeText().includes('Rim: Add (Linear Dodge)'), recipeText());
+
+  // the picture: painted, and a preview pixel is the typed hex and percent worked by hand
+  check('Flats | Recipe | Target start on Recipe', radio(panel(), 'Recipe')?.getAttribute('aria-checked') === 'true' && !!radio(panel(), 'Flats') && !!radio(panel(), 'Target'));
+  const recipeSig = sig();
+  const bust = bustOf(520);
+  let at = -1;
+  // under the chin, on the neck: all shadow and nothing else, a few pixels clear of any edge or outline
+  const near = [-5, 0, 5].flatMap((dy) => [-5, 0, 5].map((dx) => dy * 520 + dx));
+  scan: for (let y = 318; y < 335; y++) {
+    for (let x = 230; x < 250; x++) {
+      const p = y * 520 + x;
+      const same = near.every((o) => bust.part[p + o] === 0 && bust.shadow[p + o] > 0.999 && bust.light[p + o] === 0 && bust.rim[p + o] === 0);
+      if (same) {
+        at = p;
+        break scan;
+      }
+    }
+  }
+  const px = (p: number) => rgbHex([...canvas()!.getContext('2d')!.getImageData(p % 520, Math.floor(p / 520), 1, 1).data]);
+  const skin = m0.flats.find((f) => f.name === 'Skin')!;
+  check('a pixel in the neck’s shadow is the skin flat under the Shadow layer, exactly as the typed hex and percent give it', at >= 0 && px(at) === shadeFlat(skin.hex, shadowStack(skin, m0.r)), [at, at >= 0 && px(at), shadeFlat(skin.hex, shadowStack(skin, m0.r))]);
+  bare('1', 'Digit1');
+  const flatsSig = (await until(() => illustrationView().layerShow === 'flats' && sig() !== recipeSig && sig())) || 0;
+  check('1 shows the Flats: the picture changes, the view keeps it, and it is the flat colour at that pixel', illustrationView().layerShow === 'flats' && !!flatsSig && px(at) === skin.hex, [illustrationView().layerShow, px(at), skin.hex]);
+  bare('3', 'Digit3');
+  const targetSig = (await until(() => illustrationView().layerShow === 'target' && sig() !== flatsSig && sig())) || 0;
+  check('3 shows the Target: a third picture, from the ramps’ own steps', !!targetSig && targetSig !== recipeSig, [targetSig, recipeSig]);
+  bare('2', 'Digit2');
+  check('2 is back to the Recipe, as it was', !!(await until(() => illustrationView().layerShow === 'recipe' && sig() === recipeSig)) && radio(panel(), 'Recipe')?.getAttribute('aria-checked') === 'true');
+
+  // Parts: five selects, a default by material, and a choice that moves the picture
+  const partSelects = () => [...(panel()?.querySelectorAll<HTMLButtonElement>('[role="group"][aria-label="Parts"] button[aria-haspopup="listbox"]') ?? [])];
+  check('five Parts selects name the ramp each part shows, skin on Skin, top on Shirt and the background on Wall', partSelects().length === 5 && partSelects()[0].textContent!.includes('Skin') && partSelects()[2].textContent!.includes('Shirt') && partSelects()[4].textContent!.includes('Wall'), partSelects().map((b) => b.textContent));
+  const d0 = il.depth();
+  partSelects()[0].click();
+  (await until(() => optionRow('Shirt')))?.click();
+  check('choosing Shirt for the Skin part changes the picture and is kept in the view, not in undo', !!(await until(() => sig() !== recipeSig)) && Object.values(illustrationView().layerParts).length === 1 && il.depth() === d0, [illustrationView().layerParts, il.depth()]);
+  patchIllustration({ layerParts: {} });
+  await until(() => sig() === recipeSig);
+
+  // Matters most: a star that moves the recipe, never in undo
+  const starred = m0.flats.find((f) => {
+    const v = illustrationView();
+    return solveRecipe(recipeFlats(allFlats(il.get(), { ...v, layerStar: [f.id] }), v), { space: v.layerSpace, lightMode: v.layerLight }).shadow.hex !== m0.r.shadow.hex;
+  });
+  const starBtn = starred && flatRow(starred.name)?.querySelector<HTMLButtonElement>('button[aria-label$="matters most"]');
+  starBtn?.click();
+  const moved = await until(() => hexOf('shadow') !== m0.r.shadow.hex);
+  check('starring a flat moves the recipe to the solve with that flat counting three times, and is not an undo step', !!starBtn && !!moved && starBtn.getAttribute('aria-pressed') === 'true' && illustrationView().layerStar.join() === starred!.id && hexOf('shadow') === model().r.shadow.hex && il.depth() === d0, [starred?.name, hexOf('shadow'), model().r.shadow.hex]);
+  starBtn?.click();
+  check('and unstarring puts it back', !!(await until(() => hexOf('shadow') === m0.r.shadow.hex && pctOf('shadow') === String(m0.r.shadow.pct))) && illustrationView().layerStar.length === 0);
+
+  // a flat out of the recipe is left out of the solve (the picture still shows it)
+  const wallRow = () => flatRow('Wall')!;
+  const toggle = (row: HTMLElement, label: string) => boxes(row).find((b) => b.textContent === label) as HTMLButtonElement;
+  toggle(wallRow(), 'In the recipe').click();
+  const out = await until(() => illustrationView().layerOut.length === 1 && model().flats.length === 3);
+  check('In the recipe off takes the flat out of the solve and out of the count, the picture keeping it', !!out && toggle(wallRow(), 'In the recipe').getAttribute('aria-checked') === 'false' && hexOf('shadow') === model().r.shadow.hex && !!panel()?.textContent?.includes('3 of 4 in the recipe') && !!canvas(), [hexOf('shadow'), model().r.shadow.hex]);
+  toggle(wallRow(), 'In the recipe').click();
+  await until(() => illustrationView().layerOut.length === 0);
+
+  // Background: a Cast shadow row appears, the Shadow stops weighing the flat
+  toggle(wallRow(), 'Background').click();
+  const withCast = await until(() => layer('cast'));
+  const m1 = model();
+  check('Background on a ramp adds a Cast shadow row on the background, solved for that flat alone', !!withCast && !!m1.r.cast && hexOf('cast') === m1.r.cast.hex && !!withCast.textContent?.includes('on the background') && !(m1.flats.find((f) => f.name === 'Wall')!.id in m1.r.shadow.dist) && /Cast shadow: Multiply #[0-9A-F]{6} at \d+%, on the background/.test(recipeText()), [layerKeys(), recipeText()]);
+  check('and the Shadow is clipped to the character, solved without the wall', hexOf('shadow') === m1.r.shadow.hex && Object.keys(m1.r.shadow.dist).length === 3, [hexOf('shadow'), m1.r.shadow.hex]);
+  check('the picture changed: the wall takes the Cast shadow', sig() !== recipeSig);
+
+  // Light: Add | Screen, and Copy recipe
+  const lightRow = () => layer('light');
+  check('the Light row has an Add | Screen switch, on Screen', !!radio(lightRow(), 'Add') && radio(lightRow(), 'Screen')?.getAttribute('aria-checked') === 'true' && illustrationView().layerLight === 'screen');
+  radio(lightRow(), 'Add')!.click();
+  check('Add re-solves the light: the recipe text says Add (Linear Dodge) and the view keeps it', !!(await until(() => recipeText().includes('Light: Add (Linear Dodge) ') && illustrationView().layerLight === 'add')) && hexOf('light') === model().r.light.hex, [recipeText(), hexOf('light'), model().r.light.hex]);
+  radio(lightRow(), 'Screen')!.click();
+  check('Screen puts it back to a Screen line', !!(await until(() => /Light: Screen #[0-9A-F]{6} at \d+%/.test(recipeText()))) && hexOf('light') === model().r.light.hex);
+  const lines = recipeText().split(String.fromCharCode(10)).slice(1);
+  check('every line of the recipe text reads back as a layer to type: a mode, a hex and a whole percent', lines.length >= 4 && lines.every((l) => !!parseRecipeLine(l)), lines);
+  button('illustration', 'Copy recipe')?.click();
+  check('Copy recipe puts the recipe text on the clipboard and says so', !!(await until(() => toastSays('Copied the recipe'))) && utf8((await api.invoke('clipboard.peek'))['text/plain']) === recipeText(), [recipeText(), utf8((await api.invoke('clipboard.peek'))['text/plain'])]);
+
+  // the eyes: an eye off takes the layer out of the text and the picture
+  const shadowEye = () => layer('shadow')!.querySelector<HTMLButtonElement>('button[aria-label="Show Shadow"]')!;
+  const sigOn = sig();
+  shadowEye().click();
+  check('an eye off takes the layer out of the recipe text and the picture', !!(await until(() => !recipeText().includes('Shadow: Multiply') && shadowEye().getAttribute('aria-pressed') === 'false')) && sig() !== sigOn);
+  shadowEye().click();
+  await until(() => recipeText().includes('Shadow: Multiply'));
+
+  // Rim and Mood: a typed opacity is view state, an eye is too, and neither is an undo step
+  const d1 = il.depth();
+  const rimIn = layer('rim')!.querySelector<HTMLInputElement>('input[aria-label="Rim opacity"]')!;
+  typeInto(rimIn, '50');
+  press('Enter', { code: 'Enter' });
+  check('typing 50 in the Rim opacity sets the Rim to 50% in the view and the recipe text, not in undo', !!(await until(() => illustrationView().layerRim === 50 && /Rim: [^\n]* at 50%/.test(recipeText()))) && il.depth() === d1, [illustrationView().layerRim, recipeText()]);
+  layer('mood')!.querySelector<HTMLButtonElement>('button[aria-label="Show Mood"]')!.click();
+  check('the Mood’s eye puts it in the recipe text, Overlay on the whole picture', !!(await until(() => /Mood: Overlay #[0-9A-F]{6} at 15%, over the whole picture/.test(recipeText()))) && illustrationView().layerMoodOn === true && il.depth() === d1, recipeText());
+  layer('mood')!.querySelector<HTMLButtonElement>('button[aria-label="Show Mood"]')!.click();
+  await until(() => !illustrationView().layerMoodOn);
+
+  // Goes muddy lists what the model says, and Advanced folds both blend spaces
+  const warns = muddyAll(model().flats, model().r);
+  const listed = panel()?.querySelectorAll('ul li').length ?? 0;
+  check('Goes muddy lists what the maths flags under the layers shown, or says none does', warns.length ? listed === warns.length : !!panel()?.textContent?.includes('No flat goes muddy under these layers'), [warns.map((w) => w.text), listed]);
+  check('Advanced is there, with Blend in sRGB (as the apps do) | Linear light and a reason for each', !!panel()?.textContent?.includes('Advanced') && ['sRGB (as the apps do)', 'Linear light', 'Krita and Photoshop do', 'blend gamma'].every((t) => !!panel()?.textContent?.includes(t)));
+  radio(panel(), 'Linear light')!.click();
+  check('Linear light re-solves and says so in the recipe header', !!(await until(() => illustrationView().layerSpace === 'linear' && recipeText().includes('blended in linear light'))) && hexOf('shadow') === model().r.shadow.hex, [recipeText().split(String.fromCharCode(10))[0], hexOf('shadow'), model().r.shadow.hex]);
+  radio(panel(), 'sRGB (as the apps do)')!.click();
+  await until(() => illustrationView().layerSpace === 'srgb');
+
+  // Add layer colours to palette: proposals, named like “Shadow · Multiply 80%”, and nothing written
+  const doc0 = il.get();
+  const d2 = il.depth();
+  button('illustration', 'Add layer colours to palette')?.click();
+  const want = layerKeys();
+  const offered = await until(() => (bases.get()?.label === 'From Layers' ? bases.get() : null));
+  const names = offered?.items.map((p) => p.name ?? '') ?? [];
+  check('Add layer colours to palette offers a proposal for each layer, named with its mode and opacity', !!offered && offered.items.length === want.length && want.length >= 5 && names.some((n) => /^Shadow · Multiply \d+%$/.test(n)) && names.some((n) => /^Cast shadow · Multiply \d+%$/.test(n)) && names.some((n) => /^Light · Screen \d+%$/.test(n)) && names.some((n) => /^Rim · Add \d+%$/.test(n)) && names.some((n) => /^Mood · Overlay \d+%$/.test(n)), names);
+  check('and the colours are the hexes shown, with a toast that says what was offered, and the palette and its undo untouched', !!offered && offered.items.every((p, i) => toHex(p.oklch).toUpperCase() === hexOf(want[i])) && !!(await until(() => toastSays('Offered'))) && il.get() === doc0 && il.depth() === d2, [offered?.items.map((p) => toHex(p.oklch)), want.map(hexOf)]);
+  button('illustration', 'Add layer colours to palette')?.click();
+  check('offering the same set again says it was already offered', !!(await until(() => toastSays('Already offered'))) && bases.get()?.items.length === want.length);
+  clearBases();
+
+  // solve on commit: a picker drag moves nothing until it ends
+  const skinBase = baseOf(il.get(), il.get().ramps[0].id)!.id;
+  const held = [hexOf('shadow'), pctOf('shadow'), hexOf('light')].join();
+  il.begin();
+  for (const h of [280, 290, 300]) {
+    il.set((d) => recolour(d, skinBase, [0.4, 0.15, h]));
+    await sleep(40);
+  }
+  await sleep(250);
+  check('a drag on a base colour does not re-solve the layers until it ends', [hexOf('shadow'), pctOf('shadow'), hexOf('light')].join() === held && il.inGesture(), [hexOf('shadow'), held]);
+  il.commit('Smoke drag');
+  check('and the commit re-solves them for the new colour', !!(await until(() => hexOf('shadow') === model().r.shadow.hex && [hexOf('shadow'), pctOf('shadow'), hexOf('light')].join() !== held)), [hexOf('shadow'), model().r.shadow.hex]);
+  ctrlZ();
+  await until(() => hexOf('shadow') === held.split(',')[0]);
+
+  // the view is saved in the workspace and was never an undo step
+  check('the Layers state is saved in the workspace view', ['layerShow', 'layerOut', 'layerBg', 'layerStar', 'layerParts', 'layerLight', 'layerSpace', 'layerRim', 'layerRimOn', 'layerMood', 'layerMoodOn'].every((k) => k in ((shell.view('illustration') as object) ?? {})));
+
+  // G greys the picture and the chips, never the chrome
+  const filterOf = (el: Element | null | undefined) => (el ? getComputedStyle(el).filter : '');
+  bare('g', 'KeyG');
+  await until(() => shell.getState().settings?.greyscale === true && document.documentElement.dataset.greyscale === 'true');
+  const chips = [...(panel()?.querySelectorAll<HTMLElement>('i[data-colour]') ?? [])];
+  check('G greys the picture and every colour chip, and no chrome', chips.length >= 8 && chips.every((e) => filterOf(e).includes('dt-grey')) && filterOf(canvas()).includes('dt-grey') && filterOf(layer('shadow')) === 'none' && filterOf(flatRow('Skin')) === 'none', [chips.length, filterOf(canvas()), filterOf(layer('shadow'))]);
+  bare('g', 'KeyG');
+  check('and G turns it off again', !!(await until(() => shell.getState().settings?.greyscale !== true && document.documentElement.dataset.greyscale !== 'true')));
 
   // back as it was
   clearBases();
@@ -5261,6 +5486,7 @@ async function quiet(): Promise<void> {
   const iv = illustrationView();
   check('Illustration Variations: the seed, the real path entry, the lock list and the real ticks came back; the odd ones were dropped', iv.varSeed === 5150 && iv.varPath.join() === '2' && iv.varOpen === 0 && iv.lockedRamps.join() === 'keep-1' && iv.pictureOn.join() === 'skin,sky' && JSON.stringify(iv.pictureTones) === '{"skin":"skin-deep"}' && iv.swapRamp === '', [iv.varSeed, iv.varPath, iv.varOpen, iv.lockedRamps, iv.pictureOn, iv.pictureTones, iv.swapRamp]);
   check('Light zones: the strengths came back (the odd one default, the high one pulled in), the rim colour kept, a bad ground dropped for the default, Values still on', iv.zoneStrengths.join() === '2,0.5,0.25,0.25' && iv.zoneRim?.join() === '0.7,0.1,30' && iv.zoneGround.join() === '0.55,0.07,60' && iv.zoneValues === true, [iv.zoneStrengths, iv.zoneRim, iv.zoneGround, iv.zoneValues]);
+  check('Layers: the Rim came back pulled in to 100, the odd Mood the default, the list once, only the real part choice, the odd light mode the default, Linear light and the Rim being off kept', iv.layerRim === 100 && iv.layerMood === 15 && iv.layerOut.join() === 'gone' && iv.layerStar.length === 0 && JSON.stringify(iv.layerParts) === '{"skin":"r1"}' && iv.layerLight === 'screen' && iv.layerSpace === 'linear' && iv.layerRimOn === false, [iv.layerRim, iv.layerMood, iv.layerOut, iv.layerStar, iv.layerParts, iv.layerLight, iv.layerSpace, iv.layerRimOn]);
   shell.setActive('design');
   check('the value lock left on in the first pass came back', prefs?.valueLock === true && prefs.hueLock === false, [prefs?.valueLock, prefs?.hueLock]);
   check('the picker style and model chosen in the first pass came back', prefs?.pickerStyle === 'wheel' && prefs.pickerModel === 'rgb' && (await until(() => host('design')?.querySelector('[data-picker="wheel"]'), 5000)), [prefs?.pickerStyle, prefs?.pickerModel]);
