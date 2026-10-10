@@ -18,7 +18,8 @@ import type { Rect } from '../shared/logo/types.ts';
 import { layoutTile, reachOf } from '../shared/pattern/layout.ts';
 import { parseSize } from '../shared/svg/index.ts';
 import { ALGORITHMS } from '../shared/dither/algorithms.ts';
-import type { LibraryItemRef, PatternPayload, Swatch, ToolId } from '../shared/types.ts';
+import type { LibraryItemRef, MaterialId, PatternPayload, Swatch, ToolId } from '../shared/types.ts';
+import { ZONES } from '../shared/palette/zones.ts';
 import { saveFile, saveToFolder } from './lib/export.ts';
 import type { ExportFormat } from './tools/common/ExportPalette.tsx';
 import { decodeFrames } from './lib/frames.ts';
@@ -48,6 +49,8 @@ import { patchView as patchHalftone, status as halftoneStatus } from './tools/ha
 import { eyedrop, rampsFromLoose } from './tools/illustration/actions.ts';
 import { carryLight, addRamp, baseOf, rampName, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
 import { FINISH_PRESETS } from './tools/illustration/finish.ts';
+import { cleanColour, cleanStrengths, readout as splitText, zoneRig, zoneRows } from './tools/illustration/light-zones.ts';
+import { LIGHTS as SCENE_LIGHTS, sceneLight } from './tools/illustration/scene.ts';
 import type { PaintEngine } from './tools/illustration/paint/index.ts';
 import { liveEngine, liveSaves } from './tools/illustration/paint/live.ts';
 import { paintEngineChecks } from './tools/illustration/paint/smoke-checks.ts';
@@ -337,6 +340,7 @@ async function full(): Promise<void> {
   await illustration();
   await variationsUi();
   await variationsIllustrationUi();
+  await lightZonesUi();
   await greyscale();
 
   // brief §8: nothing loops, and there is no spinner to run: no running animation repeats, and no loaded
@@ -357,7 +361,7 @@ async function full(): Promise<void> {
   // and a Variations path, open cell and swap role that a hand-edited file could hold
   shell.setView('design', { ...designView(), lockL: true, lockH: true, varPath: [9, 2, 'x'], varOpen: 99, swapRole: 'Nonsense' });
   // Illustration's Variations state likewise: a stray path entry, an out-of-range cell, a lock list with a number in it, subjects that do not exist
-  shell.setView('illustration', { ...illustrationView(), varSeed: 5150, varPath: [9, 2, 'x'], varOpen: 99, lockedRamps: ['keep-1', 4, 'keep-1'], pictureOn: ['sky', 'unicorn', 'skin'], pictureTones: { skin: 'skin-deep', hair: 'nonsense' } });
+  shell.setView('illustration', { ...illustrationView(), varSeed: 5150, varPath: [9, 2, 'x'], varOpen: 99, lockedRamps: ['keep-1', 4, 'keep-1'], pictureOn: ['sky', 'unicorn', 'skin'], pictureTones: { skin: 'skin-deep', hair: 'nonsense' }, zoneStrengths: [9, 0.5, 'x', 0.25], zoneRim: [0.7, 0.1, 30], zoneGround: [2, 'x', 140], zoneValues: true });
 
   // left running, so the quit meets "Quit anyway?" (answered from --smoke-answer, no dialog) and the
   // pending delete is trashed after it (scripts/smoke.mjs checks both)
@@ -599,7 +603,7 @@ async function variationsIllustrationUi(): Promise<void> {
   reset();
   blur();
 
-  // the tab, after Paint; Alt+5 opens it
+  // the tab, after Paint; Alt+6 opens it
   const order = [...(host('illustration')?.querySelectorAll('[role="tab"]') ?? [])].map((t) => t.getAttribute('data-tab'));
   check('Illustration has a Variations tab right after Paint', order.indexOf('variations') === order.indexOf('paint') + 1 && order.indexOf('paint') >= 0, order);
 
@@ -610,9 +614,9 @@ async function variationsIllustrationUi(): Promise<void> {
   press(' ', { code: 'Space' });
   check('and 3 and Space open no cell and make no set', illustrationView().varOpen === 0 && illustrationView().varSeed === 4242, [illustrationView().varOpen, illustrationView().varSeed]);
   reset();
-  press('5', { code: 'Digit5', altKey: true });
+  press('6', { code: 'Digit6', altKey: true });
   const six = await until(() => (cellButtons().length === 6 ? cellButtons() : null));
-  check('Alt+5 opens the Variations tab, and it shows six cells', !!six && illustrationView().tab === 'variations', [cellButtons().length, illustrationView().tab]);
+  check('Alt+6 opens the Variations tab, and it shows six cells', !!six && illustrationView().tab === 'variations', [cellButtons().length, illustrationView().tab]);
   check('each cell has its number, a light and shadow band, and one row per ramp: a small ball and its steps', !!six && six.every((b, i) => b.textContent!.includes(String(i + 1)) && !!b.querySelector('[data-colour][aria-hidden="true"]') && b.querySelectorAll('[data-ramp]').length === 5 && b.querySelectorAll('canvas').length === 5 && b.querySelectorAll('[data-steps] i').length === 25), six?.map((b) => [b.querySelectorAll('[data-ramp]').length, b.querySelectorAll('canvas').length]));
   check('each step strip has one dot, the base’s', !!six && six.every((b) => [...b.querySelectorAll('[data-ramp]')].every((r) => r.querySelectorAll('[data-steps] i b').length === 1)));
   check('the bar offers Vary the colours and Vary the light, New set and the seed in mono', ['Vary the colours', 'Vary the light', 'New set', 'Seed 4242'].every((t) => panel()?.textContent?.includes(t)), panel()?.textContent?.slice(0, 120));
@@ -3904,7 +3908,7 @@ async function emptyUi(): Promise<void> {
   check('Add colour and From… are two full-size buttons side by side, both at least 24px tall', !!addBtn && !!fromBtn && addBtn.getBoundingClientRect().height >= 24 && fromBtn.getBoundingClientRect().height >= 24 && fromBtn.getBoundingClientRect().left >= addBtn.getBoundingClientRect().right && !document.querySelector('[data-tool="illustration"] [aria-label^="Add colours from"]'), [addBtn?.getBoundingClientRect().height, fromBtn?.getBoundingClientRect().left]);
   check('the New button has a text label', !!button('illustration', 'New'));
   const off = (id: string) => illusTab(id)?.disabled;
-  check('and holds Light and Check back until there is a colour, but not Ramp settings or Paint', off('light') === true && off('check') === true && off('settings') === false && off('paint') === false, [off('light'), off('check'), off('settings'), off('paint')]);
+  check('and holds Light, Light zones and Check back until there is a colour, but not Ramp settings or Paint', off('light') === true && off('zones') === true && off('check') === true && off('settings') === false && off('paint') === false, [off('light'), off('zones'), off('check'), off('settings'), off('paint')]);
   patchIllustration({ tab: 'light' });
   await sleep(100);
   check('a saved Light tab on an empty palette still shows the start and a usable tab, not an empty lit pane', shows(host('illustration')?.querySelector('section[aria-label="Start"]')));
@@ -4217,6 +4221,147 @@ async function startUi(): Promise<void> {
   patchIllustration({ tab: 'paint' });
 }
 
+/**
+ * Illustration's Light zones tab: a row per ramp with seven zone swatches under the light and shadow families,
+ * the value rule on the hexes shown, a preset that writes the palette's light pair as one undo step, a hover that
+ * names the zone on the ball, a click that offers a proposal (and writes nothing), the lights' strengths kept in the
+ * view and never in undo, and G greying the swatches and the ball only.
+ */
+async function lightZonesUi(): Promise<void> {
+  shell.setActive('illustration');
+  const il = illustrationDoc();
+  const [was, snap] = [il.get(), { ...illustrationView() }];
+  const fixture: [Oklch, string, MaterialId][] = [[[0.74, 0.075, 55], 'Skin', 'skin'], [[0.6, 0.12, 140], 'Leaf', 'foliage'], [[0.55, 0.09, 250], 'Shirt', 'cloth'], [[0.58, 0.03, 70], 'Rock', 'stone']];
+  il.transact('Smoke ramps', (d) => fixture.reduce<IllustrationDoc>((x, [b, name, m]) => addRamp(x, b, name, null, m).doc, { ...d, ramps: [], swatches: [], scene: undefined }));
+  patchIllustration({ tab: 'settings', selected: null, zoneStrengths: cleanStrengths(null), zoneRim: null, zoneValues: false, proof: 'off' });
+  clearBases();
+  const panel = () => host('illustration')?.querySelector<HTMLElement>('[role="tabpanel"]') ?? null;
+  const rowEls = () => [...(panel()?.querySelectorAll<HTMLElement>('[role="group"]') ?? [])].filter((g) => g.querySelector('button[data-zone]'));
+  const cell = (row: number, zone: string) => rowEls()[row]?.querySelector<HTMLButtonElement>(`button[data-zone="${zone}"]`) ?? null;
+  const hexOf = (b: Element | null) => b?.textContent?.match(/#[0-9A-F]{6}/)?.[0] ?? '';
+  const ball = () => panel()?.querySelector<HTMLCanvasElement>('canvas') ?? null;
+  const pixels = () => {
+    const c = ball();
+    return c ? c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data.join(',') : '';
+  };
+  const caption = () => panel()?.querySelector<HTMLElement>('section[aria-label="Lit preview"] p')?.textContent ?? '';
+  const over = (el: Element | null, type: 'pointerover' | 'pointerout') => el?.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true }));
+  const hexValue = (hex: string) => valueOf(hexToOklch(hex));
+  const selectedRamp = () => il.get().swatches.find((w) => w.id === illustrationView().selected)?.group;
+  /** the darkest light minus the lightest shadow of each row, on the hexes the cells show */
+  const gaps = () =>
+    rowEls().map((_, i) => {
+      const h = (z: string) => hexValue(hexOf(cell(i, z)));
+      return Math.min(h('highlight'), h('light'), h('halftone'), h('rim')) - Math.max(h('core'), h('reflected'), h('cast'));
+    });
+
+  // the tab sits right after Light & preview; Alt+3 opens it
+  const order = [...(host('illustration')?.querySelectorAll('[role="tab"]') ?? [])].map((t) => t.getAttribute('data-tab'));
+  check('Illustration has a Light zones tab right after Light & preview', order.indexOf('zones') === order.indexOf('light') + 1 && order.indexOf('light') >= 0, order);
+  press('3', { code: 'Digit3', altKey: true });
+  const rows0 = await until(() => (rowEls().length === 4 ? rowEls() : null));
+  check('Alt+3 opens it, with one row for each of the four ramps', !!rows0 && illustrationView().tab === 'zones', [rowEls().length, illustrationView().tab]);
+
+  // the grid: the families, the column heads with their one-line sources, seven swatches a row, the split readout
+  const text = panel()?.textContent ?? '';
+  check('the families are named, and each column says where its light comes from', ['Light family', 'Shadow family', 'Lit edge', 'Highlight', 'Halftone', 'Core shadow', 'Reflected light', 'Cast shadow', 'Rim', 'fill + bounce', 'rim + fill'].every((w) => text.includes(w)), text.slice(0, 200));
+  check('each row has seven zone swatches in order, and names its material', !!rows0 && rows0.every((r) => [...r.querySelectorAll('button[data-zone]')].map((b) => b.getAttribute('data-zone')).join() === 'highlight,light,halftone,core,reflected,cast,rim') && rows0[0].textContent!.includes('Skin') && rows0[1].textContent!.includes('Foliage'));
+  const model = zoneRows(il.get(), zoneRig(il.get(), illustrationView()));
+  check('the hexes shown are the maths’ own, and the readout is the row’s split', !!rows0 && model.every((m, i) => ZONES.every((z) => hexOf(cell(i, z)) === toHex(m.result.zones[z]).toUpperCase()) && rows0[i].textContent!.includes(splitText(m.result.split))), model.map((m) => splitText(m.result.split)));
+  check('every shadow is darker than every light, on the hexes shown', gaps().every((g) => g >= 0.02 - 0.006), gaps());
+  check('swatches carry content colour; the readout is chrome', rowEls().every((r) => [...r.querySelectorAll('button[data-zone] i')].every((i) => i.hasAttribute('data-colour'))) && !rowEls()[0].querySelector('p')?.hasAttribute('data-colour'));
+
+  // Values shows each colour's value
+  check('Values starts off: no cell shows a value', !panel()?.textContent?.includes('value 0.'));
+  button('illustration', 'Values')?.click();
+  check('Values shows each cell’s value and is kept in the view', !!(await until(() => panel()?.textContent?.includes('value 0.'))) && illustrationView().zoneValues === true && cell(0, 'core')!.textContent!.includes(`value ${valueOf(model[0].result.zones.core).toFixed(2)}`));
+  button('illustration', 'Values')?.click();
+  check('and the same button hides them again', !!(await until(() => !panel()?.textContent?.includes('value 0.'))) && illustrationView().zoneValues === false);
+
+  // clicking a row's name selects its ramp
+  const second = il.get().ramps[1].id;
+  rowEls()[1].querySelector<HTMLButtonElement>('button[aria-pressed]')!.click();
+  check('clicking a row’s name selects that ramp, as the Ramps panel does', !!(await until(() => selectedRamp() === second)) && rowEls()[1].querySelector('button[aria-pressed="true"]') !== null, [selectedRamp(), second]);
+
+  // hovering a cell rings its zone on the ball and names it; leaving takes the ring away
+  const before = pixels();
+  over(cell(1, 'core'), 'pointerover');
+  const named = await until(() => (caption().includes('Core shadow') ? caption() : null));
+  check('pointing at a cell names the zone, its hex and a hint under the ball', !!named && named.includes(hexOf(cell(1, 'core'))) && named.includes('Where the light runs out'), named);
+  check('and rings it on the ball: the picture changes', pixels() !== before);
+  over(cell(1, 'core'), 'pointerout');
+  await until(() => !caption().includes('Core shadow'));
+  check('leaving it puts the ball back as it was', pixels() === before);
+  check('the ball is one 280 px canvas of content colour, painted', !!ball() && ball()!.hasAttribute('data-colour') && ball()!.width === 280 && /[1-9]/.test(before.slice(0, 4000)));
+
+  // clicking a cell offers a proposal; nothing is written until it is accepted
+  const depth = il.depth();
+  const doc0 = il.get();
+  cell(0, 'core')!.click();
+  const one = await until(() => (bases.get()?.items.length === 1 ? bases.get() : null));
+  check('clicking a cell offers its colour as a proposal named like “Skin core shadow”', !!one && one.label === 'From Light zones' && one.items[0].name === 'Skin core shadow' && toHex(one.items[0].oklch).toUpperCase() === hexOf(cell(0, 'core')), [one?.label, one?.items.map((p) => p.name)]);
+  check('and writes nothing: the palette and its undo are as they were', il.get() === doc0 && il.depth() === depth);
+  check('the click also selected that row’s ramp', !!(await until(() => selectedRamp() === il.get().ramps[0].id)));
+  button('illustration', 'Add row')?.click();
+  const seven = await until(() => (bases.get()?.items.length === 7 ? bases.get() : null));
+  check('Add row offers all seven of its colours, the one already offered not twice', !!seven && new Set(seven.items.map((p) => p.name)).size === 7 && seven.items.some((p) => p.name === 'Skin cast shadow') && seven.items.every((p) => p.material === 'skin'), seven?.items.map((p) => p.name));
+  clearBases();
+
+  // a preset writes the palette's light pair, as the Light row does: one undo step, the Ramps panel follows
+  const preset = () => sceneLight(il.get()).preset?.id;
+  const picker = () => [...(panel()?.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="listbox"]') ?? [])].find((b) => b.textContent?.includes('Daylight'));
+  check('the light starts as Daylight', preset() === 'daylight' && !!picker(), preset());
+  const d1 = il.depth();
+  const base0 = il.get();
+  const daylightLight = base0.ramps[0].light.join();
+  picker()!.click();
+  (await until(() => optionRow('Golden hour')))?.click();
+  const golden = SCENE_LIGHTS.find((l) => l.id === 'golden')!;
+  check('choosing Golden hour lights every ramp with its pair as one undo step', !!(await until(() => preset() === 'golden')) && il.depth() === d1 + 1 && il.get().ramps.every((r) => r.light.join() === golden.light.join() && r.shadow.join() === golden.shadow.join()), [preset(), il.depth(), d1]);
+  check('the zones followed the light, and the four strengths took the preset’s', !!(await until(() => hexOf(cell(0, 'light')) !== toHex(model[0].result.zones.light).toUpperCase())) && illustrationView().zoneStrengths.join() === golden.strengths!.join() && illustrationView().zoneRim === null, illustrationView().zoneStrengths);
+  ctrlZ();
+  check('one Ctrl+Z puts the light pair back, the strengths being the view’s', !!(await until(() => preset() === 'daylight')) && il.depth() === d1 && il.get().ramps[0].light.join() === daylightLight);
+
+  // the lights: a strength slider and number for each, a Kelvin field on the key, a Ground colour for the bounce
+  const strengths = () => [...(panel()?.querySelectorAll<HTMLInputElement>('input[aria-label="Strength"]') ?? [])];
+  check('each of the four lights has a strength number field', strengths().length === 4, strengths().length);
+  check('the Key has a Kelvin field and says what its colour reads as', !!panel()?.querySelector('input[aria-label="Kelvin"]') && /about \d+ K|off the blackbody line/.test(panel()?.textContent ?? ''));
+  check('the Bounce has a Ground colour', (panel()?.textContent ?? '').includes('Ground'));
+
+  // a strength typed in the field moves the zones and the view, and is not an undo step
+  const d2 = il.depth();
+  const core0 = hexOf(cell(0, 'core'));
+  const fill = strengths()[1];
+  fill.focus();
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(fill, '0.9');
+  fill.dispatchEvent(new Event('input', { bubbles: true }));
+  press('Enter', { code: 'Enter' });
+  check('typing a Fill strength lifts the shadows and is kept in the view, not in undo', !!(await until(() => illustrationView().zoneStrengths[1] === 0.9)) && !!(await until(() => hexOf(cell(0, 'core')) !== core0)) && il.depth() === d2, [illustrationView().zoneStrengths, il.depth(), d2]);
+  check('and the value rule still holds on the hexes at that strength', gaps().every((g) => g >= 0.02 - 0.006), gaps());
+  check('the lights are saved in the workspace view', ['zoneStrengths', 'zoneRim', 'zoneGround', 'zoneValues'].every((k) => k in ((shell.view('illustration') as object) ?? {})));
+  check('a saved view that is odd is made sound', cleanStrengths([9, -3, 'x']).join() === '1,0.3,0.25,0.5' && cleanStrengths([9, -3, NaN, 0.5]).join() === '2,0,0.25,0.5' && cleanColour([2, 'x', 3], null) === null && cleanColour([0.6, 0.9, 140], null)!.every(Number.isFinite));
+
+  // G greys the swatches and the ball, never the chrome
+  const filterOf = (el: Element | null | undefined) => (el ? getComputedStyle(el).filter : '');
+  // a bare key does not fire in a text field, and the strength field keeps taking the focus back
+  const bare = (key: string, code: string) => {
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    press(key, { code });
+  };
+  const greyPref = () => shell.getState().settings?.greyscale === true;
+  bare('g', 'KeyG');
+  await until(() => greyPref() && document.documentElement.dataset.greyscale === 'true');
+  const sw = [...(panel()?.querySelectorAll<HTMLElement>('button[data-zone] i') ?? [])];
+  check('G greys every swatch and the ball, and no chrome', sw.length === 28 && sw.every((e) => filterOf(e).includes('dt-grey')) && filterOf(ball()).includes('dt-grey') && filterOf(cell(0, 'core')) === 'none' && filterOf(rowEls()[0].querySelector('p')) === 'none', [sw.length, filterOf(ball()), filterOf(cell(0, 'core'))]);
+  bare('g', 'KeyG');
+  check('and G turns it off again', !!(await until(() => !greyPref() && document.documentElement.dataset.greyscale !== 'true')), [document.activeElement?.tagName, document.activeElement?.getAttribute('aria-label'), greyPref()]);
+
+  // back as it was
+  clearBases();
+  il.transact('Smoke ramps back', () => was);
+  patchIllustration({ ...snap });
+}
+
 /** a hex colour's value (Rec. 709 luma), for sorting checks */
 function hexValue(hex: string): number {
   const h = hex.replace('#', '');
@@ -4233,13 +4378,13 @@ async function modesUi(): Promise<void> {
   const tab = () => illustrationView().tab;
   const chord = (n: string) => press(n, { code: `Digit${n}`, altKey: true });
   const seen: string[] = [];
-  for (const [n, want] of [['2', 'light'], ['3', 'check'], ['1', 'settings'], ['4', 'paint']] as const) {
+  for (const [n, want] of [['2', 'light'], ['3', 'zones'], ['4', 'check'], ['1', 'settings'], ['5', 'paint']] as const) {
     chord(n);
     await until(() => tab() === want, 1000);
     seen.push(tab());
   }
-  check('Alt+1 to Alt+4 switch Ramp settings, Light & preview, Check values and Paint', seen.join() === 'light,check,settings,paint', seen);
-  const picked = () => ['settings', 'light', 'check', 'paint'].filter((id) => illusTab(id)?.getAttribute('aria-selected') === 'true');
+  check('Alt+1 to Alt+5 switch Ramp settings, Light & preview, Light zones, Check values and Paint', seen.join() === 'light,zones,check,settings,paint', seen);
+  const picked = () => ['settings', 'light', 'zones', 'check', 'paint'].filter((id) => illusTab(id)?.getAttribute('aria-selected') === 'true');
   check('and the tab strip shows the one that is on', picked().join() === 'paint', picked());
   // clicking a tab, and the choice kept in the workspace (view state) for the next launch
   illusTab('light')?.click();
@@ -4250,7 +4395,7 @@ async function modesUi(): Promise<void> {
   press('b', { code: 'KeyB' });
   await sleep(60);
   check('B does nothing while another tab shows', paint().tool === 'smudge', paint().tool);
-  chord('4');
+  chord('5');
   await until(() => tab() === 'paint', 1000);
   press('b', { code: 'KeyB' });
   check('and picks the Brush while Paint shows', await until(() => paint().tool === 'paint', 1000), paint().tool);
@@ -4265,7 +4410,7 @@ async function modesUi(): Promise<void> {
   host('illustration')?.querySelector<HTMLButtonElement>(`[data-step="${step.id}"]`)?.click();
   await until(() => illustrationView().selected === step.id);
   const kept: string[] = [];
-  for (const n of ['2', '3', '4', '1']) {
+  for (const n of ['2', '3', '4', '5', '1']) {
     chord(n);
     await sleep(80);
     const chip = host('illustration')?.querySelector(`[data-step="${step.id}"]`);
@@ -4350,7 +4495,7 @@ async function modesUi(): Promise<void> {
     await sleep(60);
     check('pressing the object does not teleport the sun to it', JSON.stringify(light()) === before, light());
   }
-  chord('4');
+  chord('5');
   await until(() => tab() === 'paint', 1000);
 }
 
@@ -5095,6 +5240,7 @@ async function quiet(): Promise<void> {
   shell.setActive('illustration');
   const iv = illustrationView();
   check('Illustration Variations: the seed, the real path entry, the lock list and the real ticks came back; the odd ones were dropped', iv.varSeed === 5150 && iv.varPath.join() === '2' && iv.varOpen === 0 && iv.lockedRamps.join() === 'keep-1' && iv.pictureOn.join() === 'skin,sky' && JSON.stringify(iv.pictureTones) === '{"skin":"skin-deep"}' && iv.swapRamp === '', [iv.varSeed, iv.varPath, iv.varOpen, iv.lockedRamps, iv.pictureOn, iv.pictureTones, iv.swapRamp]);
+  check('Light zones: the strengths came back (the odd one default, the high one pulled in), the rim colour kept, a bad ground dropped for the default, Values still on', iv.zoneStrengths.join() === '2,0.5,0.25,0.25' && iv.zoneRim?.join() === '0.7,0.1,30' && iv.zoneGround.join() === '0.55,0.07,60' && iv.zoneValues === true, [iv.zoneStrengths, iv.zoneRim, iv.zoneGround, iv.zoneValues]);
   shell.setActive('design');
   check('the value lock left on in the first pass came back', prefs?.valueLock === true && prefs.hueLock === false, [prefs?.valueLock, prefs?.hueLock]);
   check('the picker style and model chosen in the first pass came back', prefs?.pickerStyle === 'wheel' && prefs.pickerModel === 'rgb' && (await until(() => host('design')?.querySelector('[data-picker="wheel"]'), 5000)), [prefs?.pickerStyle, prefs?.pickerModel]);

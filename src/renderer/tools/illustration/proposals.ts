@@ -27,7 +27,11 @@ export const picture = createStore<{ name: string; pixels: ImageData; k: number 
 export const COLOURS = { min: 3, max: 12, start: 6 };
 /** picks off the canvas gather in one set; past this the oldest goes */
 const MAX_PICKS = 12;
+/** a few rows of seven */
+const MAX_ZONES = 28;
 export const CANVAS_LABEL = 'Picked from the canvas';
+/** colours clicked in the Light zones grid gather in one set too */
+export const ZONES_LABEL = 'From Light zones';
 
 /** one set at a time: a new source replaces the last; picks off the canvas add to theirs. `sort`: light to dark, names and materials along */
 export function propose(label: string, colours: Oklch[], names: (string | null)[] = [], more: { from?: Source; sort?: boolean; note?: string; materials?: (MaterialId | undefined)[] } = {}): void {
@@ -35,7 +39,7 @@ export function propose(label: string, colours: Oklch[], names: (string | null)[
   if (more.sort) items = items.sort((a, b) => valueOf(b.oklch) - valueOf(a.oklch));
   if (more.from !== 'image') picture.set(null); // another source: the picture's pixels go
   const cur = proposals.get();
-  const next = label === CANVAS_LABEL && cur?.label === CANVAS_LABEL ? [...cur.items, ...items].slice(-MAX_PICKS) : items;
+  const next = (label === CANVAS_LABEL || label === ZONES_LABEL) && cur?.label === label ? [...cur.items, ...items].slice(-(label === ZONES_LABEL ? MAX_ZONES : MAX_PICKS)) : items;
   proposals.set(next.length ? { label, items: next, ...(more.from && { from: more.from }), ...(more.note && { note: more.note }) } : null);
 }
 

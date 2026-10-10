@@ -1,0 +1,52 @@
+/* Light zones: the grid on the left (a row per ramp, a column per zone, a gutter after each family) and the
+   lit preview over the four lights on the right. Only the swatches and the ball carry content colour; the
+   selected row and the pointed-at cell are background changes, never a stripe. Nothing animates. */
+.tab { flex: 1; display: flex; flex-direction: column; min-height: 0; container-type: inline-size; }
+.layout { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 12px; min-height: 0; }
+@container (max-width: 859px) { .layout { grid-template-columns: minmax(0, 1fr); grid-auto-rows: min-content; overflow: auto; } }
+.main { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
+.side { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
+.side > * { flex: none; }
+.hint { margin: 0; color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }
+
+.bar { display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.seen { display: inline-flex; align-items: center; gap: 8px; }
+.lab { color: var(--ink-3); font-size: var(--fs-meta); white-space: nowrap; }
+
+.scroll { flex: 1; min-height: 0; overflow: auto; }
+.grid { --head-w: 150px; display: grid; gap: 6px; min-width: 760px; }
+.line { display: grid; grid-template-columns: var(--head-w) repeat(3, minmax(0, 1fr)) 10px repeat(3, minmax(0, 1fr)) 10px minmax(0, 1fr); column-gap: 6px; align-items: start; }
+
+.band { padding: 3px 8px; border-radius: 7px; background: var(--well); color: var(--ink-3); font: 500 var(--fs-caps)/1.2 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; }
+.head { min-width: 0; padding: 0 3px; }
+.head b { display: block; color: var(--ink); font-weight: 500; font-size: var(--fs-row); }
+.head small { display: block; color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.25; }
+
+.row { padding: 6px 0 4px; border-radius: 10px; }
+.row.on { background: var(--well); }
+.rowh { grid-row: 1 / span 2; display: grid; gap: 4px; align-content: start; min-width: 0; padding: 0 8px; }
+.name { min-width: 0; min-height: 24px; overflow: hidden; padding: 2px 0; text-align: left; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font: 500 var(--fs-row)/1.2 var(--font-sans); }
+.name:hover { color: var(--ink); text-decoration: underline; }
+.material { color: var(--ink-3); font-size: var(--fs-meta); }
+.rowh button:last-child { justify-self: start; }
+
+.cell { display: grid; gap: 3px; min-width: 0; padding: 3px; border-radius: 9px; text-align: left; }
+.cell:hover, .cell:focus-visible { background: var(--well-hover); }
+.row.on .cell:hover, .row.on .cell:focus-visible { background: var(--raise); }
+.sw { display: block; height: 48px; border-radius: 7px; box-shadow: inset 0 0 0 1px var(--edge); }
+.hex { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 5px; color: var(--ink-2); font: 400 var(--fs-unit)/1.3 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
+.val { color: var(--ink-3); font: 400 var(--fs-unit)/1.3 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
+.held { padding: 0 4px; border-radius: 4px; background: var(--signal-soft); color: var(--ink); font: 400 var(--fs-unit)/1.3 var(--font-sans); }
+.split { grid-column: 2 / -1; margin: 0; padding: 0 4px; color: var(--ink-3); font: 400 var(--fs-unit)/1.3 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
+
+.preview { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--r-mod); background: var(--module); box-shadow: inset 0 0 0 1px var(--line); }
+.title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0; color: var(--ink); font: 500 var(--fs-row)/1.2 var(--font-sans); }
+.of { min-width: 0; overflow: hidden; color: var(--ink-2); font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.ball { display: block; width: 100%; max-width: 360px; height: auto; margin: 0 auto; border-radius: 8px; aspect-ratio: 1; }
+.caption { min-height: 2.8em; margin: 0; color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.4; }
+.caption b { color: var(--ink); font-weight: 500; }
+.mono { font: 400 var(--fs-unit)/1.3 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
+
+.lights { display: flex; flex-direction: column; gap: var(--gap); }
+/* the colour chips are 24px to hit, like every control (the shared chip is 20) */
+.lights button[aria-haspopup="dialog"] { width: 24px; height: 24px; }

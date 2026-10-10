@@ -6,6 +6,7 @@ import { shell } from '../../shell/core/index.ts';
 import { EXPORT_FORMATS, type ExportFormat } from '../common/ExportPalette.tsx';
 import { createStore } from '../common/store.ts';
 import type { Surround } from '../common/surround.ts';
+import { cleanColour, cleanStrengths, DEFAULT_GROUND } from './light-zones.ts';
 import { cleanCell, cleanLocks, cleanPath, cleanPicture } from './variations.ts';
 
 const ID = 'illustration';
@@ -13,8 +14,8 @@ const ID = 'illustration';
 export type IllustrationView = {
   /** the selected step or loose swatch (swatch id); null: the first ramp's base */
   selected: string | null;
-  /** the tab of the tabbed section (Alt+1-5) */
-  tab: 'settings' | 'light' | 'check' | 'paint' | 'variations' | 'notes';
+  /** the tab of the tabbed section (Alt+1-6) */
+  tab: 'settings' | 'light' | 'zones' | 'check' | 'paint' | 'variations' | 'notes';
   /** the Ramps section's width, the Selected ramp section's height and the Colour picker's width, in px (drag handles) */
   rampsWidth: number;
   rampHeight: number;
@@ -59,6 +60,11 @@ export type IllustrationView = {
   pictureTones: Record<string, string>;
   /** What's in the picture shows its ticks (closed, it is one line that says how many are ticked) */
   pictureOpen: boolean;
+  /** Light zones: how strong the key, fill, bounce and rim are, the rim's colour when set (null: the key's), the ground the bounce comes off, and whether each cell shows its value */
+  zoneStrengths: number[];
+  zoneRim: Oklch | null;
+  zoneGround: Oklch;
+  zoneValues: boolean;
 };
 
 /** [min, max, default] of the three panel sizes */
@@ -96,10 +102,14 @@ export const DEFAULT_VIEW: IllustrationView = {
   pictureOn: [],
   pictureTones: {},
   pictureOpen: false,
+  zoneStrengths: cleanStrengths(null),
+  zoneRim: null,
+  zoneGround: DEFAULT_GROUND,
+  zoneValues: false,
 };
 
 const ENUMS: Partial<Record<keyof IllustrationView, readonly unknown[]>> = {
-  tab: ['settings', 'light', 'check', 'paint', 'variations', 'notes'],
+  tab: ['settings', 'light', 'zones', 'check', 'paint', 'variations', 'notes'],
   varMode: ['colours', 'light'],
   show: ['hex', 'name', 'off'],
   proof: ['off', 'protan', 'deutan', 'tritan', 'achromat'],
@@ -153,6 +163,10 @@ function sanitize(raw: unknown): IllustrationView {
   out.varSeed = Math.abs(Math.floor(out.varSeed as number)) || DEFAULT_VIEW.varSeed;
   out.lockedRamps = cleanLocks(r.lockedRamps);
   Object.assign(out, cleanPicture(r.pictureOn, r.pictureTones));
+  // Light zones: four strengths in their ranges, two colours sRGB can show (the rim's may be none)
+  out.zoneStrengths = cleanStrengths(r.zoneStrengths);
+  out.zoneRim = cleanColour(r.zoneRim, null);
+  out.zoneGround = cleanColour(r.zoneGround, DEFAULT_GROUND);
   return out as IllustrationView;
 }
 

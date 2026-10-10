@@ -13,6 +13,7 @@ export { Slider, type SliderProps } from './Slider.tsx';
 export { Ticks } from './Ticks.tsx';
 export { useDocNumber, useDocColour } from './bind.ts';
 export { ColorField, type ColorFieldProps } from './ColorField.tsx';
+export { KelvinField } from './KelvinField.tsx';
 export { Popover } from './Popover.tsx';
 export type { Match } from './PickerHold.tsx';
 export { PickerModelSelect } from './PickerNumbers.tsx';

@@ -1,6 +1,6 @@
 // The Illustration tool's screen: sections, not a canvas and an inspector. Ramps (left, full height),
 // the Selected ramp (top right), the Colour picker (bottom left of the right column) and a tabbed
-// section (Ramp settings | Light & preview | Check values | Paint | Variations, Alt+1-5). A new tab is one more
+// section (Ramp settings | Light & preview | Light zones | Check values | Paint | Variations, Alt+1-6). A new tab is one more
 // entry in TABS. Paint stays mounted while another tab shows, so it keeps its engine and its painting.
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
@@ -18,6 +18,7 @@ import { CheckTab } from './Check.tsx';
 import { useChecks, type Checks } from './CheckPane.tsx';
 import { named, type IllustrationDoc } from './doc.ts';
 import { LightTab } from './Light.tsx';
+import { ZonesTab } from './LightZones.tsx';
 import { Palette } from './Palette.tsx';
 import { PaintPane } from './PaintPane.tsx';
 import { PickerSection } from './PickerSection.tsx';
@@ -37,6 +38,8 @@ type Ctx = { doc: Doc; d: IllustrationDoc; v: IllustrationView; checks: Checks; 
 const TABS: { id: Tab; label: string; needsColour?: boolean; when?(c: Ctx): boolean; badge?(c: Ctx): number; render(c: Ctx): React.ReactNode }[] = [
   { id: 'settings', label: 'Ramp settings', render: (c) => <RampSettings doc={c.doc} d={c.d} v={c.v} /> },
   { id: 'light', label: 'Light & preview', needsColour: true, render: (c) => <LightTab doc={c.doc} d={c.d} v={c.v} /> },
+  // mounted only while it shows; its rows are worked out from the ramps and the palette's light
+  { id: 'zones', label: 'Light zones', needsColour: true, render: (c) => <ZonesTab doc={c.doc} d={c.d} v={c.v} /> },
   // mounted only while it shows
   { id: 'check', label: 'Check values', needsColour: true, badge: (c) => c.checks.problems, render: (c) => <CheckTab key={c.source} doc={c.doc} d={c.d} v={c.v} checks={c.checks} /> },
   { id: 'paint', label: 'Paint', render: (c) => <PaintSlot host={c.paint} /> },
@@ -97,6 +100,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
     render: () => t.render(ctx),
   }));
   const tab = (tabs.find((t) => t.id === v.tab && !t.disabled) ?? tabs[0]).id as Tab;
+  const wide = tab === 'variations' || tab === 'zones';
   return (
     <div className={s.view}>
       <DocBar
@@ -122,9 +126,9 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
             <SelectedRamp doc={doc} d={d} v={v} />
             <ResizeHandle edge="bottom" label="Selected ramp height" value={v.rampHeight} min={SIZES.rampHeight[0]} max={SIZES.rampHeight[1]} reset={SIZES.rampHeight[2]} onChange={(rampHeight) => patchView({ rampHeight })} />
           </div>
-          <div className={cx(s.lower, tab === 'variations' && s.wide)}>
-            {/* Variations has no use for the picker, so the tab takes its width: six palettes need the room */}
-            {tab !== 'variations' && (
+          <div className={cx(s.lower, wide && s.wide)}>
+            {/* Variations and Light zones have no use for the picker, so the tab takes its width: six palettes, or seven zones in a row, need the room */}
+            {!wide && (
               <div className={s.cell}>
                 <PickerSection doc={doc} d={d} v={v} />
                 <ResizeHandle label="Colour picker width" value={v.pickerWidth} min={SIZES.pickerWidth[0]} max={SIZES.pickerWidth[1]} reset={SIZES.pickerWidth[2]} onChange={(pickerWidth) => patchView({ pickerWidth })} />

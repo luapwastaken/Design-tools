@@ -8,7 +8,10 @@ import type { MaterialId, RampSpec } from '../../../shared/types.ts';
 import { baseOf, looseOf, MAX_RAMPS, type IllustrationDoc } from './doc.ts';
 
 export type LightPair = { light: Oklch; shadow: Oklch };
-export type LightPreset = LightPair & { id: string; label: string };
+/** [key, fill, bounce, rim]: how strong each of the four lights is (Light zones) */
+export type Strengths = [number, number, number, number];
+/** `kelvin`: set where a preset is a colour temperature (the Kelvin field shows it); `strengths`: what Light zones starts its four lights at */
+export type LightPreset = LightPair & { id: string; label: string; kelvin?: number; strengths?: Strengths };
 
 /**
  * The scene lights: the colour the lit side leans to, and the colour its shadow does (warm light, cool
@@ -16,14 +19,14 @@ export type LightPreset = LightPair & { id: string; label: string };
  * how dark it goes, so choosing one visibly moves the ramps (test/illustration-scene.test.ts).
  */
 export const LIGHTS: LightPreset[] = [
-  { id: 'daylight', label: 'Daylight', ...DAYLIGHT },
-  { id: 'golden', label: 'Golden hour', light: [0.87, 0.09, 65], shadow: [0.36, 0.105, 333] },
-  { id: 'dusk', label: 'Dusk', light: [0.675, 0.16, 1.5], shadow: [0.306, 0.121, 292] },
-  { id: 'twilight', label: 'Twilight', light: [0.64, 0.07, 300], shadow: [0.287, 0.065, 250] },
-  { id: 'moon', label: 'Moonlight', light: [0.777, 0.065, 215], shadow: [0.25, 0.067, 261] },
-  { id: 'overcast', label: 'Overcast', light: [0.84, 0.028, 233], shadow: [0.48, 0.039, 240] },
-  { id: 'interior', label: 'Warm interior', light: [0.91, 0.09, 95], shadow: [0.37, 0.083, 27] },
-  { id: 'studio', label: 'Studio neutral', light: [0.978, 0.008, 90], shadow: [0.293, 0.006, 270] },
+  { id: 'daylight', label: 'Daylight', ...DAYLIGHT, strengths: [1, 0.3, 0.25, 0.5] },
+  { id: 'golden', label: 'Golden hour', light: [0.87, 0.09, 65], shadow: [0.36, 0.105, 333], strengths: [1, 0.28, 0.3, 0.7] },
+  { id: 'dusk', label: 'Dusk', light: [0.675, 0.16, 1.5], shadow: [0.306, 0.121, 292], strengths: [0.8, 0.35, 0.2, 0.6] },
+  { id: 'twilight', label: 'Twilight', light: [0.64, 0.07, 300], shadow: [0.287, 0.065, 250], strengths: [0.6, 0.4, 0.15, 0.5] },
+  { id: 'moon', label: 'Moonlight', light: [0.777, 0.065, 215], shadow: [0.25, 0.067, 261], strengths: [0.55, 0.35, 0.15, 0.6] },
+  { id: 'overcast', label: 'Overcast', light: [0.84, 0.028, 233], shadow: [0.48, 0.039, 240], strengths: [0.45, 0.75, 0.2, 0.1] },
+  { id: 'interior', label: 'Warm interior', light: [0.91, 0.09, 95], shadow: [0.37, 0.083, 27], strengths: [0.9, 0.3, 0.35, 0.3] },
+  { id: 'studio', label: 'Studio neutral', light: [0.978, 0.008, 90], shadow: [0.293, 0.006, 270], strengths: [1, 0.35, 0.2, 0.8] },
 ];
 
 const near = (a: Oklch, b: Oklch) => a.every((v, i) => Math.abs(v - b[i]) < 1e-6);

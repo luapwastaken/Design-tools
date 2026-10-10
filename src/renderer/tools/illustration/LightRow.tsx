@@ -11,33 +11,36 @@ import s from './LightRow.module.css';
 
 const MIXED = 'The ramps are not all lit the same, so these are the selected ramp’s colours. Choose a light, or change a colour, to light every ramp alike.';
 
+/** a preset chosen: its light and shadow on every ramp, one undo step (Light zones writes the same pair through here) */
+export function chooseLight(doc: Doc, id: string): void {
+  const l = LIGHTS.find((x) => x.id === id);
+  if (l) doc.transact(`Light the scene: ${l.label}`, (x) => setScene(x, l.light, l.shadow));
+}
+
+/** a chip edits one end of the pair for every ramp, as one undo step per gesture */
+export const lightBinding = (which: keyof LightPair, label: string, group: string | undefined) => ({
+  label: `Light the scene: ${label}`,
+  key: `scene:${which}`,
+  get: (x: IllustrationDoc) => sceneLight(x, group).pair[which],
+  set: (x: IllustrationDoc, o: Oklch) => {
+    const now = sceneLight(x, group).pair;
+    return setScene(x, which === 'light' ? o : now.light, which === 'shadow' ? o : now.shadow);
+  },
+});
+
 export function LightRow({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: IllustrationView }) {
   const group = selected(d, v.selected)?.group;
   const { pair, preset, mixed } = sceneLight(d, group);
   // the reading when it is no preset: Mixed (the ramps disagree) or Custom (they agree on a pair of its own)
   const value = preset?.id ?? (mixed ? 'mixed' : 'custom');
   const options = [...LIGHTS.map((l) => ({ value: l.id, label: l.label })), ...(preset ? [] : [{ value, label: mixed ? 'Mixed' : 'Custom' }])];
-  const choose = (id: string) => {
-    const l = LIGHTS.find((x) => x.id === id);
-    if (l) doc.transact(`Light the scene: ${l.label}`, (x) => setScene(x, l.light, l.shadow));
-  };
-  // a chip edits one end of the pair for every ramp, as one undo step per gesture
-  const binding = (which: keyof LightPair, label: string) => ({
-    label: `Light the scene: ${label}`,
-    key: `scene:${which}`,
-    get: (x: IllustrationDoc) => sceneLight(x, group).pair[which],
-    set: (x: IllustrationDoc, o: Oklch) => {
-      const now = sceneLight(x, group).pair;
-      return setScene(x, which === 'light' ? o : now.light, which === 'shadow' ? o : now.shadow);
-    },
-  });
-  const light = useDocColour(doc, binding('light', 'light colour'));
-  const shadow = useDocColour(doc, binding('shadow', 'shadow colour'));
+  const light = useDocColour(doc, lightBinding('light', 'light colour', group));
+  const shadow = useDocColour(doc, lightBinding('shadow', 'shadow colour', group));
   return (
     <div className={s.row} role="group" aria-label="Light">
       <Tooltip content={MIXED} disabled={!mixed}>
         <div>
-          <Select label="Light" options={options} value={value} onChange={choose} />
+          <Select label="Light" options={options} value={value} onChange={(id) => chooseLight(doc, id)} />
         </div>
       </Tooltip>
       <div className={s.pair}>
