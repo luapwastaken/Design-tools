@@ -1,14 +1,15 @@
 // Image > Post FX: a quick stack of effects over an image, a GIF or a clip, with the original a keypress away, and exported as a full-resolution PNG, a GIF or a PNG sequence that loops exactly.
 // Spec: docs/superpowers/specs/2026-09-29-postfx-tool.md; plan unit V.
 import type { ToolDefinition } from '../../shell/tool.ts';
-import { showOriginalKey } from '../common/flip.ts';
 import { fetchBlob } from '../common/take.ts';
-import { duplicate, pickFile, sourceOf, takeFiles, withPalette } from './actions.ts';
+import { arrowsFree } from '../common/keyGates.ts';
+import { duplicate, moveTo, pickFile, sourceOf, takeFiles, toggleLayer, withPalette } from './actions.ts';
 import { emptyDoc, fix, timeline, type PostFxDoc } from './doc.ts';
 import { pngBlob } from './exports.ts';
+import { postfxKeys } from './keys.ts';
 import { StatusSlot } from './StatusSlot.tsx';
 import { stepFrame, togglePlay } from './Transport.tsx';
-import { getView, pausedFrame, playhead, toggleOriginal } from './view-state.ts';
+import { armed, copier, getView, pausedFrame, patchView, playhead, toggleOriginal } from './view-state.ts';
 import { View } from './View.tsx';
 
 export const tool: ToolDefinition<PostFxDoc> = {
@@ -49,23 +50,21 @@ export const tool: ToolDefinition<PostFxDoc> = {
     return left.length === files.length ? false : left.length ? left : true;
   },
 
-  shortcuts: (doc) => {
-    const d = doc.get();
-    const t = timeline(d);
-    const sel = getView().selected;
-    return [
-      { keys: 'Ctrl+O', label: 'Open an image or a clip', run: () => pickFile(doc) },
-      showOriginalKey(toggleOriginal),
-      ...(sel && d.stack.some((l) => l.id === sel) ? [{ keys: 'Ctrl+D', label: 'Duplicate the selected layer', run: () => duplicate(doc, sel) }] : []),
-      ...(d.source && t.count > 1
-        ? [
-            { keys: 'ArrowLeft', label: 'Previous frame', run: () => stepFrame(timeline(doc.get()), -1) },
-            { keys: 'ArrowRight', label: 'Next frame', run: () => stepFrame(timeline(doc.get()), 1) },
-            { keys: 'K', label: 'Play or pause', run: () => togglePlay(timeline(doc.get())) },
-          ]
-        : []),
-    ];
-  },
+  shortcuts: (doc) =>
+    postfxKeys(doc.get(), {
+      selected: getView().selected,
+      free: arrowsFree('postfx'),
+      copy: copier.get(),
+      open: () => pickFile(doc),
+      original: toggleOriginal,
+      select: (id) => patchView({ selected: id }),
+      move: (id, to) => moveTo(doc, id, to),
+      toggle: (id) => toggleLayer(doc, id),
+      duplicate: (id) => duplicate(doc, id),
+      arm: (id) => armed.set(id),
+      step: (by) => stepFrame(timeline(doc.get()), by),
+      play: () => togglePlay(timeline(doc.get())),
+    }),
   StatusSlot,
   View,
 };

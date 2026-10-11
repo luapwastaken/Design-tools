@@ -23,8 +23,8 @@ export function togglePlay(t: Timeline): void {
   else playhead.set({ frame, playing: true });
 }
 
-export const stepFrame = (t: Timeline, by: number): void => holdFrame(t, (playhead.get().frame + by + t.count) % t.count);
-
+/** wraps round the loop, whatever the step (Shift and an arrow is 10) */
+export const stepFrame = (t: Timeline, by: number): void => holdFrame(t, (((playhead.get().frame + by) % t.count) + t.count) % t.count);
 
 const clock = (sec: number) => `${Math.floor(sec / 60)}:${(sec % 60).toFixed(2).padStart(5, '0')}`;
 
@@ -36,10 +36,9 @@ export function Transport({ t, active }: { t: Timeline; active: boolean }) {
   const what = t.kind === 'loop' ? 'Loop' : t.kind === 'gif' ? 'GIF' : t.kind === 'sequence' ? 'Sequence' : 'Clip';
   return (
     <div ref={ref} className={s.transport} role="group" aria-label="Playback" data-playing={head.playing ? '' : undefined}>
-      <IconButton icon={head.playing ? 'pause' : 'play_arrow'} label={head.playing ? 'Pause' : 'Play'} shortcut="Space" latched={head.playing} onClick={() => togglePlay(t)} />
-      {/* the arrow keys step too; a kbd would print their DOM names, so the label says them */}
-      <IconButton icon="skip_previous" label="Previous frame (Left arrow)" size="sm" onClick={() => stepFrame(t, -1)} />
-      <IconButton icon="skip_next" label="Next frame (Right arrow)" size="sm" onClick={() => stepFrame(t, 1)} />
+      <IconButton icon={head.playing ? 'pause' : 'play_arrow'} label={head.playing ? 'Pause' : 'Play'} shortcut="Space or K" latched={head.playing} onClick={() => togglePlay(t)} />
+      <IconButton icon="skip_previous" label="Previous frame" shortcut="ArrowLeft" size="sm" onClick={() => stepFrame(t, -1)} />
+      <IconButton icon="skip_next" label="Next frame" shortcut="ArrowRight" size="sm" onClick={() => stepFrame(t, 1)} />
       <Slider
         label="Frame"
         min={1}

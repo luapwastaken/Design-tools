@@ -74,4 +74,10 @@ export const playhead = createStore<{ frame: number; playing: boolean }>({ frame
 /** the status bar's readout, from the view */
 export const status = createStore<{ layers: number; on: number; ms: number; busy: boolean; error: boolean } | null>(null);
 
+/** the layer whose inline delete confirm is open (Delete arms it, from the row or the keymap); the view's, so a shortcut can arm it */
+export const armed = createStore<string | null>(null);
+
+/** the doc bar's Copy the PNG, set by the view while it can run: Ctrl+Shift+C reaches the export hook through this */
+export const copier = createStore<(() => void) | null>(null);
+
 export const toggleOriginal = () => patchView({ original: !getView().original });

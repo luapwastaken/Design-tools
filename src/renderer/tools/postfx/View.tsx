@@ -10,7 +10,7 @@ import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import type { Doc } from './actions.ts';
 import { PostFxCanvas } from './Canvas.tsx';
 import { offered, timeline, type PostFxDoc } from './doc.ts';
-import { ExportModule, usePostFxExport } from './Export.tsx';
+import { ExportModule, exportWhy, usePostFxExport } from './Export.tsx';
 import { LoopModule } from './Loop.tsx';
 import { PostFxBar } from './PostFxBar.tsx';
 import { PresetsModule, ShareModule } from './Presets.tsx';
@@ -19,7 +19,7 @@ import { Preview, shown } from './preview.ts';
 import { StackModule } from './Stack.tsx';
 import { Start } from './Start.tsx';
 import { holdFrame } from './Transport.tsx';
-import { getView, pausedFrame, patchView, playhead, status, useView } from './view-state.ts';
+import { copier, getView, pausedFrame, patchView, playhead, status, useView } from './view-state.ts';
 import s from './View.module.css';
 
 const INSPECTOR = { min: 340, max: 460, reset: 380 };
@@ -108,6 +108,12 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const slow = useHeld(busy);
   const last = shown.use();
   const out = usePostFxExport(d, t, error);
+  // Ctrl+Shift+C reaches the export hook through the store; off while the doc bar's Export is
+  const canCopy = !exportWhy(out);
+  useEffect(() => {
+    copier.set(canCopy ? out.copyPng : null);
+    return () => copier.set(null);
+  });
 
   // a new source opens at Fit, and a selection that went with the old stack goes (the restored one keeps its view)
   const opened = useRef(d.source && sourceKey(d.source));

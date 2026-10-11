@@ -11,7 +11,7 @@ import { BLENDS, effectOf } from './effects/index.ts';
 import { LIMIT, offered, type Layer, type PostFxDoc, type Timeline } from './doc.ts';
 import { EffectPicker, VIDEO_ONLY_TIP } from './EffectPicker.tsx';
 import { LayerBody } from './Layer.tsx';
-import { patchView, useView } from './view-state.ts';
+import { armed as armedStore, patchView, useView } from './view-state.ts';
 import s from './Stack.module.css';
 
 /** internal reorders carry this type (foundation spec §9), so OS files dropped here still go to onFiles */
@@ -24,7 +24,8 @@ type Picker = { anchor: DOMRect; owner: HTMLElement | null };
 export function StackModule({ doc, d, t }: { doc: Doc; d: PostFxDoc; t: Timeline }) {
   const { selected } = useView();
   const [picker, setPicker] = useState<Picker | null>(null);
-  const [armed, setArmed] = useState<string | null>(null);
+  const armed = armedStore.use();
+  const setArmed = armedStore.set;
   const [drag, setDrag] = useState<{ id: string; at: number | null } | null>(null);
   const stack = d.stack;
   const sel = stack.find((l) => l.id === selected) ?? null;
@@ -180,7 +181,7 @@ export function StackModule({ doc, d, t }: { doc: Doc; d: PostFxDoc; t: Timeline
                 >
                   <Icon name="drag_indicator" size={16} />
                 </span>
-                <IconButton icon={l.on ? 'visibility' : 'visibility_off'} label={`${l.on ? 'Hide' : 'Show'} ${labelOf(l)}`} size="sm" tabIndex={-1} onClick={() => toggleLayer(doc, l.id)} />
+                <IconButton icon={l.on ? 'visibility' : 'visibility_off'} label={`${l.on ? 'Hide' : 'Show'} ${labelOf(l)}`} shortcut="Ctrl+Shift+H" size="sm" tabIndex={-1} onClick={() => toggleLayer(doc, l.id)} />
                 <span className={s.ident}>
                   <span className={s.name}>
                     <Tooltip content={labelOf(l)} overflowOnly>

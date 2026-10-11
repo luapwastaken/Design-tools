@@ -16,7 +16,7 @@ export function PostFxBar({ doc, d, v, t, out }: { doc: Doc; d: PostFxDoc; v: Po
     { label: out.anim ? 'PNG of the frame on screen' : 'PNG', icon: 'download' as const, onSelect: () => void out.png() },
     ...(out.anim ? [{ label: 'PNG sequence (a folder)', icon: 'download' as const, onSelect: () => void out.frames('folder') }] : []),
     'separator' as const,
-    { label: 'Copy the PNG', icon: 'content_copy' as const, onSelect: () => void out.copyPng() },
+    { label: 'Copy the PNG', icon: 'content_copy' as const, shortcut: 'Ctrl+Shift+C', onSelect: () => void out.copyPng() },
   ];
   const moving = src && src.kind !== 'image' ? ` · ${plural(t.count, 'frame')}${src.kind === 'video' || src.kind === 'sequence' ? ` · ${fmtFps(t.fps)} fps` : ''}` : '';
   return (
