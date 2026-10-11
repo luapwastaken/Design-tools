@@ -119,3 +119,12 @@ test('a raster part’s silhouette travels with it through the file', () => {
   const d = withPart(emptyDoc(), 'icon', { ...pngPart(), silhouette: pngPart().png! });
   assert.equal(fromPayload(file(d)).icon!.silhouette, pngPart().png);
 });
+
+test('a new logo has every version on, and a file that lists none gets them all', () => {
+  assert.deepEqual(emptyDoc().versions, ['original', 'black', 'white', 'colour', 'knockout']);
+  assert.deepEqual(fromPayload({ icon: null, wordmark: null, versions: [] }).versions, emptyDoc().versions);
+});
+
+test('a file that lists some versions keeps exactly those', () => {
+  assert.deepEqual(fromPayload({ icon: null, wordmark: null, versions: ['white', 'original'] }).versions, ['original', 'white']);
+});

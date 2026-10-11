@@ -3,6 +3,7 @@
 // each check, and hands the result to main (app.smokeDone), which quits through the close handshake.
 // 'full' runs the smoke list; 'quiet' is the relaunch: it restores, checks, and quits with no input.
 import { contrast, cssColor, deltaE, hexToOklch, inSrgb, parseCss, parseHex, rgb255, toHex, type Oklch } from '../shared/color/index.ts';
+import { colourToKelvin } from '../shared/color/kelvin.ts';
 import { COPY_FORMATS, formatColour } from '../shared/color/format.ts';
 import { fromHsb, fromHsl, fromRgb255, hsbOf, hslOf, maxChroma, planeAxis } from '../shared/color/picker.ts';
 import { heldChArt, planeColour } from '../shared/color/plane.ts';
@@ -370,6 +371,7 @@ async function full(): Promise<void> {
   await layersUi();
   await brandSafetyUi();
   await findabilityUi();
+  await layoutUi();
   await greyscale();
 
   // brief §8: nothing loops, and there is no spinner to run: no running animation repeats, and no loaded
@@ -966,8 +968,15 @@ async function greyscale(): Promise<void> {
     await sleep(80);
     return rows;
   };
-  patchIllustration({ tab: 'settings' });
+  // Seen as is in Light & preview's Seen group (a closed group until it is opened), which needs a ramp
+  const lensRamp = !illustrationDoc().get().ramps.length;
+  if (lensRamp) illustrationDoc().transact('Smoke lens ramp', (d) => addRamp(d, [0.74, 0.075, 55], 'Skin', null, 'skin').doc);
+  shell.setActive('illustration');
+  patchIllustration({ tab: 'light' });
+  const seenHead = await until(() => [...(host('illustration')?.querySelectorAll<HTMLButtonElement>('button[aria-expanded]') ?? [])].find((b) => b.textContent?.trim().startsWith('Seen') && shows(b)), 3000);
+  if (seenHead?.getAttribute('aria-expanded') === 'false') seenHead.click();
   const seen = await lensOptions('illustration', 'Seen as');
+  if (lensRamp) illustrationDoc().undo();
   check('Illustration’s Seen as lens offers the colour-vision lenses, in the Colour vision check’s names, and no Greyscale', !!seen && seen.some((t) => /Deutan/.test(t)) && !seen.some((t) => /opia$/.test(t)) && !seen.some((t) => /Greyscale/i.test(t)), seen);
   patchDesign({ tab: 'preview' });
   const see = await lensOptions('design', 'See as');
@@ -2030,7 +2039,7 @@ async function logo(dir: string): Promise<void> {
   check('the pair proposes horizontal and stacked, the horizontal aligned on the capitals', on.includes('horizontal') && on.includes('stacked') && lockupOf(d, 'horizontal').align === 'cap', on);
 
   // the pasteboard: every lockup that's on is a named artboard, a click selects, the eye turns one off,
-  // the doc bar's Version switch and the Sheet toggle in the view strip are views of the same document
+  // the Versions list and the Sheet toggle in the view strip are views of the same document
   patchLogo({ mode: 'edit', lockup: 'horizontal', version: 'original' });
   const boards = () => [...(host('logo')?.querySelectorAll<SVGElement>('[data-artboard]') ?? [])];
   const kinds = async () => (await until(() => (boards().length === on.length ? boards().map((b) => b.dataset.artboard) : null))) ?? boards().map((b) => b.dataset.artboard);
@@ -2043,11 +2052,18 @@ async function logo(dir: string): Promise<void> {
   check('the eye in Lockups turns a lockup off, and it leaves the pasteboard', await until(() => !lockupOf(ld.get(), 'stacked').on && !board('stacked')), lockupOf(ld.get(), 'stacked'));
   ld.undo();
   check('and Undo brings it back', await until(() => lockupOf(ld.get(), 'stacked').on && !!board('stacked')), lockupOf(ld.get(), 'stacked'));
-  const docbar = () => host('logo')?.querySelector<HTMLElement>('[data-docbar]') ?? host('logo');
-  const version = (name: string) => [...(docbar()?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [])].find((b) => b.textContent?.trim() === name);
-  version('Black')?.click();
-  check('the doc bar switch chooses the version every artboard shows', await until(() => logoView().version === 'black'), logoView().version);
-  version('Original')?.click();
+  // pl-10: one version selector, and every version on in a new logo
+  const versionRow = (name: string) => [...(host('logo')?.querySelectorAll<HTMLElement>('[data-version]') ?? [])].find((r) => r.textContent?.trim().startsWith(name));
+  const barRadios = [...(host('logo')?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])].filter((b) => /^(Original|Black|White|One colour|Knockout)$/.test(b.textContent?.trim() ?? '') && !b.closest('[data-version]'));
+  check('a new logo has every version on, so the first export has them all', ld.get().versions.length === 5 && host('logo')?.querySelectorAll('[data-version]').length === 5, ld.get().versions);
+  check('the doc bar has no version switch: the Versions list is the one place', barRadios.length === 0, barRadios.map((b) => b.textContent));
+  versionRow('Black')?.querySelector<HTMLElement>('[role="radio"]')?.click();
+  check('a row in Versions chooses the version every artboard shows', await until(() => logoView().version === 'black' && versionRow('Black')?.querySelector('[role="radio"]')?.getAttribute('aria-checked') === 'true'), logoView().version);
+  versionRow('Knockout')?.querySelector<HTMLButtonElement>('button[aria-label^="Leave"]')?.click();
+  check('its eye leaves a version out of the export without changing the one in view', await until(() => !ld.get().versions.includes('knockout')) && logoView().version === 'black', ld.get().versions);
+  ld.undo();
+  check('and Undo puts it back', await until(() => ld.get().versions.includes('knockout')), ld.get().versions);
+  versionRow('Original')?.querySelector<HTMLElement>('[role="radio"]')?.click();
   const sheetToggle = () => [...(host('logo')?.querySelectorAll<HTMLButtonElement>('[role="checkbox"]') ?? [])].find((b) => b.textContent?.trim() === 'Sheet');
   sheetToggle()?.click();
   check('Sheet in the view strip shows every lockup in every version', await until(() => logoView().mode === 'sheet' && host('logo')?.querySelector('[aria-label="Every lockup in every version"]')), logoView().mode);
@@ -5148,6 +5164,124 @@ async function brandSafetyUi(): Promise<void> {
 }
 
 /**
+ * The small window (aw-01), the wide tabs (des-13) and the one scene light (ill-08): at the smallest
+ * window the app opens at (1280 wide) with the Library open, Export is in every tool's doc bar, a tab
+ * strip that does not fit folds into More, and the wide tabs keep a one-row picker where the column
+ * was; the Light row under Ramps has the Kelvin field. The window is held to a width by narrowing
+ * the page's root, which every layout here answers to (grid columns and container queries).
+ */
+async function layoutUi(): Promise<void> {
+  const root = document.getElementById('root')!;
+  const [dd, il] = [designDoc(), illustrationDoc()];
+  const [libraryWas, activeWas, designWas, illustrationWas, designSnap, illustrationSnap] = [shell.getState().libraryOpen, shell.getState().active, dd.get(), il.get(), { ...designView() }, { ...illustrationView() }];
+  root.style.width = '1280px';
+  shell.toggleLibrary(true);
+  await sleep(200);
+
+  // ── Export stays in the doc bar of every tool ──
+  const exportAt = (id: ToolId) => {
+    const b = [...(host(id)?.querySelectorAll('button') ?? [])].find((x) => /Export$/.test(x.textContent?.trim() ?? '') && shows(x));
+    return b?.getBoundingClientRect() ?? null;
+  };
+  const lost: string[] = [];
+  for (const id of ['design', 'illustration', 'pattern', 'logo', 'dither', 'halftone', 'postfx'] as ToolId[]) {
+    shell.setActive(id);
+    await sleep(150);
+    const r = await until(() => exportAt(id), 1500);
+    if (!r || r.left < 0 || r.right > 1280 || r.top < 0 || r.bottom > 160) lost.push(`${id} ${r ? [Math.round(r.left), Math.round(r.right), Math.round(r.top)] : 'missing'}`);
+  }
+  check('at 1280 wide with the Library open, Export is in the doc bar of all seven tools, inside the window', !lost.length, lost);
+
+  // ── Illustration: a ramp to work on, then the Light row and the tab strip ──
+  shell.setActive('illustration');
+  if (!il.get().ramps.length) il.transact('Smoke layout ramp', (d) => addRamp(d, [0.74, 0.075, 55], 'Skin', null, 'skin').doc);
+  patchIllustration({ tab: 'settings', selected: null });
+  await sleep(200);
+  const strip = () => host('illustration')?.querySelector<HTMLElement>('[role="tablist"]') ?? null;
+  const more = () => [...(strip()?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((b) => b.textContent?.trim() === 'More' && shows(b));
+  const seen = () => [...(strip()?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [])].filter((b) => getComputedStyle(b).visibility === 'visible').map((b) => b.dataset.tab);
+  const cutOff = () => [...(strip()?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [])].filter((b) => getComputedStyle(b).visibility === 'visible' && b.getBoundingClientRect().right > strip()!.getBoundingClientRect().right + 1);
+  check('the Illustration tab strip does not fit this window, so it has a More button inside the strip', !!(await until(more, 1500)), strip()?.textContent);
+  check('no tab is cut off by the strip’s edge: each shows whole or is folded away', cutOff().length === 0, cutOff().map((b) => b.dataset.tab));
+  check('the tab you are on is always one of those showing, and More fits the strip', seen().includes('settings') && more()!.getBoundingClientRect().right <= strip()!.getBoundingClientRect().right + 1, seen());
+  more()?.click();
+  const row = await until(() => [...document.querySelectorAll<HTMLElement>('[role^="menuitem"]')].find((r) => r.textContent?.includes('Layers')));
+  check('More lists the folded tabs, with their keys', !!row && /Alt/.test(row.textContent ?? ''), row?.textContent);
+  row?.click();
+  check('choosing one opens it, and it takes a place in the strip', !!(await until(() => illustrationView().tab === 'layers' && seen().includes('layers'))) && cutOff().length === 0, [illustrationView().tab, seen()]);
+  patchIllustration({ tab: 'settings' });
+
+  // ── the Light row under Ramps: Kelvin beside the preset and the two colours ──
+  const lightRow = () => host('illustration')?.querySelector<HTMLElement>('[role="group"][aria-label="Light"]') ?? null;
+  const kelvinField = () => lightRow()?.querySelector<HTMLInputElement>('input[aria-label="Kelvin"]') ?? null;
+  check('the Light row under Ramps has a Kelvin field', !!(await until(kelvinField, 1500)));
+  const lightBefore = il.get().ramps.map((r) => r.light.join()).join('|');
+  const depthBefore = il.depth();
+  if (kelvinField()) {
+    typeInto(kelvinField()!, '2700');
+    press('Enter', { code: 'Enter' });
+  }
+  const warmed = await until(() => il.get().ramps.map((r) => r.light.join()).join('|') !== lightBefore);
+  const light = il.get().ramps[0].light;
+  check('typing 2700 there lights every ramp as one undo step, and the field reads it back', !!warmed && il.depth() === depthBefore + 1 && il.get().ramps.every((r) => r.light.join() === light.join()) && Math.abs(colourToKelvin(light).k - 2700) < 60, [il.depth() - depthBefore, colourToKelvin(light)]);
+  il.undo();
+  await sleep(100);
+
+  // ── the wide tabs keep a one-row picker, and the tab bar does not move ──
+  const stripX = (id: ToolId) => host(id)?.querySelector<HTMLElement>('[role="tablist"]')?.getBoundingClientRect().x ?? -1;
+  const oneRow = (id: ToolId) => {
+    const head = host(id)?.querySelector<HTMLElement>('[role="tablist"]')?.parentElement;
+    const field = [...(head?.querySelectorAll<HTMLInputElement>('input') ?? [])].find((i) => shows(i));
+    const copy = [...(head?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((b) => /Copy/i.test(b.getAttribute('aria-label') ?? b.textContent ?? '') && shows(b));
+    return { field, copy };
+  };
+  const columnPicker = (id: ToolId) => !![...(host(id)?.querySelectorAll('h2') ?? [])].find((h) => h.textContent?.trim() === 'Colour picker' && shows(h));
+  const hexIs = (field: HTMLInputElement | undefined, o: Oklch) => !!field && field.value.replace('#', '').toUpperCase() === toHex(o).replace('#', '').toUpperCase();
+
+  shell.setActive('design');
+  if (!dd.get().swatches.length) addSwatch(dd, 'Smoke layout');
+  const first = dd.get().swatches[0];
+  patchDesign({ tab: 'contrast', tabChosen: true, selected: [first.id] });
+  await sleep(250);
+  const [dx0, dCol] = [stripX('design'), columnPicker('design')];
+  patchDesign({ tab: 'variations', tabChosen: true });
+  await sleep(250);
+  const dRow = oneRow('design');
+  check('Design: Variations has no picker column, but the tab bar stays where it was', dCol && !columnPicker('design') && Math.abs(stripX('design') - dx0) < 1, [dCol, columnPicker('design'), dx0, stripX('design')]);
+  check('and a one-row picker (swatch, hex, Copy) sits in the bar with the selected colour’s hex', hexIs(dRow.field, first.oklch) && !!dRow.copy, [dRow.field?.value, toHex(first.oklch), !!dRow.copy]);
+  patchDesign({ tab: 'contrast', tabChosen: true });
+  await sleep(200);
+  check('back on a narrow tab the column returns, and the bar still has not moved', columnPicker('design') && Math.abs(stripX('design') - dx0) < 1, [columnPicker('design'), dx0, stripX('design')]);
+
+  shell.setActive('illustration');
+  const swatch0 = il.get().swatches[0];
+  patchIllustration({ tab: 'settings', selected: swatch0.id });
+  await sleep(250);
+  const [ix0, iCol] = [stripX('illustration'), columnPicker('illustration')];
+  const moved: string[] = [];
+  const rows: string[] = [];
+  for (const tab of ['zones', 'layers', 'variations'] as const) {
+    patchIllustration({ tab });
+    await sleep(250);
+    if (Math.abs(stripX('illustration') - ix0) >= 1 || columnPicker('illustration')) moved.push(tab);
+    const r = oneRow('illustration');
+    if (!hexIs(r.field, swatch0.oklch) || !r.copy) rows.push(tab);
+  }
+  check('Illustration: Light zones, Layers and Variations drop the picker column without moving the tab bar', iCol && moved.length === 0, [iCol, ix0, moved]);
+  check('and each keeps the one-row picker with the selected step’s hex', rows.length === 0, rows);
+
+  // ── back as it was ──
+  root.style.width = '';
+  patchDesign(designSnap);
+  patchIllustration(illustrationSnap);
+  dd.transact('Smoke layout back', () => designWas);
+  il.transact('Smoke layout back', () => illustrationWas);
+  shell.toggleLibrary(libraryWas);
+  shell.setActive(activeWas);
+  await sleep(150);
+}
+
+/**
  * Findability (ux sweep 2026-10-11): the Keyboard shortcuts sheet and the tab and row hints (aw-03), the
  * toasts (aw-04), Library rows and moves (aw-11), Design's lock keys, New palette, Contrast order and
  * New set (des-17, des-16, des-11, des-03), and Illustration's empty state, Layers words and Seen as chip
@@ -5702,21 +5836,13 @@ async function restoredUi(): Promise<void> {
   patchIllustration({ preview: { ...view().preview, shape: 'sphere', all: false } });
   patchView0(step.id);
 
-  // Ramp settings: the ramp lit beside its settings, changing with them
+  // Ramp settings keeps what is per ramp: the lit object and Seen as are Light & preview's alone (ill-08)
   patchIllustration({ tab: 'settings' });
-  const lit = await until(() => ui.querySelector<HTMLCanvasElement>('[data-live-preview] canvas'), 1500);
-  const sum = (c: HTMLCanvasElement) => {
-    const px = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
-    let t = 0;
-    for (let i = 0; i < px.length; i += 4) t = (t * 31 + px[i] + px[i + 1] * 3 + px[i + 2] * 7) | 0;
-    return t;
-  };
-  if (check('Ramp settings shows the ramp lit beside its settings', !!lit && shows(lit))) {
-    const a = sum(lit!);
-    il.transact('Hue', (d) => setSpec(d, ramp0, { hueShift: 0.9, intensity: 'extreme' }));
-    check('and changing its hue shift lights it differently at once', await until(() => sum(ui.querySelector<HTMLCanvasElement>('[data-live-preview] canvas')!) !== a), a);
-    il.undo();
-  }
+  await sleep(120);
+  const settingsTab = () => document.getElementById('tabpanel-settings');
+  check('Ramp settings has no lit preview of its own: Light & preview holds the one', !!(await until(settingsTab)) && !settingsTab()!.querySelector('[data-live-preview], canvas[aria-label]'), settingsTab()?.textContent?.slice(0, 80));
+  check('and no Seen as: it is in Light & preview only', ![...(settingsTab()?.querySelectorAll('label, span, h3') ?? [])].some((e) => e.textContent?.trim() === 'Seen as'));
+  check('it keeps the ramp’s own rows: Steps, Material, Intensity, Hue shift, Hero ramp', ['Steps', 'Material', 'Intensity', 'Hue shift', 'Hero ramp'].every((w) => (settingsTab()?.textContent ?? '').includes(w)), settingsTab()?.textContent?.slice(0, 120));
 
   // Check values: the Value ruler and its cluster fix, the colour-vision detail
   patchIllustration({ tab: 'check' });
@@ -5990,16 +6116,16 @@ async function lightUi(): Promise<void> {
     check('and both are undone', spec().material === was.material && JSON.stringify(spec().surface) === surfaceBefore && il.depth() === depth, [spec(), il.depth() - depth]);
   }
 
-  // Apply look to every ramp, beside Use for every ramp: only the look (Intensity, Push, Hue shift, Saturation), never the material or the finish
+  // Copy intensity, hue and saturation to all ramps, beside Copy light and shadow to all ramps: only the look (Intensity, Push, Hue shift, Saturation), never the material or the finish
   if (il.get().ramps.length > 1) {
-    const apply = () => [...ui.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Apply look to every ramp' && shows(b));
+    const apply = () => [...ui.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Copy intensity, hue and saturation to all ramps' && shows(b));
     // the first ramp gets a look and a finish of its own, the second a different material, so a copy of either would show
     il.transact('A look of its own', (d) => setSpec(setSpec(d, id, { material: 'metal', surface: { gloss: 0.7, grain: 0.2 }, intensity: 'extreme', push: 1.8, hueShift: 0.4, chromaCurve: -0.3 }), il.get().ramps[1].id, { material: 'skin', surface: { softness: 0.9 } }));
     await sleep(60);
     const others = () => il.get().ramps.slice(1).map((r) => [r.material, JSON.stringify(r.surface ?? null)].join());
     const looks = () => il.get().ramps.slice(1).map((r) => [r.intensity, r.push, r.hueShift, r.chromaCurve].join());
     const [depth, before, lookBefore] = [il.depth(), others(), looks()];
-    check('Apply look to every ramp sits next to Use for every ramp, and is on while the looks differ', !!(await until(apply)) && !apply()!.disabled && !!button('illustration', 'Use for every ramp'), lookBefore);
+    check('the two copy buttons say what they copy, sit side by side, and the look one is on while the looks differ', !!(await until(apply)) && !apply()!.disabled && !!button('illustration', 'Copy light and shadow to all ramps'), lookBefore);
     const applyTip = apply();
     applyTip?.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
     const copies = await until(() => document.querySelector('[role="tooltip"]')?.textContent ?? null, 2000);

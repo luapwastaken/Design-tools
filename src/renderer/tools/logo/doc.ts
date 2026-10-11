@@ -59,7 +59,8 @@ export const emptyDoc = (): LogoDoc => ({
   icon: null,
   wordmark: null,
   lockups: KINDS.map(blank),
-  versions: ['original', 'black', 'white'],
+  // every version on, so a first export has them all (turn one off with its eye)
+  versions: [...VERSIONS],
   colour: INK,
   clearspace: 0.5,
   exportPadding: 'clearspace',

@@ -9,7 +9,7 @@ import { displayName } from '../common/names.ts';
 import { paletteMenu, useReadAhead } from '../common/palettes.ts';
 import { copyProportions, resetProportions, select, toggleLockup, type Doc } from './actions.ts';
 import { available, fix, KIND_LABEL, KIND_WHERE, LIMIT, mapLockup, twoParts, VERSION_LABEL, VERSIONS, type Lockup, type LockupKind, type LogoDoc, type Part, type Version } from './doc.ts';
-import { palette } from './view-state.ts';
+import { palette, patchView, type LogoView } from './view-state.ts';
 import s from './Inspector.module.css';
 
 const ALIGN_LABEL: Record<Align, string> = { cap: 'Cap', baseline: 'Baseline', center: 'Centre', top: 'Top', bottom: 'Bottom', start: 'Left', end: 'Right' };
@@ -181,32 +181,43 @@ function Chip({ version, d }: { version: Version; d: LogoDoc }) {
   return <i className={cx(s.swatch, version === 'original' && s.original, version === 'knockout' && s.knock)} style={style} />;
 }
 
-/** which versions ship (a chip pressed = it exports), and the colour One colour and Knockout use */
-export function VersionsGroup({ doc, d }: { doc: Doc; d: LogoDoc }) {
+/** the one list of versions, as the lockups are: a row looks at it (the artboard and the small sizes show it), the eye puts it in the sheet and every export */
+export function VersionsGroup({ doc, d, v }: { doc: Doc; d: LogoDoc; v: LogoView }) {
   const colour = useDocColour(doc, { label: 'Change the colour', key: 'colour', get: (x) => x.colour, set: (x, o) => ({ ...x, colour: o }) });
   const pal = palette.use();
   useReadAhead();
-  const toggle = (v: Version, on: boolean) =>
-    doc.transact(`${on ? 'Turn on' : 'Turn off'} ${VERSION_LABEL[v].toLowerCase()}`, (x) => fix({ ...x, versions: on ? [...x.versions, v] : x.versions.filter((y) => y !== v) }));
+  const toggle = (ver: Version, on: boolean) =>
+    doc.transact(`${on ? 'Turn on' : 'Turn off'} ${VERSION_LABEL[ver].toLowerCase()}`, (x) => fix({ ...x, versions: on ? [...x.versions, ver] : x.versions.filter((y) => y !== ver) }));
   const raster = !!(d.icon && !d.icon.svg) || !!(d.wordmark && !d.wordmark.svg);
   return (
     <InspectorGroup
       id="logo.versions"
       title="Versions"
       meta={`${d.versions.length} on`}
-      actions={<InfoTip text="A pressed version goes into the sheet and every export. The switch in the bar chooses which one you look at." />}
+      actions={<InfoTip text="Click a version to look at it. The eye puts it in the sheet and every export." />}
     >
-      <div className={s.chipsGrid} role="group" aria-label="Versions that are exported">
-        {VERSIONS.map((v) => {
-          const on = d.versions.includes(v);
+      <div className={s.lockups} role="radiogroup" aria-label="Version to look at">
+        {VERSIONS.map((ver) => {
+          const on = d.versions.includes(ver);
           const last = on && d.versions.length === 1;
+          const mine = ver === v.version;
           return (
-            <Tooltip key={v} content={last ? 'The last one stays on' : `${on ? 'In the export' : 'Not in the export'}: ${VERSION_SHORT[v]}`}>
-              <button type="button" aria-pressed={on} disabled={last} className={cx(s.vchip, on && s.pressed)} onClick={() => toggle(v, !on)}>
-                <Chip version={v} d={d} />
-                {VERSION_LABEL[v]}
-              </button>
-            </Tooltip>
+            <div key={ver} className={cx(s.lockup, mine && s.edited, !on && s.off)} data-version={ver}>
+              <Tooltip content={VERSION_SHORT[ver]}>
+                <button type="button" role="radio" aria-checked={mine} className={s.pick} onClick={() => (on ? patchView({ version: ver }) : (toggle(ver, true), patchView({ version: ver })))}>
+                  <Chip version={ver} d={d} />
+                  <span className={s.lockName}>{VERSION_LABEL[ver]}</span>
+                </button>
+              </Tooltip>
+              <span />
+              <IconButton
+                icon={on ? 'visibility' : 'visibility_off'}
+                label={last ? 'The last version stays on' : on ? `Leave ${VERSION_LABEL[ver].toLowerCase()} out of the export` : `Put ${VERSION_LABEL[ver].toLowerCase()} in the export`}
+                size="sm"
+                disabled={last}
+                onClick={() => toggle(ver, !on)}
+              />
+            </div>
           );
         })}
       </div>

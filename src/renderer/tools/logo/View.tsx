@@ -1,5 +1,5 @@
 // The Logo tool's screen (spec §5): the pasteboard of artboards, one per lockup that's on (or the
-// sheet of every lockup x version), the Version switch and Export in the doc bar, and the inspector
+// sheet of every lockup x version), Export in the doc bar, and the inspector
 // (Parts, Lockups, Proportions, Versions, Clearspace, Small sizes, Export) on the right.
 import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from 'react';
 import { isTextField } from '../../shell/core/keys.ts';
@@ -80,7 +80,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   return (
     <div className={s.view} style={{ '--insp': `${v.inspector}px` } as CSSProperties}>
       <div className={s.work}>
-        <LogoBar doc={doc} d={d} v={v} out={out} />
+        <LogoBar doc={doc} d={d} out={out} />
         <div className={s.stage}>
           {empty ? (
             <Start doc={doc} />
@@ -104,7 +104,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
             <Parts doc={doc} d={d} />
             <LockupsGroup doc={doc} d={d} edited={kind} />
             <ProportionsGroup doc={doc} d={d} lockup={lockup} />
-            <VersionsGroup doc={doc} d={d} />
+            <VersionsGroup doc={doc} d={d} v={v} />
             <ClearspaceGroup doc={doc} d={d} />
             <SmallSizes d={settled} v={v} lockup={kind && lockupOf(settled, kind)} />
             <ExportGroup doc={doc} d={settled} v={v} lockup={kind && lockupOf(settled, kind)} out={out} />
