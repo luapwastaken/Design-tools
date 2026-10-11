@@ -23,6 +23,8 @@ export type Job = {
   tone: Tone;
   paper: Oklch;
   overlap: Overlap;
+  /** the inks in the separation (doc.ts stackOf) */
+  stack: boolean[];
   size: Size;
   screen: Screen;
   hold: boolean;
@@ -87,7 +89,7 @@ self.onmessage = (e: MessageEvent<Job>) => {
     if (j.source) takeSource(j.source);
     if (!src || src.key !== j.sourceKey) throw new Error('The image went missing on its way to the screen. Open it again.');
     if (sep?.key !== j.sepKey) {
-      sep = { key: j.sepKey, plates: toPlates(src.linear, src.w, src.h, j.inks, j.mode, j.tone, { paper: j.paper, overlap: j.overlap }) };
+      sep = { key: j.sepKey, plates: toPlates(src.linear, src.w, src.h, j.inks, j.mode, j.tone, { paper: j.paper, overlap: j.overlap, stack: j.stack }) };
       screened.clear();
     }
     // what this job doesn't ask for any more goes: a turned ink's old cells, the other shape's

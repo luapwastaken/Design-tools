@@ -2,3 +2,4 @@
 .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 6px; }
 .size { padding-left: 4px; color: var(--ink-3); font: 400 var(--fs-unit)/1 var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
 .danger { color: var(--danger); }
+.heavy { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 6px 0; }

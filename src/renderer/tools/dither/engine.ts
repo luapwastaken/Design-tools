@@ -32,7 +32,7 @@ export function run(img: Float32Array, w: number, h: number, s: Settings): Uint8
   const palette = toOklab(s.colours);
   const t = s.tone;
   // tone and the gradient map work in place, so they get a copy; the dither itself only reads
-  const plain = t.black === 0 && t.white === 1 && t.gamma === 1 && t.contrast === 0 && !t.map;
+  const plain = t.black === 0 && t.white === 1 && t.gamma === 1 && t.contrast === 0 && !t.invert && !t.map;
   let x = plain ? img : applyTone(img.slice(), t);
   if (t.map) x = gradientMap(x, palette);
   return dither(x, w, h, palette, { algorithm: s.algorithm, strength: s.strength, serpentine: s.serpentine, seed: s.seed });

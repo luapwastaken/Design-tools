@@ -10,8 +10,8 @@ export type SvgDoc = { size: Size; screen: Screen; inks: DrawInk[]; overlap: Ove
 
 /** 1in = 96 px, as SVG counts user units; width and height carry the real size */
 const PX_PER_IN = 96;
-/** path numbers to a thousandth of a px (a quarter micron) */
-const Q = 1000;
+/** path numbers to a hundredth of a px (under 3 microns): finer numbers are weight no press can print */
+const Q = 100;
 /** the paper, named so nobody sends it to press as an ink */
 const PAPER_ID = 'Paper_preview_only';
 
@@ -78,7 +78,7 @@ function idFor(name: string, used: Set<string>): string {
   return id;
 }
 
-/** a number of thousandths as path data writes it short: 0.5 as .5 */
+/** a number of hundredths as path data writes it short: 0.5 as .5 */
 function fmt(milli: number): string {
   const t = String(milli / Q);
   return t.startsWith('0.') ? t.slice(1) : t.startsWith('-0.') ? `-${t.slice(2)}` : t;
@@ -88,7 +88,7 @@ function fmt(milli: number): string {
 const then = (t: string) => (t[0] === '-' ? t : ` ${t}`);
 
 /**
- * One compound path's data, in thousandths of a px, in pieces of PIECE dots. Each dot starts with
+ * One compound path's data, in hundredths of a px, in pieces of PIECE dots. Each dot starts with
  * a move relative to the last dot's start, taken between rounded points so a row of hundreds never
  * drifts, and ends closed.
  */
@@ -123,7 +123,7 @@ function pathData(cells: Cells, geom: Float32Array, shape: CellShape, scale: num
       case 'round':
       case 'ellipse': {
         // two half arcs from one end of the major axis to the other and back. The radius is taken
-        // from the rounded chord, a thousandth short of half of it: a renderer scales too small a
+        // from the rounded chord, a hundredth short of half of it: a renderer scales too small a
         // radius up to exactly half the chord (SVG's out-of-range radii), which centres both halves
         // on the dot. Rounded on its own, a radius past half the chord pulled the halves apart and
         // every other dot came out taller than its cell's coverage.

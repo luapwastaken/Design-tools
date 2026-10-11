@@ -67,7 +67,7 @@ test('real units: width and height in the chosen unit, the view box at 96 px to 
   const mm = parseSvg(halftoneSvg(docOf(), screensOf(docOf())));
   assert.equal(getAttr(mm, 'width'), '40mm');
   assert.equal(getAttr(mm, 'height'), '30mm');
-  assert.deepEqual(getAttr(mm, 'viewBox')!.split(' ').map(Number), [0, 0, 151.181, 113.386]);
+  assert.deepEqual(getAttr(mm, 'viewBox')!.split(' ').map(Number), [0, 0, 151.18, 113.39]);
   const inch = docOf({ size: { w: 25.4, h: 50.8, unit: 'in', dpi: 600 } });
   const root = parseSvg(halftoneSvg(inch, screensOf(inch)));
   assert.equal(getAttr(root, 'width'), '1in');
@@ -97,7 +97,7 @@ test('the file holds the dots the preview draws: the same count, each at its cel
         if (!(a > 0 && b > 0)) continue;
         const [du, dv] = shape === 'round' || shape === 'ellipse' ? [-a, 0] : shape === 'diamond' ? [a, 0] : [a, b];
         const want = [(c.x[n] + du * ux + dv * vx) * scale, (c.y[n] + du * uy + dv * vy) * scale];
-        assert.ok(Math.abs(at[k][0] - want[0]) < 2e-3 && Math.abs(at[k][1] - want[1]) < 2e-3, `${shape} dot ${k} at ${at[k]} not ${want}`);
+        assert.ok(Math.abs(at[k][0] - want[0]) < 1e-2 && Math.abs(at[k][1] - want[1]) < 1e-2, `${shape} dot ${k} at ${at[k]} not ${want}`);
         k++;
       }
     });
@@ -161,8 +161,8 @@ test('round and elliptical dots draw as exact circles and ellipses, the size scr
         const [Rx, Ry] = [rx * grow, ry * grow];
         const off = Math.sqrt(Math.max(0, (Rx * Rx * Ry * Ry - Rx * Rx * y1 * y1 - Ry * Ry * x1 * x1) / (Rx * Rx * y1 * y1 + Ry * Ry * x1 * x1)));
         const centreOff = off * Math.hypot((Rx * y1) / Ry, (Ry * x1) / Rx);
-        assert.ok(centreOff < 2e-3, `${shape} ${lpi} lpi, dot ${i >> 1}: halves ${centreOff.toFixed(4)} off the centre`);
-        assert.ok(Math.abs(Rx - a) < 2e-3 && Math.abs(Ry - b) < 2e-3 * Math.max(1, b / a) + 1e-3, `${shape} ${lpi} lpi, dot ${i >> 1}: ${Rx} × ${Ry}, want ${a} × ${b}`);
+        assert.ok(centreOff < 2e-2, `${shape} ${lpi} lpi, dot ${i >> 1}: halves ${centreOff.toFixed(4)} off the centre`);
+        assert.ok(Math.abs(Rx - a) < 1e-2 && Math.abs(Ry - b) < 1e-2 * Math.max(1, b / a) + 1e-2, `${shape} ${lpi} lpi, dot ${i >> 1}: ${Rx} × ${Ry}, want ${a} × ${b}`);
       });
     }
   }
@@ -181,4 +181,14 @@ test('the file comes in pieces that join to the one SVG (a page of dots can outg
   const parts = svgParts(doc, screensOf(doc));
   assert.equal(parts.length, 2 + 3 * INKS.length);
   assert.equal(parts.join(''), halftoneSvg(doc, screensOf(doc)));
+});
+
+test('path numbers are rounded to two decimals, so the file is not weight no press can print', () => {
+  for (const shape of ['round', 'ellipse', 'square', 'line', 'diamond', 'cross'] as CellShape[]) {
+    const doc = docOf({ screen: { shape, lpi: 30, minDot: 0.03, gain: 0.1 } });
+    const svg = halftoneSvg(doc, screensOf(doc));
+    const paths = [...svg.matchAll(/ d="([^"]*)"/g)].map((m) => m[1]);
+    assert.ok(paths.length > 0);
+    for (const d of paths) assert.equal(/\d\.\d{3,}/.test(d), false, `${shape}: a number past two decimals`);
+  }
 });

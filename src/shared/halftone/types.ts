@@ -13,8 +13,8 @@ export type Process = 'c' | 'm' | 'y' | 'k';
 export type Size = { w: number; h: number; unit: 'mm' | 'in'; dpi: number };
 /** minDot 0..0.2 and gain 0..0.3 are coverage fractions */
 export type Screen = { shape: Shape; lpi: number; minDot: number; gain: number };
-/** levels in 0..1, gamma 1 = none, contrast −1..1 with 0 = none */
-export type Tone = { black: number; white: number; gamma: number; contrast: number };
+/** levels in 0..1, gamma 1 = none, contrast −1..1 with 0 = none; `invert` makes the negative, after the rest (a file saved before it existed has none) */
+export type Tone = { black: number; white: number; gamma: number; contrast: number; invert?: boolean };
 export type Paper = { colour: Oklch; include: boolean };
 
 /** `opaque`: a spot ink that covers what is under it instead of multiplying it (white ink, spec §6.3) */

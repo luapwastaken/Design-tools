@@ -22,7 +22,7 @@ export type Source = {
   frames: number;
 };
 
-export type Tone = { black: number; white: number; gamma: number; contrast: number; map: boolean };
+export type Tone = { black: number; white: number; gamma: number; contrast: number; map: boolean; invert?: boolean };
 
 export type DitherDoc = {
   source: Source | null;

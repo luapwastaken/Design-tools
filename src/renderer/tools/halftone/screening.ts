@@ -6,7 +6,7 @@ import { pagePx, splitOf } from '../../../shared/halftone/screen.ts';
 import { covering } from '../../../shared/halftone/separate.ts';
 import { decodeImage } from '../../lib/load.ts';
 import { fetchBlob } from '../common/take.ts';
-import { opaqueOf, overlapOf, type HalftoneDoc } from './doc.ts';
+import { opaqueOf, overlapOf, stackOf, type HalftoneDoc } from './doc.ts';
 import type { Done, Failed, InkOut, Job, SourceIn } from './screen.worker.ts';
 
 export type Screened = {
@@ -70,9 +70,16 @@ export const shownDots = (s: Pick<Screened, 'inks'>, d: HalftoneDoc): number => 
 /** Why the SVG can't hold the dots of the inks that show, or null (for `dots` counted from the plate, `about`). */
 export function svgOver(dots: number, about = false): string | null {
   return dots > SVG_DOTS
-    ? `${about ? 'About ' : ''}${(dots / 1e6).toFixed(1)} million dots is more than the SVG takes: past ${SVG_DOTS / 1e6} million the file runs to near a gigabyte. Lower the frequency or the size, hide an ink, or export the PNG or the separations.`
+    ? `${about ? 'About ' : ''}${(dots / 1e6).toFixed(1)} million dots is more than the SVG takes: past ${SVG_DOTS / 1e6} million the file runs to near a gigabyte. Lower the frequency or the size, hide an ink, export one SVG per ink, or export the PNG or the separations.`
     : null;
 }
+
+/** past about this many megabytes the SVG is heavy for Illustrator and Figma: the export row says so and offers a file for each ink */
+export const SVG_HEAVY_MB = 20;
+
+/** what the SVG will weigh, MB (bytes a dot by its shape, as the file writes it at two decimals) */
+export const svgMegabytes = (s: Pick<Screened, 'inks'>, d: HalftoneDoc): number =>
+  (shownDots(s, d) * (d.screen.shape === 'cross' ? 100 : d.screen.shape === 'round' || d.screen.shape === 'ellipse' ? 60 : 40)) / 1e6;
 
 const J = JSON.stringify;
 
@@ -84,7 +91,8 @@ function keysOf(d: HalftoneDoc, plate: { w: number; h: number }) {
   const inks = separateInks(d);
   // colour is paper-relative: the paper enters the separation only through an ink that covers
   const paper = covering(inks, d.mode, overlapOf(d)).some(Boolean) ? d.paper.colour : null;
-  const sepKey = J([sourceKey, d.mode, inks, d.tone, paper, overlapOf(d)]);
+  const stack = stackOf(d);
+  const sepKey = J([sourceKey, d.mode, inks, d.tone, paper, overlapOf(d), stack]);
   const fm = d.screen.shape === 'stochastic';
   const hold = holds(d);
   const inkKeys = d.inks.map((ink, n) => J([sepKey, n, fm ? [d.size.dpi, d.screen.gain] : [ink.angle, d.screen, d.size.dpi, hold]]));
@@ -197,6 +205,7 @@ async function compute(d: HalftoneDoc, key: string): Promise<Screened> {
     tone: d.tone,
     paper: d.paper.colour,
     overlap: overlapOf(d),
+    stack: stackOf(d),
     size: d.size,
     screen: d.screen,
   };

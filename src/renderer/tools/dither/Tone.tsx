@@ -12,7 +12,7 @@ import i from './Inspector.module.css';
 const W = 256;
 const H = 64;
 
-type Key = Exclude<keyof Tone, 'map'>;
+type Key = Exclude<keyof Tone, 'map' | 'invert'>;
 
 function Histogram({ hist, tone }: { hist: Uint32Array | null; tone: Tone }) {
   const bars = useMemo(() => {
@@ -43,7 +43,7 @@ export function ToneModule({ doc, d, hist }: { doc: Doc; d: DitherDoc; hist: Uin
   const gamma = num('gamma', 'Change the gamma', 1);
   const contrast = num('contrast', 'Change the contrast', 100);
   const t = d.tone;
-  const plain = t.black === 0 && t.white === 1 && t.gamma === 1 && t.contrast === 0 && !t.map;
+  const plain = t.black === 0 && t.white === 1 && t.gamma === 1 && t.contrast === 0 && !t.invert && !t.map;
   return (
     <InspectorGroup id="dither.tone" title="Tone" sub="Before dithering" actions={<IconButton icon="restart_alt" label="Reset the tone" size="sm" disabled={plain} onClick={() => doc.transact('Reset the tone', (x) => ({ ...x, tone: NEUTRAL_TONE }))} />}>
       <div className={i.stack}>
@@ -55,6 +55,10 @@ export function ToneModule({ doc, d, hist }: { doc: Doc; d: DitherDoc; hist: Uin
           <Slider label="Contrast" min={-100} max={100} step={1} unit="%" origin={0} {...contrast} />
         </div>
         <div className={i.group}>
+          <div className={i.row}>
+            <Toggle label="Invert" checked={!!t.invert} onChange={(invert) => doc.transact(invert ? 'Invert the tones' : 'Stop inverting the tones', (x) => ({ ...x, tone: { ...x.tone, invert } }))} />
+            <InfoTip text="Swaps light and dark before dithering: a white logo on black dithers as ink on paper." />
+          </div>
           <div className={i.row}>
             <Toggle label="Gradient map" checked={t.map} onChange={(map) => doc.transact(map ? 'Map the tones onto the palette' : 'Match colours as they are', (x) => ({ ...x, tone: { ...x.tone, map } }))} />
             <InfoTip text={t.map ? 'Black takes the first colour, white the last: reorder the palette to recolour.' : 'Lays the image’s lightness along the palette in its order, instead of matching each pixel’s nearest colours.'} />

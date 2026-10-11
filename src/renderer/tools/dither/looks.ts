@@ -70,7 +70,7 @@ export function withLook(d: DitherDoc, look: Look): DitherDoc {
   };
 }
 
-const sameTone = (a: Tone, b: Tone) => a.black === b.black && a.white === b.white && a.gamma === b.gamma && a.contrast === b.contrast && a.map === b.map;
+const sameTone = (a: Tone, b: Tone) => a.black === b.black && a.white === b.white && a.gamma === b.gamma && a.contrast === b.contrast && a.map === b.map && !!a.invert === !!b.invert;
 
 /** true when `d` still has every setting its look gave it */
 export function isLook(d: DitherDoc, look: Look): boolean {

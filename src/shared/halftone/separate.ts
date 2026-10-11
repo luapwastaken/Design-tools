@@ -45,7 +45,8 @@ export type Separation = {
   curves: Float32Array;
 };
 
-export type SeparateOptions = { paper?: Oklch; overlap?: Overlap };
+/** `stack`: which inks take part, by their place in the list; one left out is not in the separation and gets an empty plate */
+export type SeparateOptions = { paper?: Oklch; overlap?: Overlap; stack?: boolean[] };
 
 /** Ink values 0..255 over the sheet, the screen colour the preview multiplies. */
 const encodedOf = (o: Oklch) => rgb255(o).map((v) => v / 255);
@@ -56,7 +57,8 @@ export const covering = (inks: SeparateInk[], mode: Mode, overlap?: Overlap): bo
 
 /**
  * Ink order is printing order: the first ink goes down first, so the last one shows on top.
- * Visibility never enters: a hidden ink keeps its plate and the others keep theirs.
+ * Visibility never enters here: a hidden ink keeps its plate and the others keep theirs. Only a
+ * knockout stack leaves a hidden ink out (toPlates `stack`), since it would cut holes in the rest.
  */
 export function separation(inks: SeparateInk[], mode: Mode, tone: Tone, opts: SeparateOptions = {}): Separation {
   const curves = new Float32Array(TABLE * inks.length);
@@ -93,12 +95,13 @@ export function toPlates(
   tone: Tone,
   opts: SeparateOptions = {},
 ): Float32Array[] {
-  const sep = separation(inks, mode, tone, opts);
+  const taking = inks.flatMap((_, i) => (opts.stack && !opts.stack[i] ? [] : [i]));
+  const sep = separation(taking.map((i) => inks[i]), mode, tone, opts);
   const plates = inks.map(() => new Float32Array(w * h));
   const out = new Float32Array(sep.n);
   for (let p = 0, q = 0; p < w * h; p++, q += 4) {
     inksAt(sep, rgbaLinear[q], rgbaLinear[q + 1], rgbaLinear[q + 2], rgbaLinear[q + 3], out);
-    for (let i = 0; i < sep.n; i++) plates[i][p] = out[i];
+    for (let k = 0; k < sep.n; k++) plates[taking[k]][p] = out[k];
   }
   return plates;
 }

@@ -38,7 +38,7 @@ export function lookup(table: Float32Array, x: number, at = 0): number {
   return lo + (table[at + i + 1] - lo) * (p - i);
 }
 
-/** Levels (black and white input points), gamma (above 1 lifts the midtones), then an S-curve for contrast. */
+/** Levels (black and white input points), gamma (above 1 lifts the midtones), an S-curve for contrast, then the negative if asked. */
 export function toneAt(t: Tone, x: number): number {
   const span = t.white - t.black;
   let v = span > 1e-6 ? (x - t.black) / span : x >= t.white ? 1 : 0;
@@ -50,7 +50,7 @@ export function toneAt(t: Tone, x: number): number {
     const a = v ** p;
     v = a / (a + (1 - v) ** p);
   }
-  return v;
+  return t.invert ? 1 - v : v;
 }
 
 /** Linear light to toned sRGB, the same for each channel. */

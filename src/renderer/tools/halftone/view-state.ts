@@ -15,16 +15,22 @@ export type HalftoneView = {
   sepZoom: Zoom;
   show: Show;
   inspector: number;
-  /** the screen PNG's width, px */
-  pngWidth: number;
-  /** separations as greyscale or 1-bit TIFF plates (spec §5 q2) */
+  /** the screen PNG's width, px; null follows the page's print width at its dpi, so the PNG opens at the size it prints */
+  pngWidth: number | null;
+  /** the SVG draws the paper's rectangle (a preview; the file is for the inks) */
+  svgPaper: boolean;
+  /** separations as greyscale or 1-bit plates (spec §5 q2) */
   bits: 8 | 1;
+  /** the plates' files: TIFF, or PNG with the ink on a clear ground */
+  plateFile: 'tiff' | 'png';
+  /** plates on a sheet with bleed, crop and registration marks and the ink's name */
+  marks: boolean;
   /** the ink whose transfer curve is open */
   curve: string | null;
   last: ExportRecord | null;
 };
 
-export const DEFAULT_VIEW: HalftoneView = { zoom: 'fit', sepZoom: 'fit', show: 'result', inspector: 380, pngWidth: 2048, bits: 8, curve: null, last: null };
+export const DEFAULT_VIEW: HalftoneView = { zoom: 'fit', sepZoom: 'fit', show: 'result', inspector: 380, pngWidth: null, svgPaper: false, bits: 8, plateFile: 'tiff', marks: false, curve: null, last: null };
 
 const oneOf = <T,>(v: unknown, all: readonly T[], def: T): T => (all.includes(v as T) ? (v as T) : def);
 const num = (v: unknown, def: number) => (typeof v === 'number' && Number.isFinite(v) ? v : def);
@@ -38,8 +44,11 @@ function sanitize(raw: unknown): HalftoneView {
     sepZoom: asZoom(r.sepZoom),
     show: oneOf(r.show, ['result', 'separations', 'original'] as const, d.show),
     inspector: num(r.inspector, d.inspector),
-    pngWidth: Math.round(Math.min(16384, Math.max(16, num(r.pngWidth, d.pngWidth)))),
+    pngWidth: typeof r.pngWidth === 'number' && Number.isFinite(r.pngWidth) ? Math.round(Math.min(16384, Math.max(16, r.pngWidth))) : null,
+    svgPaper: typeof r.svgPaper === 'boolean' ? r.svgPaper : d.svgPaper,
     bits: oneOf(r.bits, [8, 1] as const, d.bits),
+    plateFile: oneOf(r.plateFile, ['tiff', 'png'] as const, d.plateFile),
+    marks: typeof r.marks === 'boolean' ? r.marks : d.marks,
     curve: typeof r.curve === 'string' ? r.curve : null,
     last: recordOf(r.last),
   };

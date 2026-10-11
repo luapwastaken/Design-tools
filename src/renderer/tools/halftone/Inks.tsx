@@ -49,6 +49,21 @@ function inkMenu(from: InksFrom | null | undefined, pick: (name: string, colour:
   ];
 }
 
+/**
+ * Where inks come from, in one menu for the Inks from row and the add button: a Library palette
+ * (it replaces the inks), or one ink from the palette they came from, Riso, RAL, HKS or NCS (it is added).
+ */
+function sourcesMenu(doc: Doc, d: HalftoneDoc): MenuItem[] {
+  const room = d.inks.length < LIMIT.spot;
+  return [
+    { header: 'Use a palette' },
+    ...paletteMenu('halftone'),
+    'separator',
+    { header: room ? 'Add one ink' : `Spot inks stop at ${LIMIT.spot}` },
+    ...(room ? inkMenu(d.inksFrom, (name, c) => addInk(doc, name, c)) : []),
+  ];
+}
+
 const openAt = (e: MouseEvent<HTMLButtonElement>, items: MenuItem[]) => menu.open(e.currentTarget.getBoundingClientRect(), items, { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined });
 
 /** a plate as a small picture: its ink on the paper, at the plate's tone, covering it if the ink does */
@@ -215,7 +230,7 @@ export function InksModule({ doc, d, plateOf }: { doc: Doc; d: HalftoneDoc; plat
       sub={visible === d.inks.length ? plural(d.inks.length, 'plate') : `${visible} of ${plural(d.inks.length, 'plate')}`}
       actions={
         spot && (
-          <IconButton icon="add" label={full ? `Spot inks stop at ${LIMIT.spot}` : 'Add a spot ink'} size="sm" disabled={full} onClick={(e) => openAt(e, inkMenu(d.inksFrom, (name, c) => addInk(doc, name, c)))} />
+          <IconButton icon="add" label={full ? `Spot inks stop at ${LIMIT.spot}` : 'Add a spot ink, or take inks from a palette'} size="sm" disabled={full} onClick={(e) => openAt(e, sourcesMenu(doc, d))} />
         )
       }
     >
@@ -224,7 +239,7 @@ export function InksModule({ doc, d, plateOf }: { doc: Doc; d: HalftoneDoc; plat
         {spot && (
           <div className={i.row}>
             <span className={cx('lbl', i.lab)}>Inks from</span>
-            <button type="button" className={s.from} aria-haspopup="menu" onClick={(e) => openAt(e, paletteMenu('halftone'))}>
+            <button type="button" className={s.from} aria-haspopup="menu" onClick={(e) => openAt(e, sourcesMenu(doc, d))}>
               <SwatchStrip colors={(fromShown ? from.swatches.map((w) => w.colour) : d.inks.map((k) => k.colour)).map(cssColor)} height={14} className={s.strip} />
               <span className={s.fromName}>{fromShown ? from.name : (library ?? 'Picked by hand')}</span>
               <Icon name="unfold_more" size={16} />

@@ -1,6 +1,7 @@
 // The Halftone document (plan: Document) and the limits that keep every edit printable.
 import type { Oklch } from '../../../shared/color/index.ts';
 import { curveAt } from '../../../shared/halftone/tone.ts';
+import { INKS } from '../../../shared/palette/inks.ts';
 import type { Process, Shape } from '../../../shared/halftone/types.ts';
 
 export type { Process, Shape } from '../../../shared/halftone/types.ts';
@@ -35,7 +36,7 @@ export type HalftoneDoc = {
   inks: Ink[];
   overlap: 'overprint' | 'knockout';
   paper: { colour: Oklch; include: boolean };
-  tone: { black: number; white: number; gamma: number; contrast: number };
+  tone: { black: number; white: number; gamma: number; contrast: number; invert?: boolean };
   /** preview only, and the screen PNG when `bake` */
   feel: { misregister: number; texture: number; bake: boolean };
   /** in the document, so a restart keeps it and Undo takes it back with the inks it came with */
@@ -78,6 +79,16 @@ export const processInks = (): Ink[] =>
 
 /** spot screens in the order Riso and screen printers space them, so neighbours never share an angle */
 export const SPOT_ANGLES = [45, 75, 15, 0, 60, 30];
+
+/**
+ * The inks a first switch to spot starts with: two Riso inks, since a spot job is rarely one ink and
+ * Black alone (the first on the list) reads as nothing was chosen. Blue under Fluorescent Pink is
+ * the pair riso printers reach for first.
+ */
+export function spotStart(): Ink[] {
+  const pick = (name: string) => INKS.riso.find((k) => k.name === name) ?? INKS.riso[0];
+  return ['Blue', 'Fluorescent Pink'].map((n, i) => spotInk(n, pick(n).oklch, i));
+}
 
 export const inkId = (): string => `i${crypto.randomUUID().slice(0, 8)}`;
 
@@ -126,6 +137,14 @@ export function fix(d: HalftoneDoc): HalftoneDoc {
 
 /** process inks always overprint (CMYK builds its colours by overprinting), so knockout is for spot inks only */
 export const overlapOf = (d: Pick<HalftoneDoc, 'mode' | 'overlap'>): HalftoneDoc['overlap'] => (d.mode === 'process' ? 'overprint' : d.overlap);
+
+/**
+ * Which inks take part in the separation. Knocked out, an ink that is hidden prints nothing, so it
+ * must not cut holes in the others (the view and the plates would show paper where it was); with
+ * every ink hidden there is nothing to leave out. Overprinted, hiding changes no plate.
+ */
+export const stackOf = (d: Pick<HalftoneDoc, 'mode' | 'overlap' | 'inks'>): boolean[] =>
+  overlapOf(d) === 'knockout' && d.inks.some((i) => i.visible) ? d.inks.map((i) => i.visible) : d.inks.map(() => true);
 
 /** OKLCH lightness past which a spot ink is opaque until told otherwise: white and near-white inks only show by covering */
 export const NEAR_WHITE = 0.9;

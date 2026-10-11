@@ -2,7 +2,7 @@
 // physical size, as an SVG for Illustrator, a screen PNG and separations that all match the view.
 // Spec: docs/superpowers/specs/2026-09-29-halftone-tool.md; plan unit V.
 import type { ToolDefinition } from '../../shell/tool.ts';
-import { flipOriginal } from '../common/flip.ts';
+import { flipOriginal, showOriginalKey } from '../common/flip.ts';
 import { fetchBlob } from '../common/take.ts';
 import { pickImage, sourceOf, takeFiles, withPalette } from './actions.ts';
 import { emptyDoc, type HalftoneDoc } from './doc.ts';
@@ -61,6 +61,7 @@ export const tool: ToolDefinition<HalftoneDoc> = {
 
   shortcuts: (doc) => [
     { keys: 'Ctrl+O', label: 'Open an image', run: () => pickImage(doc) },
+    showOriginalKey(flip),
     { keys: '\\', label: 'Switch between the result and the original', run: flip },
   ],
   StatusSlot,

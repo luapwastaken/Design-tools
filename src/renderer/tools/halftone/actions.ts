@@ -2,14 +2,14 @@
 // or an ink library, the process/spot switch, adding and removing spot inks.
 import { toHex, type Oklch } from '../../../shared/color/index.ts';
 import type { DocController } from '../../../shared/doc-api.ts';
-import { INKS, type InkLibrary } from '../../../shared/palette/inks.ts';
+import type { InkLibrary } from '../../../shared/palette/inks.ts';
 import { isGround } from '../../../shared/palette/roles.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { decodeImage } from '../../lib/load.ts';
 import { toast } from '../../ui/index.ts';
 import { displayName, plural } from '../common/names.ts';
 import { baseName, claims, extOf, isSvg, putAsset, svgAsPng } from '../common/take.ts';
-import { freeAngle, groundIsPaper, LIMIT, processInks, spotInk, type HalftoneDoc, type Ink } from './doc.ts';
+import { freeAngle, groundIsPaper, LIMIT, processInks, spotInk, spotStart, type HalftoneDoc, type Ink } from './doc.ts';
 
 export type Doc = DocController<HalftoneDoc>;
 
@@ -61,7 +61,7 @@ export function setMode(doc: Doc, mode: HalftoneDoc['mode']): void {
   const d = doc.get();
   if (d.mode === mode) return;
   stash[d.mode] = d.inks;
-  const inks = stash[mode] ?? (mode === 'process' ? processInks() : [spotInk('Black', INKS.riso[0].oklch, 0)]);
+  const inks = stash[mode] ?? (mode === 'process' ? processInks() : spotStart());
   doc.transact(mode === 'process' ? 'Print in CMYK' : 'Print in spot inks', (x) => ({ ...x, mode, inks }));
 }
 

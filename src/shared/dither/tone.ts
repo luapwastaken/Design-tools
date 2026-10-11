@@ -26,9 +26,9 @@ function decode(enc: Float32Array, e: number): number {
   return (lo + (span > 0 ? Math.min(1, (e - enc[lo]) / span) : 0)) / LAST;
 }
 
-const neutral = (t: Tone) => t.black === 0 && t.white === 1 && t.gamma === 1 && t.contrast === 0;
+const neutral = (t: Tone) => t.black === 0 && t.white === 1 && t.gamma === 1 && t.contrast === 0 && !t.invert;
 
-/** Levels, gamma and contrast on a linear RGB image (w*h*3), in place; neutral tone leaves it exact. */
+/** Levels, gamma, contrast and invert on a linear RGB image (w*h*3), in place; neutral tone leaves it exact. */
 export function applyTone(img: Float32Array, tone: Tone): Float32Array {
   if (neutral(tone)) return img;
   const enc = encodeTable();
