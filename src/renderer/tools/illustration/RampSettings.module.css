@@ -11,14 +11,4 @@
 .view { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
 .vtitle { margin: 0; color: var(--ink); font: 500 var(--fs-row)/1 var(--font-sans); }
 
-/* the settings beside the ramp lit: a sticky column on the right, a short row on top when the tab is narrow */
-.split { display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 20px; align-items: start; }
 .controls { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.live { position: sticky; top: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; border-radius: var(--r-ctl); box-shadow: inset 0 0 0 1px var(--edge); }
-.litCanvas { display: block; width: 100%; height: auto; aspect-ratio: 1; }
-.liveCap { color: var(--on-content-ink-2); font: 400 var(--fs-meta)/1.2 var(--font-sans); text-align: center; }
-@container (max-width: 640px) {
-  .split { grid-template-columns: minmax(0, 1fr); }
-  .live { order: -1; position: static; flex-direction: row; justify-self: start; }
-  .litCanvas { width: 96px; }
-}

@@ -1,8 +1,8 @@
-// The scene's light, under the Ramps header in every state: a preset, and the light and shadow colours
-// it is made of, editable as the shared colour fields are. A choice is written to every ramp as one
+// The scene's light, under the Ramps header in every state: a preset, the light and shadow colours
+// it is made of, editable as the shared colour fields are, and the light's colour temperature. A choice is written to every ramp as one
 // step; with no ramp it is what the next one is born with.
 import type { Oklch } from '../../../shared/color/index.ts';
-import { ColorField, Select, Tooltip, useDocColour } from '../../ui/index.ts';
+import { ColorField, KelvinField, Select, Tooltip, useDocColour } from '../../ui/index.ts';
 import { selected, type Doc } from './actions.ts';
 import { setScene, type IllustrationDoc } from './doc.ts';
 import { LIGHTS, sceneLight, type LightPair } from './scene.ts';
@@ -49,6 +49,10 @@ export function LightRow({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illus
       <div className={s.pair}>
         <ColorField {...light} name="Light" />
         <ColorField {...shadow} name="Shadow" />
+      </div>
+      <div className={s.kelvin}>
+        <span className={s.kLabel}>Kelvin</span>
+        <KelvinField {...light} />
       </div>
     </div>
   );

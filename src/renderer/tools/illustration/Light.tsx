@@ -347,8 +347,8 @@ function EveryRamp({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec })
   const sharedLook = d.ramps.every((x) => x.intensity === r.intensity && x.push === r.push && x.hueShift === r.hueShift && x.chromaCurve === r.chromaCurve);
   return (
     <div className={s.every}>
-      <Button size="xs" variant="ghost" icon="wb_sunny" disabled={sharedLight} onClick={() => lightEveryRamp(doc, r.id)} tooltip={sharedLight ? 'Every ramp is lit this way already' : 'One scene, one light: every ramp takes this light and shadow colour'}>
-        Use for every ramp
+      <Button size="xs" variant="ghost" icon="wb_sunny" disabled={sharedLight} onClick={() => lightEveryRamp(doc, r.id)} tooltip={sharedLight ? 'Every ramp has this light and shadow colour already' : 'Every ramp takes this light colour and shadow colour. Nothing else changes'}>
+        Copy light and shadow to all ramps
       </Button>
       <Button
         size="xs"
@@ -358,7 +358,7 @@ function EveryRamp({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec })
         onClick={() => doc.transact(`Give every ramp the look of ${name}`, (x) => lookForAll(x, r.id))}
         tooltip={sharedLook ? 'Every ramp has this look already' : `Every ramp takes the intensity, push, hue shift and saturation of ${name}. Each keeps its own colour, material and finish`}
       >
-        Apply look to every ramp
+        Copy intensity, hue and saturation to all ramps
       </Button>
     </div>
   );

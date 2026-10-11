@@ -1,16 +1,15 @@
 // Tab 1, Ramp settings: how the selected ramp is made (steps, intensity, hue shift, saturation, hero,
-// material, Rebuild base), its L / C / H curves (draggable), and how the steps are seen (Show,
-// Surround, Seen as). The Light and shadow colours are in Light & preview, where the light is.
+// material, Rebuild base), its L / C / H curves (draggable), and how the steps are labelled and
+// what they sit on. The scene light is the Light row's (under Ramps); the lit object, its light and
+// shadow colours and Seen as are in Light & preview, where the light is.
 import type { RampSpec } from '../../../shared/types.ts';
 import { Button, NumberField, Select, Toggle, useDocNumber, InspectorRow } from '../../ui/index.ts';
-import { SURROUNDS, surroundColour, surroundOf } from '../common/surround.ts';
+import { SURROUNDS, surroundOf } from '../common/surround.ts';
 import { rampsFromLoose, selected, type Doc } from './actions.ts';
 import { Curves } from './Curves.tsx';
-import { LIT_VIEW, LitCanvas, SHAPE_NAME, useLook } from './Light.tsx';
 import { RampLook } from './RampLook.tsx';
 import { brokenSteps, rampName, rampOf, regen, setSpec, stepsOf, type IllustrationDoc } from './doc.ts';
-import { proofOf, PROOFS, type Proof } from './proof.ts';
-import { patchView, shaped, type IllustrationView } from './view-state.ts';
+import { patchView, type IllustrationView } from './view-state.ts';
 import s from './RampSettings.module.css';
 
 const SHOWS: { value: IllustrationView['show']; label: string }[] = [
@@ -34,30 +33,13 @@ export function RampSettings({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: I
           </Button>
         </div>
       ) : (
-        <div className={s.split}>
-          <div className={s.controls}>
-            <RampControls key={r.id} doc={doc} d={d} r={r} />
-            <Curves doc={doc} d={d} v={v} />
-          </div>
-          <LivePreview d={d} v={v} r={r} />
+        <div className={s.controls}>
+          <RampControls key={r.id} doc={doc} d={d} r={r} />
+          <Curves doc={doc} d={d} v={v} />
         </div>
       )}
       {w && <ViewControls d={d} v={v} />}
     </div>
-  );
-}
-
-/** the selected ramp lit, beside its settings: hue shift, chroma, intensity and steps show at once (the light is set in Light & preview) */
-function LivePreview({ d, v, r }: { d: IllustrationDoc; v: IllustrationView; r: RampSpec }) {
-  const view = shaped(v.preview, LIT_VIEW);
-  const shape = view.shape === 'all' ? 'sphere' : view.shape;
-  const name = rampName(d, r);
-  const look = useLook({ steps: stepsOf(d, r.id).map((w) => proofOf(w.oklch, v.proof)), spec: r }, view.banded, surroundColour(v.surround, d.swatches));
-  return (
-    <aside className={s.live} aria-label="The ramp, lit" data-live-preview="" data-colour="" style={{ background: surroundOf(v.surround, d.swatches) }}>
-      <LitCanvas shape={shape} fold={view.fold} size={240} look={look} azimuth={view.azimuth} elevation={view.elevation} label={`${name} on ${SHAPE_NAME[shape]}`} className={s.litCanvas} />
-      <span className={s.liveCap}>{name}, lit</span>
-    </aside>
   );
 }
 
@@ -110,9 +92,6 @@ function ViewControls({ d, v }: { d: IllustrationDoc; v: IllustrationView }) {
         </InspectorRow>
         <InspectorRow label="Steps sit on">
           <Select options={SURROUNDS.map((o) => ({ value: o.value, label: o.label, swatch: surroundOf(o.value, d.swatches) }))} value={v.board} onChange={(board) => patchView({ board })} />
-        </InspectorRow>
-        <InspectorRow label="Seen as">
-          <Select options={PROOFS} value={v.proof} onChange={(proof: Proof) => patchView({ proof })} />
         </InspectorRow>
       </div>
     </div>

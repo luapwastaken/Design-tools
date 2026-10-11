@@ -2,3 +2,6 @@
 .row { display: flex; flex: none; flex-direction: column; gap: 6px; min-width: 0; padding: 10px 12px 0; }
 /* the colour chips are 24px to hit, like every control (the shared chip is 20) */
 .row button[aria-haspopup="dialog"] { width: 24px; height: 24px; }
+/* the light's temperature under its colour: the shared field, with its label in the row's own voice */
+.kelvin { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.kLabel { flex: none; color: var(--ink-2); font: 400 var(--fs-base)/1 var(--font-sans); }
