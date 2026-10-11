@@ -16,9 +16,12 @@ export function KelvinField({ value, onBegin, onChange, onCommit, onCancel }: { 
   return (
     <div className={s.kelvin}>
       <NumberField label="Kelvin" hideLabel value={k} min={KELVIN.min} max={KELVIN.max} step={50} precision={0} unit="K" width={96} onBegin={onBegin} onChange={(v) => onChange(kelvinToColour(v, value[0]))} onCommit={onCommit} onCancel={onCancel} />
-      <span className={s.words} data-off={off || undefined}>
-        {kelvinWordsOf(read)}
-      </span>
+      {/* the number is already in the field; words only for a colour no temperature makes */}
+      {off && (
+        <span className={s.words} data-off>
+          {kelvinWordsOf(read)}
+        </span>
+      )}
     </div>
   );
 }

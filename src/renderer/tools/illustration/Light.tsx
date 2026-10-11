@@ -331,10 +331,10 @@ function LightColours({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec
   const shadow = useDocColour(doc, { label: `Change the shadow of ${name}`, key: `${r.id}:shadow`, get: (x) => get(x).shadow, set: (x, o) => setSpec(x, r.id, { shadow: o }) });
   return (
     <>
-      <InspectorRow label="Light" info="Lighter steps lean toward this colour.">
+      <InspectorRow label="This ramp’s light" info="Lighter steps of this ramp lean toward this colour. The scene light is the Light row under Ramps.">
         <ColorField {...light} name={displayName({ name: '', oklch: light.value })} />
       </InspectorRow>
-      <InspectorRow label="Shadow" info="Darker steps lean toward this colour.">
+      <InspectorRow label="This ramp’s shadow" info="Darker steps of this ramp lean toward this colour.">
         <ColorField {...shadow} name={displayName({ name: '', oklch: shadow.value })} />
       </InspectorRow>
     </>
@@ -358,7 +358,7 @@ function EveryRamp({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec })
         onClick={() => doc.transact(`Give every ramp the look of ${name}`, (x) => lookForAll(x, r.id))}
         tooltip={sharedLook ? 'Every ramp has this look already' : `Every ramp takes the intensity, push, hue shift and saturation of ${name}. Each keeps its own colour, material and finish`}
       >
-        Copy intensity, hue and saturation to all ramps
+        Copy intensity, push, hue and saturation to all ramps
       </Button>
     </div>
   );

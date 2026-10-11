@@ -10,7 +10,7 @@ import { valueOf } from '../../../shared/color/value.ts';
 import { MATERIALS } from '../../../shared/palette/ramp.ts';
 import { ZONES, type ZoneId } from '../../../shared/palette/zones.ts';
 import { cx } from '../../ui/cx.ts';
-import { Button, ColorField, InspectorGroup, InspectorRow, KelvinField, Select, Slider, toast, Tooltip, useDocColour } from '../../ui/index.ts';
+import { Button, ColorField, InspectorGroup, InspectorRow, Select, Slider, toast, Tooltip, useDocColour } from '../../ui/index.ts';
 import { GreyscaleButton } from '../common/Greyscale.tsx';
 import { displayName } from '../common/names.ts';
 import { propose, proposals, ZONES_LABEL } from './proposals.ts';
@@ -18,9 +18,8 @@ import { select, selected, type Doc } from './actions.ts';
 import { baseOf, type IllustrationDoc } from './doc.ts';
 import { LIT_VIEW } from './Light.tsx';
 import { BACKDROP, BANDS, drawRing, PREVIEW, readout, renderZones, ringOf, STRENGTH_NAMES, STRENGTH_RANGES, ZONE_ID, ZONE_TEXT, zoneMap, zoneName, zoneRig, zoneRows, type ZoneRow } from './light-zones.ts';
-import { chooseLight, lightBinding } from './LightRow.tsx';
+import { lightBinding } from './LightRow.tsx';
 import { proofOf, PROOFS, type Proof } from './proof.ts';
-import { LIGHTS, sceneLight } from './scene.ts';
 import { patchView, shaped, type IllustrationView } from './view-state.ts';
 import s from './LightZones.module.css';
 
@@ -228,13 +227,9 @@ const LAMP_INFO: Record<(typeof STRENGTH_NAMES)[number], string> = {
   rim: 'How strong the light from behind is.',
 };
 
-/** the four lights; Key and Fill write the palette's light pair, the rest are the view's */
+/** the four lights' strengths, and the bounce and rim colours; the key and fill colours are the scene light's (the Light row) */
 function Lights({ doc, d, v, group }: { doc: Doc; d: IllustrationDoc; v: IllustrationView; group: string | undefined }) {
-  const { preset, mixed } = sceneLight(d, group);
-  const value = preset?.id ?? (mixed ? 'mixed' : 'custom');
-  const options = [...LIGHTS.map((l) => ({ value: l.id, label: l.label })), ...(preset ? [] : [{ value, label: mixed ? 'Mixed' : 'Custom' }])];
   const key = useDocColour(doc, lightBinding('light', 'key colour', group));
-  const fill = useDocColour(doc, lightBinding('shadow', 'fill colour', group));
   const strength = (i: number) => (
     <Slider
       label="Strength"
@@ -250,23 +245,11 @@ function Lights({ doc, d, v, group }: { doc: Doc; d: IllustrationDoc; v: Illustr
   const name = (o: Oklch) => displayName({ name: '', oklch: o });
   return (
     <div className={s.lights}>
-      <p className={s.hint}>A light’s colour sets its tint; its strength sets how bright it is.</p>
-      <InspectorRow label="Light preset" info="Sets the key and the fill together, as the Light row does, and the four strengths with them.">
-        <Select options={options} value={value} onChange={(id) => chooseLight(doc, id)} />
-      </InspectorRow>
+      <p className={s.hint}>The key and fill colours, the preset and the Kelvin are the Light row’s, under Ramps. Here you set how strong each light is, and the bounce and rim colours.</p>
       <InspectorGroup title="Key" sub="sun or lamp" id="illustration.zones.key">
-        <InspectorRow label="Colour">
-          <ColorField {...key} name={name(key.value)} />
-        </InspectorRow>
-        <InspectorRow label="Kelvin" info="Type a colour temperature: 2700 is a warm lamp, 6500 is neutral, 10000 is blue sky. The key takes the colour a light of that temperature gives.">
-          <KelvinField {...key} />
-        </InspectorRow>
         {strength(0)}
       </InspectorGroup>
       <InspectorGroup title="Fill" sub="sky in the shadows" id="illustration.zones.fill">
-        <InspectorRow label="Colour">
-          <ColorField {...fill} name={name(fill.value)} />
-        </InspectorRow>
         {strength(1)}
       </InspectorGroup>
       <InspectorGroup title="Bounce" sub="off the ground or a wall" id="illustration.zones.bounce">

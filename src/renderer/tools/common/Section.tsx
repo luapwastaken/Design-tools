@@ -95,7 +95,7 @@ export function TabbedSection({ tabs, value, onChange, className, bodyClassName,
     onChange(shown[i].id);
     (strip.current?.querySelector(`[data-tab="${shown[i].id}"]`) as HTMLElement | null)?.focus();
   };
-  const openMore = (e: { currentTarget: HTMLElement }) =>
+  const openMore = (e: { currentTarget: HTMLElement; detail: number }) =>
     menu.open(
       e.currentTarget.getBoundingClientRect(),
       hiddenTabs.map((t) => ({
@@ -104,7 +104,7 @@ export function TabbedSection({ tabs, value, onChange, className, bodyClassName,
         disabled: !!t.disabled,
         onSelect: () => onChange(t.id),
       })),
-      { owner: e.currentTarget },
+      { owner: e.currentTarget, initial: e.detail === 0 ? 0 : undefined },
     );
   return (
     <section className={cx(s.section, className)}>
@@ -138,7 +138,7 @@ export function TabbedSection({ tabs, value, onChange, className, bodyClassName,
             );
           })}
           {hiddenTabs.length > 0 && (
-            <button ref={moreBtn} type="button" className={cx(s.tab, s.more)} aria-haspopup="menu" onClick={openMore}>
+            <button ref={moreBtn} type="button" className={cx(s.tab, s.more)} aria-haspopup="menu" onClick={openMore} /* a second Tab stop on purpose: the arrows cycle the shown tabs, this reaches the folded ones */>
               More
               <Icon name="keyboard_arrow_down" size={16} />
             </button>

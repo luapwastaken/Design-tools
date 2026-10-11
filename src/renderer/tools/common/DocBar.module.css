@@ -20,6 +20,7 @@
 .left > * { flex: none; }
 .left > .title, .left > .rename { flex: 0 1 auto; }
 .modes { justify-content: center; align-self: stretch; }
+.modes > * { align-self: center; }
 .right { justify-content: flex-end; }
 .right > * { flex: none; }
 /* Export's slot is kept when a tool has none (Send to stays put) */

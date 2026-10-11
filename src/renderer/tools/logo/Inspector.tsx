@@ -204,7 +204,7 @@ export function VersionsGroup({ doc, d, v }: { doc: Doc; d: LogoDoc; v: LogoView
           return (
             <div key={ver} className={cx(s.lockup, mine && s.edited, !on && s.off)} data-version={ver}>
               <Tooltip content={VERSION_SHORT[ver]}>
-                <button type="button" role="radio" aria-checked={mine} className={s.pick} onClick={() => (on ? patchView({ version: ver }) : (toggle(ver, true), patchView({ version: ver })))}>
+                <button type="button" role="radio" aria-checked={mine} className={s.pick} onClick={() => patchView({ version: ver })}>
                   <Chip version={ver} d={d} />
                   <span className={s.lockName}>{VERSION_LABEL[ver]}</span>
                 </button>

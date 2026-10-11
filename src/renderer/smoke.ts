@@ -2063,6 +2063,13 @@ async function logo(dir: string): Promise<void> {
   check('its eye leaves a version out of the export without changing the one in view', await until(() => !ld.get().versions.includes('knockout')) && logoView().version === 'black', ld.get().versions);
   ld.undo();
   check('and Undo puts it back', await until(() => ld.get().versions.includes('knockout')), ld.get().versions);
+  // looking at a version that is out of the export does not put it in
+  versionRow('Knockout')?.querySelector<HTMLButtonElement>('button[aria-label^="Leave"]')?.click();
+  await until(() => !ld.get().versions.includes('knockout'));
+  versionRow('Knockout')?.querySelector<HTMLElement>('[role="radio"]')?.click();
+  check('clicking a version that is off looks at it and leaves the export as it was', await until(() => logoView().version === 'knockout') && !ld.get().versions.includes('knockout'), [logoView().version, ld.get().versions]);
+  ld.undo();
+  await until(() => ld.get().versions.includes('knockout'));
   versionRow('Original')?.querySelector<HTMLElement>('[role="radio"]')?.click();
   const sheetToggle = () => [...(host('logo')?.querySelectorAll<HTMLButtonElement>('[role="checkbox"]') ?? [])].find((b) => b.textContent?.trim() === 'Sheet');
   sheetToggle()?.click();
@@ -4766,7 +4773,7 @@ async function lightZonesUi(): Promise<void> {
 
   // a preset writes the palette's light pair, as the Light row does: one undo step, the Ramps panel follows
   const preset = () => sceneLight(il.get()).preset?.id;
-  const picker = () => [...(panel()?.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="listbox"]') ?? [])].find((b) => b.textContent?.includes('Daylight'));
+  const picker = () => [...(host('illustration')?.querySelectorAll<HTMLButtonElement>('[role="group"][aria-label="Light"] button[aria-haspopup="listbox"]') ?? [])].find((b) => b.textContent?.includes('Daylight'));
   check('the light starts as Daylight', preset() === 'daylight' && !!picker(), preset());
   const d1 = il.depth();
   const base0 = il.get();
@@ -4785,7 +4792,7 @@ async function lightZonesUi(): Promise<void> {
   // the lights: a strength slider and number for each, a Kelvin field on the key, a Ground colour for the bounce
   const strengths = () => [...(panel()?.querySelectorAll<HTMLInputElement>('input[aria-label="Strength"]') ?? [])];
   check('each of the four lights has a strength number field', strengths().length === 4, strengths().length);
-  check('the Key has a Kelvin field and says what its colour reads as', !!panel()?.querySelector('input[aria-label="Kelvin"]') && /about \d+ K|not a lamp colour/.test(panel()?.textContent ?? ''));
+  check('Light zones has no preset, Kelvin or key colour of its own: the Light row is the one place', !panel()?.querySelector('input[aria-label="Kelvin"]') && !(panel()?.textContent ?? '').includes('Light preset'));
   check('the Bounce has a Ground colour', (panel()?.textContent ?? '').includes('Ground'));
 
   // a strength typed in the field moves the zones and the view, and is not an undo step
@@ -4804,19 +4811,19 @@ async function lightZonesUi(): Promise<void> {
   // the Key's Kelvin writes the palette's light (an undo step); Ground and Rim are the view's, and are not
   const d3 = il.depth();
   const keyBefore = il.get().ramps[0].light.join();
-  const kelvin = panel()?.querySelector<HTMLInputElement>('input[aria-label="Kelvin"]');
+  const kelvin = host('illustration')?.querySelector<HTMLInputElement>('[role="group"][aria-label="Light"] input[aria-label="Kelvin"]');
   if (kelvin) {
     typeInto(kelvin, '2700');
     press('Enter', { code: 'Enter' });
   }
-  check('typing 2700 in Kelvin lights every ramp warmer as one undo step, and the read-back says about 2700 K', !!(await until(() => il.get().ramps[0].light.join() !== keyBefore)) && il.depth() === d3 + 1 && il.get().ramps.every((r) => r.light.join() === il.get().ramps[0].light.join()) && !!(await until(() => /about 2700 K/.test(panel()?.textContent ?? ''))), [il.depth(), d3, panel()?.textContent?.match(/about \d+ K|not a lamp colour/)?.[0]]);
+  check('typing 2700 in Kelvin lights every ramp warmer as one undo step, and the field reads 2700', !!(await until(() => il.get().ramps[0].light.join() !== keyBefore)) && il.depth() === d3 + 1 && il.get().ramps.every((r) => r.light.join() === il.get().ramps[0].light.join()) && Math.abs(colourToKelvin(il.get().ramps[0].light).k - 2700) < 60, [il.depth(), d3]);
   const colourFields = () => [...(panel()?.querySelectorAll<HTMLInputElement>('input[aria-label$=", colour"]') ?? [])];
   const groundBefore = hexOf(cell(0, 'reflected'));
-  const ground = colourFields()[2];
+  const ground = colourFields()[0];
   if (ground) typeInto(ground, '1E8A3A');
   press('Enter', { code: 'Enter' });
   check('a green Ground changes the Reflected light and is kept in the view, not in undo', !!(await until(() => hexOf(cell(0, 'reflected')) !== groundBefore)) && illustrationView().zoneGround.join() !== '' && il.depth() === d3 + 1, [il.depth(), d3, colourFields().length]);
-  const rim = colourFields()[3];
+  const rim = colourFields()[1];
   if (rim) typeInto(rim, 'FF6A3C');
   press('Enter', { code: 'Enter' });
   check('a Rim colour is kept in the view and is not an undo step', !!(await until(() => illustrationView().zoneRim !== null)) && il.depth() === d3 + 1, [illustrationView().zoneRim, il.depth()]);
@@ -5842,7 +5849,7 @@ async function restoredUi(): Promise<void> {
   const settingsTab = () => document.getElementById('tabpanel-settings');
   check('Ramp settings has no lit preview of its own: Light & preview holds the one', !!(await until(settingsTab)) && !settingsTab()!.querySelector('[data-live-preview], canvas[aria-label]'), settingsTab()?.textContent?.slice(0, 80));
   check('and no Seen as: it is in Light & preview only', ![...(settingsTab()?.querySelectorAll('label, span, h3') ?? [])].some((e) => e.textContent?.trim() === 'Seen as'));
-  check('it keeps the ramp’s own rows: Steps, Material, Intensity, Hue shift, Hero ramp', ['Steps', 'Material', 'Intensity', 'Hue shift', 'Hero ramp'].every((w) => (settingsTab()?.textContent ?? '').includes(w)), settingsTab()?.textContent?.slice(0, 120));
+  check('it keeps the ramp’s own rows (Steps, Hero ramp) and not the look Light & preview has (Material, Intensity, Hue shift)', ['Steps', 'Hero ramp'].every((w) => (settingsTab()?.textContent ?? '').includes(w)) && !['Intensity', 'Push'].some((w) => [...(settingsTab()?.querySelectorAll('label, span') ?? [])].some((e) => e.textContent?.trim() === w)), settingsTab()?.textContent?.slice(0, 120));
 
   // Check values: the Value ruler and its cluster fix, the colour-vision detail
   patchIllustration({ tab: 'check' });
@@ -6116,9 +6123,9 @@ async function lightUi(): Promise<void> {
     check('and both are undone', spec().material === was.material && JSON.stringify(spec().surface) === surfaceBefore && il.depth() === depth, [spec(), il.depth() - depth]);
   }
 
-  // Copy intensity, hue and saturation to all ramps, beside Copy light and shadow to all ramps: only the look (Intensity, Push, Hue shift, Saturation), never the material or the finish
+  // Copy intensity, push, hue and saturation to all ramps, beside Copy light and shadow to all ramps: only the look (Intensity, Push, Hue shift, Saturation), never the material or the finish
   if (il.get().ramps.length > 1) {
-    const apply = () => [...ui.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Copy intensity, hue and saturation to all ramps' && shows(b));
+    const apply = () => [...ui.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Copy intensity, push, hue and saturation to all ramps' && shows(b));
     // the first ramp gets a look and a finish of its own, the second a different material, so a copy of either would show
     il.transact('A look of its own', (d) => setSpec(setSpec(d, id, { material: 'metal', surface: { gloss: 0.7, grain: 0.2 }, intensity: 'extreme', push: 1.8, hueShift: 0.4, chromaCurve: -0.3 }), il.get().ramps[1].id, { material: 'skin', surface: { softness: 0.9 } }));
     await sleep(60);

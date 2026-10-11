@@ -1,13 +1,12 @@
-// Tab 1, Ramp settings: how the selected ramp is made (steps, intensity, hue shift, saturation, hero,
-// material, Rebuild base), its L / C / H curves (draggable), and how the steps are labelled and
-// what they sit on. The scene light is the Light row's (under Ramps); the lit object, its light and
-// shadow colours and Seen as are in Light & preview, where the light is.
+// Tab 1, Ramp settings: how the selected ramp is made (steps, hero, Rebuild base), its L / C / H
+// curves (draggable), and how the steps are labelled and what they sit on. The scene light is the
+// Light row's (under Ramps); the ramp's look (material, intensity, push, hue shift, saturation), the
+// lit object and Seen as are in Light & preview, where you see them relight.
 import type { RampSpec } from '../../../shared/types.ts';
 import { Button, NumberField, Select, Toggle, useDocNumber, InspectorRow } from '../../ui/index.ts';
 import { SURROUNDS, surroundOf } from '../common/surround.ts';
 import { rampsFromLoose, selected, type Doc } from './actions.ts';
 import { Curves } from './Curves.tsx';
-import { RampLook } from './RampLook.tsx';
 import { brokenSteps, rampName, rampOf, regen, setSpec, stepsOf, type IllustrationDoc } from './doc.ts';
 import { patchView, type IllustrationView } from './view-state.ts';
 import s from './RampSettings.module.css';
@@ -71,11 +70,11 @@ function RampControls({ doc, d, r }: { doc: Doc; d: IllustrationDoc; r: RampSpec
             {lighter} lighter, {made.length - 1 - lighter} darker
           </span>
         </InspectorRow>
-        <RampLook doc={doc} d={d} r={r} />
         <InspectorRow label="Hero ramp">
           <Toggle label="Quieten the other ramps" checked={r.hero} onChange={(hero) => doc.transact(hero ? `Make ${name} the hero` : `End ${name} as hero`, (x) => setSpec(x, r.id, { hero }))} />
         </InspectorRow>
       </div>
+      <p className={s.hint}>Material, finish, intensity, push, hue shift and saturation are in Light & preview, where you see the object relight.</p>
       <p className={s.hint}>Edit any step and it keeps your colour; Regenerate rebuilds the ramp from the base.</p>
     </>
   );

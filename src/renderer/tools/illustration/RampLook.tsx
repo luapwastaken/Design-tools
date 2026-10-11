@@ -1,6 +1,6 @@
 // How a ramp looks: its material, how far it is pushed (Grounded, Expressive, Extreme, and every
-// Push between), hue shift and saturation. One set of rows for the two places that edit them, Ramp
-// settings and Light & preview (where every tick relights the big object). Each edit is one undo
+// Push between), hue shift and saturation. Light & preview holds them, where
+// every tick relights the big object. Each edit is one undo
 // step; a drag is one step.
 import { intensityAt, MATERIALS, pushOf } from '../../../shared/palette/ramp.ts';
 import type { RampSpec } from '../../../shared/types.ts';
