@@ -3,28 +3,27 @@
 import { asSvg, unsupportedImage } from '../../lib/load.ts';
 import type { ToolDefinition } from '../../shell/tool.ts';
 import { toggleGreyscale } from '../common/Greyscale.tsx';
+import { copyColours } from '../../ui/index.ts';
 import { toggleValueLock } from '../../ui/PickerStyles.tsx';
+import { copyPalette } from '../common/ExportPalette.tsx';
+import { arrowsFree, copyOff } from '../common/keyGates.ts';
+import { plural } from '../common/names.ts';
 import { baseName, fetchBlob, isSvg } from '../common/take.ts';
-import { addBase, arm, duplicate, eyedrop, move, newPalette, select, selected } from './actions.ts';
-import { emptyDoc, fromPayload, rampOf, setSpec, toPayload, type IllustrationDoc } from './doc.ts';
-import { paintSettings, SIZE, LOAD, type PaintSettings } from './paint-sources.ts';
-import { clearProposals, takeImage, takeSvg } from './proposals.ts';
+import { addBase, addProposals, arm, duplicate, eyedrop, move, newPalette, reorder, select, selected } from './actions.ts';
+import { emptyDoc, fromPayload, named, rampName, rampOf, setSpec, stepsOf, toPayload, type IllustrationDoc } from './doc.ts';
+import { illustrationKeys } from './keys.ts';
+import { paintSettings, stepLoad, stepSize, type PaintSettings } from './paint-sources.ts';
+import { clearProposals, proposals, takeImage, takeSvg } from './proposals.ts';
+import { sceneLight, sceneNotes } from './scene.ts';
 import { StatusSlot } from './StatusSlot.tsx';
-import { layerKeys } from './layer-actions.ts';
-import { lockSelected, variationKeys } from './variation-actions.ts';
+import { SHOWS } from './layer-actions.ts';
+import { adoptCell, closeCell, closeSwap, lockSelected, moreLikeThis, newSet, showCell, stepCell, toggleSwap } from './variation-actions.ts';
+import { cellsOf, openCell } from './variations.ts';
 import { View } from './View.tsx';
 import { getView, patchView, type IllustrationView } from './view-state.ts';
 
-type Mode = IllustrationView['tab'];
-const inPaint = () => getView().tab === 'paint';
 /** the canvas's settings, written whole */
 const setPaint = (patch: Partial<PaintSettings>) => patchView({ canvas: { ...paintSettings(getView().canvas), ...patch } });
-const bump = (key: 'size' | 'load', by: number, range: { min: number; max: number }) => {
-  const cur = paintSettings(getView().canvas)[key];
-  // the size steps by a fifth (at least 1), as the canvas's own [ and ] do; the load by `by`
-  const next = key === 'load' ? cur + by : by > 0 ? Math.max(cur + 1, Math.round(cur * 1.2)) : Math.min(cur - 1, Math.round(cur / 1.2));
-  setPaint({ [key]: Math.min(range.max, Math.max(range.min, next)) });
-};
 
 export const tool: ToolDefinition<IllustrationDoc> = {
   id: 'illustration',
@@ -82,42 +81,74 @@ export const tool: ToolDefinition<IllustrationDoc> = {
   },
 
   shortcuts: (doc) => {
-    // Light and Check have nothing to show with no colour
-    const mode = (m: Mode) => () => doc.get().swatches.length || m === 'settings' || m === 'paint' ? patchView({ tab: m }) : undefined;
+    const d = doc.get();
+    const v = getView();
+    const sel = selected(d);
+    const ramp = rampOf(d, sel?.group);
+    const cells = v.tab === 'variations' && d.ramps.length ? cellsOf(d, v) : [];
+    const open = openCell(cells, v);
+    const swapOpen = !!v.swapRamp && !!rampOf(d, v.swapRamp);
+    const paint = paintSettings(v.canvas);
     const hero = () => {
-      const r = rampOf(doc.get(), selected(doc.get())?.group);
-      if (r) doc.transact(r.hero ? 'End the hero colour' : 'Make the hero colour', (d) => setSpec(d, r.id, { hero: !r.hero }));
+      if (ramp) doc.transact(ramp.hero ? 'End the hero colour' : 'Make the hero colour', (x) => setSpec(x, ramp.id, { hero: !ramp.hero }));
     };
-    return [
-      // first, so the Variations tab's 1 to 6, Space, arrows and Esc win while it shows, and the Layers tab's 1 to 3 (and are not there on any other tab)
-      ...variationKeys(doc),
-      ...layerKeys(doc),
-      { keys: 'Alt+1', label: 'Ramp settings', run: mode('settings') },
-      { keys: 'Alt+2', label: 'Light & preview', run: mode('light') },
-      { keys: 'Alt+3', label: 'Light zones', run: mode('zones') },
-      { keys: 'Alt+4', label: 'Check values', run: mode('check') },
-      { keys: 'Alt+5', label: 'Paint', run: mode('paint') },
-      { keys: 'Alt+6', label: 'Variations', run: mode('variations') },
-      { keys: 'Alt+7', label: 'Layers', run: mode('layers') },
-      { keys: 'Shift+A', label: 'Add a colour', run: () => addBase(doc) },
-      { keys: 'Delete', label: 'Delete ramp', run: () => arm(doc) },
-      { keys: 'Ctrl+D', label: 'Duplicate ramp', run: () => duplicate(doc) },
-      { keys: 'Ctrl+N', label: 'New palette', run: () => void newPalette(doc) },
-      { keys: 'ArrowLeft', label: 'Lighter step', run: () => move(doc, -1, 0) },
-      { keys: 'ArrowRight', label: 'Darker step', run: () => move(doc, 1, 0) },
-      { keys: 'H', label: 'Hero colour', run: hero },
-      { keys: 'L', label: 'Lock or unlock the selected ramp: it keeps its colour in every Variations cell', run: () => lockSelected(doc) },
-      { keys: 'G', label: 'Greyscale', run: () => void toggleGreyscale() },
-      { keys: 'V', label: 'Hold value', run: toggleValueLock },
-      // I picks: on the paper in Paint, anywhere on screen otherwise
-      { keys: 'I', label: 'Pick', run: () => (inPaint() ? setPaint({ tool: 'pick' }) : void eyedrop(doc)) },
-      { keys: 'B', label: 'Brush', run: () => inPaint() && setPaint({ tool: 'paint' }) },
-      { keys: 'S', label: 'Smudge', run: () => inPaint() && setPaint({ tool: 'smudge' }) },
-      { keys: '[', label: 'Smaller brush', run: () => inPaint() && bump('size', -1, SIZE) },
-      { keys: ']', label: 'Larger brush', run: () => inPaint() && bump('size', 1, SIZE) },
-      { keys: 'Shift+{', label: 'Less load', run: () => inPaint() && bump('load', -5, LOAD) },
-      { keys: 'Shift+}', label: 'More load', run: () => inPaint() && bump('load', 5, LOAD) },
-    ];
+    const light = sceneLight(d);
+    return illustrationKeys(
+      {
+        tab: v.tab,
+        swatches: d.swatches.length > 0,
+        ramps: d.ramps.length > 0,
+        ramp: !!ramp,
+        swapOpen,
+        cells: cells.length,
+        cellOpen: !!open,
+        onControl: !!document.activeElement?.closest('button, a[href], input, textarea, [role="tab"], [role="menuitem"]'),
+        proposals: !!proposals.get(),
+        copyOff: copyOff(),
+        // the ramps and the swatch board; focus in an inspector keeps its own arrows
+        arrowsFree: arrowsFree('illustration', '[aria-label="Ramps"], [aria-label="Swatch board"]'),
+      },
+      {
+        // Light and Check have nothing to show with no colour
+        tab: (t) => (d.swatches.length || t === 'settings' || t === 'paint' ? patchView({ tab: t }) : undefined),
+        addColour: () => addBase(doc),
+        arm: () => arm(doc),
+        duplicate: () => duplicate(doc),
+        newPalette: () => void newPalette(doc),
+        step: (dx, dy) => move(doc, dx, dy),
+        moveRamp: (dir) => {
+          const i = ramp ? d.ramps.indexOf(ramp) : -1;
+          // the index is where it lands before it leaves, so one down is two on
+          if (i >= 0 && i + dir >= 0 && i + dir < d.ramps.length) reorder(doc, ramp!.id, dir < 0 ? i - 1 : i + 2);
+        },
+        hero,
+        lock: () => lockSelected(doc),
+        swap: () => ramp && toggleSwap(ramp.id),
+        closeSwap,
+        keepAll: () => addProposals(doc, proposals.get()?.items ?? [], true),
+        discard: clearProposals,
+        greyscale: () => void toggleGreyscale(),
+        holdValue: toggleValueLock,
+        eyedrop: () => void eyedrop(doc),
+        paintTool: (t) => setPaint({ tool: t }),
+        size: (dir) => setPaint({ size: stepSize(paint.size, dir) }),
+        load: (dir) => setPaint({ load: stepLoad(paint.load, dir) }),
+        copyRamp: () => {
+          if (!ramp) return;
+          const steps = stepsOf(d, ramp.id);
+          void copyColours(steps.map((w) => w.oklch), `${rampName(d, ramp)}'s ${plural(steps.length, 'colour')}`);
+        },
+        copyAll: () =>
+          void copyPalette({ tool: 'illustration', swatches: d.swatches, named: () => named(doc.get()), scene: d.ramps.length && !light.mixed ? light.pair : null, notes: sceneNotes(d), format: v.format }),
+        show: showCell,
+        newSet,
+        cellStep: (dir) => stepCell(cells.length, dir),
+        more: () => moreLikeThis(d),
+        use: () => open && adoptCell(doc, open),
+        closeCell,
+        layerShow: (i) => patchView({ layerShow: SHOWS[i].id }),
+      },
+    );
   },
   StatusSlot,
   View,

@@ -27,6 +27,13 @@ export type PaintSettings = {
 
 export const SIZE = { min: 2, max: 400 };
 export const LOAD = { min: 5, max: 100 };
+/** the brush size one key step on: a fifth (at least 1), kept in range; the keys and the canvas share it */
+export const stepSize = (cur: number, dir: 1 | -1): number => {
+  const next = dir > 0 ? Math.max(cur + 1, Math.round(cur * 1.2)) : Math.min(cur - 1, Math.round(cur / 1.2));
+  return Math.min(SIZE.max, Math.max(SIZE.min, next));
+};
+/** the load (or smudge strength) one key step on: 5 */
+export const stepLoad = (cur: number, dir: 1 | -1): number => Math.min(LOAD.max, Math.max(LOAD.min, cur + dir * 5));
 export const WELL_MAX = 4;
 /** recipes put white in at up to 128 parts, and any recipe fits the well */
 export const PARTS_MAX = 128;

@@ -12,7 +12,7 @@ import { ConfirmInline, Icon, InspectorGroup, toast } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { brushWidth, toSample, WIDTH, type PaintingState, type PointerSample } from './paint/index.ts';
 import { HEIGHT } from './paint/types.ts';
-import { addToWell, loadHint, SIZE, sourcesOf, WELL_MAX, type PaintSettings, type PaletteSet } from './paint-sources.ts';
+import { addToWell, loadHint, sourcesOf, WELL_MAX, type PaintSettings, type PaletteSet } from './paint-sources.ts';
 import { PaintBar } from './PaintBar.tsx';
 import { Tray, Well } from './PaintTray.tsx';
 import { Toolbox } from './Toolbox.tsx';
@@ -200,11 +200,8 @@ export function PaintCanvas(p: PaintCanvasProps) {
   const onKeyDown = (e: KeyboardEvent<HTMLCanvasElement>) => {
     const k = e.key.toLowerCase();
     // the palette's own keys (delete, duplicate, step along a ramp) wait until focus leaves the paper
-    if (k === 'delete' || k === 'backspace' || k.startsWith('arrow') || ((e.ctrlKey || e.metaKey) && k === 'd')) return e.preventDefault();
-    if (e.key !== '[' && e.key !== ']') return;
-    e.preventDefault();
-    const next = e.key === ']' ? Math.max(v.size + 1, Math.round(v.size * 1.2)) : Math.min(v.size - 1, Math.round(v.size / 1.2));
-    p.onSettings({ size: Math.min(SIZE.max, Math.max(SIZE.min, next)) });
+    // (the brush size and load keys are the tool's shortcuts: they pass)
+    if (k === 'delete' || k === 'backspace' || k.startsWith('arrow') || ((e.ctrlKey || e.metaKey) && k === 'd')) e.preventDefault();
   };
 
   // ── undo, redo and clear ──
@@ -334,7 +331,7 @@ export function PaintCanvas(p: PaintCanvasProps) {
             Paper <b>{WIDTH} x {HEIGHT} px</b>
           </span>
           <span ref={where} className={s.where} />
-          <span className={s.keys}>[ ] size · hold Alt to pick</span>
+          <span className={s.keys}>, . size · hold Alt to pick</span>
         </div>
       </div>
       {p.mixer &&

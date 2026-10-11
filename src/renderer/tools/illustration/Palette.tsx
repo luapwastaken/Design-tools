@@ -114,7 +114,7 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
         onKeyDown={(e: KeyboardEvent) => {
           // on a step, up and down go to the next ramp as well (left and right also work from anywhere: the tool's shortcuts)
           const by = ARROWS[e.key];
-          if (!by || !(e.target as Element).closest('[data-step]')) return;
+          if (!by || e.altKey || !(e.target as Element).closest('[data-step]')) return;
           e.preventDefault();
           move(doc, by[0], by[1]);
         }}
@@ -286,6 +286,7 @@ function RampItem(p: ItemProps) {
             icon="swap_horiz"
             label="Swap colour"
             tip="Show other colours at this grey value"
+            shortcut="S"
             size="sm"
             latched={p.v.swapRamp === r.id}
             onClick={() => {
@@ -307,6 +308,7 @@ function RampItem(p: ItemProps) {
           icon="star"
           label={r.hero ? 'Hero colour: the other ramps stay quieter. Click to end it' : 'Make this the hero colour'}
           size="sm"
+          shortcut="H"
           latched={r.hero}
           onClick={() => doc.transact(r.hero ? `End ${name} as hero` : `Make ${name} the hero`, (x) => setSpec(x, r.id, { hero: !r.hero }))}
         />

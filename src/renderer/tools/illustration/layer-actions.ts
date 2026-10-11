@@ -2,7 +2,6 @@
 // Mood are view state, never in undo) except offering the layer colours, which only proposes: nothing is
 // written to the palette until a proposal is kept.
 import { hexToOklch } from '../../../shared/color/index.ts';
-import type { Shortcut } from '../../shell/tool.ts';
 import { toast } from '../../ui/index.ts';
 import type { Doc } from './actions.ts';
 import { proposalName, type Row } from './layers.ts';
@@ -15,12 +14,6 @@ export const SHOWS: { id: IllustrationView['layerShow']; label: string }[] = [
   { id: 'recipe', label: 'Recipe' },
   { id: 'target', label: 'Target' },
 ];
-
-/** 1 to 3 pick the picture's view, only while the Layers tab shows (so they are not there on any other tab) */
-export function layerKeys(doc: Doc): Shortcut[] {
-  if (getView().tab !== 'layers' || !doc.get().ramps.length) return [];
-  return SHOWS.map((s, i): Shortcut => ({ keys: String(i + 1), label: `Layers: show ${s.label}`, run: () => patchView({ layerShow: s.id }) }));
-}
 
 type Flag = 'layerOut' | 'layerBg' | 'layerStar';
 

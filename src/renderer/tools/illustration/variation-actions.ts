@@ -3,7 +3,6 @@
 // in variations.ts.
 import type { Oklch } from '../../../shared/color/index.ts';
 import { nextSeed } from '../../../shared/palette/variations.ts';
-import type { Shortcut } from '../../shell/tool.ts';
 import { toast } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
 import { select, selected, type Doc } from './actions.ts';
@@ -71,41 +70,6 @@ export const toggleRampLock = (id: string): void => patchView({ lockedRamps: tog
 export function lockSelected(doc: Doc): void {
   const id = selected(doc.get())?.group;
   if (id && rampOf(doc.get(), id)) toggleRampLock(id);
-}
-
-// ── the keys ─────────────────────────────────────────────────────────────────────────────────────
-
-/** a button, link or field has the focus: Enter belongs to it */
-const onControl = (): boolean => !!document.activeElement?.closest('button, a[href], input, textarea, [role="tab"], [role="menuitem"]');
-
-/**
- * The Variations tab's keys (spec: Asked and answered 1): 1 to 6 open a cell, Space refills the grid, and
- * while one is open the arrows step, M narrows, Enter uses it and Esc closes it. They exist only while the
- * tab shows, so every other tab keeps the arrows' own steps. The other-colours row closes on Esc from any
- * tab, before the large view does. The keymap takes the first match, so these go first.
- */
-export function variationKeys(doc: Doc): Shortcut[] {
-  const v = getView();
-  const swap: Shortcut[] = v.swapRamp && rampOf(doc.get(), v.swapRamp) ? [{ keys: 'Escape', label: 'Close the other-colours row', run: closeSwap }] : [];
-  const d = doc.get();
-  if (v.tab !== 'variations' || !d.ramps.length) return swap;
-  const cells = cellsOf(d, v);
-  const open = openCell(cells, v);
-  return [
-    ...swap,
-    ...cells.map((c): Shortcut => ({ keys: String(c.n), label: `Variations: show ${c.n} larger`, run: () => showCell(c.n) })),
-    { keys: 'Space', label: 'Variations: a new set', run: newSet },
-    ...(open
-      ? [
-          { keys: 'ArrowLeft', label: 'Variations: previous', run: () => stepCell(cells.length, -1) },
-          { keys: 'ArrowRight', label: 'Variations: next', run: () => stepCell(cells.length, 1) },
-          { keys: 'M', label: 'Variations: more like this', run: () => moreLikeThis(d) },
-          { keys: 'Escape', label: 'Variations: close', run: closeCell },
-          // a focused button keeps its own Enter
-          ...(onControl() ? [] : [{ keys: 'Enter', label: 'Variations: use this palette', run: () => adoptCell(doc, open) }]),
-        ]
-      : []),
-  ];
 }
 
 // ── Swap one colour ──────────────────────────────────────────────────────────────────────────────

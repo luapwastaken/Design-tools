@@ -37,7 +37,7 @@ export function SelectedRamp({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: I
   const onKeyDown = (e: KeyboardEvent) => {
     // on a step, up and down go to the next ramp as well (left and right also work from anywhere: the tool's shortcuts)
     const by = ARROWS[e.key];
-    if (!by || !(e.target as Element).closest('[data-step]')) return;
+    if (!by || e.altKey || !(e.target as Element).closest('[data-step]')) return;
     e.preventDefault();
     move(doc, by[0], by[1]);
   };
