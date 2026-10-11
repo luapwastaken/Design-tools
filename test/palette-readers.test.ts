@@ -2,7 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { readPaletteFile } from '../src/shared/color/palette-readers.ts';
-import { hexToOklch, toHex } from '../src/shared/color/index.ts';
+import { zipSync } from 'fflate';
+import { hexToOklch, rgb255, toHex } from '../src/shared/color/index.ts';
+import { writeKpl, writeProcreate } from '../src/shared/palette/writers.ts';
+import type { Swatch } from '../src/shared/types.ts';
 
 const fixture = (name: string) => new Uint8Array(readFileSync(new URL(`fixtures/${name}`, import.meta.url)));
 const hexes = (f: ReturnType<typeof readPaletteFile>) => f.swatches.map((s) => toHex(s.oklch));
@@ -257,4 +260,96 @@ test("Photoshop's own .aco presets read in full", { skip: !PS_SWATCHES && 'Photo
     const anpa = readPaletteFile('aco', new Uint8Array(readFileSync(`${PS_SWATCHES}/ANPA Colors.aco`)), 'ANPA');
     assert.ok(anpa.swatches.every((w) => w.name.startsWith('ANPA ')));
   }
+});
+
+// ── what we write comes back: KPL, Procreate, Lospec HEX ─────────────────────────────────────────
+
+const colour = (hex: string, name: string, more: Partial<Swatch> = {}): Swatch => ({ id: name, name, role: null, oklch: hexToOklch(hex), type: 'process', ...more });
+const LIST = [colour('#e8643c', 'Ember'), colour('#14161a', 'Ink'), colour('#fbf7f0', 'Paper'), colour('#00ff80', 'Mint')];
+
+test('KPL: write then read gives the same names and exact hexes, in order', () => {
+  const list = LIST;
+  const back = readPaletteFile('kpl', writeKpl('Brand', list), 'file');
+  assert.equal(back.name, 'Brand');
+  assert.deepEqual(back.warnings, []);
+  assert.deepEqual(back.swatches.map((s) => s.name), ['Ember', 'Ink', 'Paper', 'Mint']);
+  assert.deepEqual(hexes(back), list.map((s) => toHex(s.oklch)));
+  assert.ok(back.swatches.every((s) => s.source?.space === 'rgb'), 'imported values are kept, so the colours open locked');
+});
+
+test('KPL: ramps come back as groups, light to dark, and a single group is the palette itself (no prefix), as with ASE', () => {
+  const ramp = (group: string, base: string) => [0, 1, 2].map((i) => colour(['#aa7755', '#885533', '#552211'][i], i === 1 ? base : `${base} ${i}`, { group, step: i - 1 }));
+  const two = readPaletteFile('kpl', writeKpl('Study', [...ramp('a', 'Skin'), ...ramp('b', 'Cloth')]), 'f');
+  assert.equal(two.swatches.length, 6);
+  assert.deepEqual(two.swatches.slice(0, 3).map((s) => s.name), ['Skin / Skin 0', 'Skin / Skin', 'Skin / Skin 2']);
+  const one = readPaletteFile('kpl', writeKpl('Study', [...ramp('a', 'Skin'), colour('#123456', 'Loose')]), 'f');
+  assert.deepEqual(one.swatches.map((s) => s.name), ['Loose', 'Skin 0', 'Skin', 'Skin 2']);
+});
+
+test('KPL: a Krita-made file with Gray and CMYK entries, an odd profile, Lab and an unknown model', () => {
+  const xml = [
+    '<ColorSet version="2.0" name="From Krita" comment="" columns="4" rows="1">',
+    '<ColorSetEntry spot="false" name="Sky &amp; sea" id="" bitdepth="U8"><RGB r="0.1" g="0.5" b="0.9" space="sRGB-elle-V2-g10.icc"/><Position row="0" column="1"/></ColorSetEntry>',
+    '<ColorSetEntry spot="false" name="Mid" id="" bitdepth="U8"><Gray g="0.5" space="Gray-D50-elle-V2-srgbtrc.icc"/><Position row="0" column="0"/></ColorSetEntry>',
+    '<ColorSetEntry spot="false" name="Ink" id="" bitdepth="U8"><CMYK c="1" m="0.5" y="0" k="0.2" space="x"/><Position row="0" column="2"/></ColorSetEntry>',
+    '<ColorSetEntry spot="false" name="Lab one" id="" bitdepth="U16"><Lab L="0.5" a="0.5" b="0.5" space="x"/><Position row="0" column="3"/></ColorSetEntry>',
+    '<ColorSetEntry spot="true" name="Spot" id="" bitdepth="U8"><RGB r="1" g="0" b="0" space="sRGB-elle-V2-srgbtrc.icc"/><Position row="1" column="1"/></ColorSetEntry>',
+    '<ColorSetEntry spot="false" name="Odd" id="" bitdepth="U8"><XYZA x="1" y="1" z="1" a="1"/><Position row="1" column="0"/></ColorSetEntry>',
+    '</ColorSet>',
+  ].join('\n');
+  const bytes = zipSync({ mimetype: [utf8('application/x-krita-palette'), { level: 0 }], 'colorset.xml': utf8(xml), 'profiles.xml': utf8('<Profiles/>') });
+  const back = readPaletteFile('kpl', bytes, 'f');
+  assert.equal(back.name, 'From Krita');
+  assert.deepEqual(back.swatches.map((s) => [s.name, s.source?.space]), [['Mid', 'gray'], ['Sky & sea', 'rgb'], ['Ink', 'cmyk'], ['Spot', 'rgb']], 'by row and column, the XML entity decoded');
+  assert.equal(back.swatches[3].type, 'spot');
+  assert.equal(back.warnings.length, 3, 'unsupported models, the other profile, the CMYK estimate');
+  assert.ok(back.warnings.some((w) => /Lab/.test(w) && /XYZA/.test(w)), back.warnings.join('|'));
+  assert.ok(back.warnings.some((w) => /profile/.test(w)));
+});
+
+test('KPL: files that are not palettes say so', () => {
+  assert.throws(() => readPaletteFile('kpl', utf8('plain text'), 'x'), /isn't a Krita palette/);
+  assert.throws(() => readPaletteFile('kpl', zipSync({ 'other.txt': utf8('x') }), 'x'), /isn't a Krita palette/);
+  assert.throws(() => readPaletteFile('kpl', zipSync({ 'colorset.xml': utf8('<ColorSet name="E"></ColorSet>') }), 'x'), /No colours/);
+  const whole = writeKpl('Brand', LIST);
+  assert.throws(() => readPaletteFile('kpl', whole.subarray(0, whole.length - 40), 'x'), /isn't a Krita palette/, 'a truncated zip reports instead of crashing');
+});
+
+test('Procreate: write then read keeps every colour, in order, with the palette’s name', () => {
+  const back = readPaletteFile('swatches', writeProcreate('Brand', LIST), 'file');
+  assert.equal(back.name, 'Brand');
+  assert.deepEqual(back.warnings, []);
+  assert.deepEqual(hexes(back), LIST.map((s) => toHex(s.oklch)));
+  assert.ok(back.swatches.every((s) => s.name === '' && s.source?.space === 'rgb'));
+  // more than 30 continue as a second palette; they join into one, and the report says so
+  const long = Array.from({ length: 34 }, (_, i) => colour(`#${(i * 7).toString(16).padStart(2, '0')}8040`, `c${i}`));
+  const joined = readPaletteFile('swatches', writeProcreate('Long', long), 'x');
+  assert.equal(joined.swatches.length, 34);
+  assert.deepEqual(hexes(joined), long.map((s) => toHex(s.oklch)));
+  assert.match(joined.warnings.join(' '), /2 palettes/);
+});
+
+test('Procreate: empty slots are gaps, Display P3 swatches land on their sRGB, and broken files report', () => {
+  const file = (palettes: unknown) => zipSync({ 'Swatches.json': utf8(JSON.stringify(palettes)) });
+  const hsb = (h: number, s: number, b: number, colorSpace = 0) => ({ hue: h, saturation: s, brightness: b, alpha: 1, colorSpace });
+  const back = readPaletteFile('swatches', file([{ name: 'Mine', swatches: [hsb(0, 1, 1), null, hsb(0, 1, 1, 1), { hue: 'x' }] }]), 'f');
+  assert.equal(back.swatches.length, 2);
+  assert.equal(toHex(back.swatches[0].oklch), '#ff0000');
+  assert.deepEqual(back.swatches[1].source?.values.map((v) => Math.round(v * 255)), rgb255(back.swatches[1].oklch), 'its locked values are the sRGB it shows');
+  assert.ok(back.swatches[1].oklch[1] > back.swatches[0].oklch[1], 'the P3 colour keeps its extra chroma');
+  assert.match(back.warnings.join(' '), /1 swatch that couldn't be read/);
+  assert.throws(() => readPaletteFile('swatches', utf8('nope'), 'x'), /isn't a Procreate/);
+  assert.throws(() => readPaletteFile('swatches', file({ not: 'a list' }), 'x'), /isn't a Procreate/);
+  assert.throws(() => readPaletteFile('swatches', file([{ name: 'Empty', swatches: [null] }]), 'x'), /No colours/);
+});
+
+test('Lospec HEX: six digits to a line, with or without a #, blank lines and junk reported', () => {
+  const back = readPaletteFile('hex', utf8('e8643c\r\n#14161A\n\nfbf7f0\nnot a colour\n12345\n'), 'cave');
+  assert.equal(back.name, 'cave');
+  assert.deepEqual(hexes(back), ['#e8643c', '#14161a', '#fbf7f0']);
+  assert.ok(back.swatches.every((s) => s.source?.space === 'rgb'));
+  assert.match(back.warnings.join(' '), /Skipped 2 lines/);
+  assert.throws(() => readPaletteFile('hex', utf8('\n\n'), 'x'), /No colours/);
+  const text = LIST.map((s) => toHex(s.oklch).slice(1)).join('\n');
+  assert.deepEqual(hexes(readPaletteFile('hex', utf8(text), 'x')), LIST.map((s) => toHex(s.oklch)));
 });

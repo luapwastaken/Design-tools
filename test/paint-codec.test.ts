@@ -32,7 +32,7 @@ test('rgbaPng round-trips byte for byte, straight alpha included', async () => {
   // colour under zero and near-zero alpha: a canvas would premultiply it away
   bytes.set([241, 240, 234, 0, 90, 140, 200, 1], 0);
   const png = readPng(new Uint8Array(await (await rgbaPng(bytes, w, h)).arrayBuffer()));
-  assert.deepEqual(png.chunks, ['IHDR', 'IDAT', 'IEND']);
+  assert.deepEqual(png.chunks, ['IHDR', 'sRGB', 'pHYs', 'IDAT', 'IEND']);
   assert.deepEqual([png.w, png.h, png.depth, png.colour], [w, h, 8, 6]);
   assert.deepEqual(png.px, bytes);
   await assert.rejects(rgbaPng(bytes, w + 1, h));

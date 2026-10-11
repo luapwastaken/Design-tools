@@ -13,6 +13,14 @@ export function gradientStops(a: Oklch, b: Oklch, n: number, space: 'oklch' | 'o
   return inSrgb(a) && inSrgb(b) ? stops.map(fitChroma) : stops;
 }
 
+/**
+ * The gradient as a CSS `linear-gradient`, left to right, between the two ends and the stops in
+ * between, interpolated in the same space as the stops (the browser's hue and mixing rules match).
+ */
+export function gradientCss(a: Oklch, b: Oklch, n: number, space: 'oklch' | 'oklab', colour: (o: Oklch) => string): string {
+  return `linear-gradient(in ${space} to right, ${[a, ...gradientStops(a, b, n, space), b].map(colour).join(', ')})`;
+}
+
 function blend(a: Oklch, b: Oklch, n: number, space: 'oklch' | 'oklab'): Oklch[] {
   const count = Math.max(0, Math.floor(n));
   const ts = Array.from({ length: count }, (_, i) => (i + 1) / (count + 1));

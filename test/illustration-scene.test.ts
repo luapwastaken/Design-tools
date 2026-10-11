@@ -21,7 +21,7 @@ import {
   toPayload,
   type IllustrationDoc,
 } from '../src/renderer/tools/illustration/doc.ts';
-import { LIGHTS, materialFromName, MAX_RAMPS, paletteBases, presetOf, SETS, sceneLight, SUBJECTS } from '../src/renderer/tools/illustration/scene.ts';
+import { LIGHTS, materialFromName, MAX_RAMPS, paletteBases, presetOf, SETS, sceneLight, sceneNotes, SUBJECTS } from '../src/renderer/tools/illustration/scene.ts';
 
 const light = (id: string) => LIGHTS.find((l) => l.id === id)!;
 const withRamps = (...bases: Oklch[]): IllustrationDoc => bases.reduce((d, b) => addRamp(d, b).doc, emptyDoc());
@@ -234,4 +234,18 @@ test('a ramp is guessed to be a material only from the subject word in its name;
   // a colour name, a shirt, nothing: no guess (the ramp keeps its default, Cloth)
   for (const n of ['Ultramarine Blue', 'Shirt', 'C26B4C', '', '  ']) assert.equal(materialFromName(n), undefined, n);
   assert.equal(materialFromName(null), undefined);
+});
+
+test('a Krita export keeps the light by name and each ramp’s material; mixed or custom light is said plainly', () => {
+  const none = sceneNotes(emptyDoc());
+  assert.deepEqual([none.light, Object.keys(none.materials ?? {})], [undefined, []]);
+  const d = addRamp(addRamp(emptyDoc(), hexToOklch('#aa7755'), 'Caramel', null, 'skin').doc, hexToOklch('#336699'), 'Denim', null, 'cloth').doc;
+  const golden = setScene(d, light('golden').light, light('golden').shadow);
+  const notes = sceneNotes(golden);
+  assert.equal(notes.light, 'Golden hour');
+  assert.deepEqual(Object.values(notes.materials ?? {}), ['Skin', 'Cloth']);
+  assert.deepEqual(Object.keys(notes.materials ?? {}), golden.ramps.map((r) => r.id));
+  assert.equal(sceneNotes(setScene(d, [0.9, 0.05, 80], [0.3, 0.05, 280])).light, 'Custom');
+  const mixed = { ...golden, ramps: [golden.ramps[0], { ...golden.ramps[1], light: light('moon').light, shadow: light('moon').shadow }] };
+  assert.equal(sceneNotes(mixed).light, undefined, 'ramps lit differently have no one light to name');
 });

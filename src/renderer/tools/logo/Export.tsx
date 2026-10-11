@@ -52,7 +52,7 @@ export function useLogoExport(doc: Doc, d: LogoDoc, v: LogoView, lockup: Lockup 
   const files = async (): Promise<OutFile[]> => {
     const out: OutFile[] = [];
     for (const [l, x] of pairs) {
-      if (v.assets.svg) out.push({ name: `${fileName(name, l, x)}.svg`, data: lockupSvg(d, l, x, { padding: d.exportPadding }) });
+      if (v.assets.svg) out.push({ name: `${fileName(name, l, x)}.svg`, data: lockupSvg(d, l, x, { padding: d.exportPadding, title: fileName(name, l, x) }) });
       if (v.assets.png) out.push({ name: `${fileName(name, l, x)}.png`, data: await buffer(await lockupPng(d, l, x, v.dpi)) });
     }
     if (v.assets.favicon) out.push(...(await faviconBundle(d, v.version, name)));
@@ -96,12 +96,13 @@ function Asset({ label, checked, onChange, sub, right }: { label: string; checke
 
 export function ExportGroup({ doc, d, v, lockup, out }: { doc: Doc; d: LogoDoc; v: LogoView; lockup: Lockup | null; out: LogoExport }) {
   const { ex, count, pairs, lockups, versions } = out;
+  const name = useShell((st) => st.docNames.logo) ?? 'Logo';
   const height = useDocNumber(doc, { label: 'Change the PNG height', key: 'pngHeight', get: (x) => x.pngHeight, set: (x, h) => fix({ ...x, pngHeight: h }) });
   const tick = (k: keyof Assets) => (on: boolean) => patchView({ assets: { ...v.assets, [k]: on } });
   const sized = lockup && pngSize(d, layoutLockup(d, lockup), v.version);
   const tooBigNow = sized && tooBig(sized.w, sized.h);
   const reach = v.scope === 'view' ? `${lockup ? KIND_LABEL[lockup.kind] : 'No lockup'}, ${VERSION_LABEL[v.version]}` : v.scope === 'lockup' ? `${lockup ? KIND_LABEL[lockup.kind] : 'No lockup'}, ${plural(versions.length, 'version')}` : `${plural(lockups.length, 'lockup')}, ${plural(versions.length, 'version')}`;
-  const markup = () => lockupSvg(d, lockup!, v.version, { padding: d.exportPadding });
+  const markup = () => lockupSvg(d, lockup!, v.version, { padding: d.exportPadding, title: fileName(name, lockup!, v.version) });
 
   return (
     <InspectorGroup id="logo.export" title="Export" meta={`${count} selected`}>

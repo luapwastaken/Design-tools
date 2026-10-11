@@ -4,7 +4,7 @@ import { artboardProblem, artboardSvg, tileSvg } from '../../../shared/pattern/s
 import type { Tile } from '../../../shared/pattern/types.ts';
 import { saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
-import { InspectorGroup, InspectorRow, NumberField, Segmented, useDocNumber } from '../../ui/index.ts';
+import { InspectorGroup, InspectorRow, NumberField, Segmented, Toggle, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx } from '../common/names.ts';
@@ -49,8 +49,8 @@ export function usePatternExport(doc: Doc, d: PatternDoc, tile: Tile, v: Pattern
       const out = await make();
       return saveFile({ tool: 'pattern', suggestedName, ext, filterName, data: typeof out === 'string' ? out : await out.arrayBuffer() });
     });
-  const swatchSvg = () => tileSvg(d, tile, unit);
-  const artboardMarkup = () => artboardSvg(d, tile, board.w / PX_PER[unit], board.h / PX_PER[unit], unit);
+  const swatchSvg = () => tileSvg(d, tile, unit, v.expand);
+  const artboardMarkup = () => artboardSvg(d, tile, board.w / PX_PER[unit], board.h / PX_PER[unit], unit, v.expand);
   return {
     ex,
     pngPx,
@@ -80,7 +80,7 @@ export function ExportModule({ doc, d, tile, v, out }: { doc: Doc; d: PatternDoc
     <InspectorGroup id="pattern.export" title="Export" meta={`${inUnit(tile.width, unit)} × ${inUnit(tile.height, unit)} ${unit}`} actions={<Segmented mono fit options={UNITS} value={unit} onChange={(u) => doc.transact(`Export in ${u}`, (x) => withUnit(x, u))} className={s.units} />}>
       <InspectorRow
         label="Swatch"
-        info={`One tile with its offsets baked in: drag it into Illustrator's Swatches panel and it repeats exactly.${unit === 'px' ? ' Illustrator counts 72 px to the inch, this tool 96: a px file keeps its pixel size there, while mm and in keep their size on paper.' : ''}`}
+        info={`One tile with its offsets baked in. Open the file in Illustrator, select everything and drag it into the Swatches panel: the empty rectangle behind sets the tile, so it repeats exactly.${unit === 'px' ? ' Illustrator counts 72 px to the inch, this tool 96: a px file keeps its pixel size there, while mm and in keep their size on paper.' : ''}`}
       >
         <span className={cx('val', i.dim)}>
           {inUnit(tile.width, unit)} × {inUnit(tile.height, unit)} {unit}
@@ -91,6 +91,9 @@ export function ExportModule({ doc, d, tile, v, out }: { doc: Doc; d: PatternDoc
         <NumberField label="Height" hideLabel min={lo} max={hi} step={UNIT_STEP[unit]} unit={unit} {...ah} />
       </InspectorRow>
       {boardProblem && <span className={cx('lbl', s.danger)}>Too many shapes for one artboard file</span>}
+      <InspectorRow label="SVG" info="Off, each shape is written once as a symbol and placed again and again: a small file, and Illustrator lists the shapes in its Symbols panel. On, every place is a plain group you can select and edit, and the file is bigger.">
+        <Toggle label="Expand repeats" checked={v.expand} onChange={(expand) => patchView({ expand })} />
+      </InspectorRow>
       <InspectorRow label="PNG of" info="The PNG is written at the DPI, with the DPI in the file so it opens at its size.">
         <Segmented fit options={PNGS} value={v.png} onChange={(png) => patchView({ png })} />
       </InspectorRow>

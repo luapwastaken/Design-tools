@@ -1,9 +1,11 @@
-// Readers for imported palettes (spec §10.2): Adobe ASE, Photoshop ACO v1/v2, GIMP GPL.
+// Readers for imported palettes (spec §10.2): Adobe ASE, Photoshop ACO v1/v2, GIMP GPL, Krita KPL,
+// Procreate .swatches and Lospec .hex.
 // `Swatch.source.values` use one scale whatever the file: rgb and gray 0..1 (gray 1 = white),
 // cmyk 0..1 of ink, lab [L 0..100, a, b] (D50).
 import type { Color } from 'culori';
-import type { Swatch } from '../types.ts';
-import { toOklch } from './index.ts';
+import { strFromU8, unzipSync } from 'fflate';
+import type { PALETTE_IMPORT_EXTS, Swatch } from '../types.ts';
+import { rgb255, toOklch } from './index.ts';
 
 export type PaletteFile = { name: string; swatches: Swatch[]; warnings: string[] };
 type Source = NonNullable<Swatch['source']>;
@@ -12,8 +14,8 @@ type Read = (bytes: Uint8Array, fallbackName: string) => PaletteFile;
 const ENDS_EARLY = 'The file ends early; colours after that point are missing.';
 
 /** Throws, with a message fit for the import report, when the file has no readable colours. */
-export function readPaletteFile(ext: 'ase' | 'aco' | 'gpl', bytes: Uint8Array, fallbackName: string): PaletteFile {
-  const file = { ase: readAse, aco: readAco, gpl: readGpl }[ext](bytes, fallbackName);
+export function readPaletteFile(ext: (typeof PALETTE_IMPORT_EXTS)[number], bytes: Uint8Array, fallbackName: string): PaletteFile {
+  const file = { ase: readAse, aco: readAco, gpl: readGpl, kpl: readKpl, swatches: readProcreate, hex: readHex }[ext](bytes, fallbackName);
   if (!file.swatches.length) throw new Error('No colours in this file.');
   if (file.swatches.some((s) => s.source?.space === 'cmyk'))
     file.warnings.push('CMYK colours are shown as an estimate; the original values are kept.');
@@ -164,6 +166,140 @@ const readGpl: Read = (bytes, fallbackName) => {
   return { name, swatches, warnings };
 };
 
+// ── KPL (Krita) ──────────────────────────────────────────────────────────────────────────────────
+
+/** one tag at a time: Krita's colorset.xml is elements and quoted attributes, no text between */
+const XML_TAG = /<(\/)?([A-Za-z][\w:-]*)((?:\s+[\w:-]+\s*=\s*"[^"]*")*)\s*(\/)?>/g;
+const XML_ATTR = /([\w:-]+)\s*=\s*"([^"]*)"/g;
+const XML_ENTITY = /&(?:(amp|lt|gt|quot|apos)|#(\d+)|#x([0-9a-f]+));/gi;
+const XML_NAMED: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+
+const unescapeXml = (v: string) => v.replace(XML_ENTITY, (_, named?: string, dec?: string, hex?: string) => (named ? XML_NAMED[named.toLowerCase()] : String.fromCodePoint(dec ? Number(dec) : parseInt(hex!, 16))));
+
+type KplEntry = { group: string; name: string; spot: boolean; row: number; column: number; colour: { tag: string; a: Record<string, string> } | null };
+
+const readKpl: Read = (bytes, fallbackName) => {
+  let xml: string;
+  try {
+    const files = unzipSync(bytes, { filter: (f) => f.name === 'colorset.xml' });
+    if (!files['colorset.xml']) throw new Error('no colorset');
+    xml = strFromU8(files['colorset.xml']);
+  } catch {
+    throw new Error("This isn't a Krita palette (.kpl) file.");
+  }
+  let name = fallbackName;
+  let group = '';
+  let entry: KplEntry | null = null;
+  const entries: KplEntry[] = [];
+  for (const m of xml.matchAll(XML_TAG)) {
+    const [, closing, tag, attrText = '', selfClosing] = m;
+    const a: Record<string, string> = {};
+    for (const [, k, v] of attrText.matchAll(XML_ATTR)) a[k] = unescapeXml(v);
+    if (tag === 'ColorSet' && !closing && a.name?.trim()) name = a.name.trim();
+    else if (tag === 'Group') group = closing || selfClosing ? '' : (a.name ?? '');
+    else if (tag === 'ColorSetEntry') {
+      if (closing) entry = null;
+      else {
+        entry = { group, name: a.name ?? '', spot: a.spot === 'true', row: 0, column: 0, colour: null };
+        entries.push(entry);
+        if (selfClosing) entry = null;
+      }
+    } else if (entry && !closing && tag === 'Position') [entry.row, entry.column] = [Number(a.row) || 0, Number(a.column) || 0];
+    else if (entry && !closing && !entry.colour) entry.colour = { tag, a };
+  }
+  // laid out the way Krita shows them: a group's swatches by row, then column
+  const rank = (e: KplEntry) => e.row * 1e6 + e.column;
+  const byGroup = new Map<string, KplEntry[]>();
+  for (const e of entries) byGroup.set(e.group, [...(byGroup.get(e.group) ?? []), e]);
+  const ordered = [...byGroup.values()].flatMap((list) => list.sort((x, y) => rank(x) - rank(y)));
+  // as with ASE: the group names a swatch only where several groups need telling apart
+  const several = new Set(entries.map((e) => e.group).filter(Boolean)).size > 1;
+  const skipped = new Set<string>();
+  let otherProfile = false;
+  const swatches: Swatch[] = [];
+  for (const e of ordered) {
+    const made = e.colour ? kplColour(e.colour.tag, e.colour.a, e.name, e.spot ? 'spot' : 'process') : null;
+    if (!made) skipped.add(e.colour?.tag ?? 'no colour');
+    else {
+      if (e.colour!.a.space && !/srgb/i.test(e.colour!.a.space)) otherProfile = true;
+      swatches.push(several && e.group ? { ...made, name: `${e.group} / ${made.name}` } : made);
+    }
+  }
+  const warnings = [...skippedNote(skipped), ...(otherProfile ? ['Some colours use another colour profile than sRGB; they are read as sRGB.'] : [])];
+  return { name, swatches, warnings };
+};
+
+/** RGB, Gray and CMYK entries (channels 0..1, CMYK as ink); Krita's Lab and the rest are left out */
+function kplColour(tag: string, a: Record<string, string>, name: string, type: Swatch['type']): Swatch | null {
+  const v = (...keys: string[]) => keys.map((k) => Number(a[k]));
+  const ok = (values: number[]) => values.every((x) => Number.isFinite(x));
+  if (tag === 'RGB' && ok(v('r', 'g', 'b'))) return swatch(name, { space: 'rgb', values: v('r', 'g', 'b').map(unit) }, type);
+  if (tag === 'Gray' && ok(v('g'))) return swatch(name, { space: 'gray', values: v('g').map(unit) }, type);
+  if (tag === 'CMYK' && ok(v('c', 'm', 'y', 'k'))) return swatch(name, { space: 'cmyk', values: v('c', 'm', 'y', 'k').map(unit) }, type);
+  return null;
+}
+
+const unit = (x: number) => Math.min(1, Math.max(0, x));
+
+// ── Procreate .swatches ──────────────────────────────────────────────────────────────────────────
+
+const readProcreate: Read = (bytes, fallbackName) => {
+  const notProcreate = () => new Error("This isn't a Procreate swatches file.");
+  let palettes: unknown;
+  try {
+    const files = unzipSync(bytes, { filter: (f) => f.name === 'Swatches.json' });
+    palettes = JSON.parse(strFromU8(files['Swatches.json']));
+  } catch {
+    throw notProcreate();
+  }
+  if (!Array.isArray(palettes)) throw notProcreate();
+  const swatches: Swatch[] = [];
+  let bad = 0;
+  let name = fallbackName;
+  for (const [i, p] of palettes.entries()) {
+    if (i === 0 && typeof p?.name === 'string' && p.name.trim()) name = p.name.trim();
+    // an empty slot is null: a gap in Procreate's grid, not a colour
+    for (const w of Array.isArray(p?.swatches) ? (p.swatches as unknown[]) : []) {
+      if (w === null) continue;
+      const made = procreateSwatch(w as Record<string, unknown>);
+      if (made) swatches.push(made);
+      else bad++;
+    }
+  }
+  const warnings = [
+    palettes.length > 1 && `The file holds ${count(palettes.length, 'palette')}; they are joined into one.`,
+    bad && `Skipped ${count(bad, 'swatch', 'swatches')} that couldn't be read.`,
+  ].filter((w) => typeof w === 'string');
+  return { name, swatches, warnings };
+};
+
+/** Procreate keeps hue, saturation and brightness (0..1) in sRGB (colorSpace 0) or Display P3 (1) */
+function procreateSwatch(w: Record<string, unknown>): Swatch | null {
+  const [h, sat, b] = [w.hue, w.saturation, w.brightness].map(Number);
+  if (![h, sat, b].every(Number.isFinite)) return null;
+  const rgb = hsvToRgb(unit(h) * 360, unit(sat), unit(b));
+  if (w.colorSpace !== 1) return swatch('', { space: 'rgb', values: rgb });
+  // a P3 swatch is kept as the sRGB it lands on, so it is locked like the others and written back as that
+  const p3 = make('', { mode: 'p3', r: rgb[0], g: rgb[1], b: rgb[2] });
+  return { ...p3, source: { space: 'rgb', values: rgb255(p3.oklch).map((c) => c / 255) } };
+}
+
+// ── HEX (Lospec) ─────────────────────────────────────────────────────────────────────────────────
+
+/** six hex digits to a line, with or without a "#" */
+const readHex: Read = (bytes, fallbackName) => {
+  const swatches: Swatch[] = [];
+  let bad = 0;
+  for (const raw of new TextDecoder().decode(bytes).split(/\r?\n/)) {
+    const line = raw.trim().replace(/^#/, '');
+    if (!line) continue;
+    const m = /^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(line);
+    if (m) swatches.push(swatch('', { space: 'rgb', values: m.slice(1).map((h) => parseInt(h, 16) / 255) }));
+    else bad++;
+  }
+  return { name: fallbackName, swatches, warnings: bad ? [`Skipped ${count(bad, 'line')} that couldn't be read.`] : [] };
+};
+
 // ── shared ───────────────────────────────────────────────────────────────────────────────────────
 
 function swatch(name: string, source: Source, type: Swatch['type'] = 'process'): Swatch {
@@ -190,7 +326,7 @@ function make(name: string, color: Color, type: Swatch['type'] = 'process'): Swa
   return { id: crypto.randomUUID(), name, role: null, oklch: toOklch(color), type };
 }
 
-const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
+const count = (n: number, noun: string, plural = `${noun}s`) => `${n} ${n === 1 ? noun : plural}`;
 
 const skippedNote = (skipped: Set<string>) =>
   skipped.size ? [`Skipped colours in unsupported colour spaces: ${[...skipped].join(', ')}.`] : [];

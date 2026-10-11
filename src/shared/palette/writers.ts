@@ -149,6 +149,29 @@ export function writeJson(name: string, swatches: Swatch[]): string {
   return JSON.stringify({ name, swatches: list }, null, 2) + '\n';
 }
 
+/** the namespace of what only this app's files carry, in a token's `$extensions` */
+export const TOKENS_NAMESPACE = 'com.designtools';
+
+/**
+ * A design-tokens file (the W3C community group format Figma, Style Dictionary and Tokens Studio read):
+ * every colour a `color` token named like its CSS property, `$value` the hex a screen shows, and the
+ * full OKLCH with the swatch's name and role under `$extensions` for this app to read back.
+ */
+export function writeTokens(swatches: Swatch[]): string {
+  const keys = cssNames(swatches);
+  const color = Object.fromEntries(
+    swatches.map((s, i) => [
+      keys[i],
+      {
+        $type: 'color',
+        $value: toHex(s.oklch),
+        $extensions: { [TOKENS_NAMESPACE]: { oklch: s.oklch.map((v, k) => +v.toFixed(k === 2 ? 3 : 5)), ...(s.name.trim() && { name: s.name.trim() }), ...(s.role && { role: s.role }) } },
+      },
+    ]),
+  );
+  return JSON.stringify({ color }, null, 2) + '\n';
+}
+
 /** Procreate holds 30 swatches per palette, so longer ones continue as "Name 2", "Name 3" */
 const PROCREATE_MAX = 30;
 
@@ -193,6 +216,9 @@ const xmlAttr = (s: string) => xmlText(s).replace(/[&<>"]/g, (ch) => XML_ESCAPES
 /** an Illustration scene's light: the colours its ramps lean to */
 export type SceneLight = { light: Oklch; shadow: Oklch };
 
+/** what Krita's palette comment says about the scene: the light preset's name, and each ramp's material by ramp id */
+export type SceneNotes = { light?: string; materials?: Record<string, string> };
+
 /**
  * A Krita palette: a zip of mimetype, colorset.xml and profiles.xml. Each Illustration ramp is a
  * group laid out light to dark, the colours in no ramp fill the palette's own group, and a scene's
@@ -200,7 +226,7 @@ export type SceneLight = { light: Oklch; shadow: Oklch };
  * the mimetype, so that entry comes first and STORED. It drops swatches silently where a group has
  * no `rows`, and fails the whole file on an empty profiles.xml.
  */
-export function writeKpl(name: string, swatches: Swatch[], scene?: SceneLight | null): Uint8Array {
+export function writeKpl(name: string, swatches: Swatch[], scene?: SceneLight | null, notes?: SceneNotes): Uint8Array {
   const loose = swatches.filter((s) => s.group === undefined);
   const lit = (step: number, label: string, oklch: Oklch): Swatch => ({ id: label, name: label, role: null, oklch, type: 'process', step });
   const ramps = [
@@ -231,8 +257,15 @@ export function writeKpl(name: string, swatches: Swatch[], scene?: SceneLight | 
     return [` <Group name="${xmlAttr(unique)}" rows="${Math.ceil(list.length / columns)}">`, ...entries(lightToDark, columns, '  '), ' </Group>'];
   });
 
+  // the comment is the only place a .kpl can say how the ramps were made
+  const materials = ramps.flatMap(({ name: ramp, list }) => {
+    const material = list[0].group === undefined ? undefined : notes?.materials?.[list[0].group];
+    return material ? [`${xmlText(ramp)}: ${material}`] : [];
+  });
+  const comment = [notes?.light && `Light: ${notes.light}.`, materials.length && `Materials: ${materials.join(', ')}.`].filter(Boolean).join(' ');
+
   const xml = [
-    `<ColorSet version="2.0" name="${xmlAttr(name.trim() || 'Palette')}" comment="" columns="${columns}" rows="${Math.ceil(loose.length / KPL_ROW)}">`,
+    `<ColorSet version="2.0" name="${xmlAttr(name.trim() || 'Palette')}" comment="${xmlAttr(comment)}" columns="${columns}" rows="${Math.ceil(loose.length / KPL_ROW)}">`,
     ...entries(loose, KPL_ROW, ' '),
     ...groups,
     '</ColorSet>',

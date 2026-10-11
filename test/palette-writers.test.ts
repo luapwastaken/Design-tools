@@ -17,6 +17,7 @@ import {
   writeSheetSvg,
   writeTailwind,
   writeTailwind4,
+  writeTokens,
 } from '../src/shared/palette/writers.ts';
 
 const fixture = (name: string) => new Uint8Array(readFileSync(new URL(`fixtures/${name}`, import.meta.url)));
@@ -394,4 +395,28 @@ test('CSS: --on-primary beside a Primary, hex twins optional; Tailwind 4 as an @
   assert.ok(tw.startsWith('@theme {\n') && tw.endsWith('\n}\n'));
   assert.match(tw, /^ {2}--color-primary: oklch\(/m);
   assert.match(tw, /^ {2}--color-on-primary: oklch\(/m);
+});
+
+test('KPL: the comment names the light and each ramp’s material, and is empty without them', () => {
+  const list = [...ramp('a', 'Caramel', 3), ...ramp('b', 'Hat & Coat', 3), sw('#123456', 'Loose')];
+  const k = readKpl(writeKpl('Study', list, null, { light: 'Golden hour', materials: { a: 'Skin', b: 'Velvet', gone: 'Metal' } }));
+  assert.equal(k.root.attrs.comment, 'Light: Golden hour. Materials: Caramel: Skin, Hat & Coat: Velvet.');
+  assert.equal(readKpl(writeKpl('Study', list, null, { materials: { a: 'Skin' } })).root.attrs.comment, 'Materials: Caramel: Skin.');
+  assert.equal(readKpl(writeKpl('Study', list, null, { light: 'Dusk' })).root.attrs.comment, 'Light: Dusk.');
+  assert.equal(readKpl(writeKpl('Study', list)).root.attrs.comment, '');
+});
+
+test('Design tokens: a color token per swatch named by role, the hex as $value, the OKLCH under $extensions', () => {
+  const brand = [sw('#e8643c', 'Ember', 'Primary'), sw('#14161a', 'Ink', 'Text'), sw('#fbf7f0', 'Paper'), sw('#fbf7f0', 'Paper')];
+  const file = JSON.parse(writeTokens(brand));
+  assert.deepEqual(Object.keys(file), ['color']);
+  assert.deepEqual(Object.keys(file.color), ['primary', 'text', 'paper', 'paper-2'], 'roles first, then names; repeats numbered');
+  const primary = file.color.primary;
+  assert.deepEqual([primary.$type, primary.$value], ['color', '#e8643c']);
+  assert.deepEqual(Object.keys(primary).sort(), ['$extensions', '$type', '$value']);
+  const mine = primary.$extensions['com.designtools'];
+  assert.deepEqual([mine.name, mine.role], ['Ember', 'Primary']);
+  near(mine.oklch, brand[0].oklch.map((v, i) => +v.toFixed(i === 2 ? 3 : 5)));
+  assert.equal(file.color.paper.$extensions['com.designtools'].role, undefined, 'no role, none written');
+  assert.equal(JSON.parse(writeTokens([])).color && Object.keys(JSON.parse(writeTokens([])).color).length, 0);
 });

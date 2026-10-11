@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { crc32, deflateSync } from 'node:zlib';
-import { withDpi } from '../src/renderer/lib/png.ts';
+import { rgbaPng, withDpi } from '../src/renderer/lib/png.ts';
 
 const chunk = (type: string, data: Uint8Array) => {
   const out = Buffer.alloc(12 + data.length);
@@ -46,9 +46,10 @@ test('withDpi writes one pHYs right after IHDR, in pixels per metre, with a vali
   const out = await withDpi(png(), 300);
   assert.equal(out.type, 'image/png');
   const list = await chunks(out);
-  assert.deepEqual(list.map((c) => c.type), ['IHDR', 'pHYs', 'IDAT', 'IEND']);
+  assert.deepEqual(list.map((c) => c.type), ['IHDR', 'sRGB', 'pHYs', 'IDAT', 'IEND']);
   assert.ok(list.every((c) => c.crcOk));
-  const phys = list[1].data;
+  assert.deepEqual([...list[1].data], [0]);
+  const phys = list[2].data;
   assert.equal(phys.readUInt32BE(0), 11811); // 300 / 0.0254
   assert.equal(phys.readUInt32BE(4), 11811);
   assert.equal(phys[8], 1);
@@ -57,10 +58,10 @@ test('withDpi writes one pHYs right after IHDR, in pixels per metre, with a vali
 test('withDpi replaces a pHYs the encoder wrote, and leaves the pixels alone', async () => {
   const src = png(2835); // 72 ppi
   const list = await chunks(await withDpi(src, 96));
-  assert.deepEqual(list.map((c) => c.type), ['IHDR', 'pHYs', 'IDAT', 'IEND']);
-  assert.equal(list[1].data.readUInt32BE(0), 3780);
+  assert.deepEqual(list.map((c) => c.type), ['IHDR', 'sRGB', 'pHYs', 'IDAT', 'IEND']);
+  assert.equal(list[2].data.readUInt32BE(0), 3780);
   const before = await chunks(src);
-  assert.deepEqual(list[2].data, before.find((c) => c.type === 'IDAT')!.data);
+  assert.deepEqual(list[3].data, before.find((c) => c.type === 'IDAT')!.data);
 });
 
 test('withDpi refuses what is not a PNG, a cut-short PNG and a resolution of 0', async () => {
@@ -69,4 +70,20 @@ test('withDpi refuses what is not a PNG, a cut-short PNG and a resolution of 0',
   await assert.rejects(withDpi(new Blob([whole.subarray(0, whole.length - 6)]), 300), /cut short/);
   await assert.rejects(withDpi(png(), 0), /above 0/);
   await assert.rejects(withDpi(png(), Number.NaN), /above 0/);
+});
+
+test('withDpi without a resolution writes 72 ppi, and a PNG tagged twice keeps one sRGB', async () => {
+  const once = await withDpi(png());
+  const list = await chunks(await withDpi(once));
+  assert.deepEqual(list.map((c) => c.type), ['IHDR', 'sRGB', 'pHYs', 'IDAT', 'IEND']);
+  assert.equal(list[2].data.readUInt32BE(0), 2835);
+});
+
+test('rgbaPng writes sRGB and pHYs itself, at 72 ppi unless told otherwise', async () => {
+  const px = new Uint8Array([10, 20, 30, 255]);
+  const list = await chunks(await rgbaPng(px, 1, 1));
+  assert.deepEqual(list.map((c) => c.type), ['IHDR', 'sRGB', 'pHYs', 'IDAT', 'IEND']);
+  assert.ok(list.every((c) => c.crcOk));
+  assert.equal(list[2].data.readUInt32BE(0), 2835);
+  assert.equal((await chunks(await rgbaPng(px, 1, 1, 300)))[2].data.readUInt32BE(0), 11811);
 });

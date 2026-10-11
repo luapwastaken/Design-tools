@@ -6,7 +6,7 @@
 // artwork (a white smile on a blue disc) is cut out by a luminance mask, rather than painted over.
 import { contrast, parseCss, toHex, type Oklch } from '../color/index.ts';
 import { namespace, recolour, svgColours } from '../svg/index.ts';
-import { getAttr, parseSvg, serialize, walk, type Attr, type El } from '../svg/xml.ts';
+import { getAttr, isEl, parseSvg, serialize, textOf, walk, type Attr, type El } from '../svg/xml.ts';
 import { clearspaceRect, layoutLockup, type Layout } from './layout.ts';
 import type { Lockup, LockupKind, LogoDoc, Part, Rect, Version } from './types.ts';
 
@@ -16,6 +16,8 @@ export type SvgOptions = {
   padding: 'clearspace' | 'tight';
   /** px, the whole file's height, padding included; by default an icon height is UNIT_PX */
   height?: number;
+  /** the file's <title>: what a viewer or Illustrator calls the drawing */
+  title?: string;
 };
 
 /** px per icon height when no height is asked for, so the icon comes out alike in every lockup's file */
@@ -26,7 +28,7 @@ export const NOTHING = 'Add an icon or a wordmark first.';
 // a part root's sizing and namespace: the file's root and the part's placement stand in for them
 const ROOT_ONLY = /^(?:xmlns|version|baseProfile|x|y|width|height|viewBox|preserveAspectRatio|overflow|enable-background)$/;
 
-export const n = (v: number): string => String(+v.toFixed(3));
+export const n = (v: number): string => String(+v.toFixed(2));
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
 /** knockout brings its own field, so it always keeps the clearspace round the logo */
@@ -64,13 +66,44 @@ export function source(p: Part | null): string | null | undefined {
 }
 
 /** a part's own markup as a group: its root's sizing goes, its styling and anything pointed at stays */
-function asGroup(markup: string, head: Attr[]): El {
+function asGroup(markup: string, head: Attr[], box: Rect): El {
   const root = parseSvg(markup);
+  dropIdleClips(root, box);
   // Illustrator names every root "Layer_1"; the id only has to stay when something points at it
   const rootId = getAttr(root, 'id');
   const own = root.attrs.filter((a) => !ROOT_ONLY.test(a.name) && (a.name !== 'id' || markup.split(rootId!).length > 2));
   const nest = own.some((a) => a.name === 'id' || a.name === 'transform');
   return { name: 'g', attrs: nest ? head : [...head, ...own], children: nest ? [{ name: 'g', attrs: own, children: root.children }] : root.children };
+}
+
+const CLIP_SIDES = ['x', 'y', 'width', 'height'];
+
+/**
+ * Removes the clip paths that cut nothing: a lone rectangle well outside the artwork (Illustrator
+ * clips to its artboard), with room to spare for the widest stroke. A clip that touches the artwork
+ * stays, since it may be what trims a stroke or a shape.
+ */
+function dropIdleClips(root: El, box: Rect): void {
+  const widths = [...serialize(root).matchAll(/stroke-width\s*[:=]\s*["']?([\d.]+)/g)].map((m) => Number(m[1]));
+  const slack = 2 * (widths.length ? Math.max(...widths) : 1);
+  const idle = new Set<string>();
+  for (const { el } of walk(root)) {
+    const id = getAttr(el, 'id');
+    const inside = el.children.filter(isEl);
+    if (el.name !== 'clipPath' || !id || el.attrs.length !== 1 || inside.length !== 1 || inside[0].name !== 'rect') continue;
+    if (inside[0].attrs.some((a) => !CLIP_SIDES.includes(a.name))) continue; // a transform, rounded corners, a clip of its own
+    const [x, y, w, h] = CLIP_SIDES.map((k) => Number(getAttr(inside[0], k) ?? 0));
+    if ([x, y, w, h].every(Number.isFinite) && w > 0 && h > 0 && x <= box.x - slack && y <= box.y - slack && x + w >= box.x + box.w + slack && y + h >= box.y + box.h + slack) idle.add(id);
+  }
+  if (!idle.size) return;
+  const url = (id: string) => `url\\(\\s*["']?#${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']?\\s*\\)`;
+  const clips = new RegExp(`clip-path\\s*:\\s*(?:${[...idle].map(url).join('|')})\\s*;?`, 'g');
+  const attr = new RegExp(`^\\s*(?:${[...idle].map(url).join('|')})\\s*$`);
+  for (const { el } of walk(root)) {
+    el.attrs = el.attrs.filter((a) => !(a.name === 'clip-path' && attr.test(a.value)));
+    if (el.name === 'style') el.children = [el.children.some((c) => 'cdata' in c) ? { cdata: textOf(el).replace(clips, '') } : { text: textOf(el).replace(clips, '') }];
+    el.children = el.children.filter((c) => !isEl(c) || c.name !== 'clipPath' || !idle.has(getAttr(c, 'id') ?? ''));
+  }
 }
 
 /** which of the part's paints are paper, when it paints darker too (an all-white logo keeps its white) */
@@ -106,12 +139,12 @@ export function partGroup(part: Part, id: string, paint: string | null, transfor
     const body = paint ? `${shape}<rect ${box} fill="${paint}" mask="url(#${id}-alpha)"/>` : image(part.png ?? '');
     return serialize({ name: 'g', attrs: head, children: [{ text: body }] });
   }
-  if (!paint) return serialize(asGroup(namespace(part.svg, id), head));
-  const ink = asGroup(namespace(recolour(part.svg, paint), id), head);
+  if (!paint) return serialize(asGroup(namespace(part.svg, id), head, part.box));
+  const ink = asGroup(namespace(recolour(part.svg, paint), id), head, part.box);
   const paper = paperIn(part.svg);
   if (!paper) return serialize(ink);
   // the same drawing, white where it inks and black where it is paper, masks the painted one
-  const cut = asGroup(namespace(recolour(part.svg, (v) => (paper(v) ? '#000000' : '#ffffff')), `${id}-m`), []);
+  const cut = asGroup(namespace(recolour(part.svg, (v) => (paper(v) ? '#000000' : '#ffffff')), `${id}-m`), [], part.box);
   const area = { x: x - 0.1 * w, y: y - 0.1 * h, width: 1.2 * w, height: 1.2 * h };
   const mask: El = {
     name: 'mask',
@@ -139,7 +172,8 @@ export function placement(part: Part, r: Rect, at: Place): string {
   const k = (r.h * at.u) / part.box.h;
   const x = at.ox + r.x * at.u - k * part.box.x;
   const y = at.oy + r.y * at.u - k * part.box.y;
-  return `translate(${n(x)} ${n(y)}) scale(${+k.toPrecision(6)})`;
+  // a thousandth of a unit, not the files' two decimals: the artwork is scaled up from here, and a padded artboard's twin has to land on the tight one's pixels
+  return `translate(${+x.toFixed(3)} ${+y.toFixed(3)}) scale(${+k.toPrecision(6)})`;
 }
 
 /** the parts a layout places, with their role */
@@ -150,19 +184,20 @@ export function placed(doc: Pick<LogoDoc, 'icon' | 'wordmark'>, lay: Layout): ['
   return out;
 }
 
-export function svgFile(w: number, h: number, body: string): string {
+export function svgFile(w: number, h: number, body: string, title?: string): string {
   const [sw, sh] = [n(w), n(h)];
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${sw}px" height="${sh}px" viewBox="0 0 ${sw} ${sh}">${body}</svg>\n`;
+  const named = title?.trim() ? `<title>${esc(title.trim()).replace(/>/g, '&gt;')}</title>` : '';
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${sw}px" height="${sh}px" viewBox="0 0 ${sw} ${sh}">${named}${body}</svg>\n`;
 }
 
 /** a lockup in a w × h px file on `ground` (transparent by default); knockout lays its field over the whole file */
-export function drawn(doc: LogoDoc, kind: LockupKind, lay: Layout, version: Version, w: number, h: number, at: Place, ground?: string): string {
+export function drawn(doc: LogoDoc, kind: LockupKind, lay: Layout, version: Version, w: number, h: number, at: Place, ground?: string, title?: string): string {
   const paint = paintOf(doc, version);
   const prefix = `${kind}-${version}-${tag(source(doc.icon), source(doc.wordmark), paint)}`;
   const fill = version === 'knockout' ? toHex(doc.colour) : ground;
   const field = fill ? `<rect width="${n(w)}" height="${n(h)}" fill="${fill}"/>` : '';
   const parts = placed(doc, lay).map(([role, part, r]) => partGroup(part, `${prefix}-${role}`, paint, placement(part, r, at)));
-  return svgFile(w, h, field + parts.join(''));
+  return svgFile(w, h, field + parts.join(''), title);
 }
 
 export function lockupSvg(doc: LogoDoc, lockup: Lockup, version: Version, opts: SvgOptions): string {
@@ -171,7 +206,7 @@ export function lockupSvg(doc: LogoDoc, lockup: Lockup, version: Version, opts: 
   const pad = padOf(doc, version, opts.padding);
   const h = lay.h + 2 * pad;
   const u = opts.height && opts.height > 0 ? opts.height / h : UNIT_PX;
-  return drawn(doc, lockup.kind, lay, version, (lay.w + 2 * pad) * u, h * u, { ox: pad * u, oy: pad * u, u });
+  return drawn(doc, lockup.kind, lay, version, (lay.w + 2 * pad) * u, h * u, { ox: pad * u, oy: pad * u, u }, undefined, opts.title);
 }
 
 /**

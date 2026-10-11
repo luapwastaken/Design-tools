@@ -326,7 +326,7 @@ export class LibraryService {
     });
   }
 
-  /** .ase/.aco/.gpl become palettes, images and SVGs are copied; each file is made or says why not */
+  /** palette files (.ase, .aco, .gpl, .kpl, .swatches, .hex) become palettes, images and SVGs are copied; each file is made or says why not */
   import(paths: string[], collection: string): Promise<ImportResult> {
     return this.op(STRUCTURE, async () => {
       const dir = await this.ensureDir(collection);
@@ -715,5 +715,5 @@ export class LibraryService {
 function unsupported(ext: string): string {
   if (ext === 'psd') return "PSD files aren't supported. Export a PNG or TIFF.";
   const what = ext ? `${ext.toUpperCase()} files aren't supported.` : "It isn't a file the Library takes.";
-  return `${what} The Library takes ASE, ACO and GPL palettes, images and SVGs.`;
+  return `${what} The Library takes ASE, ACO, GPL, KPL, SWATCHES and HEX palettes, images and SVGs.`;
 }

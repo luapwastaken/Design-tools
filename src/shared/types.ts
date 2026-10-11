@@ -12,7 +12,7 @@ export type ItemKind = 'palette' | 'pattern' | 'logo' | 'image' | 'svg';
 export type DocKind = 'palette' | 'pattern' | 'logo';
 
 export const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif', 'tif', 'tiff'] as const;
-export const PALETTE_IMPORT_EXTS = ['ase', 'aco', 'gpl'] as const;
+export const PALETTE_IMPORT_EXTS = ['ase', 'aco', 'gpl', 'kpl', 'swatches', 'hex'] as const;
 /** file suffix for each JSON kind, e.g. "Monolith core.palette.json" */
 export const DOC_SUFFIX: Record<DocKind, string> = {
   palette: '.palette.json',
@@ -134,7 +134,7 @@ export type Collection = {
   name: string; // folder name; '' = Library root
   locked: boolean;
   items: LibraryItemRef[];
-  /** .ase/.aco/.gpl files sitting in the folder that haven't been imported */
+  /** palette files (.ase, .aco, .gpl, .kpl, .swatches, .hex) sitting in the folder that haven't been imported */
   notImported: { name: string; path: string }[];
   /** unknown files and deeper folders, counted for the footer */
   ignored: number;

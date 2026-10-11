@@ -319,7 +319,7 @@ export function LibraryPanel({ narrow }: { narrow: boolean }) {
                     <EmptyState
                       icon="add_photo_alternate"
                       title="Nothing in the Library yet"
-                      detail="Drop .ase, .aco or .gpl palettes, images or SVGs here. They go into Scratch."
+                      detail="Drop palettes (.ase, .aco, .gpl, .kpl, .swatches, .hex), images or SVGs here. They go into Scratch."
                       action={{ label: 'Import files', icon: 'upload_file', onClick: () => pickFiles(SCRATCH) }}
                     />
                   </div>

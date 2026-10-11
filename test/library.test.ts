@@ -10,6 +10,8 @@ import { safeName, uniqueName } from '../src/main/library/names.ts';
 import { type IdCache, scanLibrary } from '../src/main/library/scan.ts';
 import { LibraryService } from '../src/main/library/service.ts';
 import type { LibraryIndex, LoadedItem, PalettePayload } from '../src/shared/types.ts';
+import { hexToOklch, toHex } from '../src/shared/color/index.ts';
+import { writeKpl, writeProcreate } from '../src/shared/palette/writers.ts';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -583,7 +585,7 @@ describe('LibraryService', () => {
       ]);
       // spec §10.3: a plain sentence for each file
       assert.deepEqual(r.failed, [
-        { name: 'notes.txt', reason: "TXT files aren't supported. The Library takes ASE, ACO and GPL palettes, images and SVGs." },
+        { name: 'notes.txt', reason: "TXT files aren't supported. The Library takes ASE, ACO, GPL, KPL, SWATCHES and HEX palettes, images and SVGs." },
         { name: 'gone.png', reason: "The file isn't there any more." },
         { name: 'fake.psd', reason: "PSD files aren't supported. Export a PNG or TIFF." },
       ]);
@@ -617,6 +619,24 @@ describe('LibraryService', () => {
       assert.equal(r.warnings.length, 1);
       assert.equal(r.warnings[0].name, r.made[0].name);
       assert.match(r.warnings[0].messages.join(' '), /transparent/);
+    } finally {
+      await rm(src, { recursive: true, force: true });
+    }
+  });
+
+  test('a .kpl, a .swatches and a Lospec .hex import as palettes, as our own exports of them', { skip: noReader }, async () => {
+    const { lib } = harness();
+    const src = join(root, '..', `dt-import-${randomUUID().slice(0, 8)}`);
+    await mkdir(src);
+    try {
+      const list = [{ id: 'a', name: 'Ember', role: null, oklch: hexToOklch('#e8643c'), type: 'process' as const }, { id: 'b', name: 'Ink', role: null, oklch: hexToOklch('#14161a'), type: 'process' as const }];
+      await writeFile(join(src, 'brand.kpl'), writeKpl('Brand', list));
+      await writeFile(join(src, 'brand.swatches'), writeProcreate('Brand', list));
+      await writeFile(join(src, 'cave.hex'), 'e8643c\n14161a\n');
+      const r = await lib.import(['brand.kpl', 'brand.swatches', 'cave.hex'].map((f) => join(src, f)), 'Scratch');
+      assert.deepEqual(r.failed, []);
+      assert.equal(r.made.length, 3);
+      for (const made of r.made) assert.deepEqual(paletteOf(await lib.read(made.id)).swatches.map((w) => toHex(w.oklch)), ['#e8643c', '#14161a'], made.name);
     } finally {
       await rm(src, { recursive: true, force: true });
     }

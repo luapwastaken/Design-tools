@@ -5,6 +5,7 @@ import { rgb255 } from '../../../shared/color/index.ts';
 import { exportFrames } from '../../lib/frames.ts';
 import { scaleUp } from '../../lib/gif.ts';
 import { encodeIndexedPng } from '../../lib/png-indexed.ts';
+import { withDpi } from '../../lib/png.ts';
 import { fmtPx } from '../common/names.ts';
 import { workSize, type DitherDoc } from './doc.ts';
 import { dithered, type Result } from './pipeline.ts';
@@ -64,7 +65,7 @@ export async function pngBlob(d: DitherDoc, frame: number, scale: number): Promi
   if (why) throw new Error(why);
   const canvas = new OffscreenCanvas(W, H);
   canvas.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(scaleUp(rgbaOf(r), r.w, r.h, scale).buffer), W, H), 0, 0);
-  return canvas.convertToBlob({ type: 'image/png' });
+  return withDpi(await canvas.convertToBlob({ type: 'image/png' }));
 }
 
 const paletteBytes = (r: Result) => r.colours.map((c) => rgb255(c));

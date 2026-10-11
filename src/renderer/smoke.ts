@@ -53,7 +53,10 @@ import { adoptCell } from './tools/illustration/variation-actions.ts';
 import { FINISH_PRESETS } from './tools/illustration/finish.ts';
 import { cleanColour, cleanStrengths, readout as splitText, zoneRig, zoneRows } from './tools/illustration/light-zones.ts';
 import { allFlats, DEFAULT_LAYERS, recipeFlats } from './tools/illustration/layers.ts';
-import { LIGHTS as SCENE_LIGHTS, sceneLight } from './tools/illustration/scene.ts';
+import { LIGHTS as SCENE_LIGHTS, sceneLight, sceneNotes } from './tools/illustration/scene.ts';
+import { strFromU8, unzipSync } from 'fflate';
+import { MATERIALS } from '../shared/palette/ramp.ts';
+import { writeKpl } from '../shared/palette/writers.ts';
 import { reachable } from './shell/core/shortcuts.ts';
 import { stillLifeOf } from './tools/illustration/still-life.ts';
 import type { PaintEngine } from './tools/illustration/paint/index.ts';
@@ -1079,10 +1082,12 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   const read = back && (await api.invoke('library.read', back.id));
   const got: Swatch[] = read?.kind === 'palette' ? read.payload.swatches : [];
   const want = dd.get().swatches;
-  const same = got.length === want.length && want.every((w, i) => toHex(w.oklch) === toHex(got[i].oklch) && got[i].type === w.type && (!w.name || got[i].name === w.name));
-  check('its read-back matches the palette (names, colours, global and spot)', same, got.map((w) => [w.name, w.type]));
+  const same = got.length === want.length && want.every((w, i) => toHex(w.oklch) === toHex(got[i].oklch) && got[i].type === w.type && (!w.name || got[i].name === (w.role ? `${w.role} - ${w.name}` : w.name)));
+  check('its read-back matches the palette (names with the role first, colours, global and spot)', same, got.map((w) => [w.name, w.type]));
 
-  // the Krita format is another row of the same popover (the Library reads no .kpl, so only the write is checked)
+  check('an Adobe swatch file names its swatches role first by default, since this palette has roles', want.some((w) => w.role) && got.some((w) => w.role === null && /^(Background|Text|Primary|Accent) - /.test(w.name)), got.map((w) => w.name));
+
+  // the Krita format is another row of the same popover; the Library reads its own file back
   patchDesign({ format: 'kpl' });
   button('design', 'Export')?.click();
   const exportKpl = await until(() => [...(popover()?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export Krita')));
@@ -1091,7 +1096,39 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     exportKpl!.click();
     const savedKpl = await until(() => everToast.slice(shownKpl).find((t) => t.icon === 'download'));
     check('Export Krita writes a .kpl file', /^Exported .+\.kpl\.$/.test(String(savedKpl?.message ?? '')) && (await until(() => !popover())), savedKpl?.message);
+    const kplFile = /^Exported (.+)\.$/.exec(String(savedKpl?.message ?? ''))?.[1];
+    if (kplFile) {
+      await shell.importFiles([`${dir}\\exports\\${kplFile}`], 'Reimport');
+      const kplBack = await until(() => find((i) => i.collection === 'Reimport' && i.kind === 'palette' && i.id !== back?.id));
+      const kplRead = kplBack && (await api.invoke('library.read', kplBack.id));
+      const kplGot: Swatch[] = kplRead?.kind === 'palette' ? kplRead.payload.swatches : [];
+      check('the Library reads the .kpl back: the same colours in the same order', kplGot.length === want.length && want.every((w, i) => toHex(w.oklch) === toHex(kplGot[i].oklch)), kplGot.map((w) => toHex(w.oklch)));
+    }
   }
+  // each format has a file name of its own, so one export never replaces another's
+  const exportedNames: string[] = [];
+  for (const [format, label] of [['css', 'CSS'], ['tailwind4', 'Tailwind 4'], ['tailwind', 'Tailwind 3'], ['tokens', 'Design tokens'], ['json', 'JSON']] as [ExportFormat, string][]) {
+    patchDesign({ format });
+    button('design', 'Export')?.click();
+    const go = await until(() => [...(popover()?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim() === `Export ${label}`));
+    const before = everToast.length;
+    go?.click();
+    const said = await until(() => everToast.slice(before).find((t) => t.icon === 'download'));
+    exportedNames.push(/^Exported (.+)\.$/.exec(String(said?.message ?? ''))?.[1] ?? `none for ${label}`);
+    await until(() => !popover());
+  }
+  const [cssName, tw4Name, tw3Name, tokensName, jsonName] = exportedNames;
+  check('CSS, Tailwind 4, Tailwind 3, Design tokens and JSON each save to a name of their own', new Set(exportedNames).size === 5 && /^[^.]+\.css$/.test(cssName) && /\.tailwind4\.css$/.test(tw4Name) && /\.tailwind\.config\.js$/.test(tw3Name) && /\.tokens\.json$/.test(tokensName) && /^[^.]+\.json$/.test(jsonName), exportedNames);
+  patchDesign({ format: 'ase' });
+  button('design', 'Export')?.click();
+  await until(() => popover());
+  const aseText = popover()?.textContent ?? '';
+  check('the ASE description names the programs that open it, without After Effects, and its swatch names default to Role and colour name', aseText.includes('Illustrator, InDesign, Photoshop and Affinity') && !aseText.includes('After Effects') && aseText.includes('Role and colour name'), aseText.slice(0, 220));
+  patchDesign({ format: 'aco' });
+  await until(() => popover()?.textContent?.includes('Clip Studio'));
+  check('the ACO row names Clip Studio Paint', !!popover()?.textContent?.includes('Photoshop and Clip Studio Paint swatches'), popover()?.textContent?.slice(0, 160));
+  press('Escape');
+  await until(() => !popover());
   // the second button copies the format chosen (not always CSS), only for formats that are text; the binary ones can name swatches by role
   const exportLabels: [ExportFormat, string | null][] = [['css', 'Copy CSS'], ['tailwind4', 'Copy Tailwind 4'], ['json', 'Copy JSON'], ['ase', null]];
   const seen: (string | null)[] = [];
@@ -1106,6 +1143,24 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   }
   check('Export’s second button reads Copy and the format (CSS, Tailwind 4, JSON), and ASE has none but offers Swatch names by role', seen.join() === exportLabels.map(([, l]) => l).join(), seen);
   patchDesign({ format: 'ase' });
+
+  // Copy all as: every colour, one to a line, in the format Copy as remembers
+  const copyAll = [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Copy all as'));
+  copyAll?.click();
+  await sleep(150);
+  const allText = utf8((await api.invoke('clipboard.peek'))['text/plain']);
+  const allFormat = COPY_FORMATS.find((f) => f.label === copyAll?.textContent?.trim().slice('Copy all as '.length))?.id;
+  check('Copy all as copies every colour, one to a line, in the remembered format', !!copyAll && !!allFormat && allText === dd.get().swatches.map((w) => formatColour(w.oklch, allFormat)).join('\n'), [copyAll?.textContent, allText]);
+  // Gradient between two: Copy CSS gives the gradient as a linear-gradient through its stops
+  button('design', 'Add colours')?.click();
+  (await until(() => menuRow('Gradient between two')))?.click();
+  const gradient = await until(() => document.querySelector<HTMLElement>('[role="dialog"][aria-label="Gradient between two"]'));
+  [...(gradient?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim() === 'Copy CSS')?.click();
+  await sleep(150);
+  const gradientText = utf8((await api.invoke('clipboard.peek'))['text/plain']);
+  check('Copy CSS in Gradient between two copies a linear-gradient through the ends and every stop', /^linear-gradient\(in ok(lch|lab) to right, oklch\(/.test(gradientText) && (gradientText.match(/oklch\(/g)?.length ?? 0) >= 3, gradientText);
+  press('Escape');
+  await until(() => !document.querySelector('[role="dialog"][aria-label="Gradient between two"]'));
 
   // + Add > Paste codes: a popover anchored to the menu, live parse, Add makes proposals on the artboard
   clearProposals();
@@ -1143,6 +1198,21 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     await until(() => dd.get() === pasted);
     patchDesign({ locked: [] });
   }
+  // this tool's own CSS pasted back: the -hex twin and --on-primary are skipped, so one colour comes in, not three
+  clearProposals();
+  button('design', 'Add colours')?.click();
+  (await until(() => menuRow('Paste codes')))?.click();
+  const box3 = await until(() => document.querySelector<HTMLTextAreaElement>('[role="dialog"][aria-label="Paste codes"] textarea[aria-label="Colours to parse"]'));
+  if (box3) {
+    type(box3, [':root {', '  --smoke-primary: oklch(0.68 0.16 40);', '  --smoke-primary-hex: #e8643c;', '  --on-primary: oklch(1 0 0);', '  --on-primary-hex: #ffffff;', '}'].join(String.fromCharCode(10)));
+    const dialog = box3.closest('[role="dialog"]');
+    const note = await until(() => (dialog?.textContent?.includes('One colour found') ? dialog.textContent : null));
+    check('pasting the CSS export back reads the one colour: no hex twin, no --on-primary, no braces counted as skipped', !!note && !/skipped/.test(note.replace(/Skipped the -hex/, '')), dialog?.textContent?.slice(0, 200));
+    (await until(() => [...(dialog?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Propose colours') && !b.disabled)))?.click();
+    await until(() => proposals.get()?.items.length === 1);
+    check('and it keeps the property as the name', proposals.get()?.items[0]?.name === 'smoke-primary', proposals.get()?.items.map((p) => p.name));
+  } else check('Paste codes opens again for the CSS', false);
+  clearProposals();
 
   clearProposals();
 
@@ -1719,14 +1789,17 @@ async function pngAlpha(bytes: ArrayBuffer | undefined): Promise<{ w: number; h:
 }
 const PNG_COPY = JSON.stringify(['image/png', PNG_FORMAT].sort());
 
-/** a PNG's pixel size and its pHYs resolution in dpi (null without one) */
-function pngInfo(bytes: Uint8Array): { w: number; h: number; dpi: number | null } {
+/** a PNG's pixel size, its pHYs resolution in dpi (null without one) and whether it says it is sRGB */
+function pngInfo(bytes: Uint8Array): { w: number; h: number; dpi: number | null; srgb: boolean } {
   const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let dpi: number | null = null;
+  let srgb = false;
   for (let at = 8; at + 12 <= bytes.length; at += 12 + v.getUint32(at)) {
-    if (String.fromCharCode(...bytes.subarray(at + 4, at + 8)) === 'pHYs' && bytes[at + 16] === 1) dpi = v.getUint32(at + 8) * 0.0254;
+    const type = String.fromCharCode(...bytes.subarray(at + 4, at + 8));
+    if (type === 'pHYs' && bytes[at + 16] === 1) dpi = v.getUint32(at + 8) * 0.0254;
+    if (type === 'sRGB') srgb = true;
   }
-  return { w: v.getUint32(16), h: v.getUint32(20), dpi };
+  return { w: v.getUint32(16), h: v.getUint32(20), dpi, srgb };
 }
 
 /**
@@ -1812,6 +1885,14 @@ async function pattern(dir: string, palette: LibraryItemRef, dt: DocController<D
       }
     }
   }
+  // Expand repeats: plain groups where the symbols and <use>s were, the same places
+  const expandToggle = () => [...(host('pattern')?.querySelectorAll<HTMLButtonElement>('[role="checkbox"]') ?? [])].find((b) => b.textContent?.trim() === 'Expand repeats');
+  expandToggle()?.click();
+  const flat = await toolCopy('pattern', 'Copy the swatch SVG');
+  const flatRoot = flat && svgRoot(utf8(flat.held['text/plain']));
+  const flatGroups = flatRoot?.querySelectorAll('g[transform^="translate("]').length ?? 0;
+  check('Expand repeats writes the swatch as plain groups: no symbol, no use, one group where each use was', !!flatRoot && !flatRoot.querySelector('symbol, use') && flatGroups === uses.length, [flatGroups, uses.length, !!expandToggle()]);
+  expandToggle()?.click();
   const edge = svg!.querySelector(':scope > rect');
   const box = `0 0 ${+tile.width.toFixed(3)} ${+tile.height.toFixed(3)}`;
   check(
@@ -1835,7 +1916,7 @@ async function pattern(dir: string, palette: LibraryItemRef, dt: DocController<D
   await until(() => host('pattern')?.textContent?.includes(`${px[0]} × ${px[1]} px`));
   const png = await exported('PNG');
   const info = png && pngInfo(new Uint8Array(await png.arrayBuffer()));
-  check('the PNG carries its DPI in a pHYs chunk and is that many pixels', info && Math.round(info.dpi ?? 0) === 300 && info.w === px[0] && info.h === px[1], [info, px]);
+  check('the PNG carries its DPI in a pHYs chunk, says it is sRGB and is that many pixels', info && Math.round(info.dpi ?? 0) === 300 && info.srgb && info.w === px[0] && info.h === px[1], [info, px]);
 
   // Surprise me: a new layout, the shapes and colours as they were
   const before = pd.get();
@@ -2050,6 +2131,8 @@ async function logo(dir: string): Promise<void> {
     vector && /<circle/.test(vector) && /<path/.test(vector) && /fill="#000000"/.test(vector) && !/filter/.test(vector) && !/<image/.test(vector) && ![NAVY, AMBER, INK].some((c) => vector.toLowerCase().includes(c)),
     vector?.slice(0, 240),
   );
+  const title = vector ? svgRoot(vector)?.querySelector(':scope > title')?.textContent : null;
+  check('the exported lockup SVG has a title, and no number in its sizes runs past two decimals', !!title?.trim() && !/\.\d{3}/.test(vector?.match(/<svg[^>]*>/)?.[0] ?? '.000'), [title, vector?.match(/<svg[^>]*>/)?.[0]]);
   const copiedLogo = await toolCopy('logo', 'SVG');
   check(
     'Copy puts the lockup SVG on the clipboard as text and as image/svg+xml: the exported markup, and it parses',
@@ -2059,7 +2142,7 @@ async function logo(dir: string): Promise<void> {
   const png = await exported('PNG');
   const info = png && pngInfo(new Uint8Array(await png.arrayBuffer()));
   const size = pngSize(ld.get(), layoutLockup(ld.get(), lockupOf(ld.get(), 'horizontal')));
-  check('the PNG export is the set height with its DPI written in', info && info.w === size.w && info.h === size.h && Math.round(info.dpi ?? 0) === 300, [info, size]);
+  check('the PNG export is the set height with its DPI written in, and says it is sRGB', info && info.w === size.w && info.h === size.h && Math.round(info.dpi ?? 0) === 300 && info.srgb, [info, size]);
 
   const bundle = await faviconBundle(ld.get(), 'original', made!.name);
   const ico = bundle.find((f) => f.name === 'favicon.ico')?.data;
@@ -4370,6 +4453,9 @@ async function lightZonesUi(): Promise<void> {
   (await until(() => optionRow('Golden hour')))?.click();
   const golden = SCENE_LIGHTS.find((l) => l.id === 'golden')!;
   check('choosing Golden hour lights every ramp with its pair as one undo step', !!(await until(() => preset() === 'golden')) && il.depth() === d1 + 1 && il.get().ramps.every((r) => r.light.join() === golden.light.join() && r.shadow.join() === golden.shadow.join()), [preset(), il.depth(), d1]);
+  const keptLight = sceneNotes(il.get());
+  const kplComment = /comment="([^"]*)"/.exec(strFromU8(unzipSync(writeKpl('Smoke', il.get().swatches, null, keptLight))['colorset.xml']))?.[1] ?? '';
+  check('a Krita export keeps the light by name and each ramp’s material in the palette’s comment', kplComment.startsWith('Light: Golden hour.') && il.get().ramps.every((r) => kplComment.includes(MATERIALS.find((m) => m.id === r.material)!.label)), kplComment);
   check('the zones followed the light, and the four strengths took the preset’s', !!(await until(() => hexOf(cell(0, 'light')) !== toHex(model[0].result.zones.light).toUpperCase())) && illustrationView().zoneStrengths.join() === golden.strengths!.join() && illustrationView().zoneRim === null, illustrationView().zoneStrengths);
   ctrlZ();
   check('one Ctrl+Z puts the light pair back, the strengths being the view’s', !!(await until(() => preset() === 'daylight')) && il.depth() === d1 && il.get().ramps[0].light.join() === daylightLight);

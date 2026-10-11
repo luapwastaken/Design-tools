@@ -217,13 +217,13 @@ async function rgbaPng(f: Rgba, scale: number, dpi?: number, straight = false): 
   const px = scale === 1 ? f.data : new Uint8ClampedArray(scaleUp(new Uint32Array(f.data.buffer, f.data.byteOffset, f.width * f.height), f.width, f.height, scale).buffer);
   let png: Blob;
   if (straight) {
-    png = await straightPng(new Uint8Array(px.buffer, px.byteOffset, px.byteLength), w, h);
+    png = await straightPng(new Uint8Array(px.buffer, px.byteOffset, px.byteLength), w, h, dpi);
   } else {
     const canvas = new OffscreenCanvas(w, h);
     canvas.getContext('2d')!.putImageData(new ImageData(px, w, h), 0, 0);
     png = await canvas.convertToBlob({ type: 'image/png' });
   }
-  return dpi === undefined ? png : withDpi(png, dpi);
+  return withDpi(png, dpi);
 }
 
 /** the encoder worker, one job at a time */

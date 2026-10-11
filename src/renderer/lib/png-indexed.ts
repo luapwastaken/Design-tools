@@ -26,7 +26,7 @@ function chunk(type: string, data: Uint8Array): Uint8Array {
   return out;
 }
 
-/** `indices` is `w` × `h`, one palette index a pixel; `dpi` is written as pHYs */
+/** `indices` is `w` × `h`, one palette index a pixel; `dpi` is written as pHYs (72 when not given), beside the sRGB chunk */
 export async function encodeIndexedPng(indices: Uint8Array, w: number, h: number, palette: readonly Rgba8[], { scale = 1, dpi }: { scale?: number; dpi?: number } = {}): Promise<Blob> {
   const n = palette.length;
   if (n < 1 || n > 256) throw new Error(`An indexed PNG holds 1 to 256 colours, not ${n}.`);
@@ -68,5 +68,5 @@ export async function encodeIndexedPng(indices: Uint8Array, w: number, h: number
     chunk('IEND', new Uint8Array()),
   ];
   const png = new Blob(parts as BlobPart[], { type: 'image/png' });
-  return dpi === undefined ? png : withDpi(png, dpi);
+  return withDpi(png, dpi);
 }

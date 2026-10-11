@@ -30,7 +30,7 @@ export async function everyFile(d: LogoDoc, name: string, dpi: number): Promise<
   const files: OutFile[] = [];
   for (const l of shownLockups(d))
     for (const v of shownVersions(d)) {
-      files.push({ name: `${fileName(name, l, v)}.svg`, data: lockupSvg(d, l, v, { padding: d.exportPadding }) });
+      files.push({ name: `${fileName(name, l, v)}.svg`, data: lockupSvg(d, l, v, { padding: d.exportPadding, title: fileName(name, l, v) }) });
       files.push({ name: `${fileName(name, l, v)}.png`, data: await buffer(await lockupPng(d, l, v, dpi)) });
     }
   return files;

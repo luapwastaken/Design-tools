@@ -95,9 +95,9 @@ test('the parts land on their layout rects, in px, inside the padding', () => {
   const svg = lockupSvg(d, H, 'original', { padding: 'clearspace' });
   const root = parseSvg(svg);
   const [w, h] = [(lay.w + 2 * c) * UNIT_PX, (lay.h + 2 * c) * UNIT_PX];
-  assert.equal(getAttr(root, 'width'), `${+w.toFixed(3)}px`);
-  assert.equal(getAttr(root, 'height'), `${+h.toFixed(3)}px`);
-  assert.equal(getAttr(root, 'viewBox'), `0 0 ${+w.toFixed(3)} ${+h.toFixed(3)}`);
+  assert.equal(getAttr(root, 'width'), `${+w.toFixed(2)}px`);
+  assert.equal(getAttr(root, 'height'), `${+h.toFixed(2)}px`);
+  assert.equal(getAttr(root, 'viewBox'), `0 0 ${+w.toFixed(2)} ${+h.toFixed(2)}`);
   const at = (r: { x: number; y: number; w: number; h: number }) => [(c + r.x) * UNIT_PX, (c + r.y) * UNIT_PX, (c + r.x + r.w) * UNIT_PX, (c + r.y + r.h) * UNIT_PX];
   const i = mapper(group(svg, 'icon'));
   near([...i(ICON_BOX.x, ICON_BOX.y), ...i(ICON_BOX.x + ICON_BOX.w, ICON_BOX.y + ICON_BOX.h)], at(lay.icon!), 'icon');
@@ -105,10 +105,10 @@ test('the parts land on their layout rects, in px, inside the padding', () => {
   near([...wm(0, 0), ...wm(WORD_BOX.w, WORD_BOX.h)], at(lay.wordmark!), 'wordmark');
   // tight: no margin, the art touches the edges
   const t = parseSvg(lockupSvg(d, H, 'original', { padding: 'tight' }));
-  assert.equal(getAttr(t, 'height'), `${+(lay.h * UNIT_PX).toFixed(3)}px`);
+  assert.equal(getAttr(t, 'height'), `${+(lay.h * UNIT_PX).toFixed(2)}px`);
   // the padding is the clearspace rect
   const cs = clearspaceRect(d, H);
-  assert.deepEqual([cs.w * UNIT_PX, cs.h * UNIT_PX].map((v) => +v.toFixed(3)), [+w.toFixed(3), +h.toFixed(3)]);
+  assert.deepEqual([cs.w * UNIT_PX, cs.h * UNIT_PX].map((v) => +v.toFixed(2)), [+w.toFixed(2), +h.toFixed(2)]);
 });
 
 test('a height sets the whole file in px, padding included, and keeps the proportions', () => {
@@ -117,7 +117,7 @@ test('a height sets the whole file in px, padding included, and keeps the propor
     const root = parseSvg(lockupSvg(d, H, 'black', { padding, height: 64 }));
     const cs = padding === 'clearspace' ? clearspaceRect(d, H) : { ...layoutLockup(d, H) };
     assert.equal(getAttr(root, 'height'), '64px');
-    assert.equal(getAttr(root, 'width'), `${+((64 * cs.w) / cs.h).toFixed(3)}px`);
+    assert.equal(getAttr(root, 'width'), `${+((64 * cs.w) / cs.h).toFixed(2)}px`);
   }
   // without one, an icon height is UNIT_PX in every lockup's file, so the files match when placed together
   for (const l of d.lockups.filter((x) => x.kind !== 'wordmark')) {
@@ -241,4 +241,40 @@ test('a part’s id tag ignores its root tag, even a quoted > in it, so a reopen
   assert.equal(source(a), source(b));
   const ids = (d: LogoDoc) => lockupSvg(d, H, 'black', { padding: 'tight' }).match(/id="([^"]+)"/)![1];
   assert.equal(ids(doc({ icon: a })), ids(doc({ icon: b })));
+});
+
+test('the file has a title, and the same logo exports the same bytes twice (ids included)', () => {
+  const d = doc();
+  const a = lockupSvg(d, H, 'original', { padding: 'clearspace', title: 'Acme <horizontal> & co' });
+  const root = parseSvg(a);
+  const first = root.children.find(isEl)!;
+  assert.equal(first.name, 'title', 'the title comes before the drawing');
+  assert.equal(textOf(first), 'Acme &lt;horizontal&gt; &amp; co');
+  assert.equal(a, lockupSvg(d, H, 'original', { padding: 'clearspace', title: 'Acme <horizontal> & co' }));
+  assert.doesNotMatch(lockupSvg(d, H, 'original', { padding: 'clearspace' }), /<title/, 'no title asked, none written');
+});
+
+test('the file’s sizes are rounded to two decimals', () => {
+  const svg = lockupSvg(doc(), lockup('stacked', { gap: 0.37, ratio: 2.9 }), 'black', { padding: 'clearspace', height: 333.333 });
+  const root = parseSvg(svg);
+  for (const a of ['width', 'height', 'viewBox']) assert.doesNotMatch(getAttr(root, a)!, /\.\d{3}/, a);
+});
+
+test('a clip path far outside the artwork is dropped with everything that pointed at it; one that touches it stays', () => {
+  const art = (clip: string) =>
+    part('icon', `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><defs><style>.cls-1{fill:none;stroke:#29335c;stroke-width:4px;clip-path:url(#clippath);}</style><clipPath id="clippath">${clip}</clipPath></defs><g clip-path="url(#clippath)"><circle class="cls-1" cx="160" cy="110" r="40"/></g></svg>`, PADDED_BOX);
+  const d = (clip: string) => doc({ icon: art(clip) });
+  const loose = lockupSvg(d('<rect width="300" height="200"/>'), lockup('icon'), 'original', { padding: 'tight' });
+  assert.doesNotMatch(loose, /clip/i, 'no clipPath, no clip-path attribute, no clip-path rule');
+  selfContained(loose);
+  // the artboard-sized clip is gone but the drawing is whole
+  assert.match(loose, /<circle/);
+  // exactly the artwork's bounds: it may trim the stroke, so it stays
+  const snug = lockupSvg(d('<rect x="120" y="70" width="80" height="80"/>'), lockup('icon'), 'original', { padding: 'tight' });
+  assert.match(snug, /<clipPath/);
+  assert.match(snug, /<g clip-path="url\(#[\w-]+clippath\)">/);
+  selfContained(snug);
+  // a clip that is not a plain rectangle is left alone
+  const odd = lockupSvg(d('<rect width="300" height="200" rx="20"/>'), lockup('icon'), 'original', { padding: 'tight' });
+  assert.match(odd, /<clipPath/);
 });

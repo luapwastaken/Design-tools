@@ -1,9 +1,10 @@
 // SVG out: the Illustrator swatch (one tile), the artboard (real vectors) and the preview tile the
 // Library shows. Each shape is a <symbol> per slot and colour, placed with <use>, so a tile of a
-// hundred stars carries the star's paths once.
+// hundred stars carries the star's paths once. `expand` writes plain groups instead (a copy of the
+// artwork at each place), for tools that make symbols of <symbol> and <use> and won't edit them.
 import { toHex, type Oklch } from '../color/index.ts';
 import { namespace, recolour } from '../svg/index.ts';
-import { parseSvg, serialize, type Attr } from '../svg/xml.ts';
+import { isEl, parseSvg, serialize, type Attr, type XmlNode } from '../svg/xml.ts';
 import { reachOf } from './layout.ts';
 import type { Item, PatternDoc, ShapeSlot, Tile, Unit } from './types.ts';
 import { wrapItems } from './wrap.ts';
@@ -27,7 +28,11 @@ const n = (v: number) => String(+v.toFixed(3));
 const length = (px: number, unit: Unit) => `${+(px / PX_PER[unit]).toFixed(4)}${unit}`;
 const rect = (w: string, h: string, more = '') => `<rect width="${w}" height="${h}"${more}/>`;
 
-type Built = { text: string; ns: Attr[] };
+/** what a slot's root holds that is drawn only when something refers to it (rules, gradients, clips) */
+const DEFINITIONS = new Set(['style', 'defs', 'linearGradient', 'radialGradient', 'pattern', 'clipPath', 'mask', 'filter', 'marker']);
+
+/** `text`: the <symbol>; `defs` and `art` are the same artwork apart, for the expanded form */
+type Built = { text: string; defs: string; art: string; ns: Attr[] };
 type Drawn = { ns: Attr[]; defs: string; uses: string };
 
 /**
@@ -62,7 +67,11 @@ function symbol(id: string, slot: ShapeSlot, hex: string | null): Built {
   // what the root paints with (fill, class for its scoped style rules) moves onto a group
   const keep = root.attrs.filter((a) => !ROOT_ONLY.test(a.name));
   const art = keep.length ? serialize({ name: 'g', attrs: keep, children: root.children }) : root.children.map(serialize).join('');
+  const defined = (c: XmlNode) => isEl(c) && DEFINITIONS.has(c.name);
+  const drawn = root.children.filter((c) => !defined(c));
   const made = {
+    defs: root.children.filter(defined).map(serialize).join(''),
+    art: keep.length ? serialize({ name: 'g', attrs: keep, children: drawn }) : drawn.map(serialize).join(''),
     text: `<symbol id="${id}" viewBox="${n(b.x)} ${n(b.y)} ${n(b.w)} ${n(b.h)}" overflow="visible">${art}</symbol>`,
     ns: root.attrs.filter((a) => a.name.startsWith('xmlns:')),
   };
@@ -77,8 +86,18 @@ function use(id: string, b: ShapeSlot['bounds'], it: Item): string {
   return `<use xlink:href="#${id}" x="${n(-b.w / 2)}" y="${n(-b.h / 2)}" width="${n(b.w)}" height="${n(b.h)}" transform="translate(${n(it.x)} ${n(it.y)})${turn} scale(${scale})"/>`;
 }
 
-/** items as <use>s of the symbols they need; a symbol's id is its slot's place and its colour, so it stays put between edits */
-function draw(doc: SvgInput, items: Item[]): Drawn {
+/** an item as a group: the same placing as `use`, with the artwork's own corner as the origin the <use> would have moved */
+function place(art: string, b: ShapeSlot['bounds'], it: Item): string {
+  const scale = +(it.size / (Math.max(b.w, b.h) || 1)).toPrecision(6);
+  const turn = it.rotation ? ` rotate(${n(it.rotation)})` : '';
+  return `<g transform="translate(${n(it.x)} ${n(it.y)})${turn} scale(${scale}) translate(${n(-b.w / 2 - b.x)} ${n(-b.h / 2 - b.y)})">${art}</g>`;
+}
+
+/**
+ * items as <use>s of the symbols they need (a symbol's id is its slot's place and its colour, so it
+ * stays put between edits); with `expand`, as a group each, the shared rules and gradients once in <defs>
+ */
+function draw(doc: SvgInput, items: Item[], expand = false): Drawn {
   const at = new Map(doc.slots.map((s, i) => [s.id, i]));
   const hexes = new Map<Oklch, string>();
   const symbols = new Map<string, Built>();
@@ -94,11 +113,11 @@ function draw(doc: SvgInput, items: Item[]): Drawn {
     }
     const id = `dtp-${i}${hex ? `-${hex.slice(1)}` : ''}`;
     if (!symbols.has(id)) symbols.set(id, symbol(id, slot, hex));
-    uses += use(id, slot.bounds, it);
+    uses += expand ? place(symbols.get(id)!.art, slot.bounds, it) : use(id, slot.bounds, it);
   }
   const ns: Attr[] = [];
   for (const s of symbols.values()) for (const a of s.ns) if (!ns.some((x) => x.name === a.name)) ns.push(a);
-  return { ns, defs: [...symbols.values()].map((s) => s.text).join(''), uses };
+  return { ns, defs: [...symbols.values()].map((s) => (expand ? s.defs : s.text)).join(''), uses };
 }
 
 function file(width: string, height: string, viewW: string, viewH: string, ns: Attr[], body: string): string {
@@ -120,8 +139,8 @@ const background = (doc: SvgInput, w: string, h: string) => (doc.background ? re
  * side and clipped. Illustrator takes the backmost unfilled, unstroked rectangle as a dragged
  * swatch's tile, so the edges keep their half gaps and the swatch repeats at the true pitch.
  */
-export function tileSvg(doc: SvgInput, tile: Tile, unit: Unit): string {
-  const { ns, defs, uses } = draw(doc, stacked(wrapItems(tile.items, tile.width, tile.height, reachOf(doc.slots))));
+export function tileSvg(doc: SvgInput, tile: Tile, unit: Unit, expand = false): string {
+  const { ns, defs, uses } = draw(doc, stacked(wrapItems(tile.items, tile.width, tile.height, reachOf(doc.slots))), expand);
   const [w, h] = [n(tile.width), n(tile.height)];
   return file(length(+w, unit), length(+h, unit), w, h, ns,
     `<defs><clipPath id="dtp-clip">${rect(w, h)}</clipPath>${defs}</defs>` +
@@ -143,11 +162,11 @@ export function artboardProblem(tile: Tile, w: number, h: number, unit: Unit): s
  * swatch's stacking order, clipped once at the artboard's edge. No clip runs along a seam: clipping
  * each tile on its own leaves an antialiased hairline at every seam that falls between pixels.
  */
-export function artboardSvg(doc: SvgInput, tile: Tile, w: number, h: number, unit: Unit): string {
+export function artboardSvg(doc: SvgInput, tile: Tile, w: number, h: number, unit: Unit, expand = false): string {
   const why = artboardProblem(tile, w, h, unit);
   if (why) throw new Error(why);
   const [aw, ah] = [+n(w * PX_PER[unit]), +n(h * PX_PER[unit])];
-  const { ns, defs, uses } = draw(doc, stacked(wrapItems(tile.items, tile.width, tile.height, reachOf(doc.slots), { w: aw, h: ah })));
+  const { ns, defs, uses } = draw(doc, stacked(wrapItems(tile.items, tile.width, tile.height, reachOf(doc.slots), { w: aw, h: ah })), expand);
   return file(`${+w.toFixed(4)}${unit}`, `${+h.toFixed(4)}${unit}`, n(aw), n(ah), ns,
     `<defs><clipPath id="dtp-board">${rect(n(aw), n(ah))}</clipPath>${defs}</defs>` +
     `${background(doc, n(aw), n(ah))}<g clip-path="url(#dtp-board)">${uses}</g>`);

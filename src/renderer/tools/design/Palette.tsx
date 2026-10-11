@@ -6,7 +6,8 @@ import { cmykEstimate, cssColor, inSrgb, rgb255, toHex, type Oklch } from '../..
 import { ROLES } from '../../../shared/palette/roles.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { cx } from '../../ui/cx.ts';
-import { Button, Icon, IconButton, menu, Select, Tooltip, type MenuAnchor, type MenuItem } from '../../ui/index.ts';
+import { Button, copyColours, Icon, IconButton, menu, Select, Tooltip, useCopyFormat, type MenuAnchor, type MenuItem } from '../../ui/index.ts';
+import { COPY_FORMATS } from '../../../shared/color/format.ts';
 import { fmtC, fmtH, fmtL } from '../common/names.ts';
 import { GreyscaleButton } from '../common/Greyscale.tsx';
 import { Section } from '../common/Section.tsx';
@@ -42,6 +43,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
   const lit = hot.use();
   const isArmed = armed.use();
   const sel = selection(d, v);
+  const copyFormat = useCopyFormat();
   const [drag, setDrag] = useState<{ ids: string[]; at: number | null } | null>(null);
   const names = useMemo(() => namesOf(d), [d.swatches, d.ramps]);
   // the swatch that holds each job is the one Swap works on
@@ -138,6 +140,9 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
               <Select label="Surround" options={SURROUND_OPTIONS.map((o) => ({ ...o, swatch: surroundOf(o.value, d.swatches) }))} value={v.surround} onChange={(surround) => patchView({ surround })} className={s.ctl} />
               <Select label="Show" options={CHIP_DATA} value={v.chipData} onChange={(chipData) => patchView({ chipData })} className={s.ctl} />
               <GreyscaleButton />
+              <Button size="xs" icon="content_copy" onClick={() => void copyColours(d.swatches.map((w) => w.oklch), `the palette's ${plural(d.swatches.length, 'colour')}`)} tooltip="Every colour, one to a line, in the format Copy as remembers (the caret beside a colour's Copy changes it)">
+                Copy all as {COPY_FORMATS.find((f) => f.id === copyFormat)!.label}
+              </Button>
             </>
           )}
           {ghosts ? (

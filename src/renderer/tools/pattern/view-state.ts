@@ -15,10 +15,12 @@ export type PatternView = {
   inspector: number;
   /** what the PNG export draws */
   png: 'tile' | 'artboard';
+  /** the SVGs write every shape as a plain group, not a symbol placed with <use> */
+  expand: boolean;
   last: ExportRecord | null;
 };
 
-export const DEFAULT_VIEW: PatternView = { zoom: 'fit', seams: false, inspector: 380, png: 'artboard', last: null };
+export const DEFAULT_VIEW: PatternView = { zoom: 'fit', seams: false, inspector: 380, png: 'artboard', expand: false, last: null };
 
 /** what a saved workspace holds, field by field; anything odd falls back to the default */
 function sanitize(raw: unknown): PatternView {
@@ -28,6 +30,7 @@ function sanitize(raw: unknown): PatternView {
     seams: typeof r.seams === 'boolean' ? r.seams : DEFAULT_VIEW.seams,
     inspector: typeof r.inspector === 'number' && Number.isFinite(r.inspector) ? r.inspector : DEFAULT_VIEW.inspector,
     png: r.png === 'tile' || r.png === 'artboard' ? r.png : DEFAULT_VIEW.png,
+    expand: typeof r.expand === 'boolean' ? r.expand : DEFAULT_VIEW.expand,
     last: recordOf(r.last),
   };
 }

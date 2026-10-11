@@ -275,3 +275,31 @@ test('built-in shapes: the eight from the plan, each well-formed with its viewBo
   const d = doc({ cols: 4, rows: 2, slots: BUILTIN_SHAPES.map((b) => slotOf(b.id, b.svg, { recolour: true })), palette: [BLUE] });
   assert.equal(all(parseSvg(tileSvg(d, layoutTile(d), 'px')), 'symbol').length, new Set(layoutTile(d).items.map((it) => it.slot)).size);
 });
+
+test('expanded, every item is a plain group in the same place and nothing is a symbol or a <use>', () => {
+  const offset = slotOf('o', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="20 30 60 40"><defs><style>.cls-1{fill:#123456;}</style></defs><rect class="cls-1" x="20" y="30" width="60" height="40"/></svg>', { recolour: true });
+  const d = doc({ cols: 3, rows: 2, slots: [square('a'), offset], palette: [RED, GREEN], paletteMode: 'random', rotation: { mode: 'random', angle: 0, min: -30, max: 30 } });
+  const t = layoutTile(d);
+  for (const [name, svg] of [['swatch', (e: boolean) => tileSvg(d, t, 'px', e)], ['artboard', (e: boolean) => artboardSvg(d, t, 200, 150, 'px', e)]] as const) {
+    const linked = parseSvg(svg(false));
+    const flat = parseSvg(svg(true));
+    assert.equal(all(flat, 'symbol').length + all(flat, 'use').length, 0, name);
+    const groups = all(flat, 'g').filter((g) => /^translate\(/.test(getAttr(g, 'transform') ?? ''));
+    const uses = itemUses(linked);
+    assert.equal(groups.length, uses.length, name);
+    groups.forEach((g, i) => {
+      // the <use> shifts its symbol's viewBox corner to -w/2 -h/2; the group does the same in its transform
+      const [x, y, rot, scale] = Object.values(place(uses[i]));
+      const m = /^translate\(([-\d.e]+) ([-\d.e]+)\)(?: rotate\(([-\d.e]+)\))? scale\(([-\d.e]+)\) translate\(([-\d.e]+) ([-\d.e]+)\)$/.exec(getAttr(g, 'transform')!);
+      assert.ok(m, getAttr(g, 'transform')!);
+      assert.deepEqual([+m[1], +m[2], +(m[3] ?? 0), +m[4]], [x, y, rot, scale]);
+      const slot = d.slots.find((s) => getAttr(uses[i], 'xlink:href')!.startsWith(`#dtp-${d.slots.indexOf(s)}`))!;
+      assert.ok(Math.abs(+m[5] - (-slot.bounds.w / 2 - slot.bounds.x)) < 1e-3 && Math.abs(+m[6] - (-slot.bounds.h / 2 - slot.bounds.y)) < 1e-3, `${name}: the viewBox corner`);
+    });
+    // the rules and clips stay once per colour in <defs>, not once per place
+    const styles = all(flat, 'style').length;
+    assert.ok(styles > 0 && styles < groups.length, `${name}: ${styles} style blocks for ${groups.length} places`);
+    const ids = [...walk(flat)].map((w) => getAttr(w.el, 'id')).filter((v) => v !== null);
+    assert.equal(new Set(ids).size, ids.length, `${name}: ids are unique`);
+  }
+});

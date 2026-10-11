@@ -3,6 +3,7 @@
 // A JSON paste (a list, a tokens object, this tool's own export) is read for its name and colour pairs.
 import { deltaE, hexToOklch, parseCss, parseHex, toOklch, type Oklch } from '../color/index.ts';
 import { wrapHue } from './space.ts';
+import { TOKENS_NAMESPACE } from './writers.ts';
 
 /** `names`: what the text called each (null: nothing); `notes`: what was dropped on the way ("Alpha is ignored") */
 export type Pasted = { colours: Oklch[]; names: (string | null)[]; rejected: string[]; notes: string[] };
@@ -45,7 +46,7 @@ const cleanName = (n: string): string => n.replace(/^colou?r[-_.]+(?=\S)/i, '');
 
 export function parseColours(text: string): Pasted {
   const out: Pasted = { colours: [], names: [], rejected: [], notes: [] };
-  const lines = jsonLines(text) ?? text.split(/\r?\n/).map((l) => l.replace(COMMENT, ''));
+  const lines = jsonLines(text) ?? withoutDerived(text, out).split(/\r?\n/).map((l) => l.replace(COMMENT, ''));
   const items: string[] = [];
   const add = (oklch: Oklch, name: string | null) => {
     // the same colour written two ways (0-1 floats are not exact bytes) is one colour: closer than one 8-bit step
@@ -83,6 +84,23 @@ export function parseColours(text: string): Pasted {
   return out;
 }
 
+/** custom properties this app's own CSS adds beside the real colours: a colour's -hex twin, and --on-primary and the like */
+const DERIVED = /--(?:[\w-]*-hex|(?:color-)?on-[\w-]*)\s*:[^;\n}]*;?/g;
+
+/** a rule's opening and closing line (`:root {`, `@theme {`, `}`) */
+const BLOCK_LINE = /^\s*(?:[:@.#\w-]+(?:\s+\w+)?\s*)?\{\s*$|^\s*\}\s*$/gm;
+
+/**
+ * The text without the helpers this app's own CSS adds, so pasting the export back brings in the
+ * palette and not its -hex twins; a stylesheet's braces are not colours either.
+ */
+function withoutDerived(text: string, out: Pasted): string {
+  if (!/--[\w-]+\s*:/.test(text)) return text;
+  const kept = text.replace(DERIVED, '');
+  if (kept !== text) out.notes.push('Skipped the -hex and --on-… values, which are worked out from the colours');
+  return kept.replace(BLOCK_LINE, '');
+}
+
 /** a JSON paste as "name: colour" lines, keeping only strings that are colours; null when it isn't JSON */
 function jsonLines(text: string): string[] | null {
   const t = text.trim();
@@ -102,15 +120,37 @@ function jsonLines(text: string): string[] | null {
     if (!v || typeof v !== 'object') return add(v, key);
     const o = v as Record<string, unknown>;
     // a swatch object: this tool's JSON keeps full-precision OKLCH beside the hex
-    const oklch = Array.isArray(o.oklch) && o.oklch.length === 3 && o.oklch.every(Number.isFinite) ? `oklch(${o.oklch.join(' ')})` : null;
-    const colour = oklch ?? o.hex ?? o.$value ?? o.value ?? o.color ?? o.colour;
-    if (typeof colour === 'string') add(colour, o.name ?? key);
-    else for (const [k, x] of Object.entries(o)) walk(x, k);
+    // a design-tokens file this app wrote keeps the same under $extensions
+    const mine = isObjectOf(o.$extensions) && isObjectOf(o.$extensions[TOKENS_NAMESPACE]) ? o.$extensions[TOKENS_NAMESPACE] : null;
+    const oklch = [o, mine].map((x) => (x && Array.isArray(x.oklch) && x.oklch.length === 3 && x.oklch.every(Number.isFinite) ? `oklch(${x.oklch.join(' ')})` : null)).find(Boolean);
+    const colour = oklch ?? (isObjectOf(o.$value) ? dtcgValue(o.$value) : null) ?? o.hex ?? o.$value ?? o.value ?? o.color ?? o.colour;
+    if (typeof colour === 'string') add(colour, mine?.name ?? o.name ?? key);
+    // $type, $description and $extensions describe a token; they are not tokens
+    else for (const [k, x] of Object.entries(o)) if (!k.startsWith('$')) walk(x, k);
   };
   // a bare array of three or four numbers (an After Effects colour) is one colour, read as it is
   if (Array.isArray(data) && data.length >= 3 && data.length <= 4 && data.every((x) => typeof x === 'number')) return [`[${data.join(', ')}]`];
   walk(data, '');
   return lines;
+}
+
+const isObjectOf = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+
+/** a design-tokens colour value ({ colorSpace, components, hex }): its hex, else the components written as CSS */
+function dtcgValue(v: Record<string, unknown>): string | null {
+  if (typeof v.hex === 'string') return v.hex;
+  const c = Array.isArray(v.components) ? v.components.map((x) => (x === 'none' ? 0 : x)) : [];
+  if (c.length !== 3 || !c.every(Number.isFinite)) return null;
+  switch (v.colorSpace) {
+    case 'oklch':
+    case 'oklab':
+      return `${v.colorSpace}(${c.join(' ')})`;
+    case 'srgb':
+    case 'display-p3':
+      return `color(${v.colorSpace} ${c.join(' ')})`;
+    default:
+      return null;
+  }
 }
 
 function splitOutsideParens(line: string): string[] {

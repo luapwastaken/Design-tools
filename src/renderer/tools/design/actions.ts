@@ -118,7 +118,7 @@ export function proposedRoles(swatches: Swatch[], items: Proposal[], assign: boo
 export const KEPT_NOTE = 'Imported colours are locked, so Reroll and Variations keep them. Unlock one (L) to let it change.';
 
 /**
- * A palette read from an .ase, .aco or .gpl file opens with its imported colours locked (those that
+ * A palette read from a palette file (.ase, .aco, .gpl, .kpl, .swatches, .hex) opens with its imported colours locked (those that
  * still hold their imported values): Reroll and Variations would otherwise replace a brand's colours
  * with invented ones. A view setting, so the file is not touched, and it is made again at each open
  * (locks are kept by swatch id, and ids are new per open), so an unlock lasts until the palette closes.

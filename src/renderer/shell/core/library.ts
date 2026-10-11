@@ -115,7 +115,7 @@ export async function offerToLibrary(all: File[]): Promise<void> {
     const ext = READABLE.exec(f.type)?.[1]?.replace('jpeg', 'jpg');
     if (!ext) {
       // a pasted file of a kind the Library doesn't keep: said, not dropped without a word
-      toast.show({ kind: 'error', message: `Couldn't add ${f.name || 'the pasted file'} to the Library: ${f.type || 'its type'} isn't a kind it keeps. It takes images, SVGs and ASE, ACO or GPL palettes.` });
+      toast.show({ kind: 'error', message: `Couldn't add ${f.name || 'the pasted file'} to the Library: ${f.type || 'its type'} isn't a kind it keeps. It takes images, SVGs and palettes (ASE, ACO, GPL, KPL, SWATCHES or HEX).` });
       continue;
     }
     const ref = await attempt("Couldn't add the pasted image", async () => ipc.invoke('library.createImage', SCRATCH, 'Pasted image', ext, await f.arrayBuffer()));

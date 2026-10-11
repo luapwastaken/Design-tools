@@ -1,10 +1,13 @@
 // PNG resolution (Pattern plan unit W): canvas.toBlob writes no pHYs chunk, so every PNG would open
-// at the viewer's default 72 or 96 ppi instead of the size it was made for. And straight RGBA PNGs
+// at the viewer's default 72 or 96 ppi instead of the size it was made for. Every PNG this app writes
+// also says it is sRGB (the sRGB chunk), so a colour-managed viewer doesn't guess. And straight RGBA PNGs
 // (the Illustration painting): a canvas premultiplies alpha on the way out, which ruins the colour of
 // anything nearly transparent.
 
 const SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
 const INCH = 0.0254;
+/** the resolution of a PNG with no physical size of its own (a screen image): one pixel to a point */
+export const SCREEN_DPI = 72;
 
 const CRC = Uint32Array.from({ length: 256 }, (_, n) => {
   let c = n;
@@ -33,7 +36,7 @@ function chunk(type: string, data: Uint8Array): Uint8Array {
  * RGBA pixels (straight alpha, rows from the top) as an 8-bit RGBA PNG, compressed by the
  * platform's deflate. Each row is filtered against the one above ("Up"), which suits paint.
  */
-export async function rgbaPng(bytes: Uint8Array, w: number, h: number): Promise<Blob> {
+export async function rgbaPng(bytes: Uint8Array, w: number, h: number, dpi = SCREEN_DPI): Promise<Blob> {
   if (!(Number.isInteger(w) && Number.isInteger(h) && w > 0 && h > 0) || bytes.length !== w * h * 4) throw new Error(`${bytes.length} bytes aren't ${w} × ${h} RGBA pixels.`);
   const row = w * 4;
   const raw = new Uint8Array((row + 1) * h);
@@ -53,8 +56,11 @@ export async function rgbaPng(bytes: Uint8Array, w: number, h: number): Promise<
   v.setUint32(0, w);
   v.setUint32(4, h);
   head.set([8, 6, 0, 0, 0], 8);
-  return new Blob([new Uint8Array(SIGNATURE), chunk('IHDR', head), chunk('IDAT', packed), chunk('IEND', new Uint8Array(0))] as BlobPart[], { type: 'image/png' });
+  return new Blob([new Uint8Array(SIGNATURE), chunk('IHDR', head), SRGB, phys(dpi), chunk('IDAT', packed), chunk('IEND', new Uint8Array(0))] as BlobPart[], { type: 'image/png' });
 }
+
+/** sRGB: rendering intent 0 (perceptual), the one browsers and Photoshop write */
+const SRGB = chunk('sRGB', Uint8Array.of(0));
 
 /** pHYs: pixels per metre on both axes, unit 1 (metre) */
 function phys(dpi: number): Uint8Array {
@@ -70,18 +76,21 @@ function phys(dpi: number): Uint8Array {
   return out;
 }
 
-/** The same PNG with its resolution set to `dpi`: any pHYs it had is replaced by one right after IHDR. */
-export async function withDpi(png: Blob, dpi: number): Promise<Blob> {
+/**
+ * The same PNG tagged sRGB, with its resolution set to `dpi` (the screen's 72 where there is no size):
+ * any pHYs or sRGB it had is replaced by one right after IHDR.
+ */
+export async function withDpi(png: Blob, dpi = SCREEN_DPI): Promise<Blob> {
   if (!(dpi > 0) || !Number.isFinite(dpi)) throw new Error(`A PNG's resolution must be above 0 ppi, not ${dpi}.`);
   const src = new Uint8Array(await png.arrayBuffer());
   const v = new DataView(src.buffer, src.byteOffset, src.byteLength);
   const type = (at: number) => String.fromCharCode(...src.subarray(at + 4, at + 8));
   if (src.length < 33 || SIGNATURE.some((b, i) => src[i] !== b) || type(8) !== 'IHDR' || v.getUint32(8) !== 13) throw new Error('This file is not a PNG.');
-  const parts: Uint8Array[] = [src.subarray(0, 33), phys(dpi)];
+  const parts: Uint8Array[] = [src.subarray(0, 33), SRGB, phys(dpi)];
   for (let at = 33; at < src.length; ) {
     const end = at + 12 <= src.length ? at + 12 + v.getUint32(at) : Infinity;
     if (end > src.length) throw new Error('This PNG is cut short.');
-    if (type(at) !== 'pHYs') parts.push(src.subarray(at, end));
+    if (type(at) !== 'pHYs' && type(at) !== 'sRGB') parts.push(src.subarray(at, end));
     at = end;
   }
   return new Blob(parts as BlobPart[], { type: 'image/png' });

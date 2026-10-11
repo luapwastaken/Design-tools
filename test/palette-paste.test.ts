@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { toHex } from '../src/shared/color/index.ts';
 import { parseColours } from '../src/shared/palette/paste.ts';
+import { writeTokens } from '../src/shared/palette/writers.ts';
 
 const hexes = (text: string) => parseColours(text).colours.map(toHex);
 
@@ -147,4 +148,39 @@ test('design tokens: $value, key names, role words kept, prefixes dropped, the f
 test('one colour written two ways (bytes and 0-1 floats) is one colour', () => {
   assert.deepEqual(hexes('0xFF8800\n[1, 0.5333, 0, 1]\n255 136 0'), ['#ff8800']);
   assert.equal(parseColours('#ff8800, #ff8a00').colours.length, 2, 'a visible difference stays two');
+});
+
+test('this tool’s CSS pasted back: the -hex twins and --on-primary are skipped, the colours and names stay', () => {
+  const css = `:root {
+  --primary: oklch(0.68 0.16 40) /* Ember */;
+  --primary-hex: #e8643c;
+  --text: oklch(0.2 0.01 260);
+  --text-hex: #14161a;
+  --on-primary: oklch(1 0 0);
+  --on-primary-hex: #ffffff;
+}
+`;
+  const read = parseColours(css);
+  assert.equal(read.colours.length, 2);
+  assert.deepEqual(read.names, ['primary', 'text']);
+  assert.deepEqual(read.rejected, []);
+  assert.equal(read.notes.length, 1);
+  // Tailwind 4's flavour, on one line
+  assert.equal(parseColours('@theme { --color-primary: oklch(0.68 0.16 40); --color-on-primary: oklch(1 0 0); }').colours.length, 1);
+  assert.deepEqual(parseColours('--color-brand: #e8643c;').notes, [], 'nothing derived, nothing to say');
+});
+
+test('design tokens as the W3C format has them: a $value object, this tool’s own file, and $-keys that are not tokens', () => {
+  const object = parseColours(JSON.stringify({ color: { brand: { $type: 'color', $value: { colorSpace: 'srgb', components: [0.9098, 0.3922, 0.2353], hex: '#e8643c' } }, ink: { $type: 'color', $value: { colorSpace: 'oklch', components: [0.2, 0.01, 260] } } } }));
+  assert.deepEqual(object.colours.map((c) => c.map((v) => +v.toFixed(2))).slice(1), [[0.2, 0.01, 260]]);
+  assert.equal(toHex(object.colours[0]), '#e8643c');
+  assert.deepEqual(object.names, ['brand', 'ink'], 'never "$value"');
+  const none = parseColours(JSON.stringify({ x: { $type: 'color', $value: { colorSpace: 'oklch', components: ['none', 0, 0] } } }));
+  assert.deepEqual(none.colours, [[0, 0, 0]]);
+  const mine = writeTokens([{ id: 'a', name: 'Burnt Sienna', role: 'Primary', oklch: [0.5123456, 0.1234567, 40.12345], type: 'process' }]);
+  const back = parseColours(mine);
+  assert.deepEqual(back.names, ['Burnt Sienna']);
+  assert.deepEqual(back.colours[0].map((v) => +v.toFixed(3)), [0.512, 0.123, 40.123], 'the OKLCH beside the hex, not the hex');
+  assert.notEqual(toHex(back.colours[0]), '#e8643c');
+  assert.deepEqual(back.rejected, []);
 });

@@ -4,7 +4,8 @@
 // proposals, never in the document until kept.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { cssColor, toHex, type Oklch } from '../../../shared/color/index.ts';
-import { gradientStops } from '../../../shared/palette/gradient.ts';
+import { formatColour } from '../../../shared/color/format.ts';
+import { gradientCss, gradientStops } from '../../../shared/palette/gradient.ts';
 import { PRESETS } from '../../../shared/palette/generate.ts';
 import { harmony } from '../../../shared/palette/harmony.ts';
 import { parseColours } from '../../../shared/palette/paste.ts';
@@ -13,7 +14,7 @@ import { useShell } from '../../shell/core/index.ts';
 import { ipc } from '../../shell/core/ipc.ts';
 import { cx } from '../../ui/cx.ts';
 import { HexField } from '../../ui/HexField.tsx';
-import { Button, IconButton, NumberField, Popover, Segmented, Select, SwatchStrip, toast } from '../../ui/index.ts';
+import { Button, copyText, IconButton, NumberField, Popover, Segmented, Select, SwatchStrip, toast } from '../../ui/index.ts';
 import { HARMONIES, runGradient, runHarmony } from './build.ts';
 import { displayName, type DesignDoc, type DesignView } from './doc.ts';
 import { proposals } from './proposals.ts';
@@ -337,16 +338,21 @@ function GradientBody({ d, v, ends, onDone }: { d: DesignDoc; v: DesignView; end
         <Segmented mono options={[{ value: 'oklch', label: 'OKLCH' }, { value: 'oklab', label: 'OKLab' }]} value={v.space} onChange={(space) => change({}, { space })} />
       </Row>
       <SwatchStrip colors={[a.oklch, ...stops, b.oklch].map(cssColor)} height={22} />
-      <Button
-        icon="add"
-        variant="primary"
-        onClick={() => {
-          runGradient(a, b, v);
-          onDone();
-        }}
-      >
-        Propose {stops.length === 1 ? 'the stop' : `${stops.length} stops`}
-      </Button>
+      <Row>
+        <Button
+          icon="add"
+          variant="primary"
+          onClick={() => {
+            runGradient(a, b, v);
+            onDone();
+          }}
+        >
+          Propose {stops.length === 1 ? 'the stop' : `${stops.length} stops`}
+        </Button>
+        <Button icon="content_copy" onClick={() => void copyText(gradientCss(a.oklch, b.oklch, v.stops, v.space, (o) => formatColour(o, 'oklch')), 'Copied the gradient as CSS.')} tooltip="A CSS linear-gradient through these colours, left to right">
+          Copy CSS
+        </Button>
+      </Row>
     </>
   );
 }

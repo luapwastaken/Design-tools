@@ -2,7 +2,8 @@
 // the subjects a single ramp can be made for, and the limited sets of bases. All taste, all editable:
 // they are starting points, none of them a rule. Pure (no DOM), so it is unit tested.
 import type { Oklch } from '../../../shared/color/index.ts';
-import { DAYLIGHT } from '../../../shared/palette/ramp.ts';
+import { DAYLIGHT, MATERIALS } from '../../../shared/palette/ramp.ts';
+import type { SceneNotes } from '../../../shared/palette/writers.ts';
 import { fitChroma, wrapHue } from '../../../shared/palette/space.ts';
 import type { MaterialId, RampSpec } from '../../../shared/types.ts';
 import { baseOf, isLayer, looseOf, MAX_RAMPS, type IllustrationDoc } from './doc.ts';
@@ -51,6 +52,18 @@ export function sceneLight(d: IllustrationDoc, selectedRamp?: string): { pair: L
   const shown: Pick<RampSpec, 'light' | 'shadow'> = mixed ? (d.ramps.find((r) => r.id === selectedRamp) ?? d.ramps.at(-1)!) : first;
   const pair = { light: shown.light, shadow: shown.shadow };
   return { pair, preset: mixed ? null : presetOf(pair), mixed };
+}
+
+/**
+ * What a Krita export keeps in the palette's comment: the light by its preset's name ("Custom" for a
+ * pair of its own; nothing while the ramps are lit differently, or there are none) and each ramp's material.
+ */
+export function sceneNotes(d: IllustrationDoc): SceneNotes {
+  const { preset, mixed } = sceneLight(d);
+  return {
+    light: d.ramps.length && !mixed ? (preset?.label ?? 'Custom') : undefined,
+    materials: Object.fromEntries(d.ramps.map((r) => [r.id, MATERIALS.find((m) => m.id === r.material)?.label ?? r.material])),
+  };
 }
 
 // ── subjects: one ramp, named and made of its material ─────────────────────────────────────────

@@ -42,9 +42,9 @@ const random = (n: number, len: number, seed = 1) => Uint8Array.from({ length: l
 test('an opaque palette gives IHDR, PLTE, IDAT, IEND with valid CRCs and PLTE holding the palette', async () => {
   const pal = palette(5);
   const list = await chunks(await encodeIndexedPng(random(5, 12), 4, 3, pal));
-  assert.deepEqual(list.map((c) => c.type), ['IHDR', 'PLTE', 'IDAT', 'IEND']);
+  assert.deepEqual(list.map((c) => c.type), ['IHDR', 'sRGB', 'pHYs', 'PLTE', 'IDAT', 'IEND']);
   assert.ok(list.every((c) => c.crcOk));
-  assert.deepEqual([...list[1].data], pal.flatMap((c) => [c[0], c[1], c[2]]));
+  assert.deepEqual([...list[3].data], pal.flatMap((c) => [c[0], c[1], c[2]]));
 });
 
 test('the smallest bit depth the palette allows, every pixel back as written, at widths that end mid-byte', async () => {
@@ -70,19 +70,21 @@ test('scale makes every pixel an exact block: pixel size 8 is 8 px in the file',
 test('tRNS appears only when a colour is clear, and stops at the last entry that is not opaque', async () => {
   const pal: Rgba8[] = [[1, 1, 1], [2, 2, 2, 0], [3, 3, 3, 255], [4, 4, 4, 128], [5, 5, 5], [6, 6, 6, 255]];
   const list = await chunks(await encodeIndexedPng(random(6, 6), 3, 2, pal));
-  assert.deepEqual(list.map((c) => c.type), ['IHDR', 'PLTE', 'tRNS', 'IDAT', 'IEND']);
-  assert.deepEqual([...list[2].data], [255, 0, 255, 128]);
+  assert.deepEqual(list.map((c) => c.type), ['IHDR', 'sRGB', 'pHYs', 'PLTE', 'tRNS', 'IDAT', 'IEND']);
+  assert.deepEqual([...list[4].data], [255, 0, 255, 128]);
   const opaque = await chunks(await encodeIndexedPng(random(2, 4), 2, 2, [[0, 0, 0, 255], [9, 9, 9, 255]]));
   assert.ok(!opaque.some((c) => c.type === 'tRNS'));
 });
 
 test('dpi is written as pHYs in pixels per metre, before PLTE and IDAT', async () => {
   const list = await chunks(await encodeIndexedPng(random(2, 4), 2, 2, palette(2), { dpi: 300 }));
-  assert.deepEqual(list.map((c) => c.type), ['IHDR', 'pHYs', 'PLTE', 'IDAT', 'IEND']);
+  assert.deepEqual(list.map((c) => c.type), ['IHDR', 'sRGB', 'pHYs', 'PLTE', 'IDAT', 'IEND']);
   assert.ok(list.every((c) => c.crcOk));
-  assert.equal(list[1].data.readUInt32BE(0), 11811);
-  assert.equal(list[1].data.readUInt32BE(4), 11811);
-  assert.equal(list[1].data[8], 1);
+  assert.equal(list[2].data.readUInt32BE(0), 11811);
+  assert.equal(list[2].data.readUInt32BE(4), 11811);
+  assert.equal(list[2].data[8], 1);
+  const plain = await chunks(await encodeIndexedPng(random(2, 4), 2, 2, palette(2)));
+  assert.equal(plain[2].data.readUInt32BE(0), 2835, 'no dpi given: 72 ppi');
 });
 
 test('what would make a broken PNG is refused with a reason', async () => {
