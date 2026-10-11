@@ -11,7 +11,7 @@ const NEXT: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
 
 /**
  * The 60px rail: each tool an icon with its name under it, the groups apart by a 12px gap (no
- * headings), then Library and Settings at the bottom. One Tab stop; arrow keys move inside (brief §6).
+ * headings), then Library, Keys and Settings at the bottom. One Tab stop; arrow keys move inside (brief §6).
  * Shortcuts live in the tooltips.
  */
 export function Rail() {
@@ -19,6 +19,7 @@ export function Rail() {
   const active = useShell((st) => st.active);
   const libraryOpen = useShell((st) => st.libraryOpen);
   const settingsOpen = useShell((st) => st.settingsOpen);
+  const shortcutsOpen = useShell((st) => st.shortcutsOpen);
 
   const open = (id: ToolId) => {
     if (settingsOpen) shell.openSettings(false);
@@ -35,8 +36,8 @@ export function Rail() {
     items[to].focus();
   };
 
-  const item = (p: { key: string; icon: IconName; label: string; shortcut?: string; on: boolean; stop?: boolean; current?: boolean; onClick(): void }) => (
-    <Tooltip key={p.key} content={p.label} shortcut={p.shortcut} side="right">
+  const item = (p: { key: string; icon: IconName; label: string; tip?: string; shortcut?: string; on: boolean; stop?: boolean; current?: boolean; onClick(): void }) => (
+    <Tooltip key={p.key} content={p.tip ?? p.label} shortcut={p.shortcut} side="right">
       <button
         type="button"
         className={cx(s.item, p.on && s.on)}
@@ -77,6 +78,7 @@ export function Rail() {
       })}
       <div className={cx(s.group, s.foot)}>
         {item({ key: 'library', icon: 'collections_bookmark', label: 'Library', shortcut: 'Ctrl+L', on: libraryOpen, onClick: () => shell.toggleLibrary() })}
+        {item({ key: 'keys', icon: 'keyboard', label: 'Keys', tip: 'Keyboard shortcuts', shortcut: '?', on: shortcutsOpen, onClick: () => shell.openShortcuts(!shortcutsOpen) })}
         {item({ key: 'settings', icon: 'settings', label: 'Settings', shortcut: 'Ctrl+,', on: settingsOpen, onClick: () => shell.openSettings(!settingsOpen) })}
       </div>
     </nav>

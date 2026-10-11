@@ -1,7 +1,7 @@
 import type { Shortcut } from '../../shell/tool.ts';
 
-/** Y: the original, and again the view it came from. The same key and words in every image tool (Dither and Halftone also keep `\`) */
-export const showOriginalKey = (run: () => void): Shortcut => ({ keys: 'Y', label: 'Show the original, or the result again', run });
+/** Y: the original, and again the view it came from. The same key and words in every image tool; `\` is the same key on a US keyboard (it needs AltGr on a German one) */
+export const showOriginalKey = (run: () => void): Shortcut => ({ keys: 'Y', us: ['\\'], label: 'Show the original, or the result again', group: 'Image', run });
 
 /**
  * `\` shows the original, and again goes back to the view it came from (not always the result:

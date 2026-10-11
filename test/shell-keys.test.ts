@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { comboOf, fieldOwnsUndo, isTextField, keyOf, type KeyLike, matches, parseCombo, shellKey, toolMayTake } from '../src/renderer/shell/core/keys.ts';
+import { comboOf, type Combo, EVERYWHERE, fieldOwnsUndo, isTextField, keyOf, type KeyLike, matches, parseCombo, sameCombo, shellKey, toolMayTake } from '../src/renderer/shell/core/keys.ts';
 
 const key = (k: string, code: string, mods: Partial<KeyLike> = {}): KeyLike => ({ key: k, code, ctrlKey: false, altKey: false, shiftKey: false, ...mods });
 const ctrl = (k: string, code: string, mods: Partial<KeyLike> = {}) => comboOf(key(k, code, { ctrlKey: true, ...mods }));
@@ -14,6 +14,13 @@ test('keys are named by what they are, not what Shift makes them type', () => {
   assert.equal(keyOf({ key: ' ', code: 'Space' }), 'SPACE');
   assert.equal(keyOf({ key: 'Delete', code: 'Delete' }), 'DELETE');
   assert.equal(keyOf({ key: ',', code: 'Comma' }), ',');
+  // comma and period by position too: Shift+, types '<' on a US board and ';' on a German one
+  assert.equal(keyOf({ key: '<', code: 'Comma' }), ',');
+  assert.equal(keyOf({ key: ';', code: 'Comma' }), ',');
+  assert.equal(keyOf({ key: ':', code: 'Period' }), '.');
+  assert.equal(matches('Shift+,', comboOf(key(';', 'Comma', { shiftKey: true }))), true);
+  assert.equal(matches('Shift+.', comboOf(key('>', 'Period', { shiftKey: true }))), true);
+  assert.equal(matches(',', comboOf(key(',', 'Comma', { shiftKey: true }))), false);
 });
 
 test('shortcut strings parse', () => {
@@ -95,4 +102,52 @@ test('text fields, and who owns Ctrl+Z', () => {
   assert.equal(fieldOwnsUndo({ tagName: 'TEXTAREA' }), true);
   assert.equal(fieldOwnsUndo({ tagName: 'BUTTON' }), false);
   assert.equal(fieldOwnsUndo(null), false);
+});
+
+test('Ctrl+E exports, Ctrl+F searches the Library, and Esc is a shell key (taken only while Settings is open)', () => {
+  assert.deepEqual(shellKey(ctrl('e', 'KeyE')), { t: 'export' });
+  assert.deepEqual(shellKey(ctrl('f', 'KeyF')), { t: 'search' });
+  assert.equal(shellKey(ctrl('E', 'KeyE', { shiftKey: true })), null);
+  assert.equal(shellKey(ctrl('e', 'KeyE', { altKey: true })), null);
+  assert.deepEqual(shellKey(comboOf(key('Escape', 'Escape'))), { t: 'escape' });
+  assert.equal(shellKey(comboOf(key('Escape', 'Escape', { shiftKey: true }))), null);
+  assert.equal(shellKey(ctrl('Escape', 'Escape')), null);
+});
+
+// the Everywhere table (what the sheet shows) and shellKey (what the keymap fires) must agree
+const comboKeys = (r: (typeof EVERYWHERE)[number]) => [r.keys, ...(r.also ?? []), ...(r.us ?? [])];
+/** '?' needs Shift to type, and shellKey does not mind Shift on ? or F1 */
+const norm = (c: Combo): Combo => (c.key === '?' || c.key === 'F1' ? { ...c, shift: false } : c);
+const covers = (r: (typeof EVERYWHERE)[number], c: Combo) =>
+  comboKeys(r).some((k) => {
+    const p = parseCombo(k);
+    return !!p && sameCombo(norm(p), norm(c));
+  }) ||
+  // 'Ctrl+1' to 'Ctrl+9'
+  (!!r.to && parseCombo(r.keys)!.ctrl === c.ctrl && /^\d$/.test(c.key) && c.key >= parseCombo(r.keys)!.key && c.key <= parseCombo(r.to)!.key);
+
+test('every live shell key is in the Everywhere table', () => {
+  const names = ['Z', 'Y', 'L', 'E', 'F', ',', 'F1', 'F6', '?', 'ESCAPE', 'A', 'D', '0', ...'123456789'];
+  let found = 0;
+  for (const key of names) {
+    for (let m = 0; m < 8; m++) {
+      const c: Combo = { ctrl: !!(m & 1), alt: !!(m & 2), shift: !!(m & 4), key };
+      if (!shellKey(c)) continue;
+      found++;
+      assert.ok(EVERYWHERE.some((r) => covers(r, c)), `${JSON.stringify(c)} is a shell key with no row`);
+    }
+  }
+  assert.ok(found > 15);
+});
+
+test('every Everywhere row that something runs is a key the shell reaches', () => {
+  for (const r of EVERYWHERE.filter((x) => !x.listedOnly)) {
+    for (const k of comboKeys(r)) {
+      const p = parseCombo(k);
+      assert.ok(p && shellKey(p), `${k} (${r.label}) is not a shell key`);
+    }
+  }
+  // and the listed-only ones are not, so the table cannot promise a shell key it does not have
+  for (const r of EVERYWHERE.filter((x) => x.listedOnly)) assert.equal(shellKey(parseCombo(r.keys)!), null, `${r.keys} is run elsewhere`);
+  for (const k of ['Ctrl+0', 'Shift+0', 'Ctrl+Alt+0', 'Ctrl++', 'Ctrl+-', 'Ctrl+=', 'Space', 'F2', 'Enter', 'Ctrl+D', 'Delete']) assert.ok(EVERYWHERE.some((r) => comboKeys(r).includes(k)), `${k} is listed`);
 });

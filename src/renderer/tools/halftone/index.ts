@@ -62,7 +62,6 @@ export const tool: ToolDefinition<HalftoneDoc> = {
   shortcuts: (doc) => [
     { keys: 'Ctrl+O', label: 'Open an image', run: () => pickImage(doc) },
     showOriginalKey(flip),
-    { keys: '\\', label: 'Switch between the result and the original', run: flip },
   ],
   StatusSlot,
   View,

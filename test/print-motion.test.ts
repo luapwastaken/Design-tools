@@ -236,8 +236,9 @@ test('every image tool answers Y with the same words', () => {
   let ran = 0;
   const k = showOriginalKey(() => ran++);
   assert.equal(k.keys, 'Y');
+  assert.deepEqual(k.us, ['\\']);
   assert.equal(k.label, 'Show the original, or the result again');
-  k.run();
+  k.run?.();
   assert.equal(ran, 1);
 });
 

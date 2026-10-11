@@ -8,7 +8,7 @@ import s from './Segmented.module.css';
 
 export type SegmentedProps<T extends string> = {
   /** `tip`: the tooltip, and the accessible name of an icon alone; with a label, the label stays the name (voice control says it) and `tip` is its description */
-  options: { value: T; label: string; icon?: IconName; tip?: string; /** a count after the label, in the danger tone (a check's problems); 0 shows nothing */ badge?: number; /** this segment can't be chosen yet (its `tip` says why) */ disabled?: boolean }[];
+  options: { value: T; label: string; icon?: IconName; tip?: string; /** its key, printed in the tooltip */ shortcut?: string; /** a count after the label, in the danger tone (a check's problems); 0 shows nothing */ badge?: number; /** this segment can't be chosen yet (its `tip` says why) */ disabled?: boolean }[];
   value: T;
   onChange(v: T): void;
   /** a row label on the left, like a Slider's */
@@ -19,6 +19,8 @@ export type SegmentedProps<T extends string> = {
   mono?: boolean;
   /** segments hug their labels instead of sharing the width */
   fit?: boolean;
+  /** tabs, not choices: a tablist with this name, tab buttons and aria-selected */
+  tablist?: string;
   disabled?: boolean;
   className?: string;
 };
@@ -26,13 +28,13 @@ export type SegmentedProps<T extends string> = {
 const STEP: Record<string, number> = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 };
 
 /** One Tab stop; arrow keys move and choose (brief §6). */
-export function Segmented<T extends string>({ options, value, onChange, label, info, mono, fit, disabled, className }: SegmentedProps<T>) {
+export function Segmented<T extends string>({ options, value, onChange, label, info, mono, fit, tablist, disabled, className }: SegmentedProps<T>) {
   const labelId = useId();
   const at = options.findIndex((o) => o.value === value);
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const n = options.length;
-    let i = e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : e.key in STEP ? (Math.max(at, 0) + STEP[e.key] + n) % n : -1;
+    let i = e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : e.key in STEP ? (at < 0 ? (STEP[e.key] > 0 ? 0 : n - 1) : (at + STEP[e.key] + n) % n) : -1;
     if (i < 0) return;
     // past segments that can't be chosen
     for (let k = 0; k < n && options[i].disabled; k++) i = (i + (STEP[e.key] ?? 1) + n) % n;
@@ -44,18 +46,19 @@ export function Segmented<T extends string>({ options, value, onChange, label, i
 
   const group = (
     <div
-      role="radiogroup"
+      role={tablist ? 'tablist' : 'radiogroup'}
+      aria-label={tablist}
       aria-labelledby={label ? labelId : undefined}
       aria-disabled={disabled || undefined}
       className={cx(s.seg, mono && s.mono, fit && s.fit, !label && className)}
       onKeyDown={disabled ? undefined : onKeyDown}
     >
       {options.map((o, i) => (
-        <Tooltip key={o.value} content={o.tip} disabled={!o.tip}>
+        <Tooltip key={o.value} content={o.tip} shortcut={o.shortcut} disabled={!o.tip}>
           <button
             type="button"
-            role="radio"
-            aria-checked={i === at}
+            role={tablist ? 'tab' : 'radio'}
+            {...(tablist ? { 'aria-selected': i === at } : { 'aria-checked': i === at })}
             aria-label={o.label ? (o.badge ? `${o.label}, ${o.badge} to look at` : undefined) : o.tip}
             aria-description={o.label ? o.tip : undefined}
             tabIndex={i === at || (at < 0 && i === 0) ? 0 : -1}

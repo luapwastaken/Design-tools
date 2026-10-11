@@ -31,9 +31,9 @@ export type ViewStripProps = {
   readout?: ReactNode;
 };
 
-const PRESETS: { value: 'fit' | 'actual' | 'none'; label: string; tip: string }[] = [
-  { value: 'fit', label: 'Fit', tip: 'Fit in view (Ctrl 0)' },
-  { value: 'actual', label: '100%', tip: 'Actual size (Ctrl Alt 0)' },
+const PRESETS: { value: 'fit' | 'actual' | 'none'; label: string; tip: string; shortcut?: string }[] = [
+  { value: 'fit', label: 'Fit', tip: 'Fit in view', shortcut: 'Ctrl+0' },
+  { value: 'actual', label: '100%', tip: 'Actual size', shortcut: 'Shift+0' },
 ];
 
 /**

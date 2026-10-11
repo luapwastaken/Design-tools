@@ -277,6 +277,7 @@ export function LibraryPanel({ narrow }: { narrow: boolean }) {
                     icon="search"
                     placeholder={total === 1 ? 'Search 1 item' : `Search ${total} items`}
                     autoFocus={searchKey > 0}
+                    data-library-search=""
                     onChange={setQuery}
                     onCommit={setQuery}
                     end={query && <IconButton icon="close" label="Clear search" size="xs" onClick={clearSearch} />}

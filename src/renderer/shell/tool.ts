@@ -12,8 +12,19 @@ export type Use = { mode: 'open' | 'apply'; label: string };
 export type Shortcut = {
   /** e.g. 'Ctrl+Alt+0', 'I', 'Shift+Delete'. Bare keys never fire while a text field has focus. */
   keys: string;
+  /** other keys that do the same, one sheet row ('Backspace' beside 'Delete') */
+  also?: string[];
+  /** keys only a US layout reaches, shown as "US keyboard: ..." (a backslash beside 'Y', '[' beside ','); they fire like any other */
+  us?: string[];
   label: string;
-  run: () => void;
+  /** the sheet heading it sits under ('Ramps', 'Paint', 'Copy and export'); default: the three groups by kind of key */
+  group?: string;
+  /** where it works, a tag on the sheet ('Paint tab', 'animated') */
+  when?: string;
+  /** in the list but not live right now: the keymap skips it, the sheet dims it */
+  off?: boolean;
+  /** absent = listed only: something else runs it (Ctrl+V's paste event, Space's tap-to-play) */
+  run?: () => void;
 };
 
 /**

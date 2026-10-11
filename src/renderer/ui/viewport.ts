@@ -81,12 +81,14 @@ export function wheelFactor(e: { deltaY: number; deltaMode: number; ctrlKey: boo
 export type ZoomKey = 'fit' | 'actual' | 'in' | 'out';
 
 /**
- * Ctrl+0 Fit, Ctrl+Alt+0 100%, Ctrl+= and Ctrl+- (with or without Shift, and the numpad's + and -).
+ * Ctrl+0 Fit, Shift+0 and Ctrl+Alt+0 100%, Ctrl+= and Ctrl+- (with or without Shift, and the numpad's + and -).
  * AltGr is Ctrl+Alt on Windows: AltGr+0 types a character on many layouts, so it is left alone.
+ * Shift+0 has no Ctrl, so the caller keeps it out of text fields (toolMayTake).
  */
 export function zoomKey(e: KeyLike, altGraph = false): ZoomKey | null {
   const c = comboOf(e);
-  if (!c.ctrl || altGraph) return null;
+  if (altGraph) return null;
+  if (!c.ctrl) return c.shift && !c.alt && c.key === '0' ? 'actual' : null;
   if (c.key === '0') return c.shift ? null : c.alt ? 'actual' : 'fit';
   if (c.alt) return null;
   if (c.key === '=' || c.key === '+') return 'in';

@@ -25,11 +25,13 @@ export type ButtonProps = {
   tabIndex?: number;
   className?: string;
   ref?: Ref<HTMLButtonElement>;
+  /** data-* attributes go to the button (a key's hook, a smoke selector) */
+  [data: `data-${string}`]: string | undefined;
 };
 
 const ICON = { xs: 14, md: 16, lg: 16 } as const;
 
-export function Button({ variant = 'secondary', size = 'md', icon, iconEnd, children, onClick, disabled, latched, tooltip, shortcut, type = 'button', autoFocus, tabIndex, className, ref }: ButtonProps) {
+export function Button({ variant = 'secondary', size = 'md', icon, iconEnd, children, onClick, disabled, latched, tooltip, shortcut, type = 'button', autoFocus, tabIndex, className, ref, ...data }: ButtonProps) {
   const button = (
     <button
       ref={ref}
@@ -40,6 +42,7 @@ export function Button({ variant = 'secondary', size = 'md', icon, iconEnd, chil
       tabIndex={tabIndex}
       aria-keyshortcuts={shortcut && ariaKeys(shortcut)}
       aria-pressed={latched}
+      {...data}
       onClick={onClick}
     >
       {icon && <Icon name={icon} size={ICON[size]} />}

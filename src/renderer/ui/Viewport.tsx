@@ -185,7 +185,7 @@ export function Viewport(p: ViewportProps) {
       delete el.dataset.space;
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.isComposing || !onScreen()) return;
+      if (e.defaultPrevented || e.isComposing || !onScreen() || document.querySelector('[aria-modal="true"]')) return; // a modal layer (the shortcuts sheet) owns every key
       const combo = comboOf(e);
       if (!toolMayTake(combo, isTextField(document.activeElement as HTMLElement | null))) return;
       if (combo.key === 'SPACE' && !combo.ctrl && !combo.alt) {

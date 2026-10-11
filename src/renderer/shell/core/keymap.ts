@@ -1,6 +1,6 @@
 import { toast } from '../../ui/index.ts';
 import { guardSync } from './errors.ts';
-import { comboOf, fieldOwnsUndo, isTextField, matches, shellKey, type ShellKey, toolMayTake } from './keys.ts';
+import { comboOf, fieldOwnsUndo, isLive, isTextField, keysOf, matches, shellKey, type ShellKey, toolMayTake } from './keys.ts';
 import { toolForShortcut } from './routing.ts';
 import { allRuntimes, endGesture, rtOf } from './runtime.ts';
 import { setActive } from './send.ts';
@@ -25,17 +25,22 @@ function onKey(e: KeyboardEvent): void {
   // the sheet of keys is a layer over the work: only its own keys (and Esc, which it takes itself) work while it shows
   if (getState().shortcutsOpen && own?.t !== 'shortcuts') return;
   if (own) {
-    if (runShellKey(own, el)) e.preventDefault();
-    return;
+    if (runShellKey(own, el)) {
+      e.preventDefault();
+      return;
+    }
+    // Esc with Settings shut is the tool's, not the shell's
+    if (own.t !== 'escape') return;
   }
   const s = getState();
   const r = rtOf(s.active);
   if (!r?.def.shortcuts || s.settingsOpen || s.crashed[s.active] || !toolMayTake(combo, isTextField(el))) return;
   const list = guardSync(`${r.def.label}'s shortcuts failed`, () => r.def.shortcuts!(r.doc)) ?? [];
-  const hit = list.find((sc) => matches(sc.keys, combo));
+  // listed-only and switched-off rows are for the sheet: they never take a key
+  const hit = list.find((sc) => isLive(sc) && keysOf(sc).some((k) => matches(k, combo)));
   if (!hit) return;
   e.preventDefault();
-  guardSync(`${r.def.label}: ${hit.label} failed`, hit.run);
+  guardSync(`${r.def.label}: ${hit.label} failed`, hit.run!);
 }
 
 /** true when the shell took the key */
@@ -58,6 +63,21 @@ function runShellKey(k: ShellKey, el: HTMLElement | null): boolean {
       return undoRedo(k.t === 'redo', el);
     case 'region':
       return cycleRegion(k.back, el);
+    case 'export': {
+      // a keyboard click (detail 0), so an Export menu opens on its first row
+      const b = s.settingsOpen || s.crashed[s.active] ? null : document.querySelector<HTMLElement>(`[data-tool="${s.active}"] [data-export]:not([disabled])`);
+      b?.click();
+      return !!b;
+    }
+    case 'search':
+      setState({ libraryOpen: true, settingsOpen: false });
+      // the panel may only mount now; focus it once React has drawn
+      requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-library-search]')?.focus());
+      return true;
+    case 'escape':
+      if (!s.settingsOpen) return false;
+      setState({ settingsOpen: false });
+      return true;
     case 'shortcuts':
       if (k.bare && isTextField(el)) return false;
       setState({ shortcutsOpen: !s.shortcutsOpen });

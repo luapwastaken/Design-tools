@@ -65,7 +65,6 @@ export const tool: ToolDefinition<DitherDoc> = {
   shortcuts: (doc) => [
     { keys: 'Ctrl+O', label: 'Open an image', run: () => pickImage(doc) },
     showOriginalKey(flip),
-    { keys: '\\', label: 'Switch between the result and the original', run: flip },
     ...(isAnimated(doc.get())
       ? [
           { keys: 'ArrowLeft', label: 'Previous frame', run: () => stepFrame(doc.get(), -1) },

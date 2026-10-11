@@ -78,7 +78,7 @@ import { cellsOf as illustrationCells, lockedIn } from './tools/illustration/var
 import { getView as illustrationView, patchView as patchIllustration } from './tools/illustration/view-state.ts';
 import { layoutTile as tileOf } from '../shared/pattern/layout.ts';
 import { PX_PER, presetOf, toPayload, withUnit, type PatternDoc } from './tools/pattern/doc.ts';
-import { patchView as patchPattern } from './tools/pattern/view-state.ts';
+import { getView as patternView, patchView as patchPattern } from './tools/pattern/view-state.ts';
 import { addEffect, importCode } from './tools/postfx/actions.ts';
 import { BUILT_INS } from './tools/postfx/builtins.ts';
 import { openMedia, sourceKey } from './tools/postfx/media.ts';
@@ -5343,10 +5343,80 @@ async function findabilityUi(): Promise<void> {
   shell.openSettings(true);
   (await until(() => [...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Keyboard shortcuts' && shows(b)), 2000))?.click();
   const fromSettings = await until(sheet, 2000);
-  check('Settings has a Keyboard shortcuts button that opens it, with the app-wide keys only (the tool’s do not fire there)', !!fromSettings && !!fromSettings.querySelector('section[aria-label="Everywhere"]') && !fromSettings.querySelector('section[aria-label="Design"]'), fromSettings?.textContent?.slice(0, 60));
+  check('Settings has a Keyboard shortcuts button that opens it, on the active tool’s tab with the app-wide keys beside it', !!fromSettings && !!fromSettings.querySelector('section[aria-label="Everywhere"]') && !!fromSettings.querySelector('section[aria-label="Design"]'), fromSettings?.textContent?.slice(0, 60));
   press('Escape');
   await until(() => !sheet(), 1000);
   shell.openSettings(false);
+
+  // the sheet's own parts: a tab per tool in rail order, the search field focused, the footer
+  shell.setActive('design');
+  blur();
+  shell.openShortcuts(true);
+  const sheetNow = await until(sheet, 1000);
+  const tabs = [...(sheetNow?.querySelectorAll('[role="tablist"] [role="tab"]') ?? [])];
+  check('the sheet has a tab per tool in rail order, the active tool’s chosen', tabs.map((b) => b.textContent).join() === shell.getState().tools.map((d) => d.label).join() && tabs.find((b) => b.getAttribute('aria-selected') === 'true')?.textContent === 'Design', tabs.map((b) => b.textContent));
+  const searchBox = sheetNow?.querySelector<HTMLInputElement>('input[type="text"]') ?? null;
+  check('its search field has focus on open', !!searchBox && document.activeElement === searchBox);
+  check('and the footer says how it opens and closes', /opens this/.test(sheetNow?.textContent ?? '') && /Esc/.test(sheetNow?.textContent ?? '') && /single keys type/.test(sheetNow?.textContent ?? ''));
+  if (searchBox) typeInto(searchBox, 'export');
+  await sleep(120);
+  const exportRow = [...(sheetNow?.querySelectorAll('dt') ?? [])].find((dt) => dt.textContent === 'CtrlE');
+  check('typing "export" in the search shows Ctrl+E', !!exportRow && (exportRow.closest('section')?.getAttribute('aria-label') ?? '') === 'Everywhere', exportRow?.textContent);
+  if (searchBox) typeInto(searchBox, 'ctrl+shift+c');
+  await sleep(120);
+  check('a search looks through every tool and tags each hit with its tool', !!sheetNow?.querySelector('section[aria-label="Every tool"]'), sheetNow?.textContent?.slice(0, 120));
+  if (searchBox) typeInto(searchBox, '');
+  press('?', { code: 'Slash', shiftKey: true });
+  await sleep(60);
+  check('? typed into the search field types, and does not close the sheet', !!sheet());
+  press('Escape');
+  check('Esc closes the sheet with a search in it', !!(await until(() => !sheet(), 1000)));
+  blur();
+
+  // the Keys tile in the rail
+  const keysTile = () => document.querySelector<HTMLElement>('[data-rail="keys"]');
+  keysTile()?.click();
+  const fromTile = await until(sheet, 1000);
+  check('the Keys tile opens the sheet and shows lit while it is open', !!fromTile && keysTile()?.getAttribute('aria-pressed') === 'true' && /Keys/.test(keysTile()?.textContent ?? ''));
+  keysTile()?.click();
+  check('and a second click closes it', !!(await until(() => !sheet(), 1000)) && keysTile()?.getAttribute('aria-pressed') === 'false');
+  blur();
+
+  // Shift+0 is 100% in a Viewport tool, and never while a text field has the focus
+  shell.setActive('pattern');
+  patchPattern({ zoom: 'fit' });
+  blur();
+  // the zoom keys wait until the tool is on screen (its host is no longer inert)
+  await until(() => shows(host('pattern')) && !host('pattern')?.hasAttribute('inert'), 1500);
+  await sleep(60);
+  press(')', { code: 'Digit0', shiftKey: true });
+  const actual = await until(() => {
+    const z = patternView().zoom;
+    return typeof z === 'object' && z.scale === 1;
+  }, 1500);
+  check('Shift+0 zooms a Viewport tool to 100%', !!actual, patternView().zoom);
+  patchPattern({ zoom: 'fit' });
+  const zoomField = host('pattern')?.querySelector<HTMLInputElement>('[data-view-strip] input') ?? null;
+  zoomField?.focus();
+  press(')', { code: 'Digit0', shiftKey: true });
+  await sleep(120);
+  check('but not from inside a text field', patternView().zoom === 'fit', patternView().zoom);
+  blur();
+
+  // Ctrl+E clicks the active tool's Export as a keyboard click: its menu opens on the first row
+  press('e', { code: 'KeyE', ctrlKey: true });
+  const exportMenu = await until(() => document.querySelector<HTMLElement>('[role="menu"] [role="menuitem"]'), 1500);
+  check('Ctrl+E opens the active tool’s Export menu', !!exportMenu && shows(exportMenu));
+  press('Escape');
+  await until(() => !document.querySelector('[role="menu"]'), 1000);
+  shell.openSettings(true);
+  blur();
+  press('e', { code: 'KeyE', ctrlKey: true });
+  await sleep(120);
+  check('and does nothing while Settings is open', !document.querySelector('[role="menu"]'));
+  press('Escape');
+  check('Esc closes Settings', !!(await until(() => !shell.getState().settingsOpen, 1000)));
+  shell.setActive('design');
 
   // every tab says its Alt+N, and Design's tabs have them too
   shell.setActive('illustration');

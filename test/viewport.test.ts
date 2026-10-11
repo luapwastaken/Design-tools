@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { asZoom, clampView, fitView, MAX_SCALE, MIN_SCALE, originOf, panBy, snapScale, stepScale, toContent, wheelFactor, zoomAt, zoomKey } from '../src/renderer/ui/viewport.ts';
-import type { KeyLike } from '../src/renderer/shell/core/keys.ts';
+import { comboOf, toolMayTake, type KeyLike } from '../src/renderer/shell/core/keys.ts';
 
 const box = { w: 800, h: 600 };
 const near = (a: number, b: number) => assert.ok(Math.abs(a - b) < 1e-9, `${a} ≈ ${b}`);
@@ -91,6 +91,11 @@ test('the zoom keys', () => {
   assert.equal(zoomKey(key('+', 'NumpadAdd')), 'in');
   assert.equal(zoomKey(key('-', 'Minus')), 'out');
   assert.equal(zoomKey(key('-', 'NumpadSubtract')), 'out');
+  // Shift+0 is 100% without Ctrl (Ctrl+Alt+0 is AltGr+0 on a German keyboard); the Viewport keeps it out of text fields
+  assert.equal(zoomKey(key(')', 'Digit0', { ctrlKey: false, shiftKey: true })), 'actual');
+  assert.equal(zoomKey(key(')', 'Digit0', { ctrlKey: false, shiftKey: true }), true), null);
+  assert.equal(zoomKey(key(')', 'Digit0', { ctrlKey: false, shiftKey: true, altKey: true })), null);
+  assert.equal(toolMayTake(comboOf(key(')', 'Digit0', { ctrlKey: false, shiftKey: true })), true), false);
   // not ours: no Ctrl, Ctrl+Shift+0, and AltGr+0 (which types "}" on a German keyboard)
   assert.equal(zoomKey(key('0', 'Digit0', { ctrlKey: false })), null);
   assert.equal(zoomKey(key(')', 'Digit0', { shiftKey: true })), null);
