@@ -7,7 +7,9 @@ import { namespace, parseSize } from '../../../shared/svg/index.ts';
 import type { PatternDoc, ShapeSlot, Unit } from '../../../shared/pattern/types.ts';
 import { valueOf } from '../../../shared/color/value.ts';
 import { isGround } from '../../../shared/palette/roles.ts';
+import type { Arrangement } from '../../../shared/pattern/types.ts';
 import type { PatternPayload, Swatch } from '../../../shared/types.ts';
+import type { IconName } from '../../shell/tool.ts';
 import { displayName } from '../common/names.ts';
 
 export type { Arrangement, PatternDoc, ShapeSlot, Unit } from '../../../shared/pattern/types.ts';
@@ -254,3 +256,11 @@ export function withPalette(d: PatternDoc, swatches: Swatch[]): { doc: PatternDo
     bases: bases.length,
   };
 }
+
+/** the arrangements as pictograms; `tip` is the one-line description */
+export const ARRANGEMENTS: { value: Arrangement; label: string; icon: IconName; tip: string }[] = [
+  { value: 'grid', label: 'Grid', icon: 'pattern', tip: 'Rows and columns, every cell in line.' },
+  { value: 'halfdrop', label: 'Half-drop', icon: 'view_column', tip: 'Every other column drops by half a cell.' },
+  { value: 'brick', label: 'Brick', icon: 'wall', tip: 'Every other row shifts by half a cell.' },
+  { value: 'scatter', label: 'Scatter', icon: 'grain', tip: 'Spread evenly at random, never overlapping, seamless across the edges.' },
+];

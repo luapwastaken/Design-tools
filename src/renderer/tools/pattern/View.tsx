@@ -14,6 +14,7 @@ import { ExportModule, usePatternExport } from './Export.tsx';
 import { ArrangementModule, RotationModule, SpacingModule } from './Layout.tsx';
 import { PatternBar } from './PatternBar.tsx';
 import { Shapes } from './Shapes.tsx';
+import { swatchCopier } from './keystate.ts';
 import { patchView, useView } from './view-state.ts';
 import s from './View.module.css';
 
@@ -41,6 +42,12 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   usePaste(doc, active);
   const tile = useMemo(() => layoutTile(d), [d]);
   const out = usePatternExport(doc, d, tile, v);
+  // the keys reach the swatch copy through the store: the export hook lives here
+  useEffect(() => {
+    if (!active) return;
+    swatchCopier.set(() => void out.copySwatch());
+    return () => swatchCopier.set(null);
+  });
   const preview = useMemo(() => previewSvg(d, tile), [d.slots, d.background, tile]);
   const counts = useMemo(() => {
     const m = new Map<string, number>();

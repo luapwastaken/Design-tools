@@ -4,8 +4,9 @@ import type { ToolDefinition } from '../../shell/tool.ts';
 import { toast } from '../../ui/index.ts';
 import { listNames, plural } from '../common/names.ts';
 import { fetchBlob } from '../common/take.ts';
-import { leftOut, newPattern, reseed, slotFrom, takeFiles, withSlots } from './actions.ts';
+import { leftOut, newPattern, reseed, slotFrom, surprise, takeFiles, withSlots } from './actions.ts';
 import { emptyDoc, fromPayload, MAX_COLOURS, toPayload, withPalette, type PatternDoc } from './doc.ts';
+import { patternShortcuts } from './keys.ts';
 import { StatusSlot } from './StatusSlot.tsx';
 import { replacing } from './view-state.ts';
 import { View } from './View.tsx';
@@ -68,10 +69,7 @@ export const tool: ToolDefinition<PatternDoc> = {
     return left.length === files.length ? false : left.length ? left : true;
   },
 
-  shortcuts: (doc) => [
-    { keys: 'Ctrl+N', label: 'New pattern', run: () => void newPattern() },
-    { keys: 'R', label: 'Reseed', run: () => reseed(doc) },
-  ],
+  shortcuts: (doc) => patternShortcuts(doc, { newPattern, reseed, surprise }),
   StatusSlot,
   View,
 };

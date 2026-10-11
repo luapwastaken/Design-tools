@@ -1,27 +1,26 @@
 // The pattern's chrome above the canvas: the doc bar (name and place, New, undo, Send to, Export, which
 // opens a menu of the formats) and the options bar (the arrangement as pictograms, Surprise me and its Keep / Discard).
-import { useState } from 'react';
 import { Button, Icon, IconButton, Segmented, type MenuItem } from '../../ui/index.ts';
 import { DocBar, ExportMenu } from '../common/DocBar.tsx';
 import { OptionsBar, OptionsField } from '../common/OptionsBar.tsx';
 import { plural } from '../common/names.ts';
 import { newPattern, surprise, type Doc } from './actions.ts';
-import type { PatternDoc } from './doc.ts';
+import { ARRANGEMENTS, type PatternDoc } from './doc.ts';
 import type { PatternExport } from './Export.tsx';
-import { ARRANGEMENTS } from './Layout.tsx';
+import { discardSurprise, keepSurprise, proposeSurprise } from './keys.ts';
+import { made } from './keystate.ts';
 import s from './PatternBar.module.css';
 
 export function PatternBar({ doc, d, out }: { doc: Doc; d: PatternDoc; out: PatternExport }) {
   // Surprise me is a proposal until it is kept: it stands while the document is exactly what it made, so any edit keeps it
-  const [made, setMade] = useState<PatternDoc | null>(null);
-  const proposing = made !== null && d === made;
+  const proposing = made.use() !== null && d === made.get();
   const busy = out.ex.busy !== null;
   const items = (): MenuItem[] => [
     { label: 'Illustrator swatch (SVG)', icon: 'download', onSelect: () => void out.swatch() },
     { label: 'Artboard (SVG)', icon: 'download', disabled: !!out.boardProblem, hint: out.boardProblem ? 'Too many shapes' : undefined, onSelect: () => void out.artboard() },
     { label: 'PNG', icon: 'download', disabled: !!out.pngProblem, hint: out.pngProblem ? 'Too big' : undefined, onSelect: () => void out.png() },
     'separator',
-    { label: 'Copy the swatch SVG', icon: 'content_copy', onSelect: () => void out.copySwatch() },
+    { label: 'Copy the swatch SVG', icon: 'content_copy', shortcut: 'Ctrl+Shift+C', onSelect: () => void out.copySwatch() },
     { label: 'Copy the artboard SVG', icon: 'content_copy', disabled: !!out.boardProblem, onSelect: () => void out.copyArtboard() },
   ];
   return (
@@ -38,7 +37,7 @@ export function PatternBar({ doc, d, out }: { doc: Doc; d: PatternDoc; out: Patt
         <OptionsField label="Arrangement">
           <Segmented
             fit
-            options={ARRANGEMENTS.map((a) => ({ value: a.value, label: a.label, icon: a.icon, tip: a.tip }))}
+            options={ARRANGEMENTS.map((a, n) => ({ value: a.value, label: a.label, icon: a.icon, tip: a.tip, shortcut: `Alt+${n + 1}` }))}
             value={d.arrangement}
             onChange={(arrangement) => doc.transact(`Arrange as ${ARRANGEMENTS.find((x) => x.value === arrangement)!.label.toLowerCase()}`, (x) => ({ ...x, arrangement }))}
           />
@@ -50,17 +49,15 @@ export function PatternBar({ doc, d, out }: { doc: Doc; d: PatternDoc; out: Patt
               <Icon name="wand_stars" size={14} />
               Proposal
             </span>
-            <Button size="xs" onClick={() => setMade(null)} tooltip="Keep this layout">
+            <Button size="xs" onClick={keepSurprise} tooltip="Keep this layout" shortcut="A">
               Keep
             </Button>
             <Button
               size="xs"
               variant="ghost"
-              onClick={() => {
-                doc.undo();
-                setMade(null);
-              }}
+              onClick={() => discardSurprise(doc)}
               tooltip="Go back to the layout before"
+              shortcut="Esc"
             >
               Discard
             </Button>
@@ -68,11 +65,9 @@ export function PatternBar({ doc, d, out }: { doc: Doc; d: PatternDoc; out: Patt
         )}
         <Button
           icon="wand_stars"
-          onClick={() => {
-            surprise(doc);
-            setMade(doc.get());
-          }}
+          onClick={() => proposeSurprise(doc, surprise)}
           tooltip="Surprise me: a new arrangement, spacing, size and turns. The shapes and colours stay."
+          shortcut="Shift+R"
         >
           Surprise me
         </Button>

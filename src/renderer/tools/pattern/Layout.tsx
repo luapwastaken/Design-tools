@@ -2,20 +2,11 @@
 // typable and each change is one history step; fix() keeps the tile from collapsing. The arrangement
 // choice itself sits in the options bar (PatternBar), drawn as pictograms.
 import type { Tile } from '../../../shared/pattern/types.ts';
-import type { IconName } from '../../shell/tool.ts';
 import { IconButton, InspectorGroup, InspectorRow, NumberField, Segmented, Slider, useDocNumber } from '../../ui/index.ts';
 import { reseed, type Doc } from './actions.ts';
 import { UnitSwitch } from './Unit.tsx';
 import { fix, gapMin, LIMIT, lengthIn, PX_PER, rangeIn, UNIT_STEP, withTileSide, type Arrangement, type PatternDoc } from './doc.ts';
 import s from './Inspector.module.css';
-
-/** the arrangements as pictograms; `tip` is the one-line description */
-export const ARRANGEMENTS: { value: Arrangement; label: string; icon: IconName; tip: string }[] = [
-  { value: 'grid', label: 'Grid', icon: 'pattern', tip: 'Rows and columns, every cell in line.' },
-  { value: 'halfdrop', label: 'Half-drop', icon: 'view_column', tip: 'Every other column drops by half a cell.' },
-  { value: 'brick', label: 'Brick', icon: 'wall', tip: 'Every other row shifts by half a cell.' },
-  { value: 'scatter', label: 'Scatter', icon: 'grain', tip: 'Spread evenly at random, never overlapping, seamless across the edges.' },
-];
 
 type Get = (d: PatternDoc) => number;
 type Set = (d: PatternDoc, v: number) => PatternDoc;
