@@ -36,16 +36,16 @@ export function takeSvg(svgs: (string | null | undefined)[], name: string): void
 }
 
 /** pasted text: hex lists, rgb(), hsl(), oklch()… (shared/palette/paste) */
-export function takeText(text: string): { found: number; rejected: string[] } {
+export function takeText(text: string): { found: number; rejected: string[]; notes: string[] } {
   const r = parseColours(text);
   // a name that says its job ("brand-primary", "surface") proposes it, once each: Keep all then takes it
   const taken = new Set<string>();
-  const roles = r.names.map((n) => {
-    const role = roleOfName(n);
+  const roles = r.names.map((n, i) => {
+    const role = roleOfName(r.hints[i]) ?? roleOfName(n);
     if (!role || taken.has(role)) return {};
     taken.add(role);
     return { role };
   });
   if (r.colours.length) propose('paste', r.colours.length === 1 ? 'Pasted colour' : 'Pasted colours', r.colours, r.names, [], roles);
-  return { found: r.colours.length, rejected: r.rejected };
+  return { found: r.colours.length, rejected: r.rejected, notes: r.notes };
 }

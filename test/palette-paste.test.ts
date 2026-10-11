@@ -1,8 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toHex } from '../src/shared/color/index.ts';
+import { hexToOklch, toHex } from '../src/shared/color/index.ts';
 import { parseColours } from '../src/shared/palette/paste.ts';
-import { writeTokens } from '../src/shared/palette/writers.ts';
+import { roleOfName } from '../src/shared/palette/roles.ts';
+import { writeCss, writeTokens } from '../src/shared/palette/writers.ts';
+import type { Swatch } from '../src/shared/types.ts';
+
+const sw = (hex: string, name: string, role: string | null = null): Swatch => ({ id: name, name, role, oklch: hexToOklch(hex), type: 'process' });
 
 const hexes = (text: string) => parseColours(text).colours.map(toHex);
 
@@ -183,4 +187,19 @@ test('design tokens as the W3C format has them: a $value object, this tool’s o
   assert.deepEqual(back.colours[0].map((v) => +v.toFixed(3)), [0.512, 0.123, 40.123], 'the OKLCH beside the hex, not the hex');
   assert.notEqual(toHex(back.colours[0]), '#e8643c');
   assert.deepEqual(back.rejected, []);
+});
+
+test('this tool’s CSS keeps the names in its comments and a colour that only looks derived', () => {
+  const css = writeCss([sw('#e8643c', 'Ember', 'Primary'), sw('#fafafa', 'Snow', 'Background'), sw('#112233', 'Warm hex'), sw('#445566', 'On air')]);
+  const read = parseColours(css);
+  assert.deepEqual(read.names, ['Ember', 'Snow', 'warm-hex', 'on-air'], 'named by the comment, else the property');
+  assert.deepEqual(read.hints.slice(0, 2), ['primary', 'background']);
+  assert.equal(read.colours.length, 4, 'a lone --warm-hex or --on-air is a colour');
+});
+
+test('this tool’s design tokens pasted back keep every role', () => {
+  const list = [sw('#fafafa', 'Snow', 'Background'), sw('#ffffff', 'White', 'Surface'), sw('#14161a', 'Umber', 'Text'), sw('#e8643c', 'Ember', 'Primary'), sw('#336699', 'Powder Blue')];
+  const read = parseColours(writeTokens(list));
+  assert.deepEqual(read.names, ['Snow', 'White', 'Umber', 'Ember', 'Powder Blue']);
+  assert.deepEqual(read.hints.slice(0, 4).map((h) => roleOfName(h)), ['Background', 'Surface', 'Text', 'Primary']);
 });

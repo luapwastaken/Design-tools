@@ -30,7 +30,7 @@ import type { Rgba8 } from './lib/png-indexed.ts';
 import { rgbaPng } from './lib/png.ts';
 import { shell } from './shell/core/index.ts';
 import { buildRoles } from '../shared/palette/brand.ts';
-import { ROLES } from '../shared/palette/roles.ts';
+import { ROLES, roleOfName } from '../shared/palette/roles.ts';
 import { select as selectInDesign } from './tools/design/actions.ts';
 import { newSwatch as designSwatch, recolour as recolourInDesign, type DesignDoc } from './tools/design/doc.ts';
 import { clearProposals, proposals } from './tools/design/proposals.ts';
@@ -56,7 +56,8 @@ import { allFlats, DEFAULT_LAYERS, recipeFlats } from './tools/illustration/laye
 import { LIGHTS as SCENE_LIGHTS, sceneLight, sceneNotes } from './tools/illustration/scene.ts';
 import { strFromU8, unzipSync } from 'fflate';
 import { MATERIALS } from '../shared/palette/ramp.ts';
-import { writeKpl } from '../shared/palette/writers.ts';
+import { parseColours } from '../shared/palette/paste.ts';
+import { writeCss, writeKpl, writeTokens } from '../shared/palette/writers.ts';
 import { reachable } from './shell/core/shortcuts.ts';
 import { stillLifeOf } from './tools/illustration/still-life.ts';
 import type { PaintEngine } from './tools/illustration/paint/index.ts';
@@ -1130,7 +1131,7 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   press('Escape');
   await until(() => !popover());
   // the second button copies the format chosen (not always CSS), only for formats that are text; the binary ones can name swatches by role
-  const exportLabels: [ExportFormat, string | null][] = [['css', 'Copy CSS'], ['tailwind4', 'Copy Tailwind 4'], ['json', 'Copy JSON'], ['ase', null]];
+  const exportLabels: [ExportFormat, string | null][] = [['css', 'Copy'], ['tailwind4', 'Copy'], ['tokens', 'Copy'], ['json', 'Copy'], ['ase', null]];
   const seen: (string | null)[] = [];
   for (const [format] of exportLabels) {
     patchDesign({ format });
@@ -1141,16 +1142,19 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     press('Escape');
     await until(() => !popover());
   }
-  check('Export’s second button reads Copy and the format (CSS, Tailwind 4, JSON), and ASE has none but offers Swatch names by role', seen.join() === exportLabels.map(([, l]) => l).join(), seen);
+  check('Export’s second button is a plain Copy for the text formats (so a long format name never pushes it out of the popover), and ASE has none but offers Swatch names by role', seen.join() === exportLabels.map(([, l]) => l).join(), seen);
   patchDesign({ format: 'ase' });
 
   // Copy all as: every colour, one to a line, in the format Copy as remembers
-  const copyAll = [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Copy all as'));
+  const copyAll = [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim() === 'Copy all');
   copyAll?.click();
   await sleep(150);
   const allText = utf8((await api.invoke('clipboard.peek'))['text/plain']);
-  const allFormat = COPY_FORMATS.find((f) => f.label === copyAll?.textContent?.trim().slice('Copy all as '.length))?.id;
+  const allFormat = COPY_FORMATS.find((f) => f.id === (localStorage.getItem('copyAs') ?? 'hex'))?.id;
   check('Copy all as copies every colour, one to a line, in the remembered format', !!copyAll && !!allFormat && allText === dd.get().swatches.map((w) => formatColour(w.oklch, allFormat)).join('\n'), [copyAll?.textContent, allText]);
+  // the tokens file pasted back keeps each role
+  const tokenRead = parseColours(writeTokens(dd.get().swatches));
+  check('this tool’s design tokens read back with every role', tokenRead.colours.length === dd.get().swatches.length && dd.get().swatches.every((w, i) => !w.role || roleOfName(tokenRead.hints[i]) === w.role), [tokenRead.hints, dd.get().swatches.map((w) => w.role)]);
   // Gradient between two: Copy CSS gives the gradient as a linear-gradient through its stops
   button('design', 'Add colours')?.click();
   (await until(() => menuRow('Gradient between two')))?.click();
@@ -1204,13 +1208,13 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   (await until(() => menuRow('Paste codes')))?.click();
   const box3 = await until(() => document.querySelector<HTMLTextAreaElement>('[role="dialog"][aria-label="Paste codes"] textarea[aria-label="Colours to parse"]'));
   if (box3) {
-    type(box3, [':root {', '  --smoke-primary: oklch(0.68 0.16 40);', '  --smoke-primary-hex: #e8643c;', '  --on-primary: oklch(1 0 0);', '  --on-primary-hex: #ffffff;', '}'].join(String.fromCharCode(10)));
+    type(box3, writeCss([{ ...dd.get().swatches[0], name: 'Smoke', role: 'Primary' }]));
     const dialog = box3.closest('[role="dialog"]');
     const note = await until(() => (dialog?.textContent?.includes('One colour found') ? dialog.textContent : null));
-    check('pasting the CSS export back reads the one colour: no hex twin, no --on-primary, no braces counted as skipped', !!note && !/skipped/.test(note.replace(/Skipped the -hex/, '')), dialog?.textContent?.slice(0, 200));
+    check('pasting the CSS export back reads the one colour: no hex twin, no --on-primary, no braces counted as skipped', !!note && !/skipped/.test(note.replace(/Skipped the hex twins/, '')), dialog?.textContent?.slice(0, 200));
     (await until(() => [...(dialog?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().startsWith('Propose colours') && !b.disabled)))?.click();
     await until(() => proposals.get()?.items.length === 1);
-    check('and it keeps the property as the name', proposals.get()?.items[0]?.name === 'smoke-primary', proposals.get()?.items.map((p) => p.name));
+    check('and it keeps the name its comment gave', proposals.get()?.items[0]?.name === 'Smoke', proposals.get()?.items.map((p) => p.name));
   } else check('Paste codes opens again for the CSS', false);
   clearProposals();
 

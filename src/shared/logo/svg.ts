@@ -77,6 +77,8 @@ function asGroup(markup: string, head: Attr[], box: Rect): El {
 }
 
 const CLIP_SIDES = ['x', 'y', 'width', 'height'];
+/** what a recolour leaves on a clip path, where paint means nothing */
+const PAINT_ATTRS = ['fill', 'stroke'];
 
 /**
  * Removes the clip paths that cut nothing: a lone rectangle well outside the artwork (Illustrator
@@ -90,17 +92,23 @@ function dropIdleClips(root: El, box: Rect): void {
   for (const { el } of walk(root)) {
     const id = getAttr(el, 'id');
     const inside = el.children.filter(isEl);
-    if (el.name !== 'clipPath' || !id || el.attrs.length !== 1 || inside.length !== 1 || inside[0].name !== 'rect') continue;
+    if (el.name !== 'clipPath' || !id || el.attrs.some((a) => a.name !== 'id' && !PAINT_ATTRS.includes(a.name)) || inside.length !== 1 || inside[0].name !== 'rect') continue;
     if (inside[0].attrs.some((a) => !CLIP_SIDES.includes(a.name))) continue; // a transform, rounded corners, a clip of its own
     const [x, y, w, h] = CLIP_SIDES.map((k) => Number(getAttr(inside[0], k) ?? 0));
     if ([x, y, w, h].every(Number.isFinite) && w > 0 && h > 0 && x <= box.x - slack && y <= box.y - slack && x + w >= box.x + box.w + slack && y + h >= box.y + box.h + slack) idle.add(id);
   }
+  // paint on a clip path does nothing, so the one-colour versions don't need to carry it
+  for (const { el } of walk(root)) if (el.name === 'clipPath') el.attrs = el.attrs.filter((a) => !PAINT_ATTRS.includes(a.name));
   if (!idle.size) return;
   const url = (id: string) => `url\\(\\s*["']?#${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']?\\s*\\)`;
   const clips = new RegExp(`clip-path\\s*:\\s*(?:${[...idle].map(url).join('|')})\\s*;?`, 'g');
   const attr = new RegExp(`^\\s*(?:${[...idle].map(url).join('|')})\\s*$`);
   for (const { el } of walk(root)) {
     el.attrs = el.attrs.filter((a) => !(a.name === 'clip-path' && attr.test(a.value)));
+    // the same clip written in an inline style
+    const inline = el.attrs.find((a) => a.name === 'style');
+    if (inline) inline.value = inline.value.replace(clips, '').trim();
+    el.attrs = el.attrs.filter((a) => a.name !== 'style' || a.value);
     if (el.name === 'style') el.children = [el.children.some((c) => 'cdata' in c) ? { cdata: textOf(el).replace(clips, '') } : { text: textOf(el).replace(clips, '') }];
     el.children = el.children.filter((c) => !isEl(c) || c.name !== 'clipPath' || !idle.has(getAttr(c, 'id') ?? ''));
   }
@@ -185,7 +193,9 @@ export function placed(doc: Pick<LogoDoc, 'icon' | 'wordmark'>, lay: Layout): ['
 }
 
 export function svgFile(w: number, h: number, body: string, title?: string): string {
-  const [sw, sh] = [n(w), n(h)];
+  // measured artwork is a hundredth off a whole size (a 100 px icon at 200.01): that is noise, and an odd artboard in Illustrator
+  const snap = (v: number) => (Math.abs(v - Math.round(v)) < 0.02 ? Math.round(v) : v);
+  const [sw, sh] = [n(snap(w)), n(snap(h))];
   const named = title?.trim() ? `<title>${esc(title.trim()).replace(/>/g, '&gt;')}</title>` : '';
   return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${sw}px" height="${sh}px" viewBox="0 0 ${sw} ${sh}">${named}${body}</svg>\n`;
 }

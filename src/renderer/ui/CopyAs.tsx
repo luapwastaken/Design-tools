@@ -51,6 +51,7 @@ export function copyColour(o: Oklch, as: CopyFormat = format): Promise<void> {
 
 /** Several colours, one to a line, in the remembered format; `what` names them in the toast ("Terracotta's 5 colours"). */
 export function copyColours(list: Oklch[], what: string): Promise<void> {
+  if (!list.length) return Promise.resolve();
   const label = COPY_FORMATS.find((f) => f.id === format)!.label;
   return copyText(list.map((o) => formatColour(o, format)).join('\n'), `Copied ${what} as ${label}.`);
 }

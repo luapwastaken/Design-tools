@@ -397,6 +397,12 @@ test('CSS: --on-primary beside a Primary, hex twins optional; Tailwind 4 as an @
   assert.match(tw, /^ {2}--color-on-primary: oklch\(/m);
 });
 
+test('KPL: two ramps of one name are told apart in the comment as in the groups', () => {
+  const list = [...ramp('a', 'Caramel', 3), ...ramp('b', 'Caramel', 3)];
+  const k = readKpl(writeKpl('Study', list, null, { materials: { a: 'Skin', b: 'Cloth' } }));
+  assert.equal(k.root.attrs.comment, 'Materials: Caramel: Skin, Caramel 2: Cloth.');
+});
+
 test('KPL: the comment names the light and each ramp’s material, and is empty without them', () => {
   const list = [...ramp('a', 'Caramel', 3), ...ramp('b', 'Hat & Coat', 3), sw('#123456', 'Loose')];
   const k = readKpl(writeKpl('Study', list, null, { light: 'Golden hour', materials: { a: 'Skin', b: 'Velvet', gone: 'Metal' } }));

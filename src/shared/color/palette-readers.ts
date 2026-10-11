@@ -267,7 +267,8 @@ const readProcreate: Read = (bytes, fallbackName) => {
     }
   }
   const warnings = [
-    palettes.length > 1 && `The file holds ${count(palettes.length, 'palette')}; they are joined into one.`,
+    // the pages this app's own writer splits a long palette into ("Name 2", "Name 3") are one palette coming back
+    palettes.slice(1).some((p, i) => p?.name !== `${palettes[0]?.name} ${i + 2}`) && `The file holds ${count(palettes.length, 'palette')}; they are joined into one.`,
     bad && `Skipped ${count(bad, 'swatch', 'swatches')} that couldn't be read.`,
   ].filter((w) => typeof w === 'string');
   return { name, swatches, warnings };

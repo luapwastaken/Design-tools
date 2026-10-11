@@ -278,3 +278,19 @@ test('a clip path far outside the artwork is dropped with everything that pointe
   const odd = lockupSvg(d('<rect width="300" height="200" rx="20"/>'), lockup('icon'), 'original', { padding: 'tight' });
   assert.match(odd, /<clipPath/);
 });
+
+test('a clip path a recolour has painted still goes when it clips nothing, inline-style references with it', () => {
+  const wrapped = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><clipPath id="v"><rect x="0" y="0" width="120" height="120"/></clipPath><g ${inner}><circle cx="60" cy="60" r="50"/></g></svg>`;
+  for (const inner of ['clip-path="url(#v)"', 'style="clip-path:url(#v)"']) {
+    for (const version of ['original', 'black'] as const) {
+      const out = lockupSvg(doc({ icon: part('icon', wrapped(inner), ICON_BOX) }), lockup('icon'), version, { padding: 'tight' });
+      assert.doesNotMatch(out, /clip|style=/i, `${version}: ${inner}`);
+      selfContained(out);
+    }
+  }
+});
+
+test('a size a hundredth off a whole number is written whole', () => {
+  const svg = lockupSvg(doc(), lockup('icon'), 'original', { padding: 'tight', height: 200.004 });
+  assert.equal(getAttr(parseSvg(svg), 'height'), '200px');
+});

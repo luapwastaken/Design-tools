@@ -140,8 +140,8 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
               <Select label="Surround" options={SURROUND_OPTIONS.map((o) => ({ ...o, swatch: surroundOf(o.value, d.swatches) }))} value={v.surround} onChange={(surround) => patchView({ surround })} className={s.ctl} />
               <Select label="Show" options={CHIP_DATA} value={v.chipData} onChange={(chipData) => patchView({ chipData })} className={s.ctl} />
               <GreyscaleButton />
-              <Button size="xs" icon="content_copy" onClick={() => void copyColours(d.swatches.map((w) => w.oklch), `the palette's ${plural(d.swatches.length, 'colour')}`)} tooltip="Every colour, one to a line, in the format Copy as remembers (the caret beside a colour's Copy changes it)">
-                Copy all as {COPY_FORMATS.find((f) => f.id === copyFormat)!.label}
+              <Button size="xs" icon="content_copy" disabled={!d.swatches.length} onClick={() => void copyColours(d.swatches.map((w) => w.oklch), `the palette's ${plural(d.swatches.length, 'colour')}`)} tooltip={`Every colour, one to a line, as ${COPY_FORMATS.find((f) => f.id === copyFormat)!.label} (the caret beside a colour's Copy changes the format)`}>
+                Copy all
               </Button>
             </>
           )}

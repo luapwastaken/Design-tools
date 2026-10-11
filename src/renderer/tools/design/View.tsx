@@ -43,7 +43,9 @@ function usePaste(active: boolean) {
       const text = e.clipboardData?.getData('text/plain') ?? '';
       if (!text.trim()) return;
       e.preventDefault();
-      if (!takeText(text).found) toast.show({ icon: 'content_paste', message: 'The clipboard holds no colour codes this can read.' });
+      const taken = takeText(text);
+      if (!taken.found) toast.show({ icon: 'content_paste', message: 'The clipboard holds no colour codes this can read.' });
+      else if (taken.notes.length) toast.show({ icon: 'content_paste', message: `${taken.notes.join('. ')}.` });
     };
     addEventListener('paste', onPaste);
     return () => removeEventListener('paste', onPaste);

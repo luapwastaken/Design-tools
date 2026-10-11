@@ -52,6 +52,7 @@ export function addTyped(doc: Doc, text: string): boolean {
 export function pasteColours(doc: Doc, text: string): void {
   const r = parseColours(text);
   if (!r.colours.length) return void toast.show({ icon: 'content_paste', message: 'The clipboard holds no colour codes this can read.' });
+  if (r.notes.length) toast.show({ icon: 'content_paste', message: `${r.notes.join('. ')}.` });
   if (r.colours.length === 1) return addBase(doc, r.colours[0], r.names[0] ?? '', { focus: true });
   openSource(doc, 'paste', { text });
 }

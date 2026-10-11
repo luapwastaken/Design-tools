@@ -5,8 +5,13 @@ import { deltaE, hexToOklch, parseCss, parseHex, toOklch, type Oklch } from '../
 import { wrapHue } from './space.ts';
 import { TOKENS_NAMESPACE } from './writers.ts';
 
-/** `names`: what the text called each (null: nothing); `notes`: what was dropped on the way ("Alpha is ignored") */
-export type Pasted = { colours: Oklch[]; names: (string | null)[]; rejected: string[]; notes: string[] };
+/**
+ * `names`: what the text called each (null: nothing); `hints`: the property or token key it sat under, which says its job
+ * when the name does not (the app's own CSS and tokens file); `notes`: what was dropped on the way ("Alpha is ignored")
+ */
+export type Pasted = { colours: Oklch[]; names: (string | null)[]; hints: (string | null)[]; rejected: string[]; notes: string[] };
+/** a line to read, with the property or key it came from */
+type Line = { text: string; hint: string | null };
 
 const FN = /\b(rgba?|hsla?|hwb|oklch|oklab|lab|lch|color)\(([^()]*)\)/gi;
 const HASH_HEX = /#([0-9a-f]{3,8})\b/gi;
@@ -45,30 +50,32 @@ function fromNumbers(item: string): { oklch: Oklch; alpha: boolean } | null {
 const cleanName = (n: string): string => n.replace(/^colou?r[-_.]+(?=\S)/i, '');
 
 export function parseColours(text: string): Pasted {
-  const out: Pasted = { colours: [], names: [], rejected: [], notes: [] };
-  const lines = jsonLines(text) ?? withoutDerived(text, out).split(/\r?\n/).map((l) => l.replace(COMMENT, ''));
-  const items: string[] = [];
-  const add = (oklch: Oklch, name: string | null) => {
+  const out: Pasted = { colours: [], names: [], hints: [], rejected: [], notes: [] };
+  const lines = jsonLines(text) ?? withoutDerived(text, out).split(/\r?\n/).map(cssLine);
+  const items: Line[] = [];
+  const add = (oklch: Oklch, name: string | null, hint: string | null) => {
     // the same colour written two ways (0-1 floats are not exact bytes) is one colour: closer than one 8-bit step
     const at = out.colours.findIndex((c) => deltaE(c, oklch) < 0.5);
     if (at >= 0) {
       out.names[at] ??= name; // "#abc, Ember: #aabbcc": one colour, and it keeps the name
+      out.hints[at] ??= hint;
       return;
     }
     out.colours.push(oklch);
     out.names.push(name);
+    out.hints.push(hint);
   };
-  for (const line of lines) {
+  for (const { text: line, hint } of lines) {
     const parts = splitOutsideParens(line);
     // numbers alone are one colour (0-255, or 0-1): "250, 250, 250" is a grey, not three 3-digit hexes
     const numbers = fromNumbers(line);
     if (numbers) {
       if (numbers.alpha && !out.notes.includes(ALPHA_NOTE)) out.notes.push(ALPHA_NOTE);
-      add(numbers.oklch, null);
+      add(numbers.oklch, null, hint);
     } else if (parts.length > 1 && parts.every((p) => /^\d{1,3}$/.test(p))) out.rejected.push(line.trim());
-    else items.push(...parts);
+    else items.push(...parts.map((text) => ({ text, hint: parts.length === 1 ? hint : null })));
   }
-  for (const item of items) {
+  for (const { text: item, hint } of items) {
     const found = findColours(item);
     if (!found || found.some((f) => !f.oklch)) {
       out.rejected.push(item);
@@ -79,30 +86,40 @@ export function parseColours(text: string): Pasted {
     if (rest.includes('$value')) rest = rest.split(/["']?\s*:/)[0].replace(PUNCT, '');
     if (ALPHA.test(item) && !out.notes.includes(ALPHA_NOTE)) out.notes.push(ALPHA_NOTE);
     // a list number ("1.") or a lone bracket isn't a name
-    for (const f of found) add(f.oklch!, found.length === 1 && /\p{L}/u.test(rest) ? cleanName(rest) : null);
+    for (const f of found) add(f.oklch!, found.length === 1 && /\p{L}/u.test(rest) ? cleanName(rest) : null, found.length === 1 ? hint : null);
   }
   return out;
 }
 
-/** custom properties this app's own CSS adds beside the real colours: a colour's -hex twin, and --on-primary and the like */
-const DERIVED = /--(?:[\w-]*-hex|(?:color-)?on-[\w-]*)\s*:[^;\n}]*;?/g;
+/** a custom property declaration (its name captured) */
+const DECL = /--([\w-]+)\s*:[^;\n}]*;?/g;
 
 /** a rule's opening and closing line (`:root {`, `@theme {`, `}`) */
 const BLOCK_LINE = /^\s*(?:[:@.#\w-]+(?:\s+\w+)?\s*)?\{\s*$|^\s*\}\s*$/gm;
 
 /**
  * The text without the helpers this app's own CSS adds, so pasting the export back brings in the
- * palette and not its -hex twins; a stylesheet's braces are not colours either.
+ * palette and not its twins: a colour's `-hex` (only where the colour itself is declared too) and
+ * the button-label colour `--on-primary`; a stylesheet's braces are not colours either.
  */
 function withoutDerived(text: string, out: Pasted): string {
   if (!/--[\w-]+\s*:/.test(text)) return text;
-  const kept = text.replace(DERIVED, '');
-  if (kept !== text) out.notes.push('Skipped the -hex and --on-… values, which are worked out from the colours');
+  const declared = new Set([...text.matchAll(DECL)].map((m) => m[1]));
+  const kept = text.replace(DECL, (all, prop: string) => (/^(?:color-)?on-primary(?:-hex)?$/.test(prop) || (prop.endsWith('-hex') && declared.has(prop.slice(0, -4))) ? '' : all));
+  if (kept !== text) out.notes.push('Skipped the hex twins and the on-primary colour, which are worked out from the colours');
   return kept.replace(BLOCK_LINE, '');
 }
 
+// a CSS line without its comment; `--ember: oklch(...); /* Ember */` keeps the comment as the name and the property as the hint
+function cssLine(line: string): Line {
+  const named = /^\s*--([\w-]+)\s*:\s*([^;]*?)\s*;\s*\/\*\s*(.*?)\s*\*\/\s*$/.exec(line);
+  if (named?.[3]) return { text: `${named[3]}: ${named[2]}`, hint: named[1] };
+  const decl = /^\s*--([\w-]+)\s*:/.exec(line);
+  return { text: line.replace(COMMENT, ''), hint: decl?.[1] ?? null };
+}
+
 /** a JSON paste as "name: colour" lines, keeping only strings that are colours; null when it isn't JSON */
-function jsonLines(text: string): string[] | null {
+function jsonLines(text: string): Line[] | null {
   const t = text.trim();
   if (!/^[[{]/.test(t)) return null;
   let data: unknown;
@@ -111,9 +128,9 @@ function jsonLines(text: string): string[] | null {
   } catch {
     return null;
   }
-  const lines: string[] = [];
-  const add = (colour: unknown, name: unknown) => {
-    if (typeof colour === 'string' && findColours(colour)) lines.push(typeof name === 'string' && name ? `${name}: ${colour}` : colour);
+  const lines: Line[] = [];
+  const add = (colour: unknown, name: unknown, hint: string | null = null) => {
+    if (typeof colour === 'string' && findColours(colour)) lines.push({ text: typeof name === 'string' && name ? `${name}: ${colour}` : colour, hint: hint || null });
   };
   const walk = (v: unknown, key: string): void => {
     if (Array.isArray(v)) return v.forEach((x) => walk(x, ''));
@@ -124,12 +141,13 @@ function jsonLines(text: string): string[] | null {
     const mine = isObjectOf(o.$extensions) && isObjectOf(o.$extensions[TOKENS_NAMESPACE]) ? o.$extensions[TOKENS_NAMESPACE] : null;
     const oklch = [o, mine].map((x) => (x && Array.isArray(x.oklch) && x.oklch.length === 3 && x.oklch.every(Number.isFinite) ? `oklch(${x.oklch.join(' ')})` : null)).find(Boolean);
     const colour = oklch ?? (isObjectOf(o.$value) ? dtcgValue(o.$value) : null) ?? o.hex ?? o.$value ?? o.value ?? o.color ?? o.colour;
-    if (typeof colour === 'string') add(colour, mine?.name ?? o.name ?? key);
+    // the role this app wrote, else the token's key ("background"), says what the colour is for
+    if (typeof colour === 'string') add(colour, mine?.name ?? o.name ?? key, typeof mine?.role === 'string' ? mine.role : key);
     // $type, $description and $extensions describe a token; they are not tokens
     else for (const [k, x] of Object.entries(o)) if (!k.startsWith('$')) walk(x, k);
   };
   // a bare array of three or four numbers (an After Effects colour) is one colour, read as it is
-  if (Array.isArray(data) && data.length >= 3 && data.length <= 4 && data.every((x) => typeof x === 'number')) return [`[${data.join(', ')}]`];
+  if (Array.isArray(data) && data.length >= 3 && data.length <= 4 && data.every((x) => typeof x === 'number')) return [{ text: `[${data.join(', ')}]`, hint: null }];
   walk(data, '');
   return lines;
 }

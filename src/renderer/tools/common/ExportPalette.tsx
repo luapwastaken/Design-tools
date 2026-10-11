@@ -156,8 +156,8 @@ function ExportBody({ tool, swatches, named, scene, notes, format, onFormat, nam
           Export {f.label}
         </Button>
         {f.text && (
-          <Button size="lg" disabled={!swatches.length} onClick={() => void copy()}>
-            Copy {f.label}
+          <Button size="lg" icon="content_copy" disabled={!swatches.length} onClick={() => void copy()} tooltip={`Copy the ${f.label} text`}>
+            Copy
           </Button>
         )}
       </div>

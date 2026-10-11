@@ -248,19 +248,22 @@ export function writeKpl(name: string, swatches: Swatch[], scene?: SceneLight | 
 
   // two ramps can share a base name, and Krita merges groups of one name
   const taken = new Set<string>();
-  const groups = ramps.flatMap(({ name: ramp, list }) => {
+  const named = ramps.map(({ name: ramp, list }) => {
     const base = xmlText(ramp) || 'Ramp';
     let unique = base;
     for (let n = 2; taken.has(unique); n++) unique = `${base} ${n}`;
     taken.add(unique);
+    return { unique, list };
+  });
+  const groups = named.flatMap(({ unique, list }) => {
     const lightToDark = [...list].sort((a, b) => (a.step ?? 0) - (b.step ?? 0));
     return [` <Group name="${xmlAttr(unique)}" rows="${Math.ceil(list.length / columns)}">`, ...entries(lightToDark, columns, '  '), ' </Group>'];
   });
 
-  // the comment is the only place a .kpl can say how the ramps were made
-  const materials = ramps.flatMap(({ name: ramp, list }) => {
+  // the comment is the only place a .kpl can say how the ramps were made; it names the ramps as the groups are named
+  const materials = named.flatMap(({ unique, list }) => {
     const material = list[0].group === undefined ? undefined : notes?.materials?.[list[0].group];
-    return material ? [`${xmlText(ramp)}: ${material}`] : [];
+    return material ? [`${unique}: ${material}`] : [];
   });
   const comment = [notes?.light && `Light: ${notes.light}.`, materials.length && `Materials: ${materials.join(', ')}.`].filter(Boolean).join(' ');
 

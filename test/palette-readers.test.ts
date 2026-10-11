@@ -326,7 +326,7 @@ test('Procreate: write then read keeps every colour, in order, with the paletteâ
   const joined = readPaletteFile('swatches', writeProcreate('Long', long), 'x');
   assert.equal(joined.swatches.length, 34);
   assert.deepEqual(hexes(joined), long.map((s) => toHex(s.oklch)));
-  assert.match(joined.warnings.join(' '), /2 palettes/);
+  assert.deepEqual(joined.warnings, [], 'the pages this app split a long palette into are one palette coming back');
 });
 
 test('Procreate: empty slots are gaps, Display P3 swatches land on their sRGB, and broken files report', () => {
