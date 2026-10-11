@@ -3,13 +3,17 @@
 // the middle of its time on screen and proved by requestVideoFrameCallback's mediaTime. Previews
 // play through a callback; exports go through lib/frames' one animated path.
 import { decodeFrames, exportFrames, MAX_FRAMES, type FrameImage } from '../../lib/frames.ts';
+import { putSequence, sequenceFrame, SEQUENCE_FPS } from '../common/sequence.ts';
 import { fetchBlob, putAsset } from '../common/take.ts';
 import { DEFAULT_FPS, frameOf, gifPlan, isCleanRate, isVideoFile, seekTime, snapFps, timingOf, typicalStep, videoProblem, type MediaKind, type Timing } from './media-time.ts';
 
 export { isVideoFile, type Loop, type MediaKind, type Timing } from './media-time.ts';
 
-/** the document's source (plan: PostFxDoc.source); `fps` and `frames` are null for a still, `delays` is a GIF's own timing in ms */
-export type Source = { asset: string; name: string; kind: MediaKind; w: number; h: number; fps: number | null; frames: number | null; delays?: number[] | null };
+/**
+ * the document's source (plan: PostFxDoc.source); `fps` and `frames` are null for a still, `delays` is a GIF's own timing in ms.
+ * A sequence's `asset` is its first frame and `assets` all of them, in order.
+ */
+export type Source = { asset: string; assets?: string[]; name: string; kind: MediaKind; w: number; h: number; fps: number | null; frames: number | null; delays?: number[] | null };
 
 /** what the preview is given on each frame: valid only during the call, so draw or upload it there */
 export type Shown = ImageBitmap | HTMLVideoElement;
@@ -66,8 +70,14 @@ export async function sourceOf(blob: Blob, name: string, ext = extOf(blob, name)
   return { asset, name, kind: 'gif', w, h, fps, frames: count, delays };
 }
 
+/** several stills as the frames of one animation, in name order (Dither takes them the same way, through common/sequence) */
+export async function sequenceOf(files: File[]): Promise<Source> {
+  const { assets, name, w, h, count } = await putSequence(ID, files);
+  return { asset: assets[0], assets, name, kind: 'sequence', w, h, fps: SEQUENCE_FPS, frames: count, delays: null };
+}
+
 /** the source ready to read and play; each call opens its own, so an export never moves the preview */
-export const openMedia = (s: Source): Promise<Media> => (s.kind === 'video' ? videoMedia(s) : pictureMedia(s));
+export const openMedia = (s: Source): Promise<Media> => (s.kind === 'video' ? videoMedia(s) : s.kind === 'sequence' ? sequenceMedia(s) : pictureMedia(s));
 
 /**
  * One loop of `timing` (the timeline's) as a GIF or a folder of numbered PNGs at full resolution: a
@@ -163,6 +173,31 @@ async function pictureMedia(s: Source): Promise<Media> {
       stop?.();
       if (still) still.close();
       else f.close();
+    },
+  };
+}
+
+/** a sequence's files, each read as it is asked for (the stills' way of playing: a frame decoding holds the one on screen) */
+async function sequenceMedia(s: Source): Promise<Media> {
+  const assets = s.assets ?? [s.asset];
+  const frame = (i: number) => sequenceFrame(assets, s.name, s.w, s.h, i);
+  let stop: (() => void) | null = null;
+  return {
+    frame,
+    play(o) {
+      stop?.();
+      const halt = clock(o.timing, o.from, (i) => frame(i).then((b) => ({ image: b, done: () => b.close() })), o.show, (e) => {
+        halt();
+        o.failed?.(e);
+      });
+      const end = () => {
+        halt();
+        if (stop === end) stop = null;
+      };
+      return (stop = end);
+    },
+    close() {
+      stop?.();
     },
   };
 }

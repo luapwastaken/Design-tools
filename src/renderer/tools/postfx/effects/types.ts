@@ -4,7 +4,7 @@ import type { Oklch } from '../../../../shared/color/index.ts';
 import type { Gpu, Texture, UniformValue } from '../../../lib/gpu/index.ts';
 
 export const EFFECT_IDS = [
-  'grade', 'gradient-map', 'duotone',
+  'grade', 'gradient-map', 'duotone', 'invert',
   'bloom', 'vignette', 'chromatic', 'light-leak', 'lens',
   'grain', 'crt', 'vhs', 'glitch', 'pixel-stretch',
   'posterize', 'edge', 'kuwahara',

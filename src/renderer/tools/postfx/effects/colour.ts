@@ -29,6 +29,20 @@ export const grade: Effect = {
   passes: (c) => c.run(GRADE, { u_lift: c.n('lift') / 100, u_gamma: c.n('gamma'), u_gain: c.n('gain') / 100, u_sat: c.n('saturation') / 100 }),
 };
 
+const INVERT = fx(`void main() {
+  vec4 c = here();
+  o = vec4(1.0 - c.rgb, c.a);
+}`);
+
+export const invert: Effect = {
+  id: 'invert',
+  label: 'Invert',
+  group: 'colour',
+  about: 'The negative: every colour swapped for its opposite',
+  params: [],
+  passes: (c) => c.run(INVERT),
+};
+
 const GRADIENT_MAP = fx(`uniform vec3 u_c0;
 uniform vec3 u_c1;
 uniform vec3 u_c2;

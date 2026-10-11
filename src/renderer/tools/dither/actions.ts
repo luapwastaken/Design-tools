@@ -4,11 +4,12 @@ import { toHex, type Oklch } from '../../../shared/color/index.ts';
 import type { DocController } from '../../../shared/doc-api.ts';
 import { extractPalette } from '../../../shared/dither/palette.ts';
 import type { PalettePayload, Swatch } from '../../../shared/types.ts';
-import { decodeFrames, naturalOrder } from '../../lib/frames.ts';
+import { decodeFrames } from '../../lib/frames.ts';
 import { shell } from '../../shell/core/index.ts';
 import { ipc } from '../../shell/core/ipc.ts';
 import { toast } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
+import { putSequence, SEQUENCE_FPS } from '../common/sequence.ts';
 import { baseName, claims, extOf, isSvg, putAsset, svgAsPng } from '../common/take.ts';
 import { LIMIT, paletteOf, used, type DitherDoc, type Source } from './doc.ts';
 import { withLook, type Look } from './looks.ts';
@@ -17,8 +18,6 @@ import { workFrame } from './source.ts';
 export type Doc = DocController<DitherDoc>;
 
 const ID = 'dither';
-/** a sequence plays at film rate until you say otherwise */
-const SEQUENCE_FPS = 24;
 
 
 /** read to be sure it opens, then copied into the workspace at full resolution (foundation spec §7.2); a GIF keeps its own timing */
@@ -34,11 +33,7 @@ export async function sourceOf(blob: Blob, name: string, ext = extOf(blob, name)
 
 /** files as the frames of one animation, in the order Explorer sorts them by name */
 async function sequenceOf(files: File[]): Promise<Source> {
-  const f = await decodeFrames(files);
-  const { name, w, h, count } = f;
-  f.close();
-  const assets: string[] = [];
-  for (const file of naturalOrder(files)) assets.push(await putAsset(ID, file, extOf(file, file.name)));
+  const { assets, name, w, h, count } = await putSequence(ID, files);
   return { assets, name, w, h, fps: SEQUENCE_FPS, delays: null, frames: count };
 }
 

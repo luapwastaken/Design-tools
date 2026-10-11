@@ -12,7 +12,7 @@ import { baseName, claims, isSvg, svgAsPng } from '../common/take.ts';
 import { effectOf, fromPalette, type EffectId } from './effects/index.ts';
 import { duplicateLayer, fix, layerOf, LIMIT, mapLayer, moveLayer, offered, removeLayer, type Layer, type PostFxDoc, type Source } from './doc.ts';
 
-import { isVideoFile, sourceOf } from './media.ts';
+import { isVideoFile, sequenceOf, sourceOf } from './media.ts';
 import type { Preset } from './presets.ts';
 import { decodeStack } from './share.ts';
 import { getView, patchView } from './view-state.ts';
@@ -32,27 +32,37 @@ const withSource = (d: PostFxDoc, source: Source): PostFxDoc => fix({ ...d, sour
 /** bumped by each open, so one that reads slowly never lands over a later one */
 let opening = 0;
 
-/** the first image or clip among dropped, pasted or picked files, opened as one step; the rest are left for the Library */
+/**
+ * The first image or clip among dropped, pasted or picked files, opened as one step; the rest are
+ * left for the Library. Several stills together are the frames of one sequence, in name order, as
+ * Dither takes them.
+ */
 export async function takeFiles(doc: Doc, files: File[]): Promise<File[]> {
   const file = files.find(opens);
   if (!file) return files;
+  const stills = files.filter((f) => opens(f) && !isVideoFile(f.type, f.name) && !isSvg(f));
+  const taken = stills.length > 1 ? stills : [file];
   const mine = ++opening;
   const name = baseName(file.name);
   try {
     const why = isVideoFile(file.type, file.name) ? null : unsupportedImage(file.type, file.name);
     if (why) throw new Error(why);
-    const source = await shell.runBusy(async () => (isSvg(file) ? sourceOf(await svgAsPng(file), name, 'png') : sourceOf(file, name)));
-    if (mine === opening) doc.transact(`Open ${name}`, (d) => withSource(d, source));
+    const source = await shell.runBusy(async () => (stills.length > 1 ? sequenceOf(stills) : isSvg(file) ? sourceOf(await svgAsPng(file), name, 'png') : sourceOf(file, name)));
+    if (mine === opening) {
+      doc.transact(`Open ${source.name || name}`, (d) => withSource(d, source));
+      if (source.kind === 'sequence') toast.show({ icon: 'movie', message: `${plural(source.frames ?? 0, 'frame')} of ${source.name}, in name order, at ${source.fps} fps.` });
+    }
   } catch (e) {
     if (mine === opening) toast.show({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
   }
-  return files.filter((f) => f !== file);
+  return files.filter((f) => !taken.includes(f));
 }
 
 /** the file picker, from the doc bar, the empty state and Ctrl+O */
 export function pickFile(doc: Doc): void {
   const input = document.createElement('input');
   input.type = 'file';
+  input.multiple = true;
   input.accept = 'image/*,video/mp4,video/webm,.mp4,.webm,.m4v,.mov,.tif,.tiff,.svg';
   input.onchange = () => void takeFiles(doc, [...(input.files ?? [])]).then((left) => left.length && toast.show({ icon: 'block', message: `${left[0].name} isn't an image or a clip this tool can open.` }));
   input.click();

@@ -3,7 +3,7 @@
 // becomes, and the plain words for a video that won't open.
 import { unreadable } from '../../lib/load.ts';
 
-export type MediaKind = 'image' | 'gif' | 'video';
+export type MediaKind = 'image' | 'gif' | 'video' | 'sequence';
 /** a still's loop, for effects that move (a clip or a GIF is its own loop) */
 export type Loop = { seconds: number; fps: number };
 

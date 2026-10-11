@@ -43,11 +43,11 @@ export function fix(d: PostFxDoc): PostFxDoc {
 export const isMoving = (d: Pick<PostFxDoc, 'stack'>): boolean => d.stack.some((l) => l.on && effectOf(l.effect)?.moving);
 
 /** media.ts's timing of one loop, and where its frames come from: the source's own, a loop made for a still, or one still frame */
-export type Timeline = Timing & { kind: 'still' | 'loop' | 'gif' | 'video' };
+export type Timeline = Timing & { kind: 'still' | 'loop' | 'gif' | 'video' | 'sequence' };
 
 export function timeline(d: Pick<PostFxDoc, 'source' | 'stack' | 'loop'>): Timeline {
   const s = d.source;
-  if (s && (s.kind === 'gif' || s.kind === 'video')) return { ...timingOf(s.kind, { frames: s.frames ?? 1, fps: s.fps, delays: s.delays ?? null }, d.loop), kind: s.kind };
+  if (s && s.kind !== 'image') return { ...timingOf(s.kind, { frames: s.frames ?? 1, fps: s.fps, delays: s.delays ?? null }, d.loop), kind: s.kind };
   const moving = isMoving(d);
   const t = timingOf('image', { frames: 1, fps: null, delays: null }, moving ? d.loop : { seconds: 0, fps: d.loop.fps });
   return { ...t, kind: moving ? 'loop' : 'still' };

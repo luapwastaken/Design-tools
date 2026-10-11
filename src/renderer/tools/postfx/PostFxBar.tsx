@@ -18,7 +18,7 @@ export function PostFxBar({ doc, d, v, t, out }: { doc: Doc; d: PostFxDoc; v: Po
     'separator' as const,
     { label: 'Copy the PNG', icon: 'content_copy' as const, onSelect: () => void out.copyPng() },
   ];
-  const moving = src && src.kind !== 'image' ? ` · ${plural(t.count, 'frame')}${src.kind === 'video' ? ` · ${fmtFps(t.fps)} fps` : ''}` : '';
+  const moving = src && src.kind !== 'image' ? ` · ${plural(t.count, 'frame')}${src.kind === 'video' || src.kind === 'sequence' ? ` · ${fmtFps(t.fps)} fps` : ''}` : '';
   return (
     <DocBar
       tool="postfx"

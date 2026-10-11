@@ -2,12 +2,12 @@
 // and the indexed PNG with each block exactly `scale` px, the SVG as runs of blocks, and an
 // animation's GIF or PNG frames through the one shared animated path (lib/frames).
 import { rgb255 } from '../../../shared/color/index.ts';
-import { exportFrames } from '../../lib/frames.ts';
+import { exportFrames, gifBytes, type ExportFramesOptions } from '../../lib/frames.ts';
 import { scaleUp } from '../../lib/gif.ts';
 import { encodeIndexedPng } from '../../lib/png-indexed.ts';
 import { withDpi } from '../../lib/png.ts';
 import { fmtPx } from '../common/names.ts';
-import { workSize, type DitherDoc } from './doc.ts';
+import { gifLimit, isAnimated, workSize, type DitherDoc } from './doc.ts';
 import { dithered, type Result } from './pipeline.ts';
 import { runsSvg } from './svg.ts';
 
@@ -48,14 +48,21 @@ export function imageOf(r: Result): ImageData {
 }
 
 /**
- * Send to's PNG of a frame: each block the pixel size, or, for a source too big for that, the largest
- * whole number of px a block that fits, so blocks stay exact.
+ * Send to's picture, as big as the Export group's scale makes the files. An animation goes whole, as
+ * a GIF of every frame with its own timing (Post FX opens it as a clip to work on), unless a GIF
+ * can't time it (`gifLimit`), when the frame on screen goes alone and `why` says so. `scale`: the
+ * px a block came out, smaller than asked where the picture would be more than a PNG here holds.
  */
-export async function sendBlob(d: DitherDoc, frame: number): Promise<{ blob: Blob; scale: number }> {
+export async function sendFor(d: DitherDoc, frame: number, scale: number): Promise<{ blob: Blob; ext: 'gif' | 'png'; scale: number; why: string | null }> {
   const { w, h } = workSize(d);
-  let scale = d.pixel;
-  while (scale > 1 && w * h * scale * scale > MAX_PX) scale--;
-  return { blob: await pngBlob(d, frame, scale), scale };
+  let fit = scale;
+  while (fit > 1 && w * h * fit * fit > MAX_PX) fit--;
+  const why = isAnimated(d) ? gifLimit(d) : null;
+  if (isAnimated(d) && !why) {
+    const bytes = await gifBytes(framesOptions(d, fit, 'gif', d.source!.name));
+    if (bytes) return { blob: new Blob([bytes], { type: 'image/gif' }), ext: 'gif', scale: fit, why: null };
+  }
+  return { blob: await pngBlob(d, frame, fit), ext: 'png', scale: fit, why };
 }
 
 export async function pngBlob(d: DitherDoc, frame: number, scale: number): Promise<Blob> {
@@ -82,11 +89,11 @@ export async function svgFor(d: DitherDoc, frame: number, scale: number): Promis
   return runsSvg(r.indices, r.w, r.h, r.colours, scale);
 }
 
-/** every frame, in order, as a GIF or numbered PNGs (spec §3: exact frame counts, no drift) */
-export function framesTo(d: DitherDoc, scale: number, to: 'gif' | 'folder', name: string, progress?: Progress, signal?: AbortSignal) {
+/** the options of the one animated path: every frame, in order, from the index buffers the view shows */
+function framesOptions(d: DitherDoc, scale: number, to: 'gif' | 'folder', name: string, progress?: Progress, signal?: AbortSignal): ExportFramesOptions {
   const s = d.source;
   if (!s || s.frames < 2) throw new Error('Only an animation has frames to export.');
-  return exportFrames({
+  return {
     tool: 'dither',
     name,
     count: s.frames,
@@ -100,5 +107,8 @@ export function framesTo(d: DitherDoc, scale: number, to: 'gif' | 'folder', name
       return { indices: r.indices, w: r.w, h: r.h, palette: paletteBytes(r) };
     },
     to,
-  });
+  };
 }
+
+/** every frame, in order, as a GIF or numbered PNGs (spec §3: exact frame counts, no drift) */
+export const framesTo = (d: DitherDoc, scale: number, to: 'gif' | 'folder', name: string, progress?: Progress, signal?: AbortSignal) => exportFrames(framesOptions(d, scale, to, name, progress, signal));

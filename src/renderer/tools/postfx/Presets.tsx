@@ -7,23 +7,20 @@ import { cx } from '../../ui/cx.ts';
 import { plural } from '../common/names.ts';
 import { createStore } from '../common/store.ts';
 import { applyPreset, importCode, type Doc } from './actions.ts';
-import { BUILT_INS } from './builtins.ts';
+import { BUILT_INS, presetReadout, sameStack as same } from './builtins.ts';
 import type { Layer, PostFxDoc } from './doc.ts';
 import { deletePreset, freeName, loadSaved, renamePreset, saved, savePreset, type Preset } from './presets.ts';
 import { decodeStack, encodeStack } from './share.ts';
 import s from './Presets.module.css';
 
-/** the preset the stack last came from (this session), so the readout can say it was changed */
-const from = createStore<string | null>(null);
-
-const same = (a: Layer[], b: Layer[]) =>
-  a.length === b.length && a.every((l, n) => l.effect === b[n].effect && l.on === b[n].on && l.opacity === b[n].opacity && l.blend === b[n].blend && JSON.stringify(l.params) === JSON.stringify(b[n].params));
+/** the preset the stack last came from (this session) and the stack it replaced, so the readout can say it was changed, and stop saying so when Undo brings the old one back */
+const from = createStore<{ id: string; before: Layer[] } | null>(null);
 
 function pick(doc: Doc, p: Preset) {
   const d = doc.get();
   const here = [...BUILT_INS, ...saved.get().list].some((x) => same(d.stack, x.layers));
   applyPreset(doc, p, !here);
-  from.set(p.id);
+  from.set({ id: p.id, before: d.stack });
 }
 
 function Yours({ doc, d, p }: { doc: Doc; d: PostFxDoc; p: Preset }) {
@@ -98,13 +95,12 @@ export function PresetsModule({ doc, d }: { doc: Doc; d: PostFxDoc }) {
   useEffect(() => void loadSaved(), []);
   const save = (name: string) => {
     setNaming(false);
-    void savePreset(name, d.stack).then((p) => p && from.set(p.id));
+    void savePreset(name, d.stack).then((p) => p && from.set({ id: p.id, before: d.stack }));
   };
 
   const all = [...BUILT_INS, ...mine.list];
   const match = all.find((p) => same(d.stack, p.layers));
-  const was = all.find((p) => p.id === last);
-  const readout = match ? match.name : was && d.stack.length ? `${was.name}, changed` : undefined;
+  const readout = presetReadout(all, d.stack, last);
 
   // one Tab stop; arrows move, Enter or a click uses the preset (it replaces the stack, so never on a move)
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {

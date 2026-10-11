@@ -1,6 +1,7 @@
 // Image > Post FX: a quick stack of effects over an image, a GIF or a clip, with the original a keypress away, and exported as a full-resolution PNG, a GIF or a PNG sequence that loops exactly.
 // Spec: docs/superpowers/specs/2026-09-29-postfx-tool.md; plan unit V.
 import type { ToolDefinition } from '../../shell/tool.ts';
+import { showOriginalKey } from '../common/flip.ts';
 import { fetchBlob } from '../common/take.ts';
 import { duplicate, pickFile, sourceOf, takeFiles, withPalette } from './actions.ts';
 import { emptyDoc, fix, timeline, type PostFxDoc } from './doc.ts';
@@ -54,7 +55,7 @@ export const tool: ToolDefinition<PostFxDoc> = {
     const sel = getView().selected;
     return [
       { keys: 'Ctrl+O', label: 'Open an image or a clip', run: () => pickFile(doc) },
-      { keys: 'Y', label: 'Show the original, or the result again', run: toggleOriginal },
+      showOriginalKey(toggleOriginal),
       ...(sel && d.stack.some((l) => l.id === sel) ? [{ keys: 'Ctrl+D', label: 'Duplicate the selected layer', run: () => duplicate(doc, sel) }] : []),
       ...(d.source && t.count > 1
         ? [

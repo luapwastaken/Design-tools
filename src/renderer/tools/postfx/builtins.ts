@@ -79,3 +79,21 @@ export const RECIPES: Recipe[] = [
 ];
 
 export const BUILT_INS = builtIns(RECIPES);
+
+/** two stacks that are the same layers with the same settings (ids aside) */
+export const sameStack = (a: Layer[], b: Layer[]): boolean =>
+  a.length === b.length && a.every((l, n) => l.effect === b[n].effect && l.on === b[n].on && l.opacity === b[n].opacity && l.blend === b[n].blend && JSON.stringify(l.params) === JSON.stringify(b[n].params));
+
+/**
+ * What the Presets header says the stack is: a preset's name while it is one, "name, changed" once
+ * it was edited from one, and nothing when Undo took it back to the stack the preset replaced (that
+ * stack was never the preset, so it is not "changed" from it). `last`: the preset the stack last came
+ * from this session, and the stack it replaced.
+ */
+export function presetReadout(all: Pick<Preset, 'id' | 'name' | 'layers'>[], stack: Layer[], last: { id: string; before: Layer[] } | null): string | undefined {
+  const match = all.find((p) => sameStack(stack, p.layers));
+  if (match) return match.name;
+  const was = all.find((p) => p.id === last?.id);
+  if (!was || !stack.length || sameStack(stack, last!.before)) return undefined;
+  return `${was.name}, changed`;
+}

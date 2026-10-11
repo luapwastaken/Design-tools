@@ -155,19 +155,29 @@ export type ExportFramesOptions = {
   signal?: AbortSignal;
 };
 
-/** What was written and a label for the toast, or null when cancelled (at the dialog, or by `signal`). */
-export async function exportFrames(o: ExportFramesOptions): Promise<{ path: string; label: string } | null> {
+function checked(o: ExportFramesOptions) {
   const { count: n, scale = 1 } = o;
   if (!Number.isInteger(n) || n < 1) throw new Error(`An animation needs at least one frame, not ${n}.`);
   if (!Number.isInteger(scale) || scale < 1) throw new Error(`The scale has to be a whole number from 1 up, not ${scale}.`);
   if (o.delays && o.delays.length !== n) throw new Error(`${o.delays.length} delays can't time ${n} frames.`);
-  const step = (i: number) => o.progress?.(i / n, i < n ? `Frame ${i + 1} of ${n}` : 'Writing');
+  return { n, scale, step: (i: number) => o.progress?.(i / n, i < n ? `Frame ${i + 1} of ${n}` : 'Writing') };
+}
+
+/** The animation as a GIF's bytes, not saved anywhere (for a tool that hands it on); null when stopped by `signal`. `o.to` is not read. */
+export function gifBytes(o: ExportFramesOptions): Promise<Uint8Array<ArrayBuffer> | null> {
+  const { n, scale, step } = checked(o);
+  return exporting(() => encode(o, n, scale, step));
+}
+
+/** What was written and a label for the toast, or null when cancelled (at the dialog, or by `signal`). */
+export async function exportFrames(o: ExportFramesOptions): Promise<{ path: string; label: string } | null> {
+  const { n, scale, step } = checked(o);
   // counted as running work from the first frame (the quit check), and a window hidden or minimised
   // mid-export would otherwise be slowed to a crawl
   return exporting(() => (o.to === 'gif' ? gif(o, n, scale, step) : folder(o, n, scale, step)));
 }
 
-async function gif(o: ExportFramesOptions, n: number, scale: number, step: (i: number) => void) {
+async function encode(o: ExportFramesOptions, n: number, scale: number, step: (i: number) => void): Promise<Uint8Array<ArrayBuffer> | null> {
   const delays = gifDelays(n, o.delays ?? o.fps); // a rate a GIF can't play fails before any rendering
   const enc = encoder();
   try {
@@ -178,12 +188,17 @@ async function gif(o: ExportFramesOptions, n: number, scale: number, step: (i: n
     }
     if (o.signal?.aborted) return null;
     step(n);
-    const bytes = await enc.finish();
-    const path = await saveFile({ tool: o.tool, suggestedName: o.name, ext: 'gif', filterName: 'Animated GIF', data: bytes.buffer });
-    return path ? { path, label: leaf(path) } : null;
+    return await enc.finish();
   } finally {
     enc.close();
   }
+}
+
+async function gif(o: ExportFramesOptions, n: number, scale: number, step: (i: number) => void) {
+  const bytes = await encode(o, n, scale, step);
+  if (!bytes) return null;
+  const path = await saveFile({ tool: o.tool, suggestedName: o.name, ext: 'gif', filterName: 'Animated GIF', data: bytes.buffer });
+  return path ? { path, label: leaf(path) } : null;
 }
 
 /** the folder is chosen first, then each frame is written as it is made: a long 4K sequence is never in memory whole */

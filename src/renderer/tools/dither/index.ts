@@ -3,11 +3,11 @@
 // Spec: docs/superpowers/specs/2026-09-29-dither-tool.md; plan unit V.
 import type { ToolDefinition } from '../../shell/tool.ts';
 import { toast } from '../../ui/index.ts';
-import { flipOriginal } from '../common/flip.ts';
+import { flipOriginal, showOriginalKey } from '../common/flip.ts';
 import { fetchBlob } from '../common/take.ts';
 import { pickImage, sourceOf, takeFiles, withPalette } from './actions.ts';
-import { isAnimated, type DitherDoc } from './doc.ts';
-import { sendBlob } from './exports.ts';
+import { isAnimated, scaleOf, type DitherDoc } from './doc.ts';
+import { sendFor } from './exports.ts';
 import { emptyDoc } from './looks.ts';
 import { StatusSlot } from './StatusSlot.tsx';
 import { stepFrame } from './Transport.tsx';
@@ -44,12 +44,17 @@ export const tool: ToolDefinition<DitherDoc> = {
     return { ...current, source: await sourceOf(blob, item.ref.name, item.ref.kind === 'image' ? item.ref.ext.toLowerCase() : 'png') };
   },
 
-  /** the frame on screen as a PNG, each block the pixel size (plan: Send to renders the 1× PNG scaled by the pixel size), as the exports do */
+  /**
+   * What the exports write at the Export group's scale (each block the pixel size times it): an
+   * animation as a GIF of every frame, a still, or a frame a GIF can't time, as a PNG
+   */
   async render(d) {
     if (!d.source) throw new Error('There is no image to send yet.');
-    const { blob, scale } = await sendBlob(d, Math.min(playhead.get().frame, d.source.frames - 1));
-    if (scale < d.pixel) toast.show({ icon: 'info', message: `Sent with ${scale} px blocks: at ${d.pixel} px the image is more than a PNG here can hold.` });
-    return { blob, name: d.source.name, ext: 'png' };
+    const asked = scaleOf(d, getView());
+    const { blob, ext, scale, why } = await sendFor(d, Math.min(playhead.get().frame, d.source.frames - 1), asked);
+    if (scale < asked) toast.show({ icon: 'info', message: `Sent with ${scale} px blocks: at ${asked} px the image is more than a PNG here can hold.` });
+    if (why) toast.show({ icon: 'info', message: `Sent the frame on screen only. ${why}` });
+    return { blob, name: d.source.name, ext };
   },
 
   async onFiles(files, _how, doc) {
@@ -59,6 +64,7 @@ export const tool: ToolDefinition<DitherDoc> = {
 
   shortcuts: (doc) => [
     { keys: 'Ctrl+O', label: 'Open an image', run: () => pickImage(doc) },
+    showOriginalKey(flip),
     { keys: '\\', label: 'Switch between the result and the original', run: flip },
     ...(isAnimated(doc.get())
       ? [

@@ -11,8 +11,15 @@ import s from './Loop.module.css';
 export function LoopModule({ doc, d, t }: { doc: Doc; d: PostFxDoc; t: Timeline }) {
   const seconds = useDocNumber(doc, { label: 'Change the loop length', key: 'loop:seconds', get: (x) => x.loop.seconds, set: (x, v) => fix({ ...x, loop: { ...x.loop, seconds: v } }) });
   const fps = useDocNumber(doc, { label: 'Change the loop frame rate', key: 'loop:fps', get: (x) => x.loop.fps, set: (x, v) => fix({ ...x, loop: { ...x.loop, fps: v } }) });
-  const own = t.kind === 'gif' || t.kind === 'video';
-  const noun = t.kind === 'gif' ? 'The GIF' : 'The clip';
+  const own = t.kind === 'gif' || t.kind === 'video' || t.kind === 'sequence';
+  const noun = t.kind === 'gif' ? 'The GIF' : t.kind === 'sequence' ? 'The sequence' : 'The clip';
+  // a sequence has no rate of its own: the frames are numbered stills, so the rate is yours
+  const rate = useDocNumber(doc, {
+    label: 'Change the sequence frame rate',
+    key: 'seq:fps',
+    get: (x) => x.source?.fps ?? 24,
+    set: (x, v) => fix({ ...x, source: x.source && { ...x.source, fps: Math.round(Math.min(LIMIT.fps[1], Math.max(LIMIT.fps[0], v))) } }),
+  });
   // with nothing moving there is no loop to set: the controls wait, set back, until a moving effect is in the stack
   const idle = t.kind !== 'loop';
   return (
@@ -25,7 +32,7 @@ export function LoopModule({ doc, d, t }: { doc: Doc; d: PostFxDoc; t: Timeline 
             </span>
           </InspectorRow>
           <InspectorRow label="Rate">
-            <span className={s.fact}>{t.delays ? 'its own frame times' : <><b>{fmtFps(t.fps)}</b> fps</>}</span>
+            {t.kind === 'sequence' ? <NumberField label="FPS" min={LIMIT.fps[0]} max={LIMIT.fps[1]} step={1} width={120} {...rate} /> : <span className={s.fact}>{t.delays ? 'its own frame times' : <><b>{fmtFps(t.fps)}</b> fps</>}</span>}
           </InspectorRow>
           <InspectorRow label="Frames">
             <span className={s.fact}>

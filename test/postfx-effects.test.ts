@@ -8,7 +8,7 @@ import type { Oklch } from '../src/shared/color/index.ts';
 
 test('the curated list: every effect once, in its group, with the spec’s moving and video-only ones', () => {
   assert.deepEqual(EFFECTS.map((e) => e.id), [...EFFECT_IDS]);
-  assert.equal(new Set(EFFECT_IDS).size, 22);
+  assert.equal(new Set(EFFECT_IDS).size, 23);
   const groups = new Set(GROUPS.map((g) => g.id));
   for (const e of EFFECTS) {
     assert.ok(groups.has(e.group), e.id);

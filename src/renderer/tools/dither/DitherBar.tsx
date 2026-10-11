@@ -4,14 +4,21 @@ import { IconButton, Segmented, type MenuItem } from '../../ui/index.ts';
 import { DocBar, ExportMenu } from '../common/DocBar.tsx';
 import { fmtPx, plural } from '../common/names.ts';
 import { pickImage, type Doc } from './actions.ts';
-import type { DitherDoc } from './doc.ts';
+import { gifLimit, isAnimated, type DitherDoc } from './doc.ts';
 import type { DitherExport } from './Export.tsx';
 import { patchView, type DitherView, type Show } from './view-state.ts';
 
 const SHOWS: { value: Show; label: string; icon: 'image' | 'blur_on'; tip?: string }[] = [
-  { value: 'original', label: 'Original', icon: 'image', tip: 'The image before dithering (\\ switches)' },
+  { value: 'original', label: 'Original', icon: 'image', tip: 'The image before dithering (Y or \\ switches)' },
   { value: 'result', label: 'Result', icon: 'blur_on' },
 ];
+
+/** what Send to hands on, said where it is chosen: the files' scale, and for an animation whether every frame goes */
+function sendTip(d: DitherDoc): string {
+  if (!isAnimated(d)) return 'Hands on the dithered PNG, at the scale in the Export group';
+  const why = gifLimit(d);
+  return why ? `Hands on the frame on screen as a PNG only: ${why}` : 'Hands on every frame as a GIF, at the scale in the Export group';
+}
 
 export function DitherBar({ doc, d, v, out }: { doc: Doc; d: DitherDoc; v: DitherView; out: DitherExport }) {
   const src = d.source;
@@ -33,7 +40,7 @@ export function DitherBar({ doc, d, v, out }: { doc: Doc; d: DitherDoc; v: Dithe
       actions={<IconButton icon="image" label={src ? 'Open another image' : 'Open an image'} shortcut="Ctrl+O" size="sm" onClick={() => pickImage(doc)} />}
       modes={<Segmented options={SHOWS} value={v.show} disabled={!src} onChange={(show) => patchView({ show })} fit />}
       exportButton={<ExportMenu items={items} disabled={!!out.why} tooltip={out.why ?? 'Export a PNG, an indexed PNG or an SVG at the scale in the Export group'} />}
-      send={{ noun: 'image', empty: 'Open an image first: Send to hands on the dithered PNG', tip: `Hands on the dithered PNG${src && src.frames > 1 ? ' of the frame on screen' : ''}, each block the pixel size` }}
+      send={{ noun: 'image', empty: 'Open an image first: Send to hands on the dithered PNG', tip: sendTip(d) }}
     />
   );
 }

@@ -33,7 +33,7 @@ export function Transport({ t, active }: { t: Timeline; active: boolean }) {
   const head = playhead.use();
   useSpaceTap(ref, active, () => togglePlay(t));
   const frame = Math.min(head.frame, t.count - 1);
-  const what = t.kind === 'loop' ? 'Loop' : t.kind === 'gif' ? 'GIF' : 'Clip';
+  const what = t.kind === 'loop' ? 'Loop' : t.kind === 'gif' ? 'GIF' : t.kind === 'sequence' ? 'Sequence' : 'Clip';
   return (
     <div ref={ref} className={s.transport} role="group" aria-label="Playback" data-playing={head.playing ? '' : undefined}>
       <IconButton icon={head.playing ? 'pause' : 'play_arrow'} label={head.playing ? 'Pause' : 'Play'} shortcut="Space" latched={head.playing} onClick={() => togglePlay(t)} />

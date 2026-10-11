@@ -3,7 +3,7 @@
 // dithers. A GIF decodes a frame at a time through lib/frames; a sequence a file at a time.
 import { cssColor } from '../../../shared/color/index.ts';
 import { decodeFrames } from '../../lib/frames.ts';
-import { decodeImage } from '../../lib/load.ts';
+import { sequenceFrame } from '../common/sequence.ts';
 import { fetchBlob } from '../common/take.ts';
 import { workSize, type DitherDoc, type Source } from './doc.ts';
 
@@ -67,14 +67,7 @@ function oneFile(s: Source) {
 /** a sequence's files, each read as it is asked for, all the size of the first */
 function sequence(s: Source) {
   return {
-    async frame(i: number) {
-      const label = `${s.name} frame ${i + 1}`;
-      const b = await decodeImage(await fetchBlob(s.assets[i], label), label);
-      const { width, height } = b;
-      if (width === s.w && height === s.h) return b;
-      b.close();
-      throw new Error(`${label} is ${width} × ${height} px, but the first frame is ${s.w} × ${s.h} px. Every frame of a sequence has to be the same size.`);
-    },
+    frame: (i: number) => sequenceFrame(s.assets, s.name, s.w, s.h, i),
     close() {},
   };
 }

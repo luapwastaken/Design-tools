@@ -15,7 +15,7 @@ import { defaultsFor, isValue, valuesFor } from './params.ts';
 import { crt, glitch, grain, pixelStretch, vhs } from './retro.ts';
 import { edge, kuwahara, posterize } from './stylise.ts';
 import { gaussian, tiltShift } from './blur.ts';
-import { duotone, gradientMap, grade } from './colour.ts';
+import { duotone, gradientMap, grade, invert } from './colour.ts';
 import { kaleidoscope, twirl, wave } from './distort.ts';
 import { datamosh } from './video.ts';
 import { EFFECT_IDS, type Effect, type EffectId, type Group, type ParamValue } from './types.ts';
@@ -26,7 +26,7 @@ export { BLENDS, blendIndex, isValue, EFFECT_IDS };
 
 /** in the add menu's order */
 export const EFFECTS: readonly Effect[] = [
-  grade, gradientMap, duotone,
+  grade, gradientMap, duotone, invert,
   bloom, vignette, chromatic, lightLeak, lens,
   grain, crt, vhs, glitch, pixelStretch,
   posterize, edge, kuwahara,
