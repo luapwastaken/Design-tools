@@ -11,6 +11,7 @@ import { addInk, LIBRARIES, removeInk, setMode, type Doc } from './actions.ts';
 import { Curve } from './Curve.tsx';
 import { Dial } from './Dial.tsx';
 import { foldAngle, isIdentity, LIMIT, mapInk, opaqueOf, overlapOf, sharedScreen, type HalftoneDoc, type Ink, type InksFrom } from './doc.ts';
+import { toggleInk } from './keys.ts';
 import { patchView, useView } from './view-state.ts';
 import s from './Inks.module.css';
 import i from './Inspector.module.css';
@@ -119,7 +120,8 @@ function InkRow({ doc, d, ink, n, plate, open, onOpen }: { doc: Doc; d: Halftone
         icon={ink.visible ? 'visibility' : 'visibility_off'}
         label={ink.visible ? `Hide ${ink.name}` : `Show ${ink.name}`}
         size="sm"
-        onClick={() => doc.transact(ink.visible ? `Hide ${ink.name}` : `Show ${ink.name}`, (x) => mapInk(x, ink.id, (k) => ({ ...k, visible: !k.visible })))}
+        shortcut={n < 9 ? `${n + 1}` : undefined}
+        onClick={() => toggleInk(doc, ink.id)}
       />
       <PlateThumb plate={plate} ink={ink.colour} paper={d.paper.colour} cover={!overprint || opaqueOf(ink)} />
       <span className={s.ch}>{channel}</span>

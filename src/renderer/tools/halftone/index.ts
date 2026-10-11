@@ -2,11 +2,12 @@
 // physical size, as an SVG for Illustrator, a screen PNG and separations that all match the view.
 // Spec: docs/superpowers/specs/2026-09-29-halftone-tool.md; plan unit V.
 import type { ToolDefinition } from '../../shell/tool.ts';
-import { flipOriginal, showOriginalKey } from '../common/flip.ts';
+import { flipOriginal } from '../common/flip.ts';
 import { fetchBlob } from '../common/take.ts';
 import { pickImage, sourceOf, takeFiles, withPalette } from './actions.ts';
 import { emptyDoc, type HalftoneDoc } from './doc.ts';
 import { pngBlob, pngLimit } from './exports.ts';
+import { halftoneKeys } from './keys.ts';
 import { placement } from './screening.ts';
 import { StatusSlot } from './StatusSlot.tsx';
 import { getView, patchView } from './view-state.ts';
@@ -59,10 +60,7 @@ export const tool: ToolDefinition<HalftoneDoc> = {
     return left.length === files.length ? false : left.length ? left : true;
   },
 
-  shortcuts: (doc) => [
-    { keys: 'Ctrl+O', label: 'Open an image', run: () => pickImage(doc) },
-    showOriginalKey(flip),
-  ],
+  shortcuts: (doc) => halftoneKeys(doc, { pick: () => pickImage(doc), flip, show: (show) => patchView({ show }) }),
   StatusSlot,
   View,
 };

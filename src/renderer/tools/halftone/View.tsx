@@ -13,6 +13,7 @@ import { ExportModule, useHalftoneExport } from './Export.tsx';
 import { FeelModule } from './Feel.tsx';
 import { HalftoneBar } from './HalftoneBar.tsx';
 import { InksModule, type PlateOf } from './Inks.tsx';
+import { copyPng } from './keys.ts';
 import { Meters, type InkCoverage } from './Meters.tsx';
 import { OutputModule } from './Output.tsx';
 import { PaperModule } from './Paper.tsx';
@@ -86,6 +87,13 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const sum = useMemo(() => (screened ? totals(screened, d) : null), [screened, shownKey]);
   const fm = d.screen.shape === 'stochastic';
   const out = useHalftoneExport(d, v, screened, screenError);
+
+  // Ctrl+Shift+C runs the menu's Copy the PNG, whose export hook lives here
+  useEffect(() => {
+    if (!active) return;
+    copyPng.now = { run: () => void out.copyPng(), off: !!out.why || !!out.pngProblem };
+    return () => void (copyPng.now = null);
+  });
 
   useEffect(() => {
     status.set(d.source ? { dots: sum?.dots ?? 0, about: !!screened && !screened.held, fm: fm ? d.size.dpi : null, ms: screened?.ms ?? 0, busy: !error && (busy || !screened), error: !!error } : null);

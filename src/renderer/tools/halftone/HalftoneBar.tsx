@@ -9,10 +9,10 @@ import type { HalftoneExport } from './Export.tsx';
 import { sourcePpi } from './Output.tsx';
 import { patchView, type HalftoneView, type Show } from './view-state.ts';
 
-const SHOWS: { value: Show; label: string; icon: 'image' | 'grain' | 'layers'; tip?: string }[] = [
-  { value: 'original', label: 'Original', icon: 'image', tip: 'The image as it sits on the page, before screening (Y or \\ switches)' },
-  { value: 'result', label: 'Result', icon: 'grain' },
-  { value: 'separations', label: 'Separations', icon: 'layers' },
+const SHOWS: { value: Show; label: string; icon: 'image' | 'grain' | 'layers'; tip: string; shortcut: string }[] = [
+  { value: 'original', label: 'Original', icon: 'image', tip: 'The image as it sits on the page, before screening', shortcut: 'Y' },
+  { value: 'result', label: 'Result', icon: 'grain', tip: 'The screened page', shortcut: 'Alt+2' },
+  { value: 'separations', label: 'Separations', icon: 'layers', tip: 'Each ink on its own plate', shortcut: 'Alt+3' },
 ];
 
 export function HalftoneBar({ doc, d, v, out }: { doc: Doc; d: HalftoneDoc; v: HalftoneView; out: HalftoneExport }) {
@@ -23,7 +23,7 @@ export function HalftoneBar({ doc, d, v, out }: { doc: Doc; d: HalftoneDoc; v: H
     { label: 'PNG for screen', icon: 'download', disabled: !!out.pngProblem, hint: out.pngProblem ? 'Too big' : undefined, onSelect: () => void out.png() },
     { label: 'Separations (a folder of plates)', icon: 'download', disabled: !!out.plateProblem, hint: out.plateProblem ? 'Too big' : undefined, onSelect: () => void out.plates() },
     'separator',
-    { label: 'Copy the PNG', icon: 'content_copy', disabled: !!out.pngProblem, onSelect: () => void out.copyPng() },
+    { label: 'Copy the PNG', icon: 'content_copy', shortcut: 'Ctrl+Shift+C', disabled: !!out.pngProblem, onSelect: () => void out.copyPng() },
   ];
   const ppi = sourcePpi(d);
   return (

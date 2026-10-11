@@ -5,6 +5,7 @@ import { IconButton, InspectorGroup, Slider, useDocNumber } from '../../ui/index
 import { cx } from '../../ui/cx.ts';
 import type { Doc } from './actions.ts';
 import { emptyDoc, fix, LIMIT, type HalftoneDoc, type Shape } from './doc.ts';
+import { setShape, SHAPES, stepIndex } from './keys.ts';
 import s from './Screen.module.css';
 import i from './Inspector.module.css';
 
@@ -25,16 +26,6 @@ const GLYPH: Record<Shape, ReactNode> = {
   stochastic: g([[2, 3], [7, 1], [12, 4], [4, 8], [9, 7], [14, 9], [1, 13], [6, 12], [11, 14], [13, 1]].map(([x, y]) => <rect key={`${x}${y}`} x={x} y={y} width={2} height={2} />)),
 };
 
-const SHAPES: { value: Shape; label: string; tip: string }[] = [
-  { value: 'round', label: 'Round', tip: 'Round dots: the classic screen' },
-  { value: 'ellipse', label: 'Ellipse', tip: 'Elliptical dots, which chain smoothly through the midtones' },
-  { value: 'square', label: 'Square', tip: 'Square dots' },
-  { value: 'diamond', label: 'Diamond', tip: 'Diamond dots' },
-  { value: 'line', label: 'Line', tip: 'A line screen: bars that thicken with the tone' },
-  { value: 'cross', label: 'Cross', tip: 'Crosses' },
-  { value: 'stochastic', label: 'Stochastic (FM)', tip: 'Single printer dots scattered by blue noise: no angles, no rosettes, no SVG' },
-];
-
 /** the coverage where each dot first touches its neighbours, for the caption */
 const JOINS: Partial<Record<Shape, string>> = { round: 'dots join at 78%', ellipse: 'dots chain from 47%', square: 'squares meet at 100%', diamond: 'corners meet at 50%', line: 'lines merge at 100%' };
 
@@ -45,7 +36,7 @@ function ShapeKeys({ value, onChange }: { value: Shape; onChange(v: Shape): void
     const step = { ArrowLeft: -1, ArrowUp: -4, ArrowRight: 1, ArrowDown: 4 }[e.key] ?? 0;
     if (!step) return;
     e.preventDefault();
-    const next = Math.min(SHAPES.length - 1, Math.max(0, idx + step));
+    const next = stepIndex(idx, step);
     onChange(SHAPES[next].value);
     (e.currentTarget.children[next] as HTMLElement | undefined)?.focus();
   };
@@ -76,7 +67,7 @@ export function ScreenModule({ doc, d }: { doc: Doc; d: HalftoneDoc }) {
   return (
     <InspectorGroup id="halftone.screen" title="Screen" meta={fm ? `FM · ${d.size.dpi} dpi` : `${d.screen.lpi} lpi`} actions={<IconButton icon="restart_alt" label="Reset the screen" size="sm" onClick={reset} />}>
       <div className={i.stack}>
-        <ShapeKeys value={d.screen.shape} onChange={(shape) => doc.transact(`Screen with ${SHAPES.find((x) => x.value === shape)!.label.toLowerCase()} dots`, (x) => ({ ...x, screen: { ...x.screen, shape } }))} />
+        <ShapeKeys value={d.screen.shape} onChange={(shape) => setShape(doc, shape)} />
         <div className={i.group}>
           <Slider label="Frequency" min={LIMIT.lpi[0]} max={LIMIT.lpi[1]} step={1} unit="lpi" disabled={fm} {...lpi} />
           <p className={i.cap}>
