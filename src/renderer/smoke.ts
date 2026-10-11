@@ -41,12 +41,12 @@ import { armed as armedInDesign, getView as designView, patchView as patchDesign
 import { used, type DitherDoc } from './tools/dither/doc.ts';
 import { lookOf as ditherLook, withLook } from './tools/dither/looks.ts';
 import { dithered, ready as ditherReady, type Result } from './tools/dither/pipeline.ts';
-import { patchView as patchDither, status as ditherStatus } from './tools/dither/view-state.ts';
-import { emptyDoc as halftoneEmpty, mapInk, opaqueOf, spotInk, type HalftoneDoc } from './tools/halftone/doc.ts';
+import { getView as ditherView, patchView as patchDither, status as ditherStatus } from './tools/dither/view-state.ts';
+import { emptyDoc as halftoneEmpty, mapInk, opaqueOf, printPx, spotInk, spotStart, type HalftoneDoc } from './tools/halftone/doc.ts';
 import { lookOf, Painter } from './tools/halftone/draw.ts';
-import { platesFor, pngBlob, svgFor } from './tools/halftone/exports.ts';
-import { ready, screen, shownDots, svgOver, totals } from './tools/halftone/screening.ts';
-import { patchView as patchHalftone, status as halftoneStatus } from './tools/halftone/view-state.ts';
+import { platesFor, pngBlob, pngWidthOf, svgFor } from './tools/halftone/exports.ts';
+import { ready, screen, shownDots, svgMegabytes, SVG_HEAVY_MB, svgOver, totals } from './tools/halftone/screening.ts';
+import { getView as halftoneView, patchView as patchHalftone, status as halftoneStatus } from './tools/halftone/view-state.ts';
 import { addBase, eyedrop, rampsFromLoose } from './tools/illustration/actions.ts';
 import { carryLight, addRamp, baseOf, rampName, recolour, renameSwatch, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
 import { adoptCell } from './tools/illustration/variation-actions.ts';
@@ -75,15 +75,18 @@ import { clearProposals as clearBases, proposals as bases, sourcePop } from './t
 import { select as selectInIllustration } from './tools/illustration/actions.ts';
 import { cellsOf as illustrationCells, lockedIn } from './tools/illustration/variations.ts';
 import { getView as illustrationView, patchView as patchIllustration } from './tools/illustration/view-state.ts';
-import { PX_PER, toPayload, withUnit, type PatternDoc } from './tools/pattern/doc.ts';
+import { layoutTile as tileOf } from '../shared/pattern/layout.ts';
+import { PX_PER, presetOf, toPayload, withUnit, type PatternDoc } from './tools/pattern/doc.ts';
 import { patchView as patchPattern } from './tools/pattern/view-state.ts';
 import { addEffect, importCode } from './tools/postfx/actions.ts';
+import { BUILT_INS } from './tools/postfx/builtins.ts';
+import { openMedia } from './tools/postfx/media.ts';
 import { layerOf, offered, timeline, type PostFxDoc } from './tools/postfx/doc.ts';
 import { datamoshChecks, flickerChecks, loopChecks, pipelineChecks, scaleChecks } from './tools/postfx/effects/checks.ts';
 import { Stack } from './tools/postfx/effects/stack.ts';
 import { decodeStack, encodeStack } from './tools/postfx/share.ts';
 import { togglePlay } from './tools/postfx/Transport.tsx';
-import { playhead } from './tools/postfx/view-state.ts';
+import { getView as postfxView, playhead } from './tools/postfx/view-state.ts';
 import { toast } from './ui/index.ts';
 import { LEAVE_MS, toastStore, type ToastEntry } from './ui/toast.ts';
 
@@ -134,6 +137,8 @@ const ctrlY = () => press('y', { code: 'KeyY', ctrlKey: true });
 const host = (id: ToolId) => document.querySelector<HTMLElement>(`[data-tool="${id}"]`);
 /** the Export row a button sits in, by the row's name */
 const rowOf = (b: Element) => b.closest('[data-row]')?.getAttribute('data-row');
+/** a tool's inspector group by its title (its header holds the title and the readout) */
+const sectionOf = (id: ToolId, title: string) => [...(host(id)?.querySelectorAll('section') ?? [])].find((sec) => sec.querySelector('h2')?.textContent === title) ?? null;
 const shows = (el: Element | null | undefined) => !!el && el.getClientRects().length > 0;
 /** a tool's showing button whose text ends with `text` (an icon's name comes first) */
 const button = (id: ToolId, text: string) => [...(host(id)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith(text) && shows(b));
@@ -1921,6 +1926,7 @@ async function pattern(dir: string, palette: LibraryItemRef, dt: DocController<D
   const png = await exported('PNG');
   const info = png && pngInfo(new Uint8Array(await png.arrayBuffer()));
   check('the PNG carries its DPI in a pHYs chunk, says it is sRGB and is that many pixels', info && Math.round(info.dpi ?? 0) === 300 && info.srgb && info.w === px[0] && info.h === px[1], [info, px]);
+  await patternUnit(pd);
 
   // Surprise me: a new layout, the shapes and colours as they were
   const before = pd.get();
@@ -2332,7 +2338,7 @@ async function halftone(dir: string, dt: DocController<DitherDoc>): Promise<void
     dots && copiedDots && [copiedDots.said, Object.keys(copiedDots.held), dots.colour, dots.w, dots.min, dots.max],
   );
   hd.undo();
-  patchHalftone({ pngWidth: 2048 });
+  patchHalftone({ pngWidth: null });
 
   // the separations, through the doc bar's Export menu; smoke runs write them into exports/halftone
   const before = everToast.length;
@@ -2367,7 +2373,9 @@ async function halftone(dir: string, dt: DocController<DitherDoc>): Promise<void
   const bits = await Promise.all(bilevel.map(async (f) => inkOf(await pixelsOf(new Blob([f.data])))));
   check("and each carries its meter's coverage too, light tones included", bits.every((v, i) => Math.abs(v - stats[[0, 1, 3][i]].mean) < 0.01), bits.map((v, i) => [v.toFixed(4), stats[[0, 1, 3][i]].mean.toFixed(4)]));
   await halftonePrint(d, greySource);
-  await halftoneFollowUps({ white: await put('Smoke white', 'png', await pngFrom(64, 64, () => [255, 255, 255])), grey, ramp }, hd);
+  const white = await put('Smoke white', 'png', await pngFrom(64, 64, () => [255, 255, 255]));
+  await halftoneFollowUps({ white, grey, ramp }, hd);
+  await halftoneSweep(dir, hd, white, ramp);
 
   // Send to: Dither gets the screen PNG at the image's own resolution
   const want = await pixelsOf((await shell.tool('halftone').render!(d)).blob);
@@ -2650,6 +2658,21 @@ async function dither(dir: string): Promise<void> {
     frames.close();
     check('each GIF frame is that frame’s dither pixel for pixel, and no two are the same', offs.length === 6 && offs.every((o) => o === 0) && seen.size === 6, offs);
   }
+  // Invert: the Tone group's switch, one step, and the result is the negative; Y shows the original as in Post FX
+  const positive = (await shown())!;
+  const invertSwitch = toggleOf(host('dither'), 'Invert');
+  const depth0 = dt.depth();
+  invertSwitch?.click();
+  const negative = await until(() => (dt.get().tone.invert ? ditherReady(dt.get(), 0) : null), 20_000);
+  check('Dither: the Tone group’s Invert switch inverts the tones in one step, and the result changes', !!invertSwitch && dt.depth() === depth0 + 1 && !!negative && negative.indices.join() !== positive.indices.join(), [dt.depth() - depth0, !!negative]);
+  dt.undo();
+  await shown();
+  patchDither({ show: 'result' });
+  press('y', { code: 'KeyY' });
+  const yOn = ditherView().show;
+  press('y', { code: 'KeyY' });
+  check('Dither: Y shows the original and again the result, as in Post FX', yOn === 'original' && ditherView().show === 'result', [yOn, ditherView().show]);
+
   const shown0 = everToast.length;
   await chooseExport('dither', 'PNG frames');
   const done = await until(() => everToast.slice(shown0).find((t) => t.icon === 'download'), 20_000);
@@ -2708,6 +2731,281 @@ async function dither(dir: string): Promise<void> {
   check('Send to Halftone: it opens the dithered PNG at the export size, every block as the view has it', shell.getState().active === 'halftone' && r2 && got && offBlocks(got, r2, 2) === 0, [hs?.name, got?.w, got?.h, got && r2 && offBlocks(got, r2, 2)]);
 
   await shell.sendItem(anim, 'dither');
+}
+
+
+/**
+ * Pattern's lengths in the tool's unit (2026-10-11): the Print preset is mm at 300 dpi, the Tile row
+ * takes a size in mm and scales the whole tile to it in one step, and the gap, size and jitter fields
+ * show and take the same unit. Everything it does is undone, so the pattern checks after it see what they expect.
+ */
+async function patternUnit(pd: DocController<PatternDoc>): Promise<void> {
+  const depth0 = pd.depth();
+  const field = (title: string, label: string) => sectionOf('pattern', title)?.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`) ?? null;
+  const click = (title: string, text: string) => [...(sectionOf('pattern', title)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim() === text)?.click();
+  const set = (el: HTMLInputElement | null, text: string) => {
+    if (!el) return;
+    typeInto(el, text);
+    press('Enter', { code: 'Enter' });
+  };
+
+  click('Export', 'Screen');
+  check('Pattern: the Screen preset is px at 96 dpi', presetOf(pd.get()) === 'screen' && pd.get().exportUnit === 'px' && pd.get().dpi === 96, [pd.get().exportUnit, pd.get().dpi]);
+  await frame();
+  click('Export', 'Print');
+  check('and the Print preset is mm at 300 dpi', presetOf(pd.get()) === 'print' && pd.get().exportUnit === 'mm' && pd.get().dpi === 300, [pd.get().exportUnit, pd.get().dpi]);
+
+  // the unit is the whole tool's: the spacing and size fields show it, and the unit switch in Arrangement is the same one
+  await until(() => field('Spacing and size', 'From')?.value === (pd.get().sizeMin / PX_PER.mm).toFixed(1));
+  const sizeShown = field('Spacing and size', 'From')?.value;
+  check('the size field shows the size in mm', sizeShown === (pd.get().sizeMin / PX_PER.mm).toFixed(1), [sizeShown, pd.get().sizeMin / PX_PER.mm]);
+  const steps = pd.depth();
+  set(field('Spacing and size', 'To'), '12');
+  check('and typing 12 in it makes the shapes 12 mm', await until(() => Math.abs(pd.get().sizeMax - 12 * PX_PER.mm) < 0.01), [pd.get().sizeMax, 12 * PX_PER.mm]);
+  check('as one step', pd.depth() === steps + 1, [pd.depth() - steps]);
+  pd.undo();
+
+  // the tile: a width in mm scales the shapes and gaps with it
+  const before = pd.get();
+  const was = tileOf(before);
+  const stepsBefore = pd.depth();
+  set(field('Arrangement', 'Width'), '100');
+  const grown = await until(() => (Math.abs(tileOf(pd.get()).width - 100 * PX_PER.mm) < 0.6 ? pd.get() : null));
+  const now = grown && tileOf(grown);
+  check('Pattern: a tile width of 100 mm makes the tile 100 mm wide, in one step', !!grown && pd.depth() === stepsBefore + 1, [now?.width, 100 * PX_PER.mm, pd.depth() - stepsBefore]);
+  const k = (100 * PX_PER.mm) / was.width;
+  check('and the shapes, gaps and the height grew with it, so the pattern looks the same', !!grown && !!now && Math.abs(grown.sizeMax - before.sizeMax * k) < 0.05 && Math.abs(grown.gapX - before.gapX * k) < 0.05 && Math.abs(now.height - was.height * k) < 0.6, [grown?.sizeMax, before.sizeMax * k, now?.height, was.height * k]);
+  const shownWidth = field('Arrangement', 'Width')?.value;
+  check('the Tile row reads 100.0 mm', shownWidth === '100.0', shownWidth);
+  pd.undo();
+
+  click('Arrangement', 'in');
+  check('the unit switch in Arrangement changes the unit for the whole tool', pd.get().exportUnit === 'in' && (await until(() => field('Spacing and size', 'From')?.value === (pd.get().sizeMin / 96).toFixed(2))) !== null, [pd.get().exportUnit, field('Spacing and size', 'From')?.value]);
+  while (pd.depth() > depth0) pd.undo();
+  check('Pattern: those edits leave the pattern as it was', pd.depth() === depth0, pd.depth() - depth0);
+}
+
+/**
+ * Halftone's print fixes (2026-10-11), in the app: a hidden ink leaves a knockout stack, Invert, the
+ * SVG's weight and its file for each ink, plates with marks, a PNG that follows the print width, two
+ * inks to start a spot job, one menu for the inks, and Y. Leaves Halftone on the ramp as it found it.
+ */
+async function halftoneSweep(dir: string, hd: DocController<HalftoneDoc>, white: LibraryItemRef, ramp: LibraryItemRef): Promise<void> {
+  const depth0 = hd.depth();
+  const base = halftoneEmpty();
+  const riso = (name: string) => INKS.riso.find((x) => x.name === name)!;
+  const rampSource = hd.get().source;
+  const page = { ...base.size, w: 90, h: 60 };
+  const small = (source: HalftoneDoc['source'], more: Partial<HalftoneDoc> = {}): HalftoneDoc => ({ ...base, source, size: page, fit: 'cover', screen: { ...base.screen, lpi: 40 }, ...more });
+
+  // a hidden ink leaves a knockout stack
+  const stack = (visible: boolean[]): HalftoneDoc => small(rampSource, { mode: 'spot', overlap: 'knockout', inks: ['Black', 'Medium Blue', 'Fluorescent Pink'].map((n, i) => ({ ...spotInk(n, riso(n).oklch, i), visible: visible[i] })) });
+  const all = await screen(stack([true, true, true]), true);
+  const hidden = await screen(stack([false, true, true]), true);
+  const without = await screen({ ...stack([true, true, true]), inks: stack([true, true, true]).inks.slice(1) }, true);
+  const mean = (x: typeof all, i: number) => x.stats[i].mean;
+  check(
+    'Halftone, knockout: hiding Black takes it out of the stack: its plate is empty and Blue and Pink have the plates they have without it',
+    mean(hidden, 0) === 0 && Math.abs(mean(hidden, 1) - mean(without, 0)) < 1e-6 && Math.abs(mean(hidden, 2) - mean(without, 1)) < 1e-6,
+    [mean(hidden, 0), mean(hidden, 1), mean(without, 0)],
+  );
+  check('and with Black showing, Blue is cut back under it', mean(all, 1) < mean(hidden, 1) - 0.001, [mean(all, 1), mean(hidden, 1)]);
+  const plateInks = async (d: HalftoneDoc) => Promise.all((await platesFor(d, 8, 'Knock')).map(async (f) => inkOf(await pixelsOf(new Blob([f.data])))));
+  const [withBlack, noBlack] = [await plateInks(stack([true, true, true])), await plateInks(stack([false, true, true]))];
+  check('and the exported Blue plate is not the same with Black hidden', withBlack.length === 3 && noBlack.length === 2 && noBlack[0] > withBlack[1] + 0.001, [withBlack, noBlack]);
+
+  // Invert: a white image on a black screen
+  await shell.sendItem(white, 'halftone');
+  const whiteSource = hd.get().source;
+  const [plain, flipped] = [await screen(small(whiteSource), true), await screen(small(whiteSource, { tone: { ...base.tone, invert: true } }), true)];
+  check('Halftone: a white image takes no black, and takes nearly all of it once inverted', plain.stats[3].mean < 0.01 && flipped.stats[3].mean > 0.9, [plain.stats[3].mean, flipped.stats[3].mean]);
+  const invertSwitch = toggleOf(host('halftone'), 'Invert');
+  const before = hd.depth();
+  invertSwitch?.click();
+  const inverted = await until(() => (hd.get().tone.invert ? screen(hd.get(), true) : null), 20_000);
+  check('and the Tone group’s Invert switch does it in one step', !!invertSwitch && hd.depth() === before + 1 && !!inverted && inverted.stats[3].mean > 0.9, [hd.depth() - before, inverted?.stats[3].mean]);
+  hd.undo();
+  await shell.sendItem(ramp, 'halftone');
+
+  // Y, as in Post FX
+  shell.setActive('halftone');
+  patchHalftone({ show: 'result' });
+  press('y', { code: 'KeyY' });
+  const yOn = halftoneView().show;
+  press('y', { code: 'KeyY' });
+  check('Halftone: Y shows the original and again the result', yOn === 'original' && halftoneView().show === 'result', [yOn, halftoneView().show]);
+
+  // the SVG's weight on A4: a warning, and a file for each ink
+  hd.transact('A4 for the SVG', (d) => ({ ...d, size: { ...d.size, w: 210, h: 297 }, screen: { ...d.screen, lpi: 60 } }));
+  const a4 = await until(() => {
+    const st = halftoneStatus.get();
+    return ready(hd.get()) && st && !st.busy && !st.error ? st : null;
+  }, 40_000);
+  const heavy = a4 ? svgMegabytes((await screen(hd.get(), true))!, hd.get()) : 0;
+  check(`Halftone: A4 at 60 lpi is a heavy SVG (${Math.round(heavy)} MB, past ${SVG_HEAVY_MB})`, heavy > SVG_HEAVY_MB, heavy);
+  check('and the Export group says so in plain words and offers One SVG per ink', !!(await until(() => host('halftone')?.textContent?.includes('is a lot for Illustrator or Figma to open') && button('halftone', 'One SVG per ink'))));
+  const whole = hd.get();
+  const wholeText = new TextDecoder().decode(await svgFor(whole));
+  check('the SVG leaves the paper rectangle out unless asked, and writes numbers to two decimals', !wholeText.includes('Paper_preview_only') && !/ d="[^"]*\d\.\d{3,}/.test(wholeText) && new TextDecoder().decode(await svgFor(whole, { paper: true })).includes('Paper_preview_only'), wholeText.length);
+  const one = new TextDecoder().decode(await svgFor(whole, { only: 0 }));
+  check('and a file of one ink holds that ink alone, and is lighter than the whole', (one.match(/<g /g) ?? []).length === 1 && one.length < wholeText.length * 0.6, [one.length, wholeText.length]);
+  const toasts = everToast.length;
+  await chooseExport('halftone', 'SVG, one file per ink');
+  const perInk = await until(() => everToast.slice(toasts).find((t) => t.icon === 'download'), 60_000);
+  const visible = whole.inks.filter((i) => i.visible).length;
+  check(`One SVG per ink writes a file for each of the ${visible} inks that show into one folder`, new RegExp(`^Exported ${visible} SVGs into `).test(String(perInk?.message)), perInk?.message);
+  hd.undo();
+
+  // plates with marks: a larger sheet, the page untouched in the middle, marks outside the bleed, the ink's name in the slug
+  const [W, H] = [Math.round((90 * 300) / 25.4), Math.round((60 * 300) / 25.4)];
+  const [m, b] = [Math.round((12 * 300) / 25.4), Math.round((3 * 300) / 25.4)];
+  const d = hd.get();
+  const [plainPlate] = await platesFor(d, 8, 'Plain');
+  const [marked] = await platesFor(d, 8, 'Marks', undefined, undefined, { marks: true });
+  const [flat, sheet] = [await pixelsOf(new Blob([plainPlate.data])), await pixelsOf(new Blob([marked.data]))];
+  const markedTags = tiffTags(new Uint8Array(marked.data));
+  check('Halftone: a plate with marks is on a sheet 12 mm larger all round, still at 300 dpi', markedTags.get(256) === W + 2 * m && markedTags.get(257) === H + 2 * m && markedTags.get(282) === 300 && sheet.w === W + 2 * m, [markedTags.get(256), markedTags.get(257), W + 2 * m]);
+  let [different, outside, slug] = [0, 0, 0];
+  for (let y = 0; y < sheet.h; y++) {
+    for (let x = 0; x < sheet.w; x++) {
+      const dark = sheet.px[(y * sheet.w + x) * 4] < 128;
+      const onPage = x >= m && x < m + W && y >= m && y < m + H;
+      if (onPage && sheet.px[(y * sheet.w + x) * 4] !== flat.px[((y - m) * W + (x - m)) * 4]) different++;
+      if (dark && (x < m - b || x >= m + W + b || y < m - b || y >= m + H + b)) outside++;
+      if (dark && x >= m + 20 && x < m + 20 + 300 && y > m + H + 60 && y < m + H + 110) slug++;
+    }
+  }
+  check('with the page untouched in the middle', different === 0, different);
+  check('crop and registration marks outside the bleed', outside > 300, outside);
+  check('and the ink’s name set under the trim', slug > 40, slug);
+  const [clear] = await platesFor(d, 8, 'Clear', undefined, undefined, { marks: true, png: true });
+  const clearPng = pngInfo(new Uint8Array(clear.data));
+  const clearPx = await pixelsOf(new Blob([clear.data], { type: 'image/png' }));
+  let opaque = 0;
+  for (let p = 0; p < clearPx.px.length; p += 4) if (clearPx.px[p + 3] === 255 && clearPx.px[p] === 0) opaque++;
+  check(
+    'Halftone: PNG plates are ink on a clear ground: the paper has no alpha, the ink and the marks are solid, at 300 dpi',
+    clear.name.endsWith('.png') && clearPx.px[3] === 0 && opaque > 300 && clearPng.w === W + 2 * m && Math.round(clearPng.dpi ?? 0) === 300 && clear.data.byteLength < marked.data.byteLength,
+    [clear.name, clearPx.px[3], opaque, clearPng, clear.data.byteLength, marked.data.byteLength],
+  );
+  const marksSwitch = toggleOf(host('halftone'), 'Crop and registration marks');
+  marksSwitch?.click();
+  const marksOn = halftoneView().marks;
+  patchHalftone({ plateFile: 'png' });
+  const sep0 = everToast.length;
+  // two plates, so the notice is not the one the earlier Separations left on screen (a same notice is not shown twice)
+  const magenta = hd.get().inks.find((i) => i.process === 'm')!;
+  hd.transact('Hide Magenta', (x) => mapInk(x, magenta.id, (i) => ({ ...i, visible: false })));
+  const sepOpened = await chooseExport('halftone', 'Separations');
+  const sepDone = await until(() => everToast.slice(sep0).find((t) => t.icon === 'download'), 60_000);
+  check('and the Marks switch and the Plate file choice reach the Separations export', marksOn === true && /^Exported 2 plates into /.test(String(sepDone?.message)), [marksOn, sepDone?.message, sepOpened]);
+  patchHalftone({ marks: false, plateFile: 'tiff' });
+
+  // defaults: the PNG is as wide as the page prints, and a spot job starts with two inks
+  const px = printPx(d);
+  check('Halftone: the PNG defaults to the print width at the page’s dpi', halftoneView().pngWidth === null && pngWidthOf(d, null) === px.w && pngWidthOf(d, 360) === 360, [halftoneView().pngWidth, pngWidthOf(d, null), px.w]);
+  check('a first switch to spot inks starts with two Riso inks, not Black', spotStart().map((k) => k.name).join() === 'Blue,Fluorescent Pink');
+  [...(host('halftone')?.querySelectorAll('button') ?? [])].find((x) => x.textContent?.trim() === 'Spot inks')?.click();
+  await until(() => hd.get().mode === 'spot');
+  check('and the Spot inks switch gives them', hd.get().inks.map((k) => k.name).join() === 'Blue,Fluorescent Pink', hd.get().inks.map((k) => k.name));
+  const menuRows = async (open: () => void) => {
+    open();
+    const rows = await until(() => {
+      const list = [...document.querySelectorAll<HTMLElement>('[role="menu"] [role="menuitem"], [role="menu"] [role="presentation"]')].map((r) => r.textContent?.trim() ?? '');
+      return list.length ? list : null;
+    });
+    press('Escape');
+    await sleep(50);
+    return rows ?? [];
+  };
+  const fromRows = await menuRows(() => [...(host('halftone')?.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="menu"]') ?? [])].find((x) => shows(x) && x.className.includes('from'))?.click());
+  const addRows = await menuRows(() => host('halftone')?.querySelector<HTMLButtonElement>('button[aria-label^="Add a spot ink"]')?.click());
+  check('Halftone: the Inks from row and the add button open the same menu, palettes first and then Riso, RAL, HKS and NCS', fromRows.length > 3 && fromRows.join('|') === addRows.join('|') && ['Riso', 'RAL', 'HKS', 'NCS'].every((n) => fromRows.some((r) => r.startsWith(n))), [fromRows, addRows]);
+
+  while (hd.depth() > depth0) hd.undo();
+  await shell.sendItem(ramp, 'halftone');
+  check('Halftone: the sweep leaves the ramp open', hd.get().source?.name === 'Smoke ramp', hd.get().source?.name);
+  void dir;
+}
+
+/**
+ * Post FX's fixes (2026-10-11): Invert, a PNG sequence, Dither's whole animation at its export
+ * scale, Y, and the preset label. Leaves Post FX on a still, as the checks after it expect.
+ */
+async function postfxSweep(dir: string, pd: DocController<PostFxDoc>, put: (name: string, bytes: ArrayBuffer) => Promise<LibraryItemRef>, exported: (label: string) => Promise<Response | null>): Promise<void> {
+  // Invert swaps every colour and keeps the alpha
+  const negative = await put('Smoke negative', await pngRgba(32, 32, (x) => [200, 50, 10, x < 16 ? 255 : 128]));
+  await shell.sendItem(negative, 'postfx');
+  pd.transact('Invert', (d) => ({ ...d, stack: [layerOf('invert')] }));
+  const inverted = await exported('PNG');
+  const flipped = inverted && (await pixelsOf(await inverted.blob()));
+  const near = (a: number, b: number) => Math.abs(a - b) <= 2;
+  check(
+    'Post FX: Invert swaps every colour for its opposite and keeps the alpha',
+    !!flipped && [0, 1, 2].every((c, i) => near(flipped.px[(5 * 32 + 4) * 4 + c], [55, 205, 245][i])) && near(flipped.px[(5 * 32 + 4) * 4 + 3], 255) && near(flipped.px[(5 * 32 + 24) * 4 + 3], 128),
+    flipped && [...flipped.px.slice((5 * 32 + 4) * 4, (5 * 32 + 4) * 4 + 4)],
+  );
+
+  // four numbered PNGs dropped together are one sequence, in name order, with no frame left for the Library
+  const frames = await Promise.all([3, 1, 4, 2].map(async (n) => new File([await pngRgba(48, 32, () => [n * 50, 100, 200 - n * 40, 255])], `smoke seq ${n}.png`, { type: 'image/png' })));
+  const taken = await shell.runBusy(async () => shell.tool('postfx').onFiles!(frames, 'drop', pd));
+  const seq = await until(() => (pd.get().source?.kind === 'sequence' ? pd.get().source : null), 20_000);
+  check('Post FX: four PNGs dropped together open as one sequence of four frames, and none is left for the Library', taken === true && seq?.frames === 4 && seq.assets?.length === 4 && seq.fps === 24 && timeline(pd.get()).count === 4, [taken, seq]);
+  const media = seq && (await openMedia(seq));
+  const reds: number[] = [];
+  for (let i = 0; media && i < 4; i++) {
+    const bmp = await media.frame(i);
+    const c = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d', { willReadFrequently: true })!;
+    c.drawImage(bmp, 0, 0);
+    bmp.close();
+    reds.push(c.getImageData(5, 5, 1, 1).data[0]);
+  }
+  media?.close();
+  check('in name order', JSON.stringify(reds) === JSON.stringify([50, 100, 150, 200]), reds);
+  const seqToast = everToast.length;
+  await chooseExport('postfx', 'PNG sequence');
+  const seqDone = await until(() => everToast.slice(seqToast).find((t) => t.icon === 'download'), 30_000);
+  check('and its PNG sequence has all four', /^Exported 4 frames into /.test(String(seqDone?.message)), seqDone?.message);
+
+  // Dither's animation arrives whole, at the export scale
+  const dt = ditherDoc();
+  patchDither({ times: 1 });
+  await shell.sendDoc('dither', 'postfx');
+  const shape = dt.get().source;
+  const arrived = await until(() => (pd.get().source?.kind === 'gif' && pd.get().source?.name.startsWith('Smoke anim') ? pd.get().source : null), 30_000);
+  const [bw, bh] = shape ? [Math.round(shape.w / dt.get().pixel) * dt.get().pixel * ditherView().times, Math.round(shape.h / dt.get().pixel) * dt.get().pixel * ditherView().times] : [0, 0];
+  check(
+    'Dither to Post FX: a six-frame animation arrives as six frames with its own timing, not a still',
+    arrived?.frames === 6 && JSON.stringify(arrived.delays) === JSON.stringify(shape?.delays?.map((ms) => Math.round(ms / 10) * 10)) && arrived.w === bw && arrived.h === bh,
+    arrived && [arrived.frames, arrived.delays, arrived.w, arrived.h, bw, bh],
+  );
+  patchDither({ times: 2 });
+  await shell.sendDoc('dither', 'postfx');
+  const twice = await until(() => (pd.get().source?.kind === 'gif' && pd.get().source !== arrived ? pd.get().source : null), 30_000);
+  check('and at Scale 2 every frame is twice the size', twice?.frames === 6 && twice.w === bw * 2 && twice.h === bh * 2, twice && [twice.frames, twice.w, twice.h]);
+  patchDither({ times: 1 });
+
+  // Y shows the original and again the result; the preset label is cleared by Undo
+  shell.setActive('postfx');
+  const was = postfxView().original;
+  press('y', { code: 'KeyY' });
+  const yOn = postfxView().original;
+  press('y', { code: 'KeyY' });
+  check('Post FX: Y shows the original and again the result', !was && yOn && !postfxView().original, [was, yOn]);
+  pd.transact('Own stack', (d) => ({ ...d, stack: [layerOf('grade')] }));
+  const readout = () => sectionOf('postfx', 'Presets')?.querySelector('header')?.textContent?.replace('Presets', '').trim() ?? null;
+  const vhs = BUILT_INS.find((p) => p.name === 'VHS tape')!;
+  [...(sectionOf('postfx', 'Presets')?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.includes(vhs.name))?.click();
+  const named = await until(() => (readout() === vhs.name ? readout() : null));
+  pd.transact('Soften', (d) => ({ ...d, stack: d.stack.map((l, n) => (n ? { ...l, opacity: 0.5 } : l)) }));
+  const edited = await until(() => (readout() === `${vhs.name}, changed` ? readout() : null));
+  pd.undo();
+  const back = await until(() => (readout() === vhs.name ? readout() : null));
+  pd.undo();
+  const gone = await until(() => (readout() === '' ? true : null));
+  check('Post FX: the preset label says the preset, then changed, and Undo takes both back', named === vhs.name && edited === `${vhs.name}, changed` && back === vhs.name && gone === true, [named, edited, back, gone, readout()]);
+  pd.undo();
+  void dir;
 }
 
 const postfxDoc = () => shell.doc('postfx') as DocController<PostFxDoc>;
@@ -3037,6 +3335,8 @@ async function postfx(dir: string): Promise<void> {
     }),
   );
   check(`and the index drawn in each frame, read back from the PNGs, runs 0 to ${N - 1} with none repeated or missing`, indices.every((v, i) => v === i), indices);
+
+  await postfxSweep(dir, pd, put, exported);
 
   // leave a still with a grain loop, and hand its first frame on: Send to renders the effects in, full size
   await shell.sendItem(card, 'postfx');
