@@ -4,7 +4,7 @@
 import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from 'react';
 import { isTextField } from '../../shell/core/keys.ts';
 import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
-import { Toggle, ViewStrip } from '../../ui/index.ts';
+import { Toggle, Tooltip, ViewStrip } from '../../ui/index.ts';
 import { ExportProgress } from '../common/Export.tsx';
 import { InspectorColumn } from '../common/InspectorColumn.tsx';
 import { editedKind, takeMarkup, type Doc } from './actions.ts';
@@ -81,13 +81,17 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
     <div className={s.view} style={{ '--insp': `${v.inspector}px` } as CSSProperties}>
       <div className={s.work}>
         <LogoBar doc={doc} d={d} out={out} />
-        <div className={s.stage}>
+        <div className={s.stage} data-logo-stage>
           {empty ? (
             <Start doc={doc} />
           ) : sheet ? (
             <div className={s.sheetStage}>
               <Sheet d={d} v={v} />
-              <ViewStrip overlays={<Toggle label="Sheet" checked onChange={() => patchView({ mode: 'edit' })} />} background={<Canvas v={v} />} readout={<span>{shownLockups(d).length} lockups</span>} />
+              <ViewStrip overlays={
+                  <Tooltip content="Back to one lockup" shortcut="Alt+1">
+                    <span className={s.tip}><Toggle label="Sheet" checked onChange={() => patchView({ mode: 'edit' })} /></span>
+                  </Tooltip>
+                } background={<Canvas v={v} />} readout={<span>{shownLockups(d).length} lockups</span>} />
             </div>
           ) : kind ? (
             <Board doc={doc} d={d} v={v} selected={kind} />

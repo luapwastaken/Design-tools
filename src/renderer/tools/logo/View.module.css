@@ -33,3 +33,4 @@
 /* the sheet fills the stage above its view strip */
 .sheetStage { display: flex; flex-direction: column; min-height: 0; background: var(--module); }
 .sheetStage > :first-child { flex: 1 1 0; min-height: 0; }
+.tip { display: inline-flex; flex: none; }

@@ -6,7 +6,7 @@
 import { Fragment, useMemo, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { capBand } from '../../../shared/logo/layout.ts';
 import { sideBySide } from '../../../shared/logo/types.ts';
-import { Button, menu, Toggle, Viewport, type ViewTransform } from '../../ui/index.ts';
+import { Button, menu, Toggle, Tooltip, Viewport, type ViewTransform } from '../../ui/index.ts';
 import { clampScale } from '../../ui/viewport.ts';
 import { cx } from '../../ui/cx.ts';
 import { select, type Doc } from './actions.ts';
@@ -137,9 +137,15 @@ export function Board({ doc, d, v, selected }: { doc: Doc; d: LogoDoc; v: LogoVi
       cursor={readout}
       overlays={
         <>
-          <Toggle label="Clearspace" checked={v.clearspace} onChange={(clearspace) => patchView({ clearspace })} className={s.toggle} />
-          <Toggle label="Guides" checked={v.guides} onChange={(guides) => patchView({ guides })} className={s.toggle} />
-          <Toggle label="Sheet" checked={false} onChange={() => patchView({ mode: 'sheet' })} className={s.toggle} />
+          <Tooltip content="Show or hide the clearspace" shortcut="C">
+            <span className={s.tip}><Toggle label="Clearspace" checked={v.clearspace} onChange={(clearspace) => patchView({ clearspace })} className={s.toggle} /></span>
+          </Tooltip>
+          <Tooltip content="Show or hide the guides" shortcut="G">
+            <span className={s.tip}><Toggle label="Guides" checked={v.guides} onChange={(guides) => patchView({ guides })} className={s.toggle} /></span>
+          </Tooltip>
+          <Tooltip content="Every lockup in every version" shortcut="Alt+2">
+            <span className={s.tip}><Toggle label="Sheet" checked={false} onChange={() => patchView({ mode: 'sheet' })} className={s.toggle} /></span>
+          </Tooltip>
         </>
       }
       background={<Canvas v={v} />}

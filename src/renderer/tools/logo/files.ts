@@ -19,6 +19,9 @@ export const buffer = async (b: Blob | Uint8Array): Promise<ArrayBuffer> => {
 /** the file's name: "Acme horizontal black" */
 export const fileName = (name: string, l: Lockup, v: Version): string => `${name} ${KIND_FILE[l.kind]} ${v}`;
 
+/** a lockup's SVG as Export writes it, and Copy puts on the clipboard */
+export const lockupMarkup = (d: LogoDoc, l: Lockup, v: Version, name: string): string => lockupSvg(d, l, v, { padding: d.exportPadding, title: fileName(name, l, v) });
+
 /** a lockup's PNG: its SVG with the export padding, the document's PNG height tall */
 export async function lockupPng(d: LogoDoc, l: Lockup, v: Version, dpi: number): Promise<Blob> {
   const px = pngSize(d, layoutLockup(d, l), v);

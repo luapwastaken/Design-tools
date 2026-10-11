@@ -1,10 +1,12 @@
 // Edits the stage, the inspector and the keyboard share. Each is one history step (spec §8).
 import type { DocController } from '../../../shared/doc-api.ts';
 import type { Swatch } from '../../../shared/types.ts';
+import { copyToClipboard, exporting } from '../../lib/export.ts';
 import { shell } from '../../shell/core/index.ts';
 import { toast } from '../../ui/index.ts';
 import { partAs, partFromImage, partFromSvg } from './intake.ts';
-import { ALIGNS, available, fix, KIND_LABEL, lockupOf, mapLockup, proposed, twoParts, withPart, type LockupKind, type LogoDoc, type Part, type Role } from './doc.ts';
+import { ALIGNS, available, fix, KIND_LABEL, lockupOf, mapLockup, proposed, twoParts, VERSIONS, withPart, type LockupKind, type LogoDoc, type Part, type Role } from './doc.ts';
+import { lockupMarkup } from './files.ts';
 import { armed, getView, loading, palette, patchView, target } from './view-state.ts';
 
 export type Doc = DocController<LogoDoc>;
@@ -165,6 +167,34 @@ export function step(doc: Doc, by: 1 | -1): void {
   const on = d.lockups.filter((l) => l.on && available(d, l.kind)).map((l) => l.kind);
   const at = on.indexOf(editedKind(d, getView().lockup) ?? on[0]);
   if (on.length) patchView({ lockup: on[(at + by + on.length) % on.length] });
+}
+
+/** the previous or next colour version to look at (arrow keys), round the whole Versions list */
+export function stepVersion(by: 1 | -1): void {
+  const at = VERSIONS.indexOf(getView().version);
+  patchView({ version: VERSIONS[(at + by + VERSIONS.length) % VERSIONS.length] });
+}
+
+/** a keyboard copy is under way: a second press meanwhile does nothing */
+let copying = false;
+
+/** the lockup in view, in the version in view, as SVG on the clipboard (Ctrl+Shift+C; the Export group's Copy button shows its busy state) */
+export async function copySvg(doc: Doc): Promise<void> {
+  if (copying) return;
+  const d = doc.get();
+  const v = getView();
+  const kind = editedKind(d, v.lockup);
+  if (!kind) return;
+  const data = lockupMarkup(d, lockupOf(d, kind), v.version, shell.getState().docNames.logo ?? 'Logo');
+  copying = true;
+  try {
+    await exporting(() => copyToClipboard({ kind: 'svg', data }));
+    toast.show({ icon: 'content_copy', message: 'Copied the SVG.' });
+  } catch (e) {
+    toast.show({ kind: 'error', message: `Couldn't copy the SVG: ${e instanceof Error ? e.message : String(e)}` });
+  } finally {
+    copying = false;
+  }
 }
 
 // -- colour --

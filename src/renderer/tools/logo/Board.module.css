@@ -3,6 +3,7 @@
 /* toasts rise from the top of the view strip, over the artboards, not onto the inspector */
 .vp > :first-child { anchor-name: --toasts; }
 .toggle { flex: none; white-space: nowrap; }
+.tip { display: inline-flex; flex: none; }
 .canvasLabel { flex: none; color: var(--ink-2); font: 400 var(--fs-label)/1 var(--font-sans); }
 .live b { color: var(--signal); }
 

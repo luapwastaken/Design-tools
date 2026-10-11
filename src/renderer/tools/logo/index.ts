@@ -3,8 +3,10 @@
 import type { ToolDefinition, Use } from '../../shell/tool.ts';
 import { shell } from '../../shell/core/index.ts';
 import { fetchBlob } from '../common/take.ts';
-import { imagePart, newLogo, nextRole, step, svgPart, takeFiles, takePalette } from './actions.ts';
+import { arrowsFree } from '../common/keyGates.ts';
+import { copySvg, imagePart, newLogo, nextRole, step, stepVersion, svgPart, takeFiles, takePalette } from './actions.ts';
 import { emptyDoc, fromPayload, isEmpty, toPayload, withPart, type LogoDoc } from './doc.ts';
+import { logoShortcuts } from './keys.ts';
 import { getView, patchView } from './view-state.ts';
 import { View } from './View.tsx';
 
@@ -67,12 +69,6 @@ export const tool: ToolDefinition<LogoDoc> = {
     return left.length === files.length ? false : left.length ? left : true;
   },
 
-  shortcuts: (doc) => [
-    { keys: 'Ctrl+N', label: 'New logo', run: () => void newLogo() },
-    { keys: 'ArrowLeft', label: 'Previous lockup', run: () => step(doc, -1) },
-    { keys: 'ArrowRight', label: 'Next lockup', run: () => step(doc, 1) },
-    { keys: 'C', label: 'Show clearspace', run: () => patchView({ clearspace: !getView().clearspace }) },
-    { keys: 'G', label: 'Show guides', run: () => patchView({ guides: !getView().guides }) },
-  ],
+  shortcuts: (doc) => logoShortcuts(doc, { newLogo: () => void newLogo(), step, stepVersion, copySvg: (d) => void copySvg(d), view: getView, patch: patchView, arrowsFree: () => arrowsFree('logo', '[data-logo-stage]') }),
   View,
 };

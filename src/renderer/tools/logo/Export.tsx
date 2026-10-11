@@ -4,16 +4,15 @@
 // shared export path (lib/export saveFile, saveToFolder); every failure is a toast.
 import type { ReactNode } from 'react';
 import { layoutLockup } from '../../../shared/logo/layout.ts';
-import { lockupSvg } from '../../../shared/logo/svg.ts';
 import { leaf, saveFile, saveToFolder } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
-import { InspectorGroup, InspectorRow, NumberField, Segmented, Toggle, useDocNumber } from '../../ui/index.ts';
+import { Button, InspectorGroup, InspectorRow, NumberField, Segmented, Toggle, useDocNumber } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
-import { CopyButton, LastExport, useExport } from '../common/Export.tsx';
+import { LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx, plural } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { fix, KIND_LABEL, LIMIT, shownLockups, shownVersions, VERSION_LABEL, type Lockup, type LogoDoc } from './doc.ts';
-import { buffer, faviconBundle, fileName, lockupPng, sheetPng, sheetSvg, type OutFile } from './files.ts';
+import { buffer, faviconBundle, fileName, lockupMarkup, lockupPng, sheetPng, sheetSvg, type OutFile } from './files.ts';
 import { pngSize } from './geometry.ts';
 import { tooBig } from './raster.ts';
 import { patchView, type Assets, type LogoView, type Scope } from './view-state.ts';
@@ -52,7 +51,7 @@ export function useLogoExport(doc: Doc, d: LogoDoc, v: LogoView, lockup: Lockup 
   const files = async (): Promise<OutFile[]> => {
     const out: OutFile[] = [];
     for (const [l, x] of pairs) {
-      if (v.assets.svg) out.push({ name: `${fileName(name, l, x)}.svg`, data: lockupSvg(d, l, x, { padding: d.exportPadding, title: fileName(name, l, x) }) });
+      if (v.assets.svg) out.push({ name: `${fileName(name, l, x)}.svg`, data: lockupMarkup(d, l, x, name) });
       if (v.assets.png) out.push({ name: `${fileName(name, l, x)}.png`, data: await buffer(await lockupPng(d, l, x, v.dpi)) });
     }
     if (v.assets.favicon) out.push(...(await faviconBundle(d, v.version, name)));
@@ -102,7 +101,7 @@ export function ExportGroup({ doc, d, v, lockup, out }: { doc: Doc; d: LogoDoc; 
   const sized = lockup && pngSize(d, layoutLockup(d, lockup), v.version);
   const tooBigNow = sized && tooBig(sized.w, sized.h);
   const reach = v.scope === 'view' ? `${lockup ? KIND_LABEL[lockup.kind] : 'No lockup'}, ${VERSION_LABEL[v.version]}` : v.scope === 'lockup' ? `${lockup ? KIND_LABEL[lockup.kind] : 'No lockup'}, ${plural(versions.length, 'version')}` : `${plural(lockups.length, 'lockup')}, ${plural(versions.length, 'version')}`;
-  const markup = () => lockupSvg(d, lockup!, v.version, { padding: d.exportPadding, title: fileName(name, lockup!, v.version) });
+  const markup = () => lockupMarkup(d, lockup!, v.version, name);
 
   return (
     <InspectorGroup id="logo.export" title="Export" meta={`${count} selected`}>
@@ -132,7 +131,9 @@ export function ExportGroup({ doc, d, v, lockup, out }: { doc: Doc; d: LogoDoc; 
         <NumberField label="DPI" min={LIMIT.dpi[0]} max={LIMIT.dpi[1]} value={v.dpi} onChange={(dpi) => patchView({ dpi })} />
       </InspectorRow>
       <div data-row="SVG" className={s.copy}>
-        <CopyButton ex={ex} what="SVG" why={lockup ? null : 'Every lockup is off'} onClick={() => void ex.copySvg('SVG', async () => markup())} />
+        <Button icon="content_copy" disabled={!lockup || ex.busy !== null} tooltip={lockup ? 'Copy to the clipboard' : 'Every lockup is off'} shortcut="Ctrl+Shift+C" onClick={() => void ex.copySvg('SVG', async () => markup())}>
+          {ex.busy?.what === 'SVG' && ex.busy.verb === 'copy' ? 'Copying…' : 'Copy'}
+        </Button>
       </div>
       <LastExport last={v.last} />
     </InspectorGroup>
