@@ -8,6 +8,7 @@ import { useWidth } from '../common/useWidth.ts';
 import type { Doc } from './actions.ts';
 import { fix, LIMIT, NEUTRAL_TONE, used, type DitherDoc } from './doc.ts';
 import { run, settingsOf } from './engine.ts';
+import { reseed } from './steps.ts';
 import { Blocks, ramp } from './Specimen.tsx';
 import s from './Algorithm.module.css';
 import i from './Inspector.module.css';
@@ -79,7 +80,6 @@ export function AlgorithmModule({ doc, d }: { doc: Doc; d: DitherDoc }) {
       initial: ALGORITHMS.indexOf(a) + (Object.keys(FAMILY) as Algorithm['group'][]).indexOf(a.group) + 1,
     });
   };
-  const reseed = () => doc.transact('New seed', (x) => ({ ...x, seed: (x.seed * 7919 + 13) % (LIMIT.seed[1] + 1) }));
   return (
     <InspectorGroup id="dither.algorithm" title="Algorithm" meta={FAMILY[a.group]}>
       <div className={i.stack}>
@@ -113,7 +113,7 @@ export function AlgorithmModule({ doc, d }: { doc: Doc; d: DitherDoc }) {
           </InspectorRow>
           <InspectorRow label="Seed">
             <NumberField label="Seed" hideLabel min={LIMIT.seed[0]} max={LIMIT.seed[1]} disabled={!a.seed} {...seed} />
-            <IconButton icon="casino" label="New seed" size="sm" disabled={!a.seed} onClick={reseed} />
+            <IconButton icon="casino" label="New seed" shortcut="R" size="sm" disabled={!a.seed} onClick={() => reseed(doc)} />
           </InspectorRow>
         </div>
       </div>

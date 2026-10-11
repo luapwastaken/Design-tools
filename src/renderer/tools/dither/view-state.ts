@@ -64,7 +64,8 @@ const subscribe = (fn: () => void) => {
 export const useView = (): DitherView => useSyncExternalStore(subscribe, getView);
 
 /** the frame on screen and whether it plays (this session: a relaunch opens paused on the first) */
-export const playhead = createStore<{ frame: number; playing: boolean }>({ frame: 0, playing: false });
+export { playhead } from './steps.ts';
+
 
 /** the palette index under the pointer, so its chip lights */
 export const under = createStore<number | null>(null);

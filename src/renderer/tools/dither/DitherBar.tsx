@@ -8,8 +8,8 @@ import { gifLimit, isAnimated, type DitherDoc } from './doc.ts';
 import type { DitherExport } from './Export.tsx';
 import { patchView, type DitherView, type Show } from './view-state.ts';
 
-const SHOWS: { value: Show; label: string; icon: 'image' | 'blur_on'; tip?: string }[] = [
-  { value: 'original', label: 'Original', icon: 'image', tip: 'The image before dithering (Y or \\ switches)' },
+const SHOWS: { value: Show; label: string; icon: 'image' | 'blur_on'; tip?: string; shortcut?: string }[] = [
+  { value: 'original', label: 'Original', icon: 'image', tip: 'The image before dithering', shortcut: 'Y' },
   { value: 'result', label: 'Result', icon: 'blur_on' },
 ];
 
@@ -29,7 +29,7 @@ export function DitherBar({ doc, d, v, out }: { doc: Doc; d: DitherDoc; v: Dithe
     { label: 'SVG', icon: 'download' as const, disabled: !!out.svgWhy, hint: out.svgWhy ? 'Too large' : undefined, onSelect: () => void out.svg() },
     ...(out.anim ? [{ label: 'PNG frames (a folder)', icon: 'download' as const, disabled: !!out.bigIndexed, onSelect: () => void out.folder() }] : []),
     'separator' as const,
-    { label: 'Copy the PNG', icon: 'content_copy' as const, disabled: !!out.bigPng, onSelect: () => void out.copyPng() },
+    { label: 'Copy the PNG', icon: 'content_copy' as const, hint: 'Ctrl+Shift+C', disabled: !!out.bigPng, onSelect: () => void out.copyPng() },
   ];
   return (
     <DocBar

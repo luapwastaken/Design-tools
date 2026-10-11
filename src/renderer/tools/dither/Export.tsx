@@ -2,6 +2,7 @@
 // multiple of it, or 1 px), the SVG of pixel runs for small pieces, and for an animation its GIF and
 // PNG frames, all from the index buffer the view shows, through the shared export paths. The doc
 // bar's Export menu runs them; the inspector's group holds the scale they share.
+import { useEffect } from 'react';
 import { saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
 import { InspectorGroup, InspectorRow, NumberField, Toggle } from '../../ui/index.ts';
@@ -10,6 +11,7 @@ import { LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx, plural } from '../common/names.ts';
 import { gifLimit, isAnimated, loopMs, outSize, scaleOf, used, type DitherDoc } from './doc.ts';
 import { framesTo, indexedBlob, indexedLimit, pngBlob, sizeLimit, svgFor, svgLimit } from './exports.ts';
+import { copier } from './steps.ts';
 import { patchView, TIMES_MAX, type DitherView } from './view-state.ts';
 import s from './Export.module.css';
 import i from './Inspector.module.css';
@@ -38,6 +40,16 @@ export function useDitherExport(d: DitherDoc, v: DitherView, frame: number, read
     ex.file(what, async () => saveFile({ tool: 'dither', suggestedName: `${name} dither${kind}${anim ? ` ${frame + 1}` : ''}`, ext, filterName, data: await data() }));
   const png = async () => (await pngBlob(d, frame, scale)).arrayBuffer();
   const frames = (to: 'gif' | 'folder') => ex.run(to === 'gif' ? 'GIF' : 'frames', (report, b) => framesTo(d, scale, to, `${name} dither`, report, b.stop!.signal), true);
+  const copyPng = () => ex.copyPng('PNG', png);
+  const copyWhy = none ?? (ex.busy ? 'An export is running' : bigPng);
+  useEffect(() => {
+    copier.run = copyPng;
+    copier.why = copyWhy;
+    return () => {
+      copier.run = null;
+      copier.why = 'Open an image first.';
+    };
+  });
   return {
     ex,
     scale,
@@ -55,7 +67,7 @@ export function useDitherExport(d: DitherDoc, v: DitherView, frame: number, read
     svg: () => file('SVG', 'svg', 'SVG', () => svgFor(d, frame, scale)),
     gif: () => frames('gif'),
     folder: () => frames('folder'),
-    copyPng: () => ex.copyPng('PNG', png),
+    copyPng,
   };
 }
 

@@ -3,14 +3,14 @@
 // Spec: docs/superpowers/specs/2026-09-29-dither-tool.md; plan unit V.
 import type { ToolDefinition } from '../../shell/tool.ts';
 import { toast } from '../../ui/index.ts';
-import { flipOriginal, showOriginalKey } from '../common/flip.ts';
+import { flipOriginal } from '../common/flip.ts';
 import { fetchBlob } from '../common/take.ts';
 import { pickImage, sourceOf, takeFiles, withPalette } from './actions.ts';
-import { isAnimated, scaleOf, type DitherDoc } from './doc.ts';
+import { scaleOf, type DitherDoc } from './doc.ts';
 import { sendFor } from './exports.ts';
 import { emptyDoc } from './looks.ts';
+import { ditherShortcuts } from './keys.ts';
 import { StatusSlot } from './StatusSlot.tsx';
-import { stepFrame } from './Transport.tsx';
 import { getView, patchView, playhead } from './view-state.ts';
 import { View } from './View.tsx';
 
@@ -62,16 +62,7 @@ export const tool: ToolDefinition<DitherDoc> = {
     return left.length === files.length ? false : left.length ? left : true;
   },
 
-  shortcuts: (doc) => [
-    { keys: 'Ctrl+O', label: 'Open an image', run: () => pickImage(doc) },
-    showOriginalKey(flip),
-    ...(isAnimated(doc.get())
-      ? [
-          { keys: 'ArrowLeft', label: 'Previous frame', run: () => stepFrame(doc.get(), -1) },
-          { keys: 'ArrowRight', label: 'Next frame', run: () => stepFrame(doc.get(), 1) },
-        ]
-      : []),
-  ],
+  shortcuts: (doc) => ditherShortcuts(doc, () => pickImage(doc), flip),
   StatusSlot,
   View,
 };

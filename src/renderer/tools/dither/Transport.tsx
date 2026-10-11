@@ -9,15 +9,8 @@ import { fetchBlob } from '../common/take.ts';
 import type { Doc } from './actions.ts';
 import { fix, LIMIT, loopMs, type DitherDoc } from './doc.ts';
 import { made, madeCount } from './pipeline.ts';
-import { playhead } from './view-state.ts';
+import { playhead, stepFrame, togglePlay } from './steps.ts';
 import s from './Transport.module.css';
-
-export const stepFrame = (d: DitherDoc, by: number): void => {
-  const n = d.source?.frames ?? 1;
-  playhead.set({ frame: (playhead.get().frame + by + n) % n, playing: false });
-};
-
-export const togglePlay = (): void => playhead.set({ ...playhead.get(), playing: !playhead.get().playing });
 
 export function Transport({ doc, d, frame, playing, active }: { doc: Doc; d: DitherDoc; frame: number; playing: boolean; active: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -47,10 +40,9 @@ export function Transport({ doc, d, frame, playing, active }: { doc: Doc; d: Dit
   };
   return (
     <div ref={ref} className={s.transport} role="group" aria-label="Playback">
-      <IconButton icon={playing ? 'pause' : 'play_arrow'} label={playing ? 'Pause' : 'Play'} shortcut="Space" latched={playing} onClick={togglePlay} />
-      {/* the arrow keys step too; a kbd would print their DOM names, so the label says them */}
-      <IconButton icon="skip_previous" label="Previous frame (Left arrow)" size="sm" onClick={() => stepFrame(d, -1)} />
-      <IconButton icon="skip_next" label="Next frame (Right arrow)" size="sm" onClick={() => stepFrame(d, 1)} />
+      <IconButton icon={playing ? 'pause' : 'play_arrow'} label={playing ? 'Pause' : 'Play'} shortcut="Space or K" latched={playing} onClick={togglePlay} />
+      <IconButton icon="skip_previous" label="Previous frame" shortcut="ArrowLeft" size="sm" onClick={() => stepFrame(d, -1)} />
+      <IconButton icon="skip_next" label="Next frame" shortcut="ArrowRight" size="sm" onClick={() => stepFrame(d, 1)} />
       <Slider label="Frame" min={1} max={src.frames} step={1} value={frame + 1} fieldWidth={64} className={s.scrub} onChange={seek} />
       <span className={s.of}>of {src.frames}</span>
       <span className={s.sep} />

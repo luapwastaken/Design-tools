@@ -4,10 +4,11 @@ import { InspectorGroup, InspectorRow, NumberField, Segmented, useDocNumber } fr
 import { fmtPx } from '../common/names.ts';
 import type { Doc } from './actions.ts';
 import { fix, LIMIT, scaleOf, workProblem, workSize, type DitherDoc } from './doc.ts';
+import { PIXEL_PICKS } from './steps.ts';
 import { useView } from './view-state.ts';
 import s from './Inspector.module.css';
 
-const PICKS = [1, 2, 4, 8].map((n) => ({ value: `${n}`, label: `${n}`, tip: `Blocks of ${n} px` }));
+const PICKS = PIXEL_PICKS.map((n) => ({ value: `${n}`, label: `${n}`, tip: `Blocks of ${n} px` }));
 const RESAMPLES = [
   { value: 'area' as const, label: 'Area average', tip: 'Each block is the average of the pixels it covers: smooth tones' },
   { value: 'nearest' as const, label: 'Nearest', tip: 'Each block takes the one pixel at its centre: hard edges, fine lines may drop out' },
