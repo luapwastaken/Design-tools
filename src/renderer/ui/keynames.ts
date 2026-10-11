@@ -28,8 +28,8 @@ export function splitKeys(keys: string): string[] {
   return parts;
 }
 
-/** one key as printed: arrows by name, Delete as Del; anything else as it came */
-export const keyName = (k: string): string => KEY_NAMES[k.toUpperCase()] ?? k;
+/** one key as printed: arrows by name, Delete as Del; a word parseCombo upper-cased ('CLICK', 'SHIFT') as a word; anything else as it came */
+export const keyName = (k: string): string => KEY_NAMES[k.toUpperCase()] ?? (/^[A-Z]{2,}$/.test(k) ? k[0] + k.slice(1).toLowerCase() : k);
 
 /** 'Ctrl+Shift+Z' to 'Ctrl Shift Z', the way keys are printed in the UI (arrows by name). */
 export const formatKeys = (keys: string): string => splitKeys(keys).map(keyName).join(' ');

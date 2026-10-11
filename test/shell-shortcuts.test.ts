@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { appGroups, appRows, filterGroups, keyCaps, queryWords, reachable, toolGroups } from '../src/renderer/shell/core/shortcuts.ts';
+import { appGroups, appRows, filterGroups, keyCaps, queryWords, reachable, rowMatches, toolGroups } from '../src/renderer/shell/core/shortcuts.ts';
+import { keysOf } from '../src/renderer/shell/core/keys.ts';
 import { formatKeys } from '../src/renderer/ui/keynames.ts';
 import type { Shortcut } from '../src/renderer/shell/tool.ts';
 
@@ -114,4 +115,15 @@ test('a search looks at every tool: words match label, keys and when, and + coun
   assert.deepEqual(every('export'), ['Ctrl+E']);
   assert.deepEqual(every('ctrl+e'), ['Ctrl+E']);
   assert.ok(every('zoom').includes('Shift+0'));
+});
+
+test('shown keys are printed and searchable but the keymap never matches them', () => {
+  const k = sc('K', 'Play', { shown: ['Space'] });
+  assert.deepEqual(keysOf(k), ['K']);
+  // Space stays free for a live row of its own, and the row lists it
+  assert.deepEqual(reachable([k, sc('Space', 'Reroll')]).map((s) => s.label), ['Play', 'Reroll']);
+  const [g] = toolGroups([k]);
+  assert.deepEqual(g.rows, [{ keys: 'K', shown: ['Space'], label: 'Play' }]);
+  assert.equal(rowMatches(g.rows[0], queryWords('space')), true);
+  assert.equal(rowMatches(g.rows[0], queryWords('ctrl')), false);
 });

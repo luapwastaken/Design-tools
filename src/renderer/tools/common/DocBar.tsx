@@ -64,7 +64,7 @@ export function DocBar({ tool, doc, title, meta, actions, modes, send, exportBut
 /** The primary Export for a DocBar's `exportButton`: bone fill, always labelled. `tooltip` names why it is off. */
 export function ExportButton({ onClick, disabled, tooltip, ref }: { onClick?(e: MouseEvent<HTMLButtonElement>): void; disabled?: boolean; tooltip?: string; ref?: Ref<HTMLButtonElement> }) {
   return (
-    <Button ref={ref} variant="primary" icon="download" disabled={disabled} onClick={onClick} tooltip={tooltip} data-export="">
+    <Button ref={ref} variant="primary" icon="download" disabled={disabled} onClick={onClick} tooltip={tooltip} shortcut="Ctrl+E" data-export="">
       Export
     </Button>
   );

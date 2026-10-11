@@ -131,7 +131,7 @@ function RowView({ row: r }: { row: Row }) {
   return (
     <div className={cx(s.row, r.off && s.off)}>
       <dt className={s.keys}>
-        {[r.keys, ...(r.also ?? [])].map((k, i) => (
+        {[r.keys, ...(r.also ?? []), ...(r.shown ?? [])].map((k, i) => (
           <Fragment key={k}>
             {i > 0 && <span className={s.word}>or</span>}
             <Caps keys={k} />

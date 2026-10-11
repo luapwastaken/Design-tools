@@ -8,10 +8,10 @@ import { EVERYWHERE, isLive, keysOf, parseCombo, sameCombo, type Combo } from '.
 
 /**
  * one row: `keys` ('Ctrl+Z'), through `to` when it stands for a run ('1' to '7'), the `also` keys that
- * do the same, the `us` keys only a US layout reaches, and what it does. `when` and `tool` are the
+ * do the same, the `shown` keys printed beside them that the keymap never matches, the `us` keys only a US layout reaches, and what it does. `when` and `tool` are the
  * quiet tags; `off` dims a row that doesn't apply right now.
  */
-export type Row = { keys: string; to?: string; also?: string[]; us?: string[]; label: string; when?: string; off?: boolean; tool?: string };
+export type Row = { keys: string; to?: string; also?: string[]; shown?: string[]; us?: string[]; label: string; when?: string; off?: boolean; tool?: string };
 export type Group = { title: string; rows: Row[] };
 
 /** 'Ctrl+Shift+Z' to ['Ctrl', 'Shift', 'Z']: one key cap each, arrows by name and Delete by its short name */
@@ -39,6 +39,7 @@ export function reachable(list: Shortcut[]): Shortcut[] {
 const rowOf = (s: Shortcut): Row => ({
   keys: s.keys,
   ...(s.also && { also: s.also }),
+  ...(s.shown && { shown: s.shown }),
   ...(s.us && { us: s.us }),
   label: s.label,
   ...(s.when && { when: s.when }),
@@ -126,7 +127,7 @@ export const queryWords = (q: string): string[] => q.toLowerCase().replaceAll('+
  * word is a key cap only ("ctrl e" finds Ctrl E, not every label with an e in it).
  */
 export function rowMatches(r: Row, words: string[]): boolean {
-  const caps = [...keysOf(r), ...(r.to ? [r.to] : [])].flatMap((k) => [...keyCaps(k), ...splitKeys(k)]).map((k) => k.toLowerCase());
+  const caps = [...keysOf(r), ...(r.shown ?? []), ...(r.to ? [r.to] : [])].flatMap((k) => [...keyCaps(k), ...splitKeys(k)]).map((k) => k.toLowerCase());
   const hay = [r.label, r.when ?? '', ...caps].join(' ').toLowerCase();
   return words.every((w) => caps.includes(w) || (w.length > 1 && hay.includes(w)));
 }

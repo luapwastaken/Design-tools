@@ -14,6 +14,8 @@ export type Shortcut = {
   keys: string;
   /** other keys that do the same, one sheet row ('Backspace' beside 'Delete') */
   also?: string[];
+  /** keys printed on the row with 'or' and found by the sheet's search, but never matched by the keymap: something else runs them (Space beside K, where useSpaceTap plays) */
+  shown?: string[];
   /** keys only a US layout reaches, shown as "US keyboard: ..." (a backslash beside 'Y', '[' beside ','); they fire like any other */
   us?: string[];
   label: string;

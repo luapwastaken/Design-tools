@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { writeAco, writeAse, writeCss, writeGpl, writeJson, writeKpl, writeProcreate, writeSheetSvg, writeTailwind, writeTailwind4, writeTokens, type SceneLight, type SceneNotes } from '../../../shared/palette/writers.ts';
 import type { Swatch, ToolId } from '../../../shared/types.ts';
 import { exporting, leaf, saveFile } from '../../lib/export.ts';
-import { useShell } from '../../shell/core/index.ts';
+import { shell, useShell } from '../../shell/core/index.ts';
 import { Button, Popover, Select, TextInput, toast, Toggle } from '../../ui/index.ts';
 import { withDpi } from '../../lib/png.ts';
 import { ExportButton } from './DocBar.tsx';
@@ -63,12 +63,18 @@ async function sheetPng(svg: string): Promise<Uint8Array> {
 }
 
 /** how a swatch is named inside a file: its colour name, or its role first ("Primary - Burnt Sienna") */
-type Naming = 'colour' | 'role';
+export type Naming = 'colour' | 'role';
 const NAMING = [
   { value: 'colour', label: 'Colour name' },
   { value: 'role', label: 'Role and colour name' },
 ];
 const withRoles = (list: Swatch[]): Swatch[] => list.map((w) => (w.role ? { ...w, name: `${w.role} - ${w.name}` } : w));
+
+/** what the file holds for these swatches: names chosen as the popover would (null: the format's own default) */
+function listFor(f: Format, swatches: Swatch[], named: (list: Swatch[]) => Swatch[], chosen: Naming | null): Swatch[] {
+  const naming = chosen ?? (f.roleNames && swatches.some((w) => w.role) ? 'role' : 'colour');
+  return f.swatchNames && naming === 'role' ? withRoles(named(swatches)) : named(swatches);
+}
 
 const bytesOf = (out: string | Uint8Array): string | ArrayBuffer =>
   typeof out === 'string' ? out : (out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength) as ArrayBuffer);
@@ -85,6 +91,27 @@ export type ExportPaletteProps = {
   format: ExportFormat;
   onFormat(f: ExportFormat): void;
 };
+
+export type CopyPaletteArgs = Pick<ExportPaletteProps, 'tool' | 'swatches' | 'named' | 'scene' | 'notes' | 'format'> & { name?: string; naming?: Naming | null; hex?: boolean };
+
+/**
+ * Copy every colour in the chosen format, with its toast: the popover's Copy button and a tool's
+ * Ctrl+Shift+C both run it. A format a clipboard can't hold (ASE, PNG...) copies as CSS. Resolves to
+ * whether it copied; an empty palette does nothing.
+ */
+export async function copyPalette(a: CopyPaletteArgs): Promise<boolean> {
+  if (!a.swatches.length) return false;
+  const f = FORMATS[FORMATS[a.format].text ? a.format : 'css'];
+  const file = a.name ?? shell.getState().docNames[a.tool] ?? 'Palette';
+  try {
+    await navigator.clipboard.writeText(f.write(file, listFor(f, a.swatches, a.named, a.naming ?? null), { hex: a.hex ?? true, scene: a.scene, notes: a.notes }) as string);
+  } catch {
+    toast.show({ kind: 'error', message: "Couldn't copy to the clipboard." });
+    return false;
+  }
+  toast.show({ icon: 'content_copy', message: `Copied ${f.label} for ${plural(a.swatches.length, 'colour')}.` });
+  return true;
+}
 
 /** The doc bar's Export: a button, and the export settings in a popover under it. */
 export function ExportPalette(p: ExportPaletteProps) {
@@ -119,7 +146,7 @@ function ExportBody({ tool, swatches, named, scene, notes, format, onFormat, nam
   const file = name ?? docName;
   const f = FORMATS[format];
   const naming = chosen ?? (f.roleNames && swatches.some((w) => w.role) ? 'role' : 'colour');
-  const list = () => (f.swatchNames && naming === 'role' ? withRoles(named(swatches)) : named(swatches));
+  const list = () => listFor(f, swatches, named, chosen);
 
   // counted as running work from the first byte made (the quit check), the sheet's drawing included
   const save = () =>
@@ -134,14 +161,7 @@ function ExportBody({ tool, swatches, named, scene, notes, format, onFormat, nam
       toast.show({ icon: 'download', message: `Exported ${leaf(path)}.` });
       onDone();
     });
-  const copy = () =>
-    navigator.clipboard.writeText(f.write(file, list(), { hex, scene, notes }) as string).then(
-      () => {
-        toast.show({ icon: 'content_copy', message: `Copied ${f.label} for ${plural(swatches.length, 'colour')}.` });
-        onDone();
-      },
-      () => toast.show({ kind: 'error', message: "Couldn't copy to the clipboard." }),
-    );
+  const copy = () => copyPalette({ tool, swatches, named, scene, notes, format, name: file, naming: chosen, hex }).then((ok) => ok && onDone());
 
   return (
     <div className={s.export}>
@@ -156,7 +176,7 @@ function ExportBody({ tool, swatches, named, scene, notes, format, onFormat, nam
           Export {f.label}
         </Button>
         {f.text && (
-          <Button size="lg" icon="content_copy" disabled={!swatches.length} onClick={() => void copy()} tooltip={`Copy the ${f.label} text`}>
+          <Button size="lg" icon="content_copy" disabled={!swatches.length} onClick={() => void copy()} tooltip={`Copy the ${f.label} text`} shortcut="Ctrl+Shift+C">
             Copy
           </Button>
         )}
