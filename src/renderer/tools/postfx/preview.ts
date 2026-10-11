@@ -8,7 +8,7 @@ import type { Texture } from '../../lib/gpu/index.ts';
 import { createStore } from '../common/store.ts';
 import { isStateful, leadIn, remembers, timeline, type PostFxDoc, type Source } from './doc.ts';
 import { Stack } from './effects/stack.ts';
-import { openMedia, type Media, type Shown as Presented } from './media.ts';
+import { openMedia, sourceKey, type Media, type Shown as Presented } from './media.ts';
 import { playhead } from './view-state.ts';
 
 /** what the canvas draws: the frame before and after the stack, at the preview's scale of the source */
@@ -56,11 +56,11 @@ export class Preview {
   }
 
   #mediaFor(s: Source): Promise<Media> {
-    if (this.#media?.asset === s.asset) return this.#media.media;
+    if (this.#media?.asset === sourceKey(s)) return this.#media.media;
     this.#closeMedia();
     const media = openMedia(s);
     media.catch(() => {}); // said where it is awaited
-    this.#media = { asset: s.asset, media };
+    this.#media = { asset: sourceKey(s), media };
     return media;
   }
 
@@ -96,7 +96,7 @@ export class Preview {
     // a still's every frame is the still: moving effects change, the source doesn't
     const frame = s.kind === 'image' ? 0 : want.frame;
     const lead = this.#lead(want.d, frame);
-    const have = this.#at?.asset === s.asset && this.#at.frame === frame;
+    const have = this.#at?.asset === sourceKey(s) && this.#at.frame === frame;
     if (have && !lead.length) return this.#render(want.frame);
     const mine = ++this.#reading;
     this.onBusy(true);
@@ -145,7 +145,7 @@ export class Preview {
     const w = img instanceof HTMLVideoElement ? img.videoWidth : img.width;
     if (this.#src) this.#src.upload(img);
     else this.#src = this.#stack.g.texture(img, 'rgba16f');
-    this.#at = { asset: s.asset, frame, scale: w / s.w };
+    this.#at = { asset: sourceKey(s), frame, scale: w / s.w };
     if (keepBefore) return;
     this.#before?.close();
     this.#before = null;
@@ -161,7 +161,7 @@ export class Preview {
   #render(frame: number) {
     const d = this.#want?.d;
     const s = d?.source;
-    if (!d || !s || !this.#src || !this.#at || this.#at.asset !== s.asset) return;
+    if (!d || !s || !this.#src || !this.#at || this.#at.asset !== sourceKey(s)) return;
     const t0 = performance.now();
     try {
       const out = this.#draw(d, s, frame);
@@ -171,7 +171,7 @@ export class Preview {
       this.#before ??= this.#stack.g.bitmap(this.#src);
       const after = this.#stack.g.bitmap(out);
       const prev = shown.get();
-      shown.set({ source: s.asset, frame, before: this.#before, after, scale: this.#at.scale, ms });
+      shown.set({ source: sourceKey(s), frame, before: this.#before, after, scale: this.#at.scale, ms });
       if (prev?.after && prev.after !== after) prev.after.close();
       this.onError(null);
     } catch (e) {

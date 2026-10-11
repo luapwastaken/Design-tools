@@ -3,6 +3,7 @@
 import { useShell } from '../../shell/core/index.ts';
 import { cursorXY, IconButton, Viewport, type ViewTransform } from '../../ui/index.ts';
 import type { PostFxDoc, Timeline } from './doc.ts';
+import { sourceKey } from './media.ts';
 import { shown } from './preview.ts';
 import { Transport } from './Transport.tsx';
 import { patchView, toggleOriginal, type PostFxView } from './view-state.ts';
@@ -35,7 +36,7 @@ export function PostFxCanvas({ d, v, busy, t: timeline, active }: Props) {
   const frame = shown.use();
   const src = d.source!;
   const [W, H] = [src.w, src.h];
-  const mine = frame && frame.source === src.asset ? frame : null;
+  const mine = frame && frame.source === sourceKey(src) ? frame : null;
 
   const draw = (ctx: CanvasRenderingContext2D, img: ImageBitmap, t: ViewTransform) => {
     if (!img.width) return; // closed: the next frame is on its way

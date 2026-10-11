@@ -4,12 +4,12 @@
 import { svgProblem } from '../../../shared/halftone/svg.ts';
 import { intoFolder, leaf, saveFile } from '../../lib/export.ts';
 import { useShell } from '../../shell/core/index.ts';
-import { Button, IconButton, InspectorGroup, InspectorRow, NumberField, Segmented, Toggle } from '../../ui/index.ts';
+import { Button, Icon, IconButton, InspectorGroup, InspectorRow, NumberField, Segmented, Toggle } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx, plural } from '../common/names.ts';
 import { MM_PER, printPx, type HalftoneDoc } from './doc.ts';
-import { pngFor, pngLimit, pngMaxWidth, pngWidthOf, platesFor, platesLimit, svgFor, svgWeight } from './exports.ts';
+import { pngFor, pngLimit, pngHeightOf, pngMaxWidth, pngWidthOf, platesFor, platesLimit, svgFor, svgWeight } from './exports.ts';
 import { shownDots, svgMegabytes, SVG_HEAVY_MB, svgOver, type Screened } from './screening.ts';
 import { patchView, type HalftoneView } from './view-state.ts';
 import s from './Export.module.css';
@@ -36,7 +36,7 @@ export function useHalftoneExport(d: HalftoneDoc, v: HalftoneView, screened: Scr
   const fm = d.screen.shape === 'stochastic';
   const visible = d.inks.filter((i) => i.visible);
   const pngW = pngWidthOf(d, v.pngWidth);
-  const pngH = Math.max(1, Math.round((pngW * d.size.h) / d.size.w));
+  const pngH = pngHeightOf(d, pngW);
   const pngProblem = pngLimit(pngW, pngH);
   const plateProblem = platesLimit(d, v.marks);
   const ready = !!screened && !!d.source;
@@ -129,8 +129,11 @@ export function ExportModule({ d, v, screened, out }: { d: HalftoneDoc; v: Halft
       </InspectorRow>
       {heavy && (
         <div className={s.heavy} role="status">
-          <span className="lbl">
-            About {Math.round(mb)} MB is a lot for Illustrator or Figma to open. {visible.length > 1 ? `A file for each ink is about ${Math.round(mb / visible.length)} MB.` : 'Lower the frequency or the size to lighten it.'}
+          <span className={cx('lbl', s.heavyText)}>
+            <Icon name="warning" size={14} />
+            <span>
+              About {Math.round(mb)} MB is a lot for Illustrator or Figma to open. {visible.length > 1 ? `A file for each ink averages about ${Math.round(mb / visible.length)} MB.` : 'Lower the frequency or the size to lighten it.'}
+            </span>
           </span>
           {visible.length > 1 && (
             <Button size="xs" icon="download" disabled={!!out.blocked || !!out.svgInkWhy || out.ex.busy !== null} onClick={() => void out.svgPerInk()}>
@@ -148,8 +151,10 @@ export function ExportModule({ d, v, screened, out }: { d: HalftoneDoc; v: Halft
         info={`sRGB, as wide as the page prints unless you change it, ${d.paper.include ? 'flat on the paper' : 'clear round the dots'}${d.feel.bake && (d.feel.misregister > 0 || d.feel.texture > 0) ? ', with the print feel' : ''}.`}
       >
         <NumberField label="Width" hideLabel min={16} max={pngMaxWidth(d.size)} unit="px" value={pngW} onChange={(pngWidth) => patchView({ pngWidth })} />
-        <span className={cx('val', s.size, pngProblem && s.danger)}>{fmtPx(pngW, pngH)}</span>
-        <IconButton icon="restart_alt" label="Match the page's print size" size="sm" disabled={v.pngWidth === null} onClick={() => patchView({ pngWidth: null })} />
+        <span className={s.sizeCell}>
+          <span className={cx('val', s.size, pngProblem && s.danger)}>{fmtPx(pngW, pngH)}</span>
+          <IconButton icon="restart_alt" label="Match the page's print size" size="sm" disabled={v.pngWidth === null} onClick={() => patchView({ pngWidth: null })} />
+        </span>
       </InspectorRow>
       <InspectorRow
         label="Separations"

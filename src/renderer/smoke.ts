@@ -44,7 +44,7 @@ import { dithered, ready as ditherReady, type Result } from './tools/dither/pipe
 import { getView as ditherView, patchView as patchDither, status as ditherStatus } from './tools/dither/view-state.ts';
 import { emptyDoc as halftoneEmpty, mapInk, opaqueOf, printPx, spotInk, spotStart, type HalftoneDoc } from './tools/halftone/doc.ts';
 import { lookOf, Painter } from './tools/halftone/draw.ts';
-import { platesFor, pngBlob, pngWidthOf, svgFor } from './tools/halftone/exports.ts';
+import { platesFor, pngBlob, pngHeightOf, pngWidthOf, svgFor } from './tools/halftone/exports.ts';
 import { ready, screen, shownDots, svgMegabytes, SVG_HEAVY_MB, svgOver, totals } from './tools/halftone/screening.ts';
 import { getView as halftoneView, patchView as patchHalftone, status as halftoneStatus } from './tools/halftone/view-state.ts';
 import { addBase, eyedrop, rampsFromLoose } from './tools/illustration/actions.ts';
@@ -80,7 +80,7 @@ import { PX_PER, presetOf, toPayload, withUnit, type PatternDoc } from './tools/
 import { patchView as patchPattern } from './tools/pattern/view-state.ts';
 import { addEffect, importCode } from './tools/postfx/actions.ts';
 import { BUILT_INS } from './tools/postfx/builtins.ts';
-import { openMedia } from './tools/postfx/media.ts';
+import { openMedia, sourceKey } from './tools/postfx/media.ts';
 import { layerOf, offered, timeline, type PostFxDoc } from './tools/postfx/doc.ts';
 import { datamoshChecks, flickerChecks, loopChecks, pipelineChecks, scaleChecks } from './tools/postfx/effects/checks.ts';
 import { Stack } from './tools/postfx/effects/stack.ts';
@@ -2904,6 +2904,7 @@ async function halftoneSweep(dir: string, hd: DocController<HalftoneDoc>, white:
   // defaults: the PNG is as wide as the page prints, and a spot job starts with two inks
   const px = printPx(d);
   check('Halftone: the PNG defaults to the print width at the page’s dpi', halftoneView().pngWidth === null && pngWidthOf(d, null) === px.w && pngWidthOf(d, 360) === 360, [halftoneView().pngWidth, pngWidthOf(d, null), px.w]);
+  check('and its height is the page’s own, so the PNG and the plates agree to the pixel', pngHeightOf(d, px.w) === px.h, [pngHeightOf(d, px.w), px.h]);
   check('a first switch to spot inks starts with two Riso inks, not Black', spotStart().map((k) => k.name).join() === 'Blue,Fluorescent Pink');
   [...(host('halftone')?.querySelectorAll('button') ?? [])].find((x) => x.textContent?.trim() === 'Spot inks')?.click();
   await until(() => hd.get().mode === 'spot');
@@ -2951,6 +2952,7 @@ async function postfxSweep(dir: string, pd: DocController<PostFxDoc>, put: (name
   const taken = await shell.runBusy(async () => shell.tool('postfx').onFiles!(frames, 'drop', pd));
   const seq = await until(() => (pd.get().source?.kind === 'sequence' ? pd.get().source : null), 20_000);
   check('Post FX: four PNGs dropped together open as one sequence of four frames, and none is left for the Library', taken === true && seq?.frames === 4 && seq.assets?.length === 4 && seq.fps === 24 && timeline(pd.get()).count === 4, [taken, seq]);
+  check('Post FX: a sequence is told from a still that is its first frame', !!seq && sourceKey(seq) !== seq.asset && sourceKey(seq).split('|').length === 4, seq && sourceKey(seq));
   const media = seq && (await openMedia(seq));
   const reds: number[] = [];
   for (let i = 0; media && i < 4; i++) {

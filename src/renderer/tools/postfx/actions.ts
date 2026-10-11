@@ -41,16 +41,22 @@ export async function takeFiles(doc: Doc, files: File[]): Promise<File[]> {
   const file = files.find(opens);
   if (!file) return files;
   const stills = files.filter((f) => opens(f) && !isVideoFile(f.type, f.name) && !isSvg(f));
-  const taken = stills.length > 1 ? stills : [file];
+  let taken = stills.length > 1 ? stills : [file];
   const mine = ++opening;
   const name = baseName(file.name);
   try {
+    // stills of different sizes are not one sequence: the first opens alone and the rest go to the Library
+    const asSequence = () =>
+      sequenceOf(stills).catch(() => {
+        taken = [file];
+        return sourceOf(file, name);
+      });
     const why = isVideoFile(file.type, file.name) ? null : unsupportedImage(file.type, file.name);
     if (why) throw new Error(why);
-    const source = await shell.runBusy(async () => (stills.length > 1 ? sequenceOf(stills) : isSvg(file) ? sourceOf(await svgAsPng(file), name, 'png') : sourceOf(file, name)));
+    const source = await shell.runBusy(async () => (stills.length > 1 ? await asSequence() : isSvg(file) ? sourceOf(await svgAsPng(file), name, 'png') : sourceOf(file, name)));
     if (mine === opening) {
       doc.transact(`Open ${source.name || name}`, (d) => withSource(d, source));
-      if (source.kind === 'sequence') toast.show({ icon: 'movie', message: `${plural(source.frames ?? 0, 'frame')} of ${source.name}, in name order, at ${source.fps} fps.` });
+      if (source.kind === 'sequence') toast.show({ icon: 'movie', message: `Opened ${plural(source.frames ?? 0, 'frame')}, in name order, at ${source.fps} fps.` });
     }
   } catch (e) {
     if (mine === opening) toast.show({ kind: 'error', message: e instanceof Error ? e.message : String(e) });

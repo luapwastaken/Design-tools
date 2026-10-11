@@ -192,3 +192,8 @@ test('path numbers are rounded to two decimals, so the file is not weight no pre
     for (const d of paths) assert.equal(/\d\.\d{3,}/.test(d), false, `${shape}: a number past two decimals`);
   }
 });
+
+test('a one-ink file does not say the inks knock out', () => {
+  const doc = docOf({ overlap: 'knockout', inks: [INKS[0]] });
+  assert.ok(!halftoneSvg(doc, screensOf(doc)).includes('knock out'));
+});

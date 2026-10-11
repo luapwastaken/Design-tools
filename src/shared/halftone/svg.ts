@@ -55,9 +55,11 @@ export function svgParts(doc: SvgDoc, cellsPerInk: readonly (Cells | null | unde
   const opaque = doc.inks.filter((ink) => ink.visible && ink.opaque).map((ink) => ink.name);
   const how = overprint
     ? `The inks overprint through Multiply blending${opaque.length ? `; opaque inks (${opaque.join(', ')}) keep Normal blending and cover what is under them` : ''}. For press, select each ink and turn on Overprint Fill in Window > Attributes.`
-    : 'The inks knock out: each ink covers the ones listed before it.';
+    : doc.inks.filter((ink) => ink.visible).length > 1
+      ? 'The inks knock out: each ink covers the ones listed before it.'
+      : '';
   const paper = doc.paper.include ? ' The paper rectangle only shows the stock: delete it before print, or it prints as a tint.' : '';
-  const note = `Halftone from Design Tools at ${+doc.screen.lpi.toFixed(2)} LPI, ${shape} dots. Each ink is one group holding one compound path. ${how}${paper}`;
+  const note = `Halftone from Design Tools at ${+doc.screen.lpi.toFixed(2)} LPI, ${shape} dots. Each ink is one group holding one compound path.${how ? ` ${how}` : ''}${paper}`;
   return [
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<svg xmlns="http://www.w3.org/2000/svg" width="${length(doc.size.w)}" height="${length(doc.size.h)}" viewBox="0 0 ${W} ${H}">\n` +

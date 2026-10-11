@@ -14,6 +14,7 @@ import { ExportModule, usePostFxExport } from './Export.tsx';
 import { LoopModule } from './Loop.tsx';
 import { PostFxBar } from './PostFxBar.tsx';
 import { PresetsModule, ShareModule } from './Presets.tsx';
+import { sourceKey } from './media.ts';
 import { Preview, shown } from './preview.ts';
 import { StackModule } from './Stack.tsx';
 import { Start } from './Start.tsx';
@@ -67,7 +68,7 @@ function usePreview(d: PostFxDoc, time: number, active: boolean) {
   }, [active]);
 
   // another source opens paused at its first frame, whatever was playing (spec §5 q3: nothing animates until play)
-  const asset = d.source?.asset;
+  const asset = d.source && sourceKey(d.source);
   const was = useRef(asset);
   useEffect(() => {
     if (was.current === asset) return;
@@ -109,12 +110,12 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const out = usePostFxExport(d, t, error);
 
   // a new source opens at Fit, and a selection that went with the old stack goes (the restored one keeps its view)
-  const opened = useRef(d.source?.asset);
+  const opened = useRef(d.source && sourceKey(d.source));
   useEffect(() => {
-    if (opened.current === d.source?.asset) return;
-    opened.current = d.source?.asset;
+    if (opened.current === (d.source && sourceKey(d.source))) return;
+    opened.current = d.source && sourceKey(d.source);
     if (getView().zoom !== 'fit') patchView({ zoom: 'fit' });
-  }, [d.source?.asset]);
+  }, [d.source && sourceKey(d.source)]);
   useEffect(() => {
     const sel = getView().selected;
     if (d.stack.length && !d.stack.some((l) => l.id === sel)) patchView({ selected: d.stack[0].id });

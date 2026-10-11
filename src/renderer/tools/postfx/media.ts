@@ -76,6 +76,9 @@ export async function sequenceOf(files: File[]): Promise<Source> {
   return { asset: assets[0], assets, name, kind: 'sequence', w, h, fps: SEQUENCE_FPS, frames: count, delays: null };
 }
 
+/** what tells one source from another: a sequence's first frame alone could be a still that is already open */
+export const sourceKey = (s: Source): string => (s.kind === 'sequence' && s.assets ? s.assets.join('|') : s.asset);
+
 /** the source ready to read and play; each call opens its own, so an export never moves the preview */
 export const openMedia = (s: Source): Promise<Media> => (s.kind === 'video' ? videoMedia(s) : s.kind === 'sequence' ? sequenceMedia(s) : pictureMedia(s));
 

@@ -1,7 +1,6 @@
 // The layout groups (spec §3): Arrangement, Spacing and size, Rotation and jitter. Every value is
 // typable and each change is one history step; fix() keeps the tile from collapsing. The arrangement
 // choice itself sits in the options bar (PatternBar), drawn as pictograms.
-import { layoutTile } from '../../../shared/pattern/layout.ts';
 import type { Tile } from '../../../shared/pattern/types.ts';
 import type { IconName } from '../../shell/tool.ts';
 import { IconButton, InspectorGroup, InspectorRow, NumberField, Segmented, Slider, useDocNumber } from '../../ui/index.ts';
@@ -50,8 +49,8 @@ export function ArrangementModule({ doc, d, tile }: { doc: Doc; d: PatternDoc; t
       ? `Odd ${doubled}: the tile holds twice as many, so the offset repeats.`
       : null;
   // the tile's own size, in the tool's unit: asking for another scales the whole tile, shapes and gaps with it
-  const tileW = useDocNumber(doc, { label: 'Change the tile width', key: 'tileW', get: (x) => layoutTile(x).width / PX_PER[x.exportUnit], set: (x, v) => withTileSide(x, 'width', v * PX_PER[x.exportUnit]) });
-  const tileH = useDocNumber(doc, { label: 'Change the tile height', key: 'tileH', get: (x) => layoutTile(x).height / PX_PER[x.exportUnit], set: (x, v) => withTileSide(x, 'height', v * PX_PER[x.exportUnit]) });
+  const tileW = useDocNumber(doc, { label: 'Change the tile width', key: 'tileW', get: (x) => tile.width / PX_PER[x.exportUnit], set: (x, v) => withTileSide(x, 'width', v * PX_PER[x.exportUnit]) });
+  const tileH = useDocNumber(doc, { label: 'Change the tile height', key: 'tileH', get: (x) => tile.height / PX_PER[x.exportUnit], set: (x, v) => withTileSide(x, 'height', v * PX_PER[x.exportUnit]) });
   const side = lenOf(d, [LIMIT.side[0], LIMIT.side[1]]);
   return (
     <InspectorGroup id="pattern.arrangement" title="Arrangement" meta={`${lengthIn(tile.width, d.exportUnit)} × ${lengthIn(tile.height, d.exportUnit)} ${d.exportUnit}`} actions={<UnitSwitch doc={doc} d={d} />}>

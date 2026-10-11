@@ -26,6 +26,12 @@ const BAND = 2048;
 /** the screen PNG's width: the one set, or the page's print width at its dpi (so it opens at the size it prints), kept to what a PNG here can hold */
 export const pngWidthOf = (d: HalftoneDoc, set: number | null): number => set ?? Math.max(16, Math.min(printPx(d).w, pngMaxWidth(d.size)));
 
+/** the PNG's height: the page's own pixel height at its own width (so 2,480 wide is 3,508 tall, as the plates are), else the aspect ratio's */
+export function pngHeightOf(d: Pick<HalftoneDoc, 'size'>, width: number): number {
+  const p = pagePx(d.size);
+  return Math.max(1, width === Math.round(p.w) ? Math.round(p.h) : Math.round((width * p.h) / p.w));
+}
+
 /** the widest screen PNG this page can make inside the 64-megapixel limit (the W field stops here, so it never offers what the Export can't make) */
 export const pngMaxWidth = (page: { w: number; h: number }): number => Math.max(16, Math.min(16384, Math.floor(Math.sqrt((MAX_PNG * page.w) / page.h))));
 
@@ -128,7 +134,7 @@ async function raster(s: Screened, look: Look, w: number, h: number, y0 = 0, k =
 /** The screen PNG at `width` px, the DPI written in so it opens at the page's size. */
 export async function pngBlob(d: HalftoneDoc, width: number, progress?: Progress): Promise<Blob> {
   const s = await screen(d, true);
-  const height = Math.max(1, Math.round((width * s.page.h) / s.page.w));
+  const height = pngHeightOf(d, width);
   const why = pngLimit(width, height);
   if (why) throw new Error(why);
   const px = await raster(s, lookOf(d, d.feel.bake, !d.paper.include), width, height, 0, width / s.page.w, (f) => progress?.(f * 0.9, `${width} × ${height} px`));
