@@ -152,17 +152,56 @@ export function fromPayload(p: Settings): PatternDoc {
 const artSide = (v: number, def: number): number => (v > 0 ? clamp(v, LIMIT.side) : def);
 
 /**
- * The export unit. The artboard stays in px, so this changes only how its size is shown and
- * written: rounding it to the new unit's steps drifted A4 to 210.1 × 296.9 mm by looking at inches.
+ * The unit every length in the tool shows in and the files are written in (it is called the export
+ * unit in the file): the tile, the artboard, gaps, sizes and jitter. Everything stays in px in the
+ * document, so this changes only how lengths are shown and written: rounding them to the new unit's
+ * steps drifted A4 to 210.1 × 296.9 mm by looking at inches.
  */
 export const withUnit = (d: PatternDoc, unit: Unit): PatternDoc => ({ ...d, exportUnit: unit });
 
-/** the artboard's limits in its unit, on its steps and inside the px limits */
-export function sideRange(unit: Unit): [number, number] {
+/** the print preset is millimetres at 300 dpi; the screen one is px at 96, as a new pattern starts */
+export const PRESETS = {
+  screen: { exportUnit: 'px', dpi: 96 },
+  print: { exportUnit: 'mm', dpi: 300 },
+} as const;
+
+export const withPreset = (d: PatternDoc, preset: keyof typeof PRESETS): PatternDoc => ({ ...d, ...PRESETS[preset] });
+
+/** which preset the unit and the dpi are, if either */
+export const presetOf = (d: Pick<PatternDoc, 'exportUnit' | 'dpi'>): keyof typeof PRESETS | null =>
+  d.exportUnit === 'px' && d.dpi === PRESETS.screen.dpi ? 'screen' : d.exportUnit === 'mm' && d.dpi === PRESETS.print.dpi ? 'print' : null;
+
+/** limits in px as a field in `unit` shows them: on its steps and inside the limits */
+export function rangeIn(unit: Unit, [lo, hi]: readonly [number, number]): [number, number] {
   const k = 1 / UNIT_STEP[unit];
   // toFixed first: float error would push an exact step up or down one
   const at = (px: number, round: (n: number) => number) => round(+((px / PX_PER[unit]) * k).toFixed(6)) / k;
-  return [at(LIMIT.side[0], Math.ceil), at(LIMIT.side[1], Math.floor)];
+  return [at(lo, Math.ceil), at(hi, Math.floor)];
+}
+
+/** the artboard's limits in its unit, on its steps and inside the px limits */
+export const sideRange = (unit: Unit): [number, number] => rangeIn(unit, LIMIT.side);
+
+/** a length for a readout, in its unit's precision */
+export function lengthIn(px: number, unit: Unit): string {
+  const v = px / PX_PER[unit];
+  return unit === 'px' ? `${Math.round(v)}` : v.toFixed(unit === 'mm' ? 1 : 2);
+}
+
+/**
+ * The tile made `k` times as big, everything with it: shape sizes, gaps and jitter scale, so the
+ * pattern looks the same, larger or smaller. Rounded to a hundredth of a px; fix() keeps the sizes
+ * inside their limits, so a tile asked past them stops there.
+ */
+export function scaleTile(d: PatternDoc, k: number): PatternDoc {
+  const r = (v: number) => Math.round(v * k * 100) / 100;
+  return fix({ ...d, sizeMin: r(d.sizeMin), sizeMax: r(d.sizeMax), gapX: r(d.gapX), gapY: r(d.gapY), jitter: clamp(r(d.jitter), LIMIT.jitter) });
+}
+
+/** the tile `d` lays out, one side made `px` long (the other follows, keeping its shape) */
+export function withTileSide(d: PatternDoc, side: 'width' | 'height', px: number): PatternDoc {
+  const now = layoutTile(d)[side];
+  return now > 0 && px > 0 ? scaleTile(d, px / now) : d;
 }
 
 export const mapSlot = (d: PatternDoc, id: string, fn: (s: ShapeSlot) => ShapeSlot): PatternDoc => ({ ...d, slots: d.slots.map((s) => (s.id === id ? fn(s) : s)) });

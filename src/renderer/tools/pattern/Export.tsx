@@ -9,27 +9,21 @@ import { cx } from '../../ui/cx.ts';
 import { LastExport, useExport } from '../common/Export.tsx';
 import { fmtPx } from '../common/names.ts';
 import type { Doc } from './actions.ts';
-import { LIMIT, PX_PER, sideRange, UNIT_STEP, withUnit, type PatternDoc, type Unit } from './doc.ts';
+import { LIMIT, lengthIn, presetOf, PX_PER, PRESETS, sideRange, UNIT_STEP, withPreset, type PatternDoc } from './doc.ts';
 import { boardPng, tilePng, tooBig } from './raster.ts';
+import { UnitSwitch } from './Unit.tsx';
 import { patchView, type PatternView } from './view-state.ts';
 import s from './Export.module.css';
 import i from './Inspector.module.css';
 
-const UNITS: { value: Unit; label: string }[] = [
-  { value: 'px', label: 'px' },
-  { value: 'mm', label: 'mm' },
-  { value: 'in', label: 'in' },
+const PRINTS = [
+  { value: 'screen' as const, label: 'Screen', tip: 'px at 96 dpi' },
+  { value: 'print' as const, label: 'Print', tip: 'mm at 300 dpi' },
 ];
 const PNGS = [
   { value: 'artboard' as const, label: 'Artboard' },
   { value: 'tile' as const, label: 'Tile' },
 ];
-
-/** a length for a readout, in its unit's precision */
-const inUnit = (px: number, unit: Unit) => {
-  const v = px / PX_PER[unit];
-  return unit === 'px' ? `${Math.round(v)}` : v.toFixed(unit === 'mm' ? 1 : 2);
-};
 
 /** the exports, made once: the doc bar's Export menu and the inspector's rows share one runner and one progress */
 export function usePatternExport(doc: Doc, d: PatternDoc, tile: Tile, v: PatternView) {
@@ -77,13 +71,16 @@ export function ExportModule({ doc, d, tile, v, out }: { doc: Doc; d: PatternDoc
   const dpi = useDocNumber(doc, { label: 'Change the DPI', key: 'dpi', get: (x) => x.dpi, set: (x, n) => ({ ...x, dpi: n }) });
 
   return (
-    <InspectorGroup id="pattern.export" title="Export" meta={`${inUnit(tile.width, unit)} × ${inUnit(tile.height, unit)} ${unit}`} actions={<Segmented mono fit options={UNITS} value={unit} onChange={(u) => doc.transact(`Export in ${u}`, (x) => withUnit(x, u))} className={s.units} />}>
+    <InspectorGroup id="pattern.export" title="Export" meta={`${lengthIn(tile.width, unit)} × ${lengthIn(tile.height, unit)} ${unit}`} actions={<UnitSwitch doc={doc} d={d} className={s.units} />}>
+      <InspectorRow label="For" info={`Screen is px at ${PRESETS.screen.dpi} dpi; Print is mm at ${PRESETS.print.dpi} dpi, so a PNG opens at its size on paper. The unit applies to every length in the tool.`}>
+        <Segmented fit options={PRINTS} value={presetOf(d) ?? ''} onChange={(p) => p && doc.transact(p === 'print' ? 'Set up for print' : 'Set up for screen', (x) => withPreset(x, p))} />
+      </InspectorRow>
       <InspectorRow
         label="Swatch"
         info={`One tile with its offsets baked in. Open the file in Illustrator, select everything and drag it into the Swatches panel: the empty rectangle behind sets the tile, so it repeats exactly.${unit === 'px' ? ' Illustrator counts 72 px to the inch, this tool 96: a px file keeps its pixel size there, while mm and in keep their size on paper.' : ''}`}
       >
         <span className={cx('val', i.dim)}>
-          {inUnit(tile.width, unit)} × {inUnit(tile.height, unit)} {unit}
+          {lengthIn(tile.width, unit)} × {lengthIn(tile.height, unit)} {unit}
         </span>
       </InspectorRow>
       <InspectorRow label="Artboard" info="The artboard SVG is real vector shapes, clipped at its edge, as the view shows it." pair>
