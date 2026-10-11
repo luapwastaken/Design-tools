@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Oklch } from '../src/shared/color/index.ts';
-import { ALL_ON, composite8, hexRgb, solveRecipe } from '../src/shared/palette/recipe.ts';
+import { ALL_ON, composite8, fitWord, hexRgb, solveRecipe, type Recipe } from '../src/shared/palette/recipe.ts';
 import type { MaterialId } from '../src/shared/types.ts';
 import { addRamp, emptyDoc, recolour, stepsOf, type IllustrationDoc } from '../src/renderer/tools/illustration/doc.ts';
-import { allFlats, allTogether, cleanLayers, cleanPct, DEFAULT_LAYERS, defaultParts, hintOf, paintRecipe, paintTargets, partRamps, proposalName, recipeFlats, rowsOf } from '../src/renderer/tools/illustration/layers.ts';
+import { allFlats, allTogether, cleanLayers, cleanPct, DEFAULT_LAYERS, defaultParts, GLOSS, hintOf, paintRecipe, paintTargets, partRamps, proposalName, recipeFlats, rowsOf } from '../src/renderer/tools/illustration/layers.ts';
 import { sceneLight } from '../src/renderer/tools/illustration/scene.ts';
 import type { StillLife } from '../src/renderer/tools/illustration/still-life.ts';
 import { PART_IDS } from '../src/renderer/tools/illustration/still-life.ts';
@@ -182,4 +182,31 @@ test('the target view paints each flat’s own steps through the same masks', ()
   const px2 = new Uint8ClampedArray(16).fill(100);
   paintTargets(tiny(), px2, { box: null, ball: null, can: null, table: null, wall: null });
   assert.ok(px2.every((x) => x === 100));
+});
+
+test('the sentence under the stack is made from the same distance as the Shadow row, so the two never disagree', () => {
+  const flats = allFlats(palette(), flags());
+  const alone = (dist: number) => ({ shadow2: null, shadow: { worst: { id: flats[0].id, dist } }, shadowAll: { id: flats[0].id, dist }, cast: null, lightAll: { id: flats[0].id, dist: 0 }, lightMode: 'add' }) as unknown as Recipe;
+  const name = flats[0].name;
+  for (const dist of [0.01, 0.04, 0.09]) {
+    const hint = hintOf(alone(dist), flats);
+    const word = fitWord(dist, name);
+    if (word === 'close') assert.match(hint, /^One Multiply fits every character flat, so there is no second shadow layer\./);
+    else if (word.startsWith('near')) assert.match(hint, new RegExp(`a little off on ${name}`));
+    else assert.match(hint, new RegExp(`One Multiply is off on ${name}`));
+    assert.equal(/fits every character flat, so/.test(hint), word === 'close', `${word}: ${hint}`);
+  }
+  // and on real recipes: a Shadow row that says it is off never sits beside "fits every flat"
+  for (const list of [FIXTURE, FIXTURE.slice(0, 2), [FIXTURE[0], [[0.62, 0.02, 260], 'Plate', 'metal'] as [Oklch, string, MaterialId]]]) {
+    const d = palette(list);
+    const fl = allFlats(d, flags());
+    const r = solveRecipe(fl);
+    const row = rowsOf(r, fl, sceneLight(d).pair, { layerRim: 35, layerRimOn: true, layerMood: 15, layerMoodOn: true }, ALL_ON).find((x) => x.key === 'shadow')!;
+    if (!r.shadow2 && /^off on/.test(row.fit)) assert.doesNotMatch(hintOf(r, fl), /fits every character flat, so/);
+  }
+});
+
+test('the layers a name alone would not explain have a one-line gloss, and the clipped ones name the clipping mask in the three apps', () => {
+  for (const k of ['rim', 'mood', 'cast', 'shadow', 'shadow2'] as const) assert.ok(GLOSS[k] && GLOSS[k]!.length < 220, k);
+  for (const k of ['shadow', 'shadow2'] as const) assert.match(GLOSS[k]!, /Krita.*Clip Studio.*Procreate/);
 });

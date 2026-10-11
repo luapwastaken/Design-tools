@@ -55,6 +55,13 @@ test('the shell keys', () => {
   assert.equal(shellKey(comboOf(key('Tab', 'Tab'))), null);
 });
 
+test('? and F1 open the sheet of keys; ? is only a character inside a field, and it never takes Ctrl', () => {
+  assert.deepEqual(shellKey(comboOf(key('?', 'Slash', { shiftKey: true }))), { t: 'shortcuts', bare: true });
+  assert.deepEqual(shellKey(comboOf(key('F1', 'F1'))), { t: 'shortcuts', bare: false });
+  assert.equal(shellKey(ctrl('?', 'Slash', { shiftKey: true })), null);
+  assert.equal(shellKey(comboOf(key('/', 'Slash'))), null);
+});
+
 test('Tab is never a tool shortcut; text fields keep bare keys, Space and editing keys', () => {
   const tab = comboOf(key('Tab', 'Tab'));
   assert.equal(toolMayTake(tab, false), false);

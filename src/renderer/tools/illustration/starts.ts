@@ -24,13 +24,13 @@ export const baseFromHex = (text: string): Oklch | null => {
 
 // ── one colour: its ramp is added at once ───────────────────────────────────────────────────────
 
-/** the Add colour button: a colour well away from the last, and the picker's field ready to take the one you meant */
+/** the Add colour button: the colour the picker shows now, and the picker's field ready to take the one you meant */
 export const addColour = (doc: Doc): void => addBase(doc, undefined, '', { focus: true });
 
 /** a subject: its name, its material and a base that suits it */
 export const addSubject = (doc: Doc, s: Subject): void => addBase(doc, s.base, s.label, { material: s.material, focus: true });
 
-/** the empty state's hex field: false when the text isn't a hex colour (the field shows why) */
+/** the Add by hex field: false when the text isn't a hex colour (the field shows why) */
 export function addTyped(doc: Doc, text: string): boolean {
   const o = baseFromHex(text);
   if (o) addBase(doc, o, '', { focus: true });

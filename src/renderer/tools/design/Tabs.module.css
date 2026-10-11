@@ -2,6 +2,9 @@
 .h3 { display: flex; flex: none; align-items: baseline; gap: 8px; min-width: 0; color: var(--ink); font: 500 13.5px/1.2 var(--font-sans); }
 .h3:not(:first-child) { margin-top: 10px; }
 .h3 small { overflow: hidden; color: var(--ink-3); font: 400 12px/1.2 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
+/* a heading that folds the section under it */
+.fold { width: fit-content; max-width: 100%; padding: 0; border: 0; border-radius: var(--r-ctl); background: none; text-align: left; cursor: pointer; }
+.fold:hover { color: var(--ink); }
 .flags { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
 .none { max-width: 56ch; margin: 0; color: var(--ink-2); font-size: var(--fs-base); line-height: 1.45; }
 

@@ -7,7 +7,7 @@ import {
   PencilSimple, Plus, Printer, Prohibit, SidebarSimple, Signature, SignIn, SkipBack, SkipForward, SlidersHorizontal, SortAscending, Sparkle, SquaresFour, Square, Stack,
   Stamp, Star, Sun, Trash, TrashSimple, UploadSimple, Warning, WarningCircle, Waves, X,
   CaretUp, CheckCircle, DeviceMobile, DiceFive, EyeSlash, LockSimple, LockSimpleOpen, Monitor, Pause, Play, TextAa,
-  Triangle, Wall, Columns, CaretLineRight,
+  Triangle, Wall, Columns, CaretLineRight, Keyboard,
   type Icon as PhosphorIcon,
 } from '@phosphor-icons/react';
 import { cx } from './cx.ts';
@@ -78,6 +78,7 @@ const GLYPHS = {
   info: Info,
   input: SignIn,
   join: Intersect,
+  keyboard: Keyboard,
   keyboard_arrow_down: CaretDown,
   keyboard_arrow_right: CaretRight,
   layers: Stack,

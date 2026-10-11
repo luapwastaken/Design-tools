@@ -61,6 +61,8 @@ export type IllustrationView = {
   pictureTones: Record<string, string>;
   /** What's in the picture shows its ticks (closed, it is one line that says how many are ticked) */
   pictureOpen: boolean;
+  /** with no ramp yet it shows its ticks (it is the quickest way in) unless it was folded away, which this remembers */
+  pictureShut: boolean;
   /** Light zones: how strong the key, fill, bounce and rim are, the rim's colour when set (null: the key's), the ground the bounce comes off, and whether each cell shows its value */
   zoneStrengths: number[];
   zoneRim: Oklch | null;
@@ -103,6 +105,7 @@ export const DEFAULT_VIEW: IllustrationView = {
   pictureOn: [],
   pictureTones: {},
   pictureOpen: false,
+  pictureShut: false,
   zoneStrengths: cleanStrengths(null),
   zoneRim: null,
   zoneGround: DEFAULT_GROUND,

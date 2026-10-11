@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readoutOf, when } from '../src/renderer/shell/core/readout.ts';
+import { ACTION_LABELS, readoutOf, when } from '../src/renderer/shell/core/readout.ts';
 import type { ToolId } from '../src/shared/types.ts';
 
 const labels: Partial<Record<ToolId, string>> = { illustration: 'Illustration', dither: 'Dither' };
@@ -27,4 +27,8 @@ test('image tools, new documents, failures and no state', () => {
   assert.equal(readoutOf({ t: 'new' }, label, later).text, 'Not saved yet');
   assert.deepEqual(readoutOf({ t: 'write-failed', message: 'Disk full' }, label, later), { text: 'Not saved', tone: 'danger', actions: ['retry'] });
   assert.deepEqual(readoutOf(undefined, label, later), { text: '', tone: 'normal', actions: [] });
+});
+
+test('the action that gets a document back says so in plain words', () => {
+  assert.equal(ACTION_LABELS['take-back'], 'Open it here');
 });

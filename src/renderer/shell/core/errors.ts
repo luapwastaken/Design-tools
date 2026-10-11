@@ -13,7 +13,7 @@ const REPEAT_MS = 2000;
 let last = { message: '', at: 0 };
 
 /**
- * A toast (error kind, stays until dismissed) and a log line; the same message twice within 2s shows
+ * A toast (error kind, goes after 8s) and a log line; the same message twice within 2s shows
  * once. `plain`: the error is already a sentence for Luap (a file that wouldn't open), so the toast
  * says just that, as the tools' own toasts do; the log keeps what was being done.
  */

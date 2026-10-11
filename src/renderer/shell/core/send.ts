@@ -35,7 +35,7 @@ export function setActive(id: ToolId): void {
   const s = getState();
   if (!rtOf(id)) return;
   if (s.active !== id) endGesture(rtOf(s.active)); // spec §8: hiding a tool commits its gesture
-  setState({ active: id, settingsOpen: false, mounted: s.mounted.includes(id) ? s.mounted : [...s.mounted, id] });
+  setState({ active: id, settingsOpen: false, shortcutsOpen: false, mounted: s.mounted.includes(id) ? s.mounted : [...s.mounted, id] });
   toast.leave(id);
   toast.refresh(); // a Send to toast's Ctrl Z hint follows the tool that took the item
 }

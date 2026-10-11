@@ -19,7 +19,7 @@ type Trigger = {
  * Our own tooltip (hard rule 6: never `title`). Wraps one element and listens to its pointer
  * events; shows after 500ms of hover, below the trigger (or beside it), with no transition.
  */
-export function Tooltip({ content, shortcut, children, disabled, overflowOnly, side = 'below' }: {
+export function Tooltip({ content, shortcut, children, disabled, overflowOnly, clamped, side = 'below' }: {
   /** default: the trigger's own text (with `overflowOnly`, for rich content like a toast message) */
   content?: string;
   shortcut?: string;
@@ -27,6 +27,8 @@ export function Tooltip({ content, shortcut, children, disabled, overflowOnly, s
   disabled?: boolean;
   /** only when the trigger's text is cut off with an ellipsis (it then shows the full text) */
   overflowOnly?: boolean;
+  /** with `overflowOnly`: a text cut to a few lines (line-clamp) counts as cut off too */
+  clamped?: boolean;
   /** 'right' for a column of icons, so the tip never covers the next one down */
   side?: 'below' | 'right';
 }) {
@@ -69,7 +71,7 @@ export function Tooltip({ content, shortcut, children, disabled, overflowOnly, s
       clearTimeout(timer.current);
       timer.current = setTimeout(
         () => {
-          if (live.current.disabled || !el.isConnected || (overflowOnly && el.scrollWidth <= el.clientWidth)) return;
+          if (live.current.disabled || !el.isConnected || (overflowOnly && el.scrollWidth <= el.clientWidth && !(clamped && el.scrollHeight > el.clientHeight))) return;
           live.current.shown = true;
           setShown({ anchor: el.getBoundingClientRect(), text: content ?? el.textContent ?? '' });
         },

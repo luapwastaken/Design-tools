@@ -5,6 +5,7 @@ import type { Swatch } from '../../../shared/types.ts';
 import { Button, Icon, Module, NumberField, Tooltip } from '../../ui/index.ts';
 import { cx } from '../../ui/cx.ts';
 import { partPair } from './adjust.ts';
+import { VISION_NAME } from './vision-names.ts';
 import { displayName } from './names.ts';
 import type { CheckHost } from './Value.tsx';
 import s from './Checks.module.css';
@@ -12,7 +13,7 @@ import s from './Checks.module.css';
 export type Kind = 'typical' | Cvd;
 export const VISIONS: Kind[] = ['typical', 'protan', 'deutan', 'tritan', 'achromat'];
 
-const LABEL: Record<Kind, string> = { typical: 'Typical', protan: 'Protan', deutan: 'Deutan', tritan: 'Tritan', achromat: 'Achromat' };
+const LABEL = VISION_NAME;
 const CVDS = VISIONS.slice(1) as Cvd[];
 
 /** the simulation a check opened on its own shows (and its list line names): this one while it merges a pair, else the first that does */

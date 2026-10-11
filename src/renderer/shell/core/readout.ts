@@ -9,7 +9,7 @@ export type ReadoutAction = 'take-back' | 'reload' | 'keep-copy' | 'retry';
 export type ReadoutText = Omit<Readout, 'actions'> & { actions: ReadoutAction[] };
 
 export const ACTION_LABELS: Record<ReadoutAction, string> = {
-  'take-back': 'Take back',
+  'take-back': 'Open it here',
   reload: 'Reload from disk',
   'keep-copy': 'Keep mine as a copy',
   retry: 'Try again',

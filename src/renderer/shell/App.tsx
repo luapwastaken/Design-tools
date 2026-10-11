@@ -6,6 +6,7 @@ import { LibraryPanel } from './LibraryPanel.tsx';
 import { Rail } from './Rail.tsx';
 import { ResizeHandle } from './ResizeHandle.tsx';
 import { SettingsScreen } from './SettingsScreen.tsx';
+import { ShortcutsSheet } from './ShortcutsSheet.tsx';
 import { StatusBar } from './StatusBar.tsx';
 import { TitleBar } from './TitleBar.tsx';
 import { ToolHost } from './ToolHost.tsx';
@@ -30,6 +31,7 @@ export function App() {
   const active = useShell((st) => st.active);
   const libraryOpen = useShell((st) => st.libraryOpen);
   const settingsOpen = useShell((st) => st.settingsOpen);
+  const shortcutsOpen = useShell((st) => st.shortcutsOpen);
   const [libWidth, setLibWidth] = useState(readWidth);
   // the panel stays mounted once opened, so search, scroll and folded collections survive a close
   // Settings is a page of its own: the Library steps aside while it is open, and comes back after
@@ -71,6 +73,7 @@ export function App() {
             <ToolHost key={id} id={id} active={id === active && !settingsOpen} />
           ))}
           {settingsOpen && <SettingsScreen />}
+          {shortcutsOpen && <ShortcutsSheet />}
           <ToastHost />
         </main>
       </div>

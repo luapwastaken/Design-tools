@@ -201,6 +201,15 @@ export function rowsOf(r: Recipe, flats: FlatIn[], pair: LightPair, v: Pick<Laye
   return rows;
 }
 
+/** one line on what each layer is, for the (i) after its name; "clipped" is the clipping mask of the paint apps */
+export const GLOSS: Partial<Record<LayerKey, string>> = {
+  rim: 'A thin edge of light on the character, on the side away from the key light, added in Add mode.',
+  mood: 'A tint of the light over the whole picture in Overlay mode, to pull every colour towards the mood.',
+  cast: 'The shadow the objects throw on the background, fitted to the background flat alone.',
+  shadow: 'Clipped to the character means a clipping mask: Krita (Inherit Alpha), Clip Studio (Clip to layer below) and Procreate (Clipping Mask) all have it.',
+  shadow2: 'A second Multiply layer for the flats the first one cannot reach. Clipped to them means a clipping mask: Krita (Inherit Alpha), Clip Studio (Clip to layer below) and Procreate (Clipping Mask).',
+};
+
 /** how every layer lands together, in words, for the line under the stack */
 export function allTogether(r: Recipe, flats: FlatIn[]): { label: string; fit: string; tone: Row['tone'] }[] {
   const name = (id: string) => flats.find((f) => f.id === id)?.name ?? '';
@@ -215,11 +224,17 @@ export function hintOf(r: Recipe, flats: FlatIn[]): string {
   const name = (id: string) => flats.find((f) => f.id === id)?.name ?? '';
   const names = r.shadow2 ? r.shadow2.clip.map(name).join(' and ') : '';
   const bg = flats.filter((f) => f.background).map((f) => f.name).join(' and ');
+  // one Multiply is judged on the same distance the Shadow row's fit word is made from, so the two never disagree
+  const alone = r.shadow.worst.dist;
   const shadow = r.shadow2
     ? r.shadowAll.dist < OFF
       ? `One Multiply cannot fit every character flat: ${names} would go muddy or stay visibly off. The second Shadow, clipped to ${r.shadow2.clip.length > 1 ? 'them' : 'it'}, brings them close.`
-      : `One Multiply cannot fit every character flat. A second Shadow clipped to ${names} helps, but ${name(r.shadowAll.id)} stays a little off even with it.`
-    : 'One Multiply fits every character flat well enough, so there is no second shadow layer.';
+      : `One Multiply cannot fit every character flat. A second Shadow clipped to ${names} helps, but ${name(r.shadowAll.id)} is still off even with it.`
+    : alone < CLOSE
+      ? 'One Multiply fits every character flat, so there is no second shadow layer.'
+      : alone < OFF
+        ? `One Multiply fits every character flat, a little off on ${name(r.shadow.worst.id)}. A second shadow layer would not help, so there is none.`
+        : `One Multiply is off on ${name(r.shadow.worst.id)}, and a second shadow layer would not bring it closer, so there is none.`;
   const cast = r.cast ? ` The Cast shadow is solved for ${bg} alone, so the Shadow is not tuned to it.` : '';
   const weak = r.lightAll.dist >= OFF ? ` ${r.lightMode === 'add' ? 'Add' : 'Screen'} lifts every flat by a similar amount, so the light is a weak match on ${name(r.lightAll.id)}.` : '';
   return shadow + cast + weak;

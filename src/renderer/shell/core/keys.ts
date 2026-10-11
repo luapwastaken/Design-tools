@@ -45,9 +45,11 @@ export type ShellKey =
   | { t: 'settings' }
   | { t: 'undo' }
   | { t: 'redo' }
-  | { t: 'region'; back: boolean };
+  | { t: 'region'; back: boolean }
+  /** ? opens the sheet of keys, but is a character in a field; F1 opens it anywhere */
+  | { t: 'shortcuts'; bare: boolean };
 
-/** The shell's own keys: Ctrl+1..9, Ctrl+L, Ctrl+comma, Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z, F6 / Shift+F6. */
+/** The shell's own keys: Ctrl+1..9, Ctrl+L, Ctrl+comma, Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z, F6 / Shift+F6, ? and F1. */
 export function shellKey(c: Combo): ShellKey | null {
   if (c.ctrl && !c.alt) {
     if (c.key === 'Z') return { t: c.shift ? 'redo' : 'undo' };
@@ -59,6 +61,8 @@ export function shellKey(c: Combo): ShellKey | null {
     return null;
   }
   if (!c.ctrl && !c.alt && c.key === 'F6') return { t: 'region', back: c.shift };
+  if (!c.ctrl && !c.alt && c.key === 'F1') return { t: 'shortcuts', bare: false };
+  if (!c.ctrl && !c.alt && c.key === '?') return { t: 'shortcuts', bare: true };
   return null;
 }
 

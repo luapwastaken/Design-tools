@@ -6,6 +6,7 @@ import { ipc } from './core/ipc.ts';
 import { collectionLabel, itemMenu } from './library/actions.ts';
 import { CollectionSection, fixedCollection } from './library/CollectionSection.tsx';
 import { ItemEntry, type RowMode } from './library/ItemEntry.tsx';
+import { moveNeedsConfirm } from './library/rules.ts';
 import s from './LibraryPanel.module.css';
 
 type Filter = 'all' | 'palette' | 'logo' | 'pattern' | 'image';
@@ -74,7 +75,14 @@ export function LibraryPanel({ narrow }: { narrow: boolean }) {
     setSelected(it.id);
     setArmed({ id: it.id, mode });
   };
-  const armMove = (it: LibraryItemRef, to: string) => arm(it, { t: 'move', to, toLocked: collections.some((c) => c.name === to && c.locked) });
+  const lockedAt = (name: string) => collections.some((c) => c.name === name && c.locked);
+  const armMove = (it: LibraryItemRef, to: string) => {
+    if (moveNeedsConfirm(lockedAt(it.collection), lockedAt(to))) return arm(it, { t: 'move', to, toLocked: lockedAt(to) });
+    // between unlocked collections it only moves, and the toast's Undo is the way back
+    setSelected(it.id);
+    focusNext.current = it.id;
+    void shell.moveItem(it, to);
+  };
 
   const confirm = (it: LibraryItemRef) => {
     const mode = armed?.mode;

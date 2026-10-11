@@ -97,7 +97,8 @@ export function LibraryItemRow(p: LibraryItemRowProps) {
             <span className={s.name}>{item.name}</span>
           </Tooltip>
           {/* on the name line, so the meta line keeps its width. Mouse-only: they never take focus,
-              and the row's menu carries the same commands */}
+              and the row's menu carries the same commands. Open and Send to show at rest, so they
+              can be found; More comes with the pointer or the selection */}
           <span className={s.actions} aria-hidden="true" onMouseDown={(e) => e.preventDefault()} onDoubleClick={(e) => e.stopPropagation()}>
             {actions}
             <IconButton
@@ -105,6 +106,7 @@ export function LibraryItemRow(p: LibraryItemRowProps) {
               label="More"
               size="xs"
               tabIndex={-1}
+              className={s.more}
               onClick={(e) => p.onMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0 ? { initial: 0 } : {})}
             />
           </span>
@@ -115,9 +117,13 @@ export function LibraryItemRow(p: LibraryItemRowProps) {
               {KIND[item.kind]}
               {meta && level < 1 && ` ${meta}`}
             </span>
-            {use && level < 3 && <span className={cx(s.keep, s.use)}>· {use}</span>}
+            {use && level < 3 && (
+              <Tooltip content={`The tool in front takes this as ${use.toLowerCase()}. Send to hands it over.`}>
+                <span className={cx(s.keep, s.use)}>· {use}</span>
+              </Tooltip>
+            )}
             {openIn && (
-              <Tooltip content={`Open in ${openIn}`} disabled={longTag}>
+              <Tooltip content={`Open in ${openIn}: it is that tool's document now, and what you change there is saved to this item.`}>
                 <span className={cx(s.keep, s.open)}>{longTag ? `Open in ${openIn}` : 'Open'}</span>
               </Tooltip>
             )}

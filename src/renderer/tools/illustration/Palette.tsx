@@ -119,7 +119,7 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
           move(doc, by[0], by[1]);
         }}
       >
-        {!d.swatches.length && <Start doc={doc} />}
+        {!d.swatches.length && <Start />}
         {d.ramps.map((r, i) => (
           <RampItem
             key={r.id}

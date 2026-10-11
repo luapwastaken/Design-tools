@@ -12,6 +12,7 @@ let state: ShellState = {
   mounted: [],
   libraryOpen: remembered().library,
   settingsOpen: false,
+  shortcutsOpen: false,
   settings: null,
   library: null,
   owners: {},

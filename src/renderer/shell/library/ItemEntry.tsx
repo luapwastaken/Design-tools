@@ -101,18 +101,25 @@ export function ItemEntry(p: Props) {
       onMenu={p.onMenu}
       onKeyDown={p.onKeyDown}
       actions={
-        targets.length > 0 &&
-        !p.narrow && (
-          <Button
-            size="xs"
-            variant={p.selected ? 'secondary' : 'ghost'}
-            iconEnd="chevron_right"
-            tabIndex={-1}
-            onClick={(e) => menu.open(e.currentTarget.getBoundingClientRect(), targets, { initial: e.detail === 0 ? 0 : undefined })}
-          >
-            Send to
-          </Button>
-        )
+        <>
+          {/* an item open in a tool says so in its tag; Open is for the ones that aren't */}
+          {!owner && shell.openTarget(item.kind) && (
+            <Button size="xs" variant="ghost" tabIndex={-1} onClick={() => void shell.openItem(item)}>
+              Open
+            </Button>
+          )}
+          {targets.length > 0 && !p.narrow && (
+            <Button
+              size="xs"
+              variant={p.selected ? 'secondary' : 'ghost'}
+              iconEnd="chevron_right"
+              tabIndex={-1}
+              onClick={(e) => menu.open(e.currentTarget.getBoundingClientRect(), targets, { initial: e.detail === 0 ? 0 : undefined })}
+            >
+              Send to
+            </Button>
+          )}
+        </>
       }
     />
   );

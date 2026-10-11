@@ -7,7 +7,7 @@ import { shell } from '../../shell/core/index.ts';
 import { pickFromScreen, toast } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
 import { addRamp, addSet, baseOf, carryLight, duplicateRamp, lightForAll, isLayer, LAYER_COLOURS, looseOf, looseSets, makeRamps, MAX_RAMPS, moveRamp, nameOf, rampName, rampOf, removeLoose, removeRamp, stepsOf, type IllustrationDoc } from './doc.ts';
-import { sceneLight } from './scene.ts';
+import { materialFromName, sceneLight } from './scene.ts';
 import { clearProposals, dropProposals, keptLoose, LAYERS_LABEL, proposals, restoreProposals, type Proposal } from './proposals.ts';
 import { armed, getView, patchView } from './view-state.ts';
 
@@ -88,13 +88,17 @@ export function paletteFull(d: IllustrationDoc): boolean {
   return true;
 }
 
-/** a new ramp after the selected one; the colour: given, or a hue well away from the last. Lit as the others are; `material`, `focus`: see the sources */
-export function addBase(doc: Doc, oklch: Oklch = nextBase(doc.get()), name = '', opts: { material?: MaterialId; focus?: boolean } = {}): void {
+/**
+ * a new ramp after the selected one; the colour: given, or the one the picker shows (a hue well away from
+ * the last when there is none). Lit as the others are. `material`: given, or guessed from a subject's name,
+ * else Cloth; `focus`: see the sources
+ */
+export function addBase(doc: Doc, oklch: Oklch = selected(doc.get())?.oklch ?? nextBase(doc.get()), name = '', opts: { material?: MaterialId; focus?: boolean } = {}): void {
   if (paletteFull(doc.get())) return;
   const after = selected(doc.get())?.group ?? null;
   let base = '';
   doc.transact('Add base colour', (d) => {
-    const r = addRamp(d, oklch, name, rampOf(d, after ?? undefined) ? after : null, opts.material);
+    const r = addRamp(d, oklch, name, rampOf(d, after ?? undefined) ? after : null, opts.material ?? materialFromName(name));
     base = r.base;
     return r.doc;
   });
@@ -123,7 +127,7 @@ export function addProposals(doc: Doc, all: Proposal[], keepAll = false): void {
       return r.doc;
     }
     return items.reduce((x, p, i) => {
-      const r = addRamp(x, p.oklch, p.name ?? '', null, p.material);
+      const r = addRamp(x, p.oklch, p.name ?? '', null, p.material ?? materialFromName(p.name));
       if (!i) first = r.base;
       return r.doc;
     }, d);

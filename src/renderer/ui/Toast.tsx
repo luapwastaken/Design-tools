@@ -23,7 +23,7 @@ export function ToastView({ entry: t, ctrlZ, onUndo, onDismiss, className, ...di
     // toasts never take focus: a press on one keeps it where it was
     <div className={cx(s.toast, className)} onMouseDown={(e) => e.preventDefault()} {...div}>
       {(error || t.icon) && <Icon name={error ? 'error' : t.icon!} className={cx(s.lead, error && s.error)} />}
-      <Tooltip overflowOnly>
+      <Tooltip overflowOnly clamped>
         <span className={s.msg}>{t.message}</span>
       </Tooltip>
       {t.undo && (

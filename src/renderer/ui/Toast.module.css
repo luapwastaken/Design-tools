@@ -13,7 +13,8 @@
 }
 .lead { color: var(--ink-3); }
 .error { color: var(--danger); }
-.msg { min-width: 0; overflow: hidden; font-size: var(--fs-ctl); text-overflow: ellipsis; white-space: nowrap; }
+/* a long message wraps to two lines inside the toast's own height, then ends in an ellipsis (its tooltip has all of it) */
+.msg { display: -webkit-box; min-width: 0; overflow: hidden; font-size: var(--fs-ctl); line-height: 1.15; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 .msg b { font-weight: 600; }
 .undo { height: 26px; color: var(--ink); font-weight: 600; }
 .undo + kbd { margin-left: -4px; }

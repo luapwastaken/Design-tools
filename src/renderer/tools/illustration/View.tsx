@@ -8,6 +8,7 @@ import { ResizeHandle } from '../../shell/ResizeHandle.tsx';
 import { isTextField } from '../../shell/core/keys.ts';
 import { cx } from '../../ui/cx.ts';
 import { Button } from '../../ui/index.ts';
+import { VISION_NAME } from '../common/vision-names.ts';
 import { DocBar } from '../common/DocBar.tsx';
 import { ExportPalette } from '../common/ExportPalette.tsx';
 import { NotesModule } from '../common/Notes.tsx';
@@ -95,9 +96,11 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const lit = d.ramps.length && !light.mixed ? light.pair : null;
   // Light and Check have nothing to show without a colour; Paint doesn't need the palette (the tubes work alone)
   const ctx: Ctx = { doc, d, v, checks, empty, source, paint };
-  const tabs: SectionTab[] = TABS.filter((t) => !t.when || t.when(ctx)).map((t) => ({
+  const tabs: SectionTab[] = TABS.filter((t) => !t.when || t.when(ctx)).map((t, i) => ({
     id: t.id,
     label: t.label,
+    // Alt+N in index.ts follows this order; Notes, last and only sometimes there, has no key
+    shortcut: t.id === 'notes' ? undefined : `Alt+${i + 1}`,
     badge: !empty && t.badge ? t.badge(ctx) : undefined,
     disabled: empty && t.needsColour ? 'Add a colour first' : undefined,
     render: () => t.render(ctx),
@@ -137,7 +140,20 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
                 <ResizeHandle label="Colour picker width" value={v.pickerWidth} min={SIZES.pickerWidth[0]} max={SIZES.pickerWidth[1]} reset={SIZES.pickerWidth[2]} onChange={(pickerWidth) => patchView({ pickerWidth })} />
               </div>
             )}
-            <TabbedSection tabs={tabs} value={tab} onChange={(id) => patchView({ tab: id as Tab })} bodyClassName={tab === 'paint' ? s.flush : tab === 'variations' ? s.variations : undefined} />
+            <TabbedSection
+              tabs={tabs}
+              value={tab}
+              onChange={(id) => patchView({ tab: id as Tab })}
+              // Seen as is on for every tab until it is turned off: the strip says so wherever you are
+              actions={
+                v.proof !== 'off' && (
+                  <Button size="xs" icon="visibility" latched tooltip="The swatches here are shown as this colour vision sees them, not as they are. Click to turn it off." onClick={() => patchView({ proof: 'off' })}>
+                    Seen as {VISION_NAME[v.proof]}
+                  </Button>
+                )
+              }
+              bodyClassName={tab === 'paint' ? s.flush : tab === 'variations' ? s.variations : undefined}
+            />
           </div>
         </div>
       </div>

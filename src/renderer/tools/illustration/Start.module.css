@@ -1,6 +1,4 @@
-/* The empty state in the Ramps section: a sentence, a hex field, a line of help. No card, no art. */
+/* The empty state in the Ramps section: a sentence and a line of help. No card, no art. */
 .start { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 4px 0 8px; }
 .lead { color: var(--ink); font-size: var(--fs-row); line-height: 1.45; }
-.row { display: flex; align-items: center; gap: 8px; }
-.hex { flex: 1 1 auto; min-width: 0; }
 .fine { color: var(--ink-3); font-size: var(--fs-meta); line-height: 1.4; }

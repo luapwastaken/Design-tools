@@ -11,11 +11,21 @@ import { displayName, named } from '../common/names.ts';
 export { displayName, listNames, named, plural } from '../common/names.ts';
 
 /** `ramps` and `scene`: Illustration's ramp settings and scene light, kept so they go back into the file unchanged */
-export type DesignDoc = { swatches: Swatch[]; notes: string; ramps?: RampSpec[]; scene?: PalettePayload['scene'] };
+export type DesignDoc = {
+  swatches: Swatch[];
+  notes: string;
+  ramps?: RampSpec[];
+  scene?: PalettePayload['scene'];
+  /** the last lock change (L): the pinned list before and after it, so Undo and Redo can put the view's locks back. Never saved in the file. */
+  locking?: { before: string[]; after: string[] };
+};
 
 export type BuildMethod = 'harmony' | 'generate' | 'image' | 'logo' | 'gradient' | 'paste' | 'complete';
 /** the tabs under the palette and picker; the active one is saved in the view */
 export type DesignTab = 'contrast' | 'check' | 'preview' | 'harmonies' | 'variations' | 'notes';
+/** the tab strip's names, and its order: Notes only while the file has notes. Alt+N follows this order. */
+export const TAB_LABEL: Record<DesignTab, string> = { contrast: 'Contrast', check: 'Check palette', preview: 'Preview in use', harmonies: 'Harmonies', variations: 'Variations', notes: 'Notes' };
+export const tabsOf = (d: Pick<DesignDoc, 'notes'>): DesignTab[] => ['contrast', 'check', 'preview', 'harmonies', 'variations', ...(d.notes ? (['notes'] as const) : [])];
 /** what each palette chip says: Hex; Hex and L C H; the Table adds RGB and ≈CMYK */
 export type ChipData = 'hex' | 'lch' | 'table';
 /** the view filter over the artboard and the In use page; never written to the document */
@@ -74,6 +84,12 @@ export type DesignView = {
   /** the role whose other-colours row is open under the Palette title, '' for none */
   swapRole: string;
 };
+
+/** the lock list Undo or Redo puts back: only when the step it crossed was a lock change, so undoing an edit leaves the locks as they are */
+export function lockedAfter(cause: 'undo' | 'redo', was: DesignDoc, now: DesignDoc): string[] | null {
+  if (cause === 'undo') return was.locking && was.locking !== now.locking ? was.locking.before : null;
+  return now.locking && now.locking !== was.locking ? now.locking.after : null;
+}
 
 export const emptyDoc = (): DesignDoc => ({ swatches: [], notes: '' });
 

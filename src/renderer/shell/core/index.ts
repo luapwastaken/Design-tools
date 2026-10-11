@@ -66,6 +66,7 @@ export const shell: Shell = {
   setActive: send.setActive,
   toggleLibrary: (open) => setState({ libraryOpen: open ?? !getState().libraryOpen }),
   openSettings: (open) => setState({ settingsOpen: open ?? !getState().settingsOpen }),
+  openShortcuts: (open) => setState({ shortcutsOpen: open ?? !getState().shortcutsOpen }),
   setTheme: library.setTheme,
   setPicker,
   chooseLibraryRoot: library.chooseLibraryRoot,

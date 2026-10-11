@@ -6,7 +6,7 @@ import { fromHex } from '../../../shared/color/picker.ts';
 import type { Swatch } from '../../../shared/types.ts';
 import { HexField } from '../../ui/HexField.tsx';
 import { cx } from '../../ui/cx.ts';
-import { CopyAs, IconButton, NumberField, PickerBody, PickerModelSelect, PickerStyles, pickFromScreen, Segmented, SrgbFix, TextInput, Tooltip, useDocColour, usePickerModel, usePickerStyle } from '../../ui/index.ts';
+import { CopyAs, IconButton, Kbd, NumberField, PickerBody, PickerModelSelect, PickerStyles, pickFromScreen, Segmented, SrgbFix, TextInput, Tooltip, useDocColour, usePickerModel, usePickerStyle } from '../../ui/index.ts';
 import { usePickerColour, type Channel } from '../../ui/pickerModels.ts';
 import { Section } from '../common/Section.tsx';
 import { fmtL } from '../common/names.ts';
@@ -74,6 +74,7 @@ function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Sw
         <>
           {styles}
           <IconButton icon={locked ? 'lock' : 'lock_open'} label="Lock swatch" tip={locked ? 'Locked: a re-roll and Delete leave it. Click to unlock' : 'Lock swatch: a re-roll and Delete leave it'} shortcut="L" size="sm" latched={locked} onClick={() => toggleLocked(doc)} />
+          <Kbd>L</Kbd>
           <IconButton icon="delete" label={count > 1 ? `Delete ${count} swatches` : 'Delete swatch'} shortcut="Delete" size="sm" onClick={() => armDelete(doc)} />
         </>
       }

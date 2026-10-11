@@ -1,0 +1,14 @@
+/* a layer over the work area: there at once, gone at once (nothing fades, hard rule 4) */
+.scrim { position: absolute; inset: 0; z-index: 700; display: grid; place-items: start center; padding: 40px 24px 24px; background: var(--scrim); }
+.card { display: flex; width: min(820px, 100%); max-height: 100%; min-height: 0; box-shadow: var(--shadow-popover); border-radius: var(--r-mod); }
+.mod { flex: 1; }
+.body { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; padding: 6px 4px 12px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.head { margin: 0; color: var(--ink); font: 500 var(--fs-base)/1 var(--font-sans); }
+.group { display: flex; flex-direction: column; gap: 6px; }
+.sub { margin: 0; color: var(--ink-3); font: 400 var(--fs-label)/1 var(--font-sans); }
+.rows { display: flex; flex-direction: column; gap: 4px; margin: 0; }
+.row { display: grid; grid-template-columns: minmax(96px, auto) minmax(0, 1fr); align-items: baseline; gap: 12px; }
+.keys { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 96px; }
+.to { color: var(--ink-3); font-size: var(--fs-label); }
+.label { min-width: 0; margin: 0; color: var(--ink-2); font-size: var(--fs-row); line-height: 1.35; }

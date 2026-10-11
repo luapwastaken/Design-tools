@@ -47,13 +47,14 @@ import { lookOf, Painter } from './tools/halftone/draw.ts';
 import { platesFor, pngBlob, svgFor } from './tools/halftone/exports.ts';
 import { ready, screen, shownDots, svgOver, totals } from './tools/halftone/screening.ts';
 import { patchView as patchHalftone, status as halftoneStatus } from './tools/halftone/view-state.ts';
-import { eyedrop, rampsFromLoose } from './tools/illustration/actions.ts';
+import { addBase, eyedrop, rampsFromLoose } from './tools/illustration/actions.ts';
 import { carryLight, addRamp, baseOf, rampName, recolour, renameSwatch, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
 import { adoptCell } from './tools/illustration/variation-actions.ts';
 import { FINISH_PRESETS } from './tools/illustration/finish.ts';
 import { cleanColour, cleanStrengths, readout as splitText, zoneRig, zoneRows } from './tools/illustration/light-zones.ts';
 import { allFlats, DEFAULT_LAYERS, recipeFlats } from './tools/illustration/layers.ts';
 import { LIGHTS as SCENE_LIGHTS, sceneLight } from './tools/illustration/scene.ts';
+import { reachable } from './shell/core/shortcuts.ts';
 import { stillLifeOf } from './tools/illustration/still-life.ts';
 import type { PaintEngine } from './tools/illustration/paint/index.ts';
 import { liveEngine, liveSaves } from './tools/illustration/paint/live.ts';
@@ -94,6 +95,8 @@ function check(name: string, ok: unknown, detail?: unknown): boolean {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** every toast shown so far, in order, kept after it has gone (the store drops a toast once it has left, and a notice a newer one pushes out leaves early) */
+const everToast: ToastEntry[] = [];
 
 /** poll until `fn` gives something truthy; null after `ms` */
 async function until<T>(fn: () => T | Promise<T>, ms = 8000): Promise<T | null> {
@@ -173,7 +176,10 @@ async function imageSize(dt: DocController<DitherDoc>): Promise<[number, number]
 export async function runSmoke(run: 'full' | 'quiet'): Promise<void> {
   const errors = new Map<string, string>();
   const offToasts = toastStore.subscribe(() => {
-    for (const t of toastStore.get()) if (t.kind === 'error') errors.set(t.id, String(t.message));
+    for (const t of toastStore.get()) {
+      if (t.kind === 'error') errors.set(t.id, String(t.message));
+      if (!everToast.some((x) => x.id === t.id)) everToast.push(t);
+    }
   });
   try {
     if (check('the shell starts', await until(() => shell.getState().ready, 30_000))) await (run === 'full' ? full() : quiet());
@@ -354,6 +360,7 @@ async function full(): Promise<void> {
   await lightZonesUi();
   await layersUi();
   await brandSafetyUi();
+  await findabilityUi();
   await greyscale();
 
   // brief §8: nothing loops, and there is no spinner to run: no running animation repeats, and no loaded
@@ -952,7 +959,7 @@ async function greyscale(): Promise<void> {
   };
   patchIllustration({ tab: 'settings' });
   const seen = await lensOptions('illustration', 'Seen as');
-  check('Illustration’s Seen as lens offers the colour-vision lenses and no Greyscale', !!seen && seen.some((t) => /Deuteranopia/.test(t)) && !seen.some((t) => /Greyscale/i.test(t)), seen);
+  check('Illustration’s Seen as lens offers the colour-vision lenses, in the Colour vision check’s names, and no Greyscale', !!seen && seen.some((t) => /Deutan/.test(t)) && !seen.some((t) => /opia$/.test(t)) && !seen.some((t) => /Greyscale/i.test(t)), seen);
   patchDesign({ tab: 'preview' });
   const see = await lensOptions('design', 'See as');
   check('Design’s See as lens offers the colour-vision lenses and no Greyscale', !!see && see.some((t) => /Deutan/.test(t)) && !see.some((t) => /Greyscale/i.test(t)), see);
@@ -1062,9 +1069,9 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   const popover = () => document.querySelector<HTMLElement>('[role="dialog"][aria-label="Export"]');
   const exportAse = await until(() => [...(popover()?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export ASE')));
   if (!check('the doc bar’s Export opens its popover, holding Export ASE', exportAse)) return;
-  const shown = toastStore.get().length;
+  const shown = everToast.length;
   exportAse!.click();
-  const done = await until(() => toastStore.get().slice(shown).find((t) => t.icon === 'download'));
+  const done = await until(() => everToast.slice(shown).find((t) => t.icon === 'download'));
   const file = /^Exported (.+)\.$/.exec(String(done?.message ?? ''))?.[1];
   if (!check('Export ASE writes a file, and the popover closes', file && (await until(() => !popover())), done?.message)) return;
   await shell.importFiles([`${dir}\\exports\\${file}`], 'Reimport');
@@ -1080,9 +1087,9 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   button('design', 'Export')?.click();
   const exportKpl = await until(() => [...(popover()?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim().endsWith('Export Krita')));
   if (check('the Export popover offers Export Krita', exportKpl)) {
-    const shownKpl = toastStore.get().length;
+    const shownKpl = everToast.length;
     exportKpl!.click();
-    const savedKpl = await until(() => toastStore.get().slice(shownKpl).find((t) => t.icon === 'download'));
+    const savedKpl = await until(() => everToast.slice(shownKpl).find((t) => t.icon === 'download'));
     check('Export Krita writes a .kpl file', /^Exported .+\.kpl\.$/.test(String(savedKpl?.message ?? '')) && (await until(() => !popover())), savedKpl?.message);
   }
   // the second button copies the format chosen (not always CSS), only for formats that are text; the binary ones can name swatches by role
@@ -1427,12 +1434,13 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     const accent = roleOf('Accent')!;
     selectInDesign([accent.id]);
     press('l', { code: 'KeyL' });
+    const locked = dd.depth(); // a lock change is a history step of its own
     check('L locks the selected swatch', designView().locked.includes(accent.id) && !!(await until(() => host('design')?.querySelector(`[data-swatch="${accent.id}"] button[aria-pressed="true"]`))), designView().locked);
     const lockBadge = host('design')?.querySelector(`[data-swatch="${accent.id}"] button[aria-label="Lock swatch"]`);
     check('the lock badge keeps one accessible name, Lock swatch, and shows its state in aria-pressed', lockBadge?.getAttribute('aria-label') === 'Lock swatch' && lockBadge.getAttribute('aria-pressed') === 'true', [lockBadge?.getAttribute('aria-label'), lockBadge?.getAttribute('aria-pressed')]);
     (document.activeElement as HTMLElement | null)?.blur?.();
     press(' ', { code: 'Space' });
-    const second = (await until(() => dd.depth() === steps + 1 && dd.get().swatches)) || null;
+    const second = (await until(() => dd.depth() === locked + 1 && dd.get().swatches)) || null;
     check('a locked Accent stays through Space, and the neutrals are rebuilt round the locked colours', !!second && same(second.find((w) => w.role === 'Accent'), accent) && same(second.find((w) => w.role === 'Primary'), roleOf('Primary')) && ['Text', 'Muted', 'Highlight'].some((r) => !same(second.find((w) => w.role === r), roleOf(r))), [!!second, dd.depth() - steps, designView().locked.length]);
     press('Delete', { code: 'Delete' });
     check('Delete leaves a locked swatch alone (no confirm arms)', !!dd.get().swatches.find((w) => w.id === accent.id) && !armedInDesign.get());
@@ -1475,9 +1483,9 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     patchDesign({ tab: 'contrast', locked: [roleOf('Primary')!.id] });
     selectInDesign([muted.id]);
     const lift = await until(() => [...(designPanel()?.querySelectorAll('button') ?? [])].find((b) => /^(Darken|Lift) to L/.test(b.textContent?.trim() ?? '') && shows(b)));
-    const shown = toastStore.get().length;
+    const shown = everToast.length;
     lift?.click();
-    const moved = await until(() => toastStore.get().slice(shown).find((t) => String(t.message).startsWith('Moved')));
+    const moved = await until(() => everToast.slice(shown).find((t) => String(t.message).startsWith('Moved')));
     const afterFix = dd.get().swatches;
     check('a contrast fix moves the faint Muted, leaves the locked Primary alone, and a toast says what moved with an Undo', !!moved?.undo && same(afterFix.find((w) => w.id === roleOf('Primary')!.id), roleOf('Primary')) && !same(afterFix.find((w) => w.id === muted.id), { ...muted, oklch: [0.8, 0, 0] }), moved?.message);
     ctrlZ();
@@ -1650,12 +1658,12 @@ async function chooseExport(tool: ToolId, label: string): Promise<boolean> {
 async function toolExport(dir: string, tool: ToolId, collection: string): Promise<(label: string) => Promise<Response | null>> {
   await shell.createCollection(collection);
   return async (label) => {
-    const shown = toastStore.get().length;
+    const shown = everToast.length;
     const idle = shell.getState().busy;
     if (!(await chooseExport(tool, label))) return null;
     // from the click, before anything is rendered: the quit check and the status bar count it
     check(`${tool}'s ${label} export counts as running work from the moment it starts`, shell.getState().busy > idle, shell.getState().busy);
-    const done = await until(() => toastStore.get().slice(shown).find((t) => t.icon === 'download'));
+    const done = await until(() => everToast.slice(shown).find((t) => t.icon === 'download'));
     const file = /^Exported (.+)\.$/.exec(String(done?.message ?? ''))?.[1];
     if (!file) return null;
     await shell.importFiles([`${dir}\\exports\\${file}`], collection);
@@ -1678,12 +1686,12 @@ async function toolCopy(tool: ToolId, row: string): Promise<{ held: Record<strin
   // the same plain notice isn't shown twice while it still shows (and a test window is never focused, so none times out)
   for (const t of toastStore.get()) if (t.icon === 'content_copy') toast.dismiss(t.id);
   await sleep(LEAVE_MS + 60);
-  const shown = toastStore.get().length;
+  const shown = everToast.length;
   const idle = shell.getState().busy;
   if (button) button.click();
   else if (!(await chooseExport(tool, row))) return null;
   check(`${tool}'s ${row} copy counts as running work from the moment it starts`, shell.getState().busy > idle, shell.getState().busy);
-  const done = await until(() => toastStore.get().slice(shown).find((t) => t.icon === 'content_copy'), 20_000);
+  const done = await until(() => everToast.slice(shown).find((t) => t.icon === 'content_copy'), 20_000);
   return done ? { held: await api.invoke('clipboard.peek'), said: String(done.message) } : null;
 }
 
@@ -2024,11 +2032,11 @@ async function logo(dir: string): Promise<void> {
     only(row);
     const button = await until(() => (goButton() && !goButton()!.disabled ? goButton() : null));
     if (!button) return null;
-    const shown = toastStore.get().length;
+    const shown = everToast.length;
     const idle = shell.getState().busy;
     button.click();
     check(`logo's ${row} export counts as running work from the moment it starts`, shell.getState().busy > idle, shell.getState().busy);
-    const done = await until(() => toastStore.get().slice(shown).find((t) => t.icon === 'download'));
+    const done = await until(() => everToast.slice(shown).find((t) => t.icon === 'download'));
     const file = /^Exported (.+)\.$/.exec(String(done?.message ?? ''))?.[1];
     if (!file) return null;
     await shell.importFiles([`${dir}\\exports\\${file}`], 'Logo out');
@@ -2057,10 +2065,10 @@ async function logo(dir: string): Promise<void> {
   const ico = bundle.find((f) => f.name === 'favicon.ico')?.data;
   const entries = ico instanceof ArrayBuffer ? await icoEntries(new Uint8Array(ico)) : null;
   check('the favicon ICO parses: 16, 32 and 48 px PNGs, each its stated size', JSON.stringify(entries) === '[[16,16,16],[32,32,32],[48,48,48]]', entries);
-  const shown = toastStore.get().length;
+  const shown = everToast.length;
   only('Favicon bundle');
   (await until(() => (goButton() && !goButton()!.disabled ? goButton() : null)))?.click();
-  const done = await until(() => toastStore.get().slice(shown).find((x) => x.icon === 'download'));
+  const done = await until(() => everToast.slice(shown).find((x) => x.icon === 'download'));
   check('Favicon bundle writes its nine files into one folder', /^Exported 9 files into /.test(String(done?.message)), done?.message);
 
   // other tools take the logo: Pattern its icon as a shape, Design its colours as proposals
@@ -2240,9 +2248,9 @@ async function halftone(dir: string, dt: DocController<DitherDoc>): Promise<void
   patchHalftone({ pngWidth: 2048 });
 
   // the separations, through the doc bar's Export menu; smoke runs write them into exports/halftone
-  const before = toastStore.get().length;
+  const before = everToast.length;
   await chooseExport('halftone', 'Separations');
-  const done = await until(() => toastStore.get().slice(before).find((t) => t.icon === 'download'), 20_000);
+  const done = await until(() => everToast.slice(before).find((t) => t.icon === 'download'), 20_000);
   check('Separations writes a plate per visible ink into one folder', /^Exported 3 plates into /.test(String(done?.message)), done?.message);
   const plateNames = ['C Cyan', 'M Magenta', 'K Black'];
   await shell.importFiles(plateNames.map((n) => `${dir}\\exports\\halftone\\Smoke ramp ${n}.tif`), 'Halftone out');
@@ -2555,9 +2563,9 @@ async function dither(dir: string): Promise<void> {
     frames.close();
     check('each GIF frame is that frame’s dither pixel for pixel, and no two are the same', offs.length === 6 && offs.every((o) => o === 0) && seen.size === 6, offs);
   }
-  const shown0 = toastStore.get().length;
+  const shown0 = everToast.length;
   await chooseExport('dither', 'PNG frames');
-  const done = await until(() => toastStore.get().slice(shown0).find((t) => t.icon === 'download'), 20_000);
+  const done = await until(() => everToast.slice(shown0).find((t) => t.icon === 'download'), 20_000);
   check('PNG frames writes all six into one folder', /^Exported 6 frames into /.test(String(done?.message)), done?.message);
   await shell.importFiles([1, 6].map((n) => `${dir}\\exports\\dither\\Smoke anim dither 000${n}.png`), 'Dither out');
   const frameOff = await Promise.all(
@@ -2791,9 +2799,9 @@ async function postfx(dir: string): Promise<void> {
     gifInfo?.frames.length === 10 && gifInfo.frames.every((f) => f.delay === 10) && gifInfo.loop === 0 && gifInfo.w === 256,
     gifInfo && [gifInfo.frames.map((f) => f.delay), gifInfo.loop],
   );
-  const asked = toastStore.get().length;
+  const asked = everToast.length;
   await chooseExport('postfx', 'PNG sequence');
-  const wrote = await until(() => toastStore.get().slice(asked).find((t) => t.icon === 'download'), 20_000);
+  const wrote = await until(() => everToast.slice(asked).find((t) => t.icon === 'download'), 20_000);
   check('PNG sequence writes all 10 frames into one folder', /^Exported 10 frames into /.test(String(wrote?.message)), wrote?.message);
   const numbered = (name: string, n: number) => `${name} ${String(n).padStart(4, '0')}`;
   await shell.importFiles([1, 2, 10].map((n) => `${dir}\\exports\\postfx\\${numbered('Smoke fx card fx', n)}.png`), 'Post FX out');
@@ -2928,9 +2936,9 @@ async function postfx(dir: string): Promise<void> {
   });
   check('the doc bar’s Export lists the GIF, the PNG and the PNG sequence for a clip', !!clipFormats && ['GIF', 'PNG sequence'].every((n) => clipFormats.some((l) => l.includes(n))), clipFormats);
   press('Escape');
-  const before = toastStore.get().length;
+  const before = everToast.length;
   await chooseExport('postfx', 'PNG sequence');
-  const clipDone = await until(() => toastStore.get().slice(before).find((t) => t.icon === 'download'), 60_000);
+  const clipDone = await until(() => everToast.slice(before).find((t) => t.icon === 'download'), 60_000);
   check(`its PNG sequence has one file for each of its ${N} frames`, new RegExp(`^Exported ${N} frames into `).test(String(clipDone?.message)), clipDone?.message);
   const names = Array.from({ length: N }, (_, i) => numbered('smoke clip fx', i + 1));
   await shell.importFiles(names.map((n) => `${dir}\\exports\\postfx\\${n}.png`), 'Post FX out');
@@ -3929,8 +3937,8 @@ async function emptyUi(): Promise<void> {
   patchIllustration({ tab: 'settings' });
   const start = await until(() => host('illustration')?.querySelector('section[aria-label="Start"]'), 3000);
   check('an empty palette shows the start in the Ramps section', shows(start) && !!start?.parentElement?.closest('section')?.textContent?.startsWith('Ramps'), start?.textContent?.slice(0, 40));
-  check('it is one plain sentence and a hex field: no sample chips, no starter chips', start?.querySelector('p')?.textContent === 'No ramps yet. Pick a light, then add colours.' && !start?.querySelector('i, img, svg') && !button('illustration', 'Skin medium') && !button('illustration', 'Night sky'), start?.textContent);
-  check('and it points at the labelled From… button beside Add colour, not a hidden arrow', /use From… to add several colours/.test(start?.textContent ?? '') && !!button('illustration', 'From…') && !!button('illustration', 'Add colour'), start?.textContent);
+  check('it is plain words: what a ramp is, in one line, and no sample chips or starter chips', start?.querySelector('p')?.textContent === 'No ramps yet. A ramp is one colour from highlight to deep shadow, ready to paint with.' && !start?.querySelector('i, img, svg') && !button('illustration', 'Skin medium') && !button('illustration', 'Night sky'), start?.textContent);
+  check('and it points at the labelled From… button beside Add colour, not a hidden arrow', /use From… to add several/.test(start?.textContent ?? '') && !!button('illustration', 'From…') && !!button('illustration', 'Add colour'), start?.textContent);
   const [addBtn, fromBtn] = [button('illustration', 'Add colour'), button('illustration', 'From…')];
   check('Add colour and From… are two full-size buttons side by side, both at least 24px tall', !!addBtn && !!fromBtn && addBtn.getBoundingClientRect().height >= 24 && fromBtn.getBoundingClientRect().height >= 24 && fromBtn.getBoundingClientRect().left >= addBtn.getBoundingClientRect().right && !document.querySelector('[data-tool="illustration"] [aria-label^="Add colours from"]'), [addBtn?.getBoundingClientRect().height, fromBtn?.getBoundingClientRect().left]);
   check('the New button has a text label', !!button('illustration', 'New'));
@@ -4747,6 +4755,263 @@ async function brandSafetyUi(): Promise<void> {
   patchIllustration({ ...snap });
 }
 
+/**
+ * Findability (ux sweep 2026-10-11): the Keyboard shortcuts sheet and the tab and row hints (aw-03), the
+ * toasts (aw-04), Library rows and moves (aw-11), Design's lock keys, New palette, Contrast order and
+ * New set (des-17, des-16, des-11, des-03), and Illustration's empty state, Layers words and Seen as chip
+ * (ill-05, ill-06, ill-09). Leaves the documents and views as it found them.
+ */
+async function findabilityUi(): Promise<void> {
+  const [dd, il] = [designDoc(), illustrationDoc()];
+  const [designWas, illustrationWas, designSnap, illustrationSnap] = [dd.get(), il.get(), { ...designView() }, { ...illustrationView() }];
+  const libraryWas = shell.getState().libraryOpen;
+  const sheet = () => document.querySelector<HTMLElement>('[role="dialog"][aria-label="Keyboard shortcuts"]');
+  const hover = async (el: Element | null | undefined) => {
+    el?.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+    const text = await until(() => document.querySelector('[role="tooltip"]')?.textContent ?? null, 2000);
+    el?.dispatchEvent(new PointerEvent('pointerout', { bubbles: true, pointerType: 'mouse' }));
+    await sleep(40);
+    return text;
+  };
+  const exact = (id: ToolId, text: string) => [...(host(id)?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim() === text && shows(b));
+  const blur = () => (document.activeElement as HTMLElement | null)?.blur();
+
+  // ── aw-03: the Keyboard shortcuts sheet ──
+  shell.setActive('design');
+  patchDesign({ tab: 'contrast', tabChosen: true });
+  blur();
+  const mine = reachable(shell.tool('design').shortcuts!(dd));
+  press('?', { code: 'Slash', shiftKey: true });
+  const opened = await until(sheet, 2000);
+  check('? opens the Keyboard shortcuts sheet at once', !!opened && shell.getState().shortcutsOpen);
+  const words = opened?.textContent ?? '';
+  const missing = mine.filter((k) => !/^\d$/.test(k.keys) && !words.includes(k.label)).map((k) => k.label);
+  check('it lists the tool’s own keys, built from its shortcut list (no label of it is missing)', mine.length > 10 && !missing.length, missing);
+  check('with the roles’ digits on one row, the app-wide keys after, and the tool named', /Role: Background/.test(words) && words.includes('Show or hide the Library') && words.includes('Go to a tool') && !!opened?.querySelector('section[aria-label="Design"]') && !!opened?.querySelector('section[aria-label="Everywhere"]'), words.slice(0, 80));
+  check('and its tab keys are in it', words.includes('Alt') && words.includes('Check palette') && words.includes('Variations'), words.slice(0, 80));
+  const greyWas = shell.getState().settings?.greyscale === true;
+  press('g', { code: 'KeyG' });
+  await sleep(120);
+  check('while it shows, the keys behind it do nothing', (shell.getState().settings?.greyscale === true) === greyWas);
+  press('Escape');
+  check('Esc closes it at once', !!(await until(() => !sheet(), 1000)) && !shell.getState().shortcutsOpen);
+  const field = Object.assign(document.createElement('input'), { type: 'text' });
+  document.body.append(field);
+  field.focus();
+  press('?', { code: 'Slash', shiftKey: true });
+  await sleep(100);
+  check('? typed into a text field opens nothing', !sheet());
+  press('F1', { code: 'F1' });
+  check('but F1 opens it from there', !!(await until(sheet, 1000)));
+  press('Escape');
+  await until(() => !sheet(), 1000);
+  field.remove();
+  blur();
+  shell.openSettings(true);
+  (await until(() => [...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Keyboard shortcuts' && shows(b)), 2000))?.click();
+  const fromSettings = await until(sheet, 2000);
+  check('Settings has a Keyboard shortcuts button that opens it, with the app-wide keys only (the tool’s do not fire there)', !!fromSettings && !!fromSettings.querySelector('section[aria-label="Everywhere"]') && !fromSettings.querySelector('section[aria-label="Design"]'), fromSettings?.textContent?.slice(0, 60));
+  press('Escape');
+  await until(() => !sheet(), 1000);
+  shell.openSettings(false);
+
+  // every tab says its Alt+N, and Design's tabs have them too
+  shell.setActive('illustration');
+  patchIllustration({ tab: 'settings' });
+  const illTabs = ['settings', 'light', 'zones', 'check', 'paint', 'variations', 'layers'];
+  check('Illustration’s tabs carry their Alt+N', illTabs.every((id, i) => illusTab(id)?.getAttribute('aria-keyshortcuts') === `Alt+${i + 1}`), illTabs.map((id) => illusTab(id)?.getAttribute('aria-keyshortcuts')));
+  const paintTip = await hover(illusTab('paint'));
+  check('and hovering one says it (Paint: Alt 5)', /Paint/.test(paintTip ?? '') && /Alt\s*5/.test(paintTip ?? ''), paintTip);
+  shell.setActive('design');
+  const dTabs = ['contrast', 'check', 'preview', 'harmonies', 'variations'];
+  check('Design’s tabs carry Alt+1 to Alt+5', dTabs.every((id, i) => designTab(id)?.getAttribute('aria-keyshortcuts') === `Alt+${i + 1}`), dTabs.map((id) => designTab(id)?.getAttribute('aria-keyshortcuts')));
+  press('5', { code: 'Digit5', altKey: true });
+  const alt5 = await until(() => designView().tab === 'variations', 1000);
+  press('1', { code: 'Digit1', altKey: true });
+  check('and the keys work: Alt+5 opens Variations, Alt+1 Contrast', !!alt5 && !!(await until(() => designView().tab === 'contrast', 1000)), designView().tab);
+  check('the Design tab tooltip names the key', /Variations/.test((await hover(designTab('variations'))) ?? ''));
+
+  // ── aw-04: toasts ──
+  const plainShown = () => toastStore.get().filter((t) => !t.leaving && !t.undo && t.kind !== 'error');
+  for (const n of [1, 2, 3, 4, 5]) toast.show({ message: `Findability notice ${n}` });
+  check('plain notices stack at most three', plainShown().length === 3 && plainShown().every((t) => /notice [345]$/.test(String(t.message))), plainShown().map((t) => t.message));
+  for (const t of toastStore.get()) toast.dismiss(t.id);
+  await sleep(LEAVE_MS + 60);
+  const long = 'This is a long notice that says a good deal about what happened and what to do next, so it needs more than one line to be read in full. '.repeat(2).trim();
+  toast.show({ message: long });
+  const msg = await until(() => [...document.querySelectorAll<HTMLElement>('[role="status"] span')].find((x) => x.textContent === long && shows(x)), 2000);
+  const toastBox = msg?.parentElement?.getBoundingClientRect();
+  check('a long toast wraps to two lines inside the toast’s own height, then ends in an ellipsis', !!msg && getComputedStyle(msg).webkitLineClamp === '2' && msg.scrollHeight > msg.clientHeight && msg.clientHeight > 20 && !!toastBox && toastBox.height <= 41, [msg && getComputedStyle(msg).webkitLineClamp, msg?.clientHeight, toastBox?.height]);
+  check('and its tooltip has the whole text', (await hover(msg?.parentElement ? msg : null)) === long);
+  for (const t of toastStore.get()) toast.dismiss(t.id);
+  await sleep(LEAVE_MS + 60);
+
+  // ── aw-03 / aw-11: Library rows ──
+  shell.toggleLibrary(true);
+  const rowsNow = () => [...document.querySelectorAll<HTMLElement>('[role="option"][id^="lib-row-"]')].filter((r) => shows(r));
+  const rows = (await until(() => (rowsNow().length >= 2 ? rowsNow() : null), 3000)) ?? [];
+  const at = (r: HTMLElement, text: string) => [...r.querySelectorAll('button')].find((b) => b.textContent?.trim() === text);
+  const idle = rows.filter((r) => r.getAttribute('aria-selected') !== 'true');
+  check('Library rows show Send to at rest, not only on hover', idle.some((r) => at(r, 'Send to') && getComputedStyle(at(r, 'Send to')!.parentElement!).display !== 'none' && shows(at(r, 'Send to'))), idle.map((r) => r.textContent));
+  check('and Open, on the rows no tool has open', idle.some((r) => at(r, 'Open') && shows(at(r, 'Open'))), idle.map((r) => r.textContent));
+  check('while More waits for the pointer', idle.every((r) => { const more = r.querySelector('[aria-label="More"]'); return !more || !shows(more); }));
+  const tag = rows.flatMap((r) => [...r.querySelectorAll('span')]).find((x) => /^· [A-Z]+$/.test(x.textContent ?? ''));
+  check('a use tag explains itself in a tooltip', !!tag && /takes this as/.test((await hover(tag)) ?? ''), tag?.textContent);
+
+  // a move between two unlocked collections needs no confirm, and its toast has Undo
+  await shell.createCollection('Walk from');
+  await shell.createCollection('Walk to');
+  const seed = await find((i) => i.kind === 'palette');
+  if (seed) {
+    await shell.duplicateItem(seed);
+    const dup = await until(() => find((i) => i.collection === 'Scratch' && i.kind === 'palette' && i.name !== seed.name));
+    if (dup) await shell.moveItem(dup, 'Walk from');
+    const walker = await until(() => find((i) => i.collection === 'Walk from'));
+    const row = await until(() => rowsNow().find((r) => r.closest('[data-collection="Walk from"]')), 3000);
+    if (walker && row) {
+      row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: 120, clientY: 160 }));
+      (await until(() => menuRow('Move to'), 2000))?.click();
+      (await until(() => menuRow('Walk to'), 2000))?.click();
+      const moved = await until(() => toastStore.get().find((t) => String(t.message).startsWith('Moved') && String(t.message).includes('Walk to')), 3000);
+      check('moving between unlocked collections just moves it, with an Undo toast and no confirm', !!moved?.undo && !!(await until(() => find((i) => i.id === walker.id && i.collection === 'Walk to'))) && !document.querySelector('[role="alertdialog"]'), moved?.message);
+      if (moved) toastStore.undo(moved.id);
+      await until(() => find((i) => i.id === walker.id && i.collection === 'Walk from'));
+      check('and its Undo moves it back', !!(await find((i) => i.id === walker.id && i.collection === 'Walk from')));
+      await shell.deleteItem(walker);
+      const gone = toast.activeCtrlZ();
+      if (gone) toast.dismiss(gone.id);
+    }
+  }
+  shell.toggleLibrary(libraryWas);
+
+  // ── des-17, des-16, des-03, des-11: Design ──
+  shell.setActive('design');
+  const roles: [Oklch, string, string][] = [[[0.97, 0.01, 90], 'Snow', 'Background'], [[0.99, 0, 90], 'Paper', 'Surface'], [[0.55, 0.18, 10], 'Berry', 'Primary'], [[0.2, 0.02, 40], 'Ink', 'Text']];
+  dd.transact('Smoke findability palette', (d) => ({ ...d, swatches: roles.map(([o, name, role]) => designSwatch(o, name, role)) }));
+  const [snow, , berry] = dd.get().swatches;
+  await until(() => dd.source() && dd.state().t === 'saved');
+  patchDesign({ selected: [berry.id], locked: [], tab: 'contrast', tabChosen: true });
+  const holdKey = await until(() => host('design')?.querySelector('[role="group"][aria-label="Hold"] kbd'), 2000);
+  check('Hold value shows its V key cap where the control is', holdKey?.textContent === 'V', holdKey?.textContent);
+  check('and the picker’s lock shows its L', !!pickerSection()?.querySelector('kbd') && pickerSection()!.querySelector('kbd')!.textContent === 'L', pickerSection()?.textContent);
+  blur();
+  const before = dd.depth();
+  press('l', { code: 'KeyL' });
+  check('L locks the selected colour, as one history step with a name', !!(await until(() => designView().locked.includes(berry.id))) && dd.depth() === before + 1 && dd.undoLabel() === 'Lock Berry', [designView().locked, dd.depth() - before, dd.undoLabel()]);
+  ctrlZ();
+  check('Ctrl+Z takes the lock back', !!(await until(() => !designView().locked.includes(berry.id))), designView().locked);
+  ctrlY();
+  check('and Ctrl+Y puts it back', !!(await until(() => designView().locked.includes(berry.id))), designView().locked);
+  ctrlZ();
+  await until(() => !designView().locked.includes(berry.id));
+  // an edit's undo leaves the locks alone
+  patchDesign({ locked: [snow.id] });
+  dd.transact('Smoke edit', (d) => ({ ...d, notes: 'edited' }));
+  ctrlZ();
+  await sleep(80);
+  check('while undoing an edit leaves the locks as they are', designView().locked.join() === snow.id, designView().locked);
+  patchDesign({ locked: [] });
+
+  // Contrast leads with the role pairs; the selected colour's matrix comes second and folded
+  patchDesign({ tab: 'contrast', selected: [snow.id] });
+  const panel = await until(() => (designPanel()?.textContent?.includes('Your role pairs') ? designPanel() : null), 2000);
+  const heads = [...(panel?.querySelectorAll('div, button') ?? [])].filter((x) => /^(Your role pairs|One colour as text|.+ as text)/.test(x.firstChild?.textContent ?? '') || /^Your role pairs/.test(x.textContent ?? ''));
+  const fold = [...(panel?.querySelectorAll('button[aria-expanded]') ?? [])].find((b) => / as text/.test(b.textContent ?? ''));
+  check('the Contrast tab leads with Your role pairs, then the selected colour as text, folded', !!panel && !!fold && fold.getAttribute('aria-expanded') === 'false' && (panel.textContent ?? '').indexOf('Your role pairs') < (panel.textContent ?? '').indexOf('as text') && heads.length > 0, [fold?.textContent, fold?.getAttribute('aria-expanded')]);
+  const fails = () => [...(designPanel()?.querySelectorAll('span') ?? [])].filter((x) => x.textContent === 'Fails').length;
+  const failsFolded = fails();
+  (fold as HTMLElement | undefined)?.click();
+  check('opening it shows the matrix, which a Surface selected used to fill the tab with', !!(await until(() => fold?.getAttribute('aria-expanded') === 'true')) && fails() >= failsFolded, [failsFolded, fails()]);
+  check('and no role pair says No role', !/No role on/.test(designPanel()?.textContent ?? ''), designPanel()?.textContent?.slice(0, 80));
+  (fold as HTMLElement | undefined)?.click();
+
+  // New set: the header says what Space does on Variations
+  patchDesign({ tab: 'variations' });
+  const newSet = await until(() => [...(host('design')?.querySelectorAll('button') ?? [])].find((b) => /^New set/.test(b.textContent?.trim() ?? '') && shows(b)), 2000);
+  check('on Variations the header’s Reroll reads New set, with Space', !!newSet && /Space/.test(newSet.textContent ?? '') && !rerollButton(), newSet?.textContent);
+  const [seedWas, docWas] = [designView().varSeed, dd.get()];
+  blur();
+  press(' ', { code: 'Space' });
+  await until(() => designView().varSeed !== seedWas, 1000);
+  check('Space there changes the set and leaves the palette alone', designView().varSeed !== seedWas && dd.get() === docWas, [seedWas, designView().varSeed]);
+  const seedAfter = designView().varSeed;
+  newSet?.click();
+  check('and so does the button', !!(await until(() => designView().varSeed !== seedAfter, 1000)) && dd.get() === docWas);
+  patchDesign({ tab: 'contrast' });
+  check('on every other tab it is Reroll again', !!(await until(rerollButton, 2000)) && /^Reroll/.test(rerollButton()!.textContent ?? ''), rerollButton()?.textContent);
+
+  // New palette: labelled, and it says where the old one went, with Undo
+  const named = dd.source()?.name;
+  const newBtn = exact('design', 'New');
+  check('New palette is a labelled button with a tooltip that says the old one stays', !!newBtn && /stays in the Library/.test((await hover(newBtn)) ?? ''));
+  newBtn?.click();
+  const closed = await until(() => toastStore.get().find((t) => String(t.message) === `Closed “${named}”, saved in the Library.`), 3000);
+  check('it blanks the workspace and a toast says “Closed X, saved in the Library” with Undo', !!closed?.undo && !!(await until(() => dd.get().swatches.length === 0)), [named, toastStore.get().map((t) => t.message).slice(-3)]);
+  if (closed) toastStore.undo(closed.id);
+  check('and Undo brings the palette back', !!(await until(() => dd.get().swatches.length === roles.length)), dd.get().swatches.length);
+  dd.transact('Smoke findability back', () => designWas);
+  patchDesign({ ...designSnap });
+
+  // ── ill-05, ill-06, ill-09: Illustration ──
+  shell.setActive('illustration');
+  const bare = (d: IllustrationDoc): IllustrationDoc => ({ ...d, ramps: [], swatches: [], scene: undefined });
+  il.transact('Smoke bare', bare);
+  patchIllustration({ tab: 'settings', selected: null, pictureOn: [], pictureOpen: false, pictureShut: false, proof: 'off' });
+  const picture = () => host('illustration')?.querySelector<HTMLElement>('[role="group"][aria-label="What\'s in the picture"]');
+  const pictureHead = () => picture()?.querySelector('button');
+  check('with no ramps, What’s in the picture opens expanded', !!(await until(() => pictureHead()?.getAttribute('aria-expanded') === 'true', 2000)) && !!picture()?.querySelector('[role="checkbox"], input[type="checkbox"], button[aria-checked]'), pictureHead()?.getAttribute('aria-expanded'));
+  const hexBox = () => [...(host('illustration')?.querySelectorAll('label') ?? [])].find((l) => l.textContent?.includes('Add by hex'))?.querySelector('input');
+  check('the empty state explains ramp once, in one line', !!host('illustration')?.querySelector('section[aria-label="Start"]')?.textContent?.includes('A ramp is one colour from highlight to deep shadow, ready to paint with.'));
+  check('and the Add by hex field is in the Ramps panel', !!hexBox());
+  typeInto(hexBox()!, 'C26B4C');
+  hexBox()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  await until(() => il.get().ramps.length === 1, 2000);
+  check('Enter in it adds the ramp', il.get().ramps.length === 1 && toHex(il.get().ramps[0].base).toUpperCase() === '#C26B4C', il.get().ramps.map((r) => toHex(r.base)));
+  await sleep(120);
+  check('and the field stays after the first ramp, empty again', !!hexBox() && hexBox()!.value === '', hexBox()?.value);
+  check('while the picture folds away once there is a ramp', pictureHead()?.getAttribute('aria-expanded') === 'false');
+  const fromPicker = il.get().swatches.find((w) => w.id === illustrationView().selected)?.oklch;
+  button('illustration', 'Add colour')?.click();
+  await until(() => il.get().ramps.length === 2, 2000);
+  await sleep(200); // the picker's field takes focus a frame or two later
+  check('Add colour starts from the picker’s colour, not a random one', !!fromPicker && il.get().ramps[1].base.every((v, i) => v === fromPicker[i]), [fromPicker, il.get().ramps[1]?.base]);
+  check('and an unnamed ramp stays Cloth', il.get().ramps.every((r) => r.material === 'cloth'), il.get().ramps.map((r) => r.material));
+  addBase(il, [0.74, 0.075, 55], 'Skin light');
+  addBase(il, [0.5, 0.1, 140], 'Ultramarine');
+  check('a ramp named for a subject takes its material, any other name does not', il.get().ramps.at(-2)?.material === 'skin' && il.get().ramps.at(-1)?.material === 'cloth', il.get().ramps.map((r) => r.material));
+  blur();
+
+  // Layers: the words
+  il.transact('Smoke four flats', (d) => ([[0.74, 0.075, 55], [0.78, 0.09, 85], [0.55, 0.09, 250], [0.6, 0.12, 140]] as Oklch[]).reduce<IllustrationDoc>((x, b, i) => addRamp(x, b, ['Skin', 'Hair', 'Shirt', 'Leaf'][i]).doc, bare(d)));
+  patchIllustration({ tab: 'layers', selected: null });
+  const layerRow = (key: string) => host('illustration')?.querySelector<HTMLElement>(`[data-layer="${key}"]`);
+  await until(() => layerRow('shadow'), 5000);
+  const gloss = (key: string) => layerRow(key)?.querySelector('[role="img"]')?.getAttribute('aria-label') ?? '';
+  check('Rim, Mood and the Shadow carry a one-line gloss; the clipped ones name the clipping mask in Krita, Clip Studio and Procreate', /edge of light/.test(gloss('rim')) && /Overlay/.test(gloss('mood')) && /Krita.*Clip Studio.*Procreate/.test(gloss('shadow')) && gloss('shadow').length < 220, [gloss('rim'), gloss('mood'), gloss('shadow')]);
+  const star = host('illustration')?.querySelector('button[aria-label$="matters most"]');
+  check('Matters most says what it does', /three times as hard/.test((await hover(star)) ?? ''));
+  const stackText = host('illustration')?.querySelector('[data-layer="shadow"]')?.textContent ?? '';
+  const hint = [...(host('illustration')?.querySelectorAll('p') ?? [])].map((p) => p.textContent ?? '').find((t) => /One Multiply/.test(t)) ?? '';
+  check('the sentence under the stack agrees with the Shadow row (never “off on X” beside “fits every flat”)', !!hint && !(/off on/.test(stackText) && /fits every character flat, so/.test(hint)) && (/near, a little off|off on/.test(stackText) ? !/fits every character flat, so/.test(hint) : true), [stackText, hint]);
+
+  // Seen as: a chip in the strip on every tab, with the Colour vision check's names
+  patchIllustration({ proof: 'deutan', tab: 'settings' });
+  const chipOn = (id: string) => [...(host('illustration')?.querySelectorAll('button') ?? [])].find((b) => /^Seen as Deutan$/.test(b.textContent?.trim() ?? '') && shows(b) && b.closest('header')?.querySelector(`[data-tab="${id}"]`));
+  const onTabs: string[] = [];
+  for (const id of ['settings', 'light', 'check', 'paint', 'variations']) {
+    patchIllustration({ tab: id as 'settings' });
+    if (await until(() => chipOn(id), 1500)) onTabs.push(id);
+  }
+  check('an active Seen as shows a chip in the strip header on every tab, named as Check values names it', onTabs.length === 5, onTabs);
+  patchIllustration({ tab: 'settings' });
+  (await until(() => chipOn('settings'), 1500))?.click();
+  check('and clicking it turns Seen as off, and the chip goes', illustrationView().proof === 'off' && !!(await until(() => !chipOn('settings'), 1500)), illustrationView().proof);
+
+  il.transact('Smoke findability back', () => illustrationWas);
+  patchIllustration({ ...illustrationSnap });
+  shell.setActive('design');
+}
+
 /** a hex colour's value (Rec. 709 luma), for sorting checks */
 function hexValue(hex: string): number {
   const h = hex.replace('#', '');
@@ -5417,10 +5682,10 @@ async function lightUi(): Promise<void> {
   const rows = () => [...ui.querySelectorAll<HTMLLIElement>('ul li')].filter((li) => /glow|bounce|shine|cast/.test(li.textContent ?? '') && shows(li));
   const addAll = () => [...ui.querySelectorAll<HTMLButtonElement>('button')].find((b) => /^Add (all \d+ )?to palette$/.test(b.textContent?.trim() ?? '') && shows(b));
   if (check('each needed colour has its own Add, with its hex, and Add all is there', (await until(() => rows().length >= 1)) !== null && rows().every((li) => !!li.querySelector('button') && /#[0-9A-F]{6}/.test(li.textContent ?? '')) && !!addAll(), rows().map((li) => li.textContent))) {
-    const [n0, shown] = [il.get().swatches.length, toastStore.get().length];
+    const [n0, shown] = [il.get().swatches.length, everToast.length];
     rows()[0].querySelector('button')!.click();
     check('one Add adds just that colour, as a loose swatch, in one undo step', (await until(() => il.get().swatches.length === n0 + 1)) !== null && il.get().swatches.at(-1)!.group === undefined && /glow|bounce|shine|cast/.test(il.get().swatches.at(-1)!.name), il.get().swatches.slice(n0).map((w) => w.name));
-    check('and a toast says what was added and where', !!(await until(() => toastStore.get().slice(shown).find((t) => /^Added .* to Loose/.test(String(t.message))))), toastStore.get().slice(shown).map((t) => t.message));
+    check('and a toast says what was added and where', !!(await until(() => everToast.slice(shown).find((t) => /^Added .* to Loose/.test(String(t.message))))), everToast.slice(shown).map((t) => t.message));
     check('the row stays, marked as in the palette, with its Add off', rows().length >= 1 && rows().some((li) => /In the palette/.test(li.textContent ?? '') && li.querySelector('button')?.disabled === true), rows().map((li) => li.textContent));
     // with more left to add, Add all takes them in one step
     const more = rows().filter((li) => !/In the palette/.test(li.textContent ?? '')).length;

@@ -2,10 +2,12 @@ import type { ReactNode } from 'react';
 import type { IconName } from '../shell/tool.ts';
 
 // Toasts: an imperative store so any handler can show one; <ToastHost /> draws them.
-// Undo toasts stay 8s, paused while hovered or while the window is unfocused; error toasts stay
-// until dismissed (brief §6). At most three show. Older ones wait out of sight with their clocks
-// running, and come back as newer ones close: pushing one out never closes it, so a fourth quick
-// delete can't send the first to the Recycle Bin early.
+// Undo and error toasts stay 8s, other notices 5s, paused while hovered or while the window is
+// unfocused (an error that stayed until dismissed sat through whole sessions, aw-04). At most three
+// show. Older ones wait out of sight with their clocks running, and come back as newer ones close:
+// pushing one out never closes it, so a fourth quick delete can't send the first to the Recycle Bin
+// early. Plain notices are the exception: a fourth closes the oldest of them, since nobody needs to
+// answer them and a queue of them only covers the work.
 
 export type ToastOptions = {
   icon?: IconName;
@@ -18,7 +20,7 @@ export type ToastOptions = {
   when?: () => boolean;
   /** a newer toast with the same key takes the place of the one showing (a run of rerolls is one toast, not a stack) */
   key?: string;
-  /** ms; default 8000 with undo, 5000 without, until dismissed for errors */
+  /** ms; default 8000 with undo or for an error, 5000 without */
   duration?: number;
   onClose?(reason: 'timeout' | 'undo' | 'dismiss'): void;
 };
@@ -89,12 +91,15 @@ export const toast = {
     }
     if (old.length) list = list.filter((x) => !old.includes(x));
     const id = crypto.randomUUID();
-    const duration = o.duration ?? (o.kind === 'error' ? Infinity : o.undo ? 8000 : 5000);
+    const duration = o.duration ?? (o.kind === 'error' || o.undo ? 8000 : 5000);
     emit([...list, { ...o, id, owner: toast.owner(), ctrlZLive: !!o.undo && o.ctrlZ !== false, leaving: false }]);
     if (Number.isFinite(duration)) {
       timers.set(id, { left: duration, since: 0, holds: new Set(document.hasFocus() ? [] : ['blur']) });
       run(id);
     }
+    // plain notices (no Undo, no error) stack three deep: the oldest beyond that goes
+    const plain = list.filter((x) => !x.leaving && x.kind !== 'error' && !x.undo);
+    for (const x of plain.slice(0, Math.max(0, plain.length - MAX_SHOWN))) close(x.id, 'dismiss');
     return id;
   },
   dismiss: (id: string) => close(id, 'dismiss'),

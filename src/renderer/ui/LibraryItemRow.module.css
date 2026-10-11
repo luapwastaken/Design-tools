@@ -41,6 +41,7 @@
 .lit { color: var(--ink-2); }
 .open { margin-left: 10px; color: var(--signal); }
 
-/* in the name line's flow while they show, so the name gives way to them instead of sitting under them */
-.actions { display: none; flex: none; align-items: center; gap: 2px; }
-.item:hover .actions, .item:focus-within .actions, .sel .actions { display: flex; }
+/* in the name line's flow, so the name gives way to them instead of sitting under them. Open and Send to are there at rest; More only with the pointer, focus or selection */
+.actions { display: flex; flex: none; align-items: center; gap: 2px; }
+.more { display: none; }
+.item:hover .more, .item:focus-within .more, .sel .more { display: inline-flex; }

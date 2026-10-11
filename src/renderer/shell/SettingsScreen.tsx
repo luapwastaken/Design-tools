@@ -55,6 +55,14 @@ export function SettingsScreen() {
             </InspectorRow>
           </Section>
 
+          <Section title="Keyboard">
+            <InspectorRow label="Shortcuts" info="Every key the current tool and the app answer to. Press ? anywhere outside a text field, or F1, to open it.">
+              <Button icon="keyboard" onClick={() => shell.openShortcuts(true)}>
+                Keyboard shortcuts
+              </Button>
+            </InspectorRow>
+          </Section>
+
           <Section title="Library">
             <InspectorRow label="Folder" info="Change points the app at another folder and moves nothing. Documents open from the old folder stay open, detached from their files.">
               <div className={s.folder}>

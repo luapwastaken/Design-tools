@@ -15,14 +15,17 @@ import s from './Picture.module.css';
 export function Picture({ doc, v, ramps }: { doc: Doc; v: IllustrationView; ramps: number }) {
   const n = pictureOf(v).length;
   const [asking, setAsking] = useState(false);
+  // open while there is no ramp (the quickest way in), unless folded away; with ramps it is as it was left
+  const open = ramps === 0 ? !v.pictureShut : v.pictureOpen;
+  const toggle = () => patchView(ramps === 0 ? { pictureShut: open } : { pictureOpen: !open });
   return (
     <div className={s.pic} role="group" aria-label="What's in the picture">
-      <button type="button" className={s.head} aria-expanded={v.pictureOpen} onClick={() => patchView({ pictureOpen: !v.pictureOpen })}>
-        <Icon name={v.pictureOpen ? 'keyboard_arrow_down' : 'keyboard_arrow_right'} size={14} />
+      <button type="button" className={s.head} aria-expanded={open} onClick={toggle}>
+        <Icon name={open ? 'keyboard_arrow_down' : 'keyboard_arrow_right'} size={14} />
         <span className={s.cap}>What's in the picture</span>
         {n > 0 && <span className={s.count}>{n} ticked</span>}
       </button>
-      {v.pictureOpen && (
+      {open && (
         <>
           <div className={s.ticks}>
             {KINDS.map((k) => {

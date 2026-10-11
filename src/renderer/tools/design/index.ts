@@ -7,11 +7,12 @@ import { toggleValueLock } from '../../ui/PickerStyles.tsx';
 import { baseName, fetchBlob, isSvg } from '../common/take.ts';
 import { ROLES } from '../../../shared/palette/roles.ts';
 import { armDelete, copySelected, duplicate, escape, eyedrop, keepAll, lockImported, newPalette, nudge, roleSelected, spaceNow, step, toggleLocked } from './actions.ts';
-import { emptyDoc, fromPayload, toPayload, type DesignDoc } from './doc.ts';
+import { emptyDoc, fromPayload, TAB_LABEL, tabsOf, toPayload, type DesignDoc } from './doc.ts';
 import { clearProposals } from './proposals.ts';
 import { takeImage, takeSvg } from './sources.ts';
 import { StatusSlot } from './StatusSlot.tsx';
 import { swapSelected, variationKeys } from './variation-actions.ts';
+import { patchView } from './view-state.ts';
 import { View } from './View.tsx';
 
 export const tool: ToolDefinition<DesignDoc> = {
@@ -76,13 +77,15 @@ export const tool: ToolDefinition<DesignDoc> = {
   shortcuts: (doc) => [
     // first, so the Variations tab's 1 to 6, Space, arrows and Esc win while it shows (and are not there on any other tab)
     ...variationKeys(doc),
-    { keys: 'Space', label: 'Reroll the unlocked colours (build a palette when empty)', run: () => spaceNow(doc) },
-    { keys: 'L', label: 'Lock or unlock the selected swatches: a locked colour stays through Space and Delete', run: () => toggleLocked(doc) },
+    // the tab strip's own order (View.tsx puts the same Alt+N in each tab's tooltip)
+    ...tabsOf(doc.get()).map((id, i) => ({ keys: `Alt+${i + 1}`, label: TAB_LABEL[id], run: () => patchView({ tab: id, tabChosen: true }) })),
+    { keys: 'Space', label: 'Reroll the unlocked colours, or build a palette when it is empty', run: () => spaceNow(doc) },
+    { keys: 'L', label: 'Lock or unlock the selected colours (a locked one stays through Reroll and Delete)', run: () => toggleLocked(doc) },
     { keys: 'S', label: 'Show other colours for the selected role', run: () => swapSelected(doc) },
     { keys: 'V', label: 'Hold value', run: toggleValueLock },
-    { keys: 'Delete', label: 'Delete swatches', run: () => armDelete(doc) },
+    { keys: 'Delete', label: 'Delete the selected colours', run: () => armDelete(doc) },
     { keys: 'Ctrl+D', label: 'Duplicate', run: () => duplicate(doc) },
-    { keys: 'Ctrl+N', label: 'New palette', run: () => void newPalette() },
+    { keys: 'Ctrl+N', label: 'New palette', run: () => void newPalette(doc) },
     { keys: 'ArrowLeft', label: 'Previous swatch', run: () => step(doc, -1) },
     { keys: 'ArrowRight', label: 'Next swatch', run: () => step(doc, 1) },
     { keys: 'Alt+ArrowLeft', label: 'Move the selection left', run: () => nudge(doc, -1) },

@@ -1,5 +1,6 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { cx } from '../../ui/cx.ts';
+import { Tooltip } from '../../ui/index.ts';
 import s from './Section.module.css';
 
 /**
@@ -32,6 +33,8 @@ export type SectionTab = {
   label: string;
   /** a problem count shown on the tab (danger tone); 0 or absent shows nothing */
   badge?: number;
+  /** the key that opens it (Alt+2): its tooltip says so, since a tab strip shows no key caps */
+  shortcut?: string;
   /** why it can't open yet (its tooltip-free reason is announced to screen readers) */
   disabled?: string;
   render(): ReactNode;
@@ -68,24 +71,26 @@ export function TabbedSection({ tabs, value, onChange, className, bodyClassName,
           {tabs.map((t) => {
             const on = t.id === current?.id;
             return (
-              <button
-                key={t.id}
-                type="button"
-                role="tab"
-                data-tab={t.id}
-                id={`tab-${t.id}`}
-                aria-selected={on}
-                aria-controls={`tabpanel-${t.id}`}
-                aria-label={t.badge ? `${t.label}, ${t.badge} to look at` : undefined}
-                aria-description={t.disabled}
-                tabIndex={on ? 0 : -1}
-                disabled={!!t.disabled}
-                className={cx(s.tab, on && s.on)}
-                onClick={() => onChange(t.id)}
-              >
-                {t.label}
-                {!!t.badge && <span className={s.badge}>{t.badge > 99 ? '99+' : t.badge}</span>}
-              </button>
+              <Tooltip key={t.id} content={t.label} shortcut={t.shortcut} disabled={!t.shortcut}>
+                <button
+                  type="button"
+                  role="tab"
+                  data-tab={t.id}
+                  id={`tab-${t.id}`}
+                  aria-keyshortcuts={t.shortcut}
+                  aria-selected={on}
+                  aria-controls={`tabpanel-${t.id}`}
+                  aria-label={t.badge ? `${t.label}, ${t.badge} to look at` : undefined}
+                  aria-description={t.disabled}
+                  tabIndex={on ? 0 : -1}
+                  disabled={!!t.disabled}
+                  className={cx(s.tab, on && s.on)}
+                  onClick={() => onChange(t.id)}
+                >
+                  {t.label}
+                  {!!t.badge && <span className={s.badge}>{t.badge > 99 ? '99+' : t.badge}</span>}
+                </button>
+              </Tooltip>
             );
           })}
         </div>

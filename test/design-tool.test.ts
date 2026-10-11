@@ -6,7 +6,7 @@ import type { RampSpec, Swatch } from '../src/shared/types.ts';
 import { cvdFix, partPair, spreadCluster, spreadV, spreadVs, valueFix } from '../src/renderer/tools/common/adjust.ts';
 import { moveRank } from '../src/shared/palette/checks.ts';
 import { nextV } from '../src/renderer/tools/design/adjust.ts';
-import { fromPayload, moveIds, recolour, toPayload, type DesignDoc } from '../src/renderer/tools/design/doc.ts';
+import { fromPayload, lockedAfter, moveIds, recolour, TAB_LABEL, tabsOf, toPayload, type DesignDoc } from '../src/renderer/tools/design/doc.ts';
 
 const sw = (id: string, oklch: Oklch): Swatch => ({ id, name: id, role: null, oklch, type: 'process' });
 const doc = (...ids: string[]): DesignDoc => ({ notes: '', swatches: ids.map((id, i) => sw(id, [i / 10, 0, 0])) });
@@ -179,4 +179,27 @@ test('blank names that would repeat are numbered, so a sentence never names two 
   // a second near-white takes another colour name, not "White 2"
   const pale = named([sw('x', [0.99, 0, 0]), sw('y', [0.985, 0.002, 90])]).map((w) => w.name);
   assert.ok(!/\d$/.test(pale[1]) && pale[0] !== pale[1], pale.join());
+});
+
+test('the tabs run in one order for the strip and for Alt+N, and Notes joins only while the file has notes', () => {
+  assert.deepEqual(tabsOf({ notes: '' }), ['contrast', 'check', 'preview', 'harmonies', 'variations']);
+  assert.deepEqual(tabsOf({ notes: 'Imported from brand.ase' }).at(-1), 'notes');
+  assert.ok(tabsOf({ notes: 'x' }).every((id) => TAB_LABEL[id]));
+});
+
+test('Undo and Redo put the locks back only across a lock change, never across an edit', () => {
+  const plain = doc('a', 'b');
+  const locked = { ...plain, locking: { before: ['x'], after: ['x', 'a'] } };
+  // a later edit keeps the lock step's record, as every edit spreads the document
+  const edited = { ...locked, notes: 'later' };
+  assert.deepEqual(lockedAfter('undo', locked, plain), ['x']);
+  assert.equal(lockedAfter('undo', edited, locked), null);
+  assert.deepEqual(lockedAfter('redo', plain, locked), ['x', 'a']);
+  assert.equal(lockedAfter('redo', locked, edited), null);
+  // two lock changes in a row: each undoes to its own before
+  const again = { ...locked, locking: { before: ['x', 'a'], after: ['x'] } };
+  assert.deepEqual(lockedAfter('undo', again, locked), ['x', 'a']);
+  assert.deepEqual(lockedAfter('redo', locked, again), ['x']);
+  // a lock list is not part of the palette file
+  assert.equal('locking' in toPayload(locked), false);
 });

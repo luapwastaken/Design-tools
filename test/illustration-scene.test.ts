@@ -21,7 +21,7 @@ import {
   toPayload,
   type IllustrationDoc,
 } from '../src/renderer/tools/illustration/doc.ts';
-import { LIGHTS, MAX_RAMPS, paletteBases, presetOf, SETS, sceneLight, SUBJECTS } from '../src/renderer/tools/illustration/scene.ts';
+import { LIGHTS, materialFromName, MAX_RAMPS, paletteBases, presetOf, SETS, sceneLight, SUBJECTS } from '../src/renderer/tools/illustration/scene.ts';
 
 const light = (id: string) => LIGHTS.find((l) => l.id === id)!;
 const withRamps = (...bases: Oklch[]): IllustrationDoc => bases.reduce((d, b) => addRamp(d, b).doc, emptyDoc());
@@ -222,4 +222,16 @@ test('a preset typed back in as hex still reads as the preset, and a different l
     assert.equal(presetOf(typed)?.id, l.id, `${l.label} typed as hex`);
   }
   assert.equal(presetOf({ light: [0.87, 0.09, 75], shadow: [0.36, 0.105, 333] }), null, 'ten degrees off Golden hour is Custom');
+});
+
+test('a ramp is guessed to be a material only from the subject word in its name; any other name stays Cloth', () => {
+  assert.equal(materialFromName('Skin light'), 'skin');
+  assert.equal(materialFromName('hair brown'), 'fur');
+  assert.equal(materialFromName('Wet stone wall'), 'stone');
+  assert.equal(materialFromName('Sky'), 'paper');
+  // every subject's own label says its own material
+  for (const x of SUBJECTS) assert.equal(materialFromName(x.label), x.material, x.label);
+  // a colour name, a shirt, nothing: no guess (the ramp keeps its default, Cloth)
+  for (const n of ['Ultramarine Blue', 'Shirt', 'C26B4C', '', '  ']) assert.equal(materialFromName(n), undefined, n);
+  assert.equal(materialFromName(null), undefined);
 });

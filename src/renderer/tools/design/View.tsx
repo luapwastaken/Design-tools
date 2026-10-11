@@ -11,10 +11,10 @@ import { DocBar } from '../common/DocBar.tsx';
 import { ExportPalette } from '../common/ExportPalette.tsx';
 import { TabbedSection, type SectionTab } from '../common/Section.tsx';
 import { useSettled } from '../common/settled.ts';
-import { eyedrop, giveRoles, hasJobs, lockEdited, newPalette, spaceNow, type Doc } from './actions.ts';
+import { eyedrop, followLocks, giveRoles, hasJobs, lockEdited, newPalette, spaceNow, type Doc } from './actions.ts';
 import { CheckTab } from './CheckTab.tsx';
 import { ContrastTab } from './ContrastTab.tsx';
-import { plural, type DesignDoc, type DesignTab, type DesignView } from './doc.ts';
+import { plural, TAB_LABEL, type DesignDoc, type DesignTab, type DesignView } from './doc.ts';
 import { PaletteSection } from './Palette.tsx';
 import { PickerSection } from './PickerSection.tsx';
 import { DesignPopover, type OpenPop, type PopState } from './Popovers.tsx';
@@ -24,6 +24,7 @@ import { results } from './results.ts';
 import { takeText } from './sources.ts';
 import { HarmoniesTab } from './HarmoniesTab.tsx';
 import { VariationsTab } from './VariationsTab.tsx';
+import { newSet } from './variation-actions.ts';
 import { NotesModule } from '../common/Notes.tsx';
 import { hot, PALETTE_H, patchView, PICKER_W, useView } from './view-state.ts';
 import type { CSSProperties } from 'react';
@@ -88,6 +89,8 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const ghosts = proposals.use();
   const [pop, setPop] = useState<PopState | null>(null);
   usePaste(active);
+  // Undo and Redo of a lock change (L) put the locks back
+  useEffect(() => followLocks(doc), [doc]);
   // a fix can remove the row under the pointer, which then never reports leaving
   useEffect(() => void (hot.get().length && hot.set([])), [d.swatches]);
   // a popover belongs to the tool that opened it
@@ -102,14 +105,14 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   const quiet = (what: string) => <p className={s.quiet}>{what}</p>;
   const when = (render: () => React.ReactNode): (() => React.ReactNode) => () => (empty ? quiet('Add a colour to the palette first.') : render());
   const tabs: SectionTab[] = [
-    { id: 'contrast', label: 'Contrast', badge: empty ? 0 : r.failing.length, render: when(() => <ContrastTab doc={doc} d={d} v={v} r={r} />) },
-    { id: 'check', label: 'Check palette', badge: empty ? 0 : r.toLookAt - r.failing.length, render: when(() => <CheckTab doc={doc} d={settled} v={v} r={r} />) },
-    { id: 'preview', label: 'Preview in use', badge: empty ? 0 : r.preview.failing.length, render: when(() => <PreviewTab v={v} r={r} />) },
-    { id: 'harmonies', label: 'Harmonies', render: when(() => <HarmoniesTab d={d} v={v} />) },
-    { id: 'variations', label: 'Variations', render: when(() => <VariationsTab doc={doc} d={d} v={v} />) },
+    { id: 'contrast', label: TAB_LABEL.contrast, badge: empty ? 0 : r.failing.length, render: when(() => <ContrastTab doc={doc} d={d} v={v} r={r} />) },
+    { id: 'check', label: TAB_LABEL.check, badge: empty ? 0 : r.toLookAt - r.failing.length, render: when(() => <CheckTab doc={doc} d={settled} v={v} r={r} />) },
+    { id: 'preview', label: TAB_LABEL.preview, badge: empty ? 0 : r.preview.failing.length, render: when(() => <PreviewTab v={v} r={r} />) },
+    { id: 'harmonies', label: TAB_LABEL.harmonies, render: when(() => <HarmoniesTab d={d} v={v} />) },
+    { id: 'variations', label: TAB_LABEL.variations, render: when(() => <VariationsTab doc={doc} d={d} v={v} />) },
     // the file's own notes (an import's warnings): a tab only while there are any
-    ...(d.notes ? [{ id: 'notes', label: 'Notes', render: () => <NotesModule doc={doc} /> }] : []),
-  ];
+    ...(d.notes ? [{ id: 'notes', label: TAB_LABEL.notes, render: () => <NotesModule doc={doc} /> }] : []),
+  ].map((t, n) => ({ ...t, shortcut: `Alt+${n + 1}` })); // index.ts's Alt+N follows tabsOf, the same order
 
   return (
     <div className={s.view} style={{ '--palh': `${v.paletteH}px`, '--pw': `${v.pickerW}px`, '--swaph': swapping ? '136px' : '0px' } as CSSProperties}>
@@ -118,7 +121,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         doc={doc}
         meta={plural(d.swatches.length, 'colour')}
         switcher={{ kind: 'palette' }}
-        actions={<DesignActions doc={doc} d={d} onPop={openPop} />}
+        actions={<DesignActions doc={doc} d={d} v={v} onPop={openPop} />}
         send={{ empty: 'Add a colour first: an empty palette has nothing to send' }}
         exportButton={<ExportPalette tool="design" swatches={d.swatches} named={(list) => named(list, doc.get().ramps)} format={v.format} onFormat={(format) => patchView({ format })} />}
       />
@@ -152,8 +155,8 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
   );
 }
 
-/** the doc bar's tool actions: Reroll (Surprise me while the palette is empty; style and accent on the caret), + Add colours, New */
-function DesignActions({ doc, d, onPop }: { doc: Doc; d: DesignDoc; onPop: OpenPop }) {
+/** the doc bar's tool actions: Reroll (Surprise me while the palette is empty, New set on Variations, where Space means that; style and accent on the caret), + Add colours, New */
+function DesignActions({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v: DesignView; onPop: OpenPop }) {
   const add = useRef<HTMLButtonElement>(null);
   const open = (e: { currentTarget: HTMLButtonElement; detail: number }) => {
     const at = add.current ?? e.currentTarget;
@@ -179,7 +182,13 @@ function DesignActions({ doc, d, onPop }: { doc: Doc; d: DesignDoc; onPop: OpenP
   return (
     <>
       <span className={s.gen}>
-        {d.swatches.length && !hasJobs(d.swatches) ? (
+        {v.tab === 'variations' && d.swatches.length > 0 ? (
+          // the Variations tab's Space makes six new palettes and leaves this one alone: the button says what the key does
+          <Button variant="primary" onClick={newSet} shortcut="Space" tooltip="Six new palettes to choose from. The palette you have stays as it is until you use one.">
+            New set
+            <Kbd>Space</Kbd>
+          </Button>
+        ) : d.swatches.length && !hasJobs(d.swatches) ? (
           <Button variant="primary" icon="star_shine" onClick={() => giveRoles(doc)} tooltip="No colour has a role yet, so there is nothing to reroll. This suggests Background, Text, Primary and Accent from the colours you have.">
             Give roles
           </Button>
@@ -199,7 +208,9 @@ function DesignActions({ doc, d, onPop }: { doc: Doc; d: DesignDoc; onPop: OpenP
       <Button ref={add} icon="add" iconEnd="keyboard_arrow_down" onClick={open}>
         Add colours
       </Button>
-      <IconButton icon="note_add" label="New palette" shortcut="Ctrl+N" size="sm" onClick={() => void newPalette()} />
+      <Button icon="note_add" shortcut="Ctrl+N" tooltip="New palette: this one closes and stays in the Library" onClick={() => void newPalette(doc)}>
+        New
+      </Button>
     </>
   );
 }

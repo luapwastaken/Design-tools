@@ -75,6 +75,17 @@ export const SUBJECTS: Subject[] = [
   { id: 'water', label: 'Water', base: [0.6, 0.09, 220], material: 'water' },
 ];
 
+const SUBJECT_WORD = new Map(SUBJECTS.map((x) => [x.label.split(' ')[0].toLowerCase(), x.material]));
+
+/** the material a colour's name says: only a subject's own word (Skin, Hair, Foliage, Sky, Cloth, Metal, Stone, Wood, Water); any other name says nothing, and the ramp stays Cloth */
+export function materialFromName(name: string | null | undefined): MaterialId | undefined {
+  for (const word of (name ?? '').toLowerCase().split(/[^a-z]+/)) {
+    const m = SUBJECT_WORD.get(word);
+    if (m) return m;
+  }
+  return undefined;
+}
+
 // ── limited sets: a few bases that sit apart in value ───────────────────────────────────────────
 
 export type LimitedSet = {

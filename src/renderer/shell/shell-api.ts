@@ -13,7 +13,7 @@ export type Readout = {
   /** mono caps, e.g. 'SAVED 14:32 · SCRATCH', 'OPEN IN ILLUSTRATION', 'LOCKED · MONOLITH', 'WORKSPACE' */
   text: string;
   tone: 'normal' | 'live' | 'warn' | 'danger';
-  /** e.g. { label: 'Take back', run } or { label: 'Reload from disk', run } */
+  /** e.g. { label: 'Open it here', run } or { label: 'Reload from disk', run } */
   actions: { label: string; run(): void }[];
 };
 
@@ -29,6 +29,8 @@ export type ShellState = {
   mounted: ToolId[];
   libraryOpen: boolean;
   settingsOpen: boolean;
+  /** the Keyboard shortcuts sheet is showing, over whatever is in the work area */
+  shortcutsOpen: boolean;
   settings: Settings | null;
   library: LibraryIndex | null;
   /** itemId → the tool whose live document it is (one owner per item, spec §7.3) */
@@ -56,6 +58,7 @@ export interface Shell {
   setActive(id: ToolId): void;
   toggleLibrary(open?: boolean): void;
   openSettings(open?: boolean): void;
+  openShortcuts(open?: boolean): void;
   setTheme(theme: Theme): Promise<void>;
   /** the app-wide colour picker style, model, plane and locks, and the greyscale view (every picker follows at once) */
   setPicker(patch: PickerPrefs): Promise<void>;

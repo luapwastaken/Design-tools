@@ -81,6 +81,8 @@ div.planes button { padding: 0 8px; }
 /* the hold row under the picker: Hold value, the colour's Value, Hold hue, Match */
 .hold { display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 8px; }
 .holdValue { width: 96px; }
+/* the toggle and its key cap sit together */
+.holdKey { display: inline-flex; align-items: center; gap: 6px; }
 .holdNote { color: var(--ink-3); font-size: var(--fs-meta); }
 
 /* ── Square and Wheel: the saturation-by-brightness area ── */

@@ -22,6 +22,8 @@ function onKey(e: KeyboardEvent): void {
   const el = document.activeElement as HTMLElement | null;
   const combo = comboOf(e);
   const own = shellKey(combo);
+  // the sheet of keys is a layer over the work: only its own keys (and Esc, which it takes itself) work while it shows
+  if (getState().shortcutsOpen && own?.t !== 'shortcuts') return;
   if (own) {
     if (runShellKey(own, el)) e.preventDefault();
     return;
@@ -56,6 +58,10 @@ function runShellKey(k: ShellKey, el: HTMLElement | null): boolean {
       return undoRedo(k.t === 'redo', el);
     case 'region':
       return cycleRegion(k.back, el);
+    case 'shortcuts':
+      if (k.bare && isTextField(el)) return false;
+      setState({ shortcutsOpen: !s.shortcutsOpen });
+      return true;
   }
 }
 

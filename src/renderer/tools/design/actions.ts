@@ -12,7 +12,7 @@ import { copyColour, pickFromScreen, toast, type NumberGesture } from '../../ui/
 import { nextV } from './adjust.ts';
 import { suggestRoles } from './artboard.ts';
 import { runComplete, runGenerate } from './build.ts';
-import { displayName, insertAfter, jobHolders, listNames, moveIds, newSwatch, plural, recolour, removeIds, type BuildMethod, type DesignDoc, type DesignView } from './doc.ts';
+import { displayName, insertAfter, jobHolders, listNames, lockedAfter, moveIds, newSwatch, plural, recolour, removeIds, type BuildMethod, type DesignDoc, type DesignView } from './doc.ts';
 import { clearProposals, dropProposals, proposals, proposalsFrom, type Proposal } from './proposals.ts';
 import { armed, getView, patchView } from './view-state.ts';
 
@@ -162,11 +162,17 @@ export function addProposals(doc: Doc, items: Proposal[], assign = false, from?:
 }
 
 /** an empty palette in place of this one: one undoable step; the first edit makes Scratch/Untitled palette N (spec §7.1) */
-export async function newPalette(): Promise<void> {
+export async function newPalette(doc: Doc): Promise<void> {
+  const was = doc.get();
+  const closed = doc.source();
   armed.set(false);
   clearProposals(); // they were built for the palette that was open
   select([]);
   await shell.newDoc('design');
+  // it blanked the workspace: say where the old palette went, and offer it back
+  if (!closed || doc.get() === was) return;
+  const after = doc.get();
+  toast.show({ icon: 'note_add', message: `Closed “${closed.name}”, saved in the Library.`, when: () => doc.get() === after, undo: () => void (doc.get() === after && doc.undo()) });
 }
 
 export function setColours(doc: Doc, label: string, changes: Record<string, Oklch>): void {
@@ -193,14 +199,31 @@ export function armDelete(doc: Doc): void {
   armed.set(true);
 }
 
-/** L: pin or free the selected swatches (a view setting; the file never holds it) */
+/**
+ * L: pin or free the selected swatches. The lock list is a view setting the file never holds, but the
+ * change is a history step (it rides on the document's `locking`), so Ctrl+Z takes it back.
+ */
 export function toggleLocked(doc: Doc): void {
   const d = doc.get();
   const ids = selection(d);
   if (!ids.length) return;
-  const have = getView().locked.filter((id) => d.swatches.some((w) => w.id === id));
+  const before = getView().locked;
+  const have = before.filter((id) => d.swatches.some((w) => w.id === id));
   const all = ids.every((id) => have.includes(id));
-  patchView({ locked: all ? have.filter((id) => !ids.includes(id)) : [...new Set([...have, ...ids])] });
+  const after = all ? have.filter((id) => !ids.includes(id)) : [...new Set([...have, ...ids])];
+  const verb = all ? 'Unlock' : 'Lock';
+  doc.transact(ids.length === 1 ? `${verb} ${displayName(d.swatches.find((w) => w.id === ids[0])!)}` : `${verb} ${plural(ids.length, 'colour')}`, (x) => ({ ...x, locking: { before, after } }));
+  patchView({ locked: after });
+}
+
+/** Undo and Redo of a lock change put the view's locks back (mounted with the tool's view) */
+export function followLocks(doc: Doc): () => void {
+  let was = doc.get();
+  return doc.onChange((entry, cause) => {
+    const list = cause === 'undo' || cause === 'redo' ? lockedAfter(cause, was, entry.data) : null;
+    was = entry.data;
+    if (list) patchView({ locked: list });
+  });
 }
 
 /** C: the swatch's colour in the format Copy as remembers, through the shared clipboard path */

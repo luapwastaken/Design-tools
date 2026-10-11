@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { cssColor, type Oklch } from '../../shared/color/index.ts';
 import { valueOf } from '../../shared/color/value.ts';
 import { Button } from './Button.tsx';
+import { Kbd } from './Kbd.tsx';
 import { menu } from './menu.ts';
 import { NumberField } from './NumberField.tsx';
 import type { Gesture } from './Picker.tsx';
@@ -51,8 +52,9 @@ export function PickerHold({ value, colour, match, ...g }: { value: Oklch; colou
   return (
     <div className={s.hold} role="group" aria-label="Hold">
       <Tooltip content={HOLD_VALUE} shortcut="V">
-        <span>
+        <span className={s.holdKey}>
           <Toggle checked={valueHeld} onChange={toggleValueLock} label="Hold value" />
+          <Kbd>V</Kbd>
         </span>
       </Tooltip>
       <Tooltip content="Rec. 709 luma: the grey a greyscale view shows. L and C change while this is held.">

@@ -1,6 +1,6 @@
-// Contrast tab: the selected colour as text on every other colour, then the palette's role pairs
-// with the one-click fixes the checks have.
-import { useMemo } from 'react';
+// Contrast tab: the palette's role pairs with the one-click fixes the checks have, then the selected
+// colour as text on every other colour (folded: it is a lookup, and a Surface there reads as a wall of Fails).
+import { useMemo, useState } from 'react';
 import { contrast, cssColor, type Oklch } from '../../../shared/color/index.ts';
 import type { ContrastPair } from '../../../shared/palette/checks.ts';
 import { isGround, isInk, ROLES } from '../../../shared/palette/roles.ts';
@@ -80,36 +80,10 @@ export function ContrastTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: Desig
   const anyRole = r.shown.some((x) => x.role !== null && (ROLES as readonly string[]).includes(x.role));
   const free = r.shown.filter((x) => !isGround(x.role) && !isInk(x.role) && !paired.has(x.id) && (x.role !== null || anyRole));
   const several = (p: ContrastPair) => r.contrast.filter((x) => x.text.id === p.text.id).length > 1;
+  const [open, setOpen] = useState(false);
   const held = ROLES.filter((role) => d.swatches.some((x) => x.role === role)).length;
   return (
     <>
-      <div className={s.h3}>
-        {w ? `${name} as text` : 'One colour as text'}
-        <small>{w ? 'on every other colour · WCAG 2.2' : 'select a colour in the palette'}</small>
-      </div>
-      {mine && others.length > 0 ? (
-        <div className={s.pairs}>
-          {others.map((o) => {
-            const ratio = contrast(mine.oklch, o.oklch);
-            const g = gradeOf(ratio);
-            return (
-              <div key={o.id} className={s.pair} {...pointAt([mine.id, o.id])}>
-                <Specimen text={mine.oklch} ground={o.oklch} />
-                <span className={s.n}>
-                  <span>on {displayName(o)}</span>
-                  {o.role && <small>{o.role}</small>}
-                </span>
-                <span className={s.r}>{ratio.toFixed(2)}</span>
-                <Badge label={g.label} tone={g.tone} target={4.5} ratio={ratio} />
-                <Gauge ratio={ratio} target={4.5} />
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p className={s.none}>{w ? 'Add another colour to compare it with.' : 'Pick a colour and see how it reads as text on every other.'}</p>
-      )}
-
       <div className={s.h3}>
         Your role pairs
         <small>the pairs a real layout uses</small>
@@ -140,6 +114,38 @@ export function ContrastTab({ doc, d, v, r }: { doc: Doc; d: DesignDoc; v: Desig
             {free.some((x) => x.role === null) && ' Give a colour a role to check it.'}
           </span>
         </p>
+      )}
+
+      <button type="button" className={cx(s.h3, s.fold)} aria-expanded={open} onClick={() => setOpen(!open)}>
+        <Icon name={open ? 'keyboard_arrow_down' : 'keyboard_arrow_right'} size={14} />
+        {w ? `${name} as text` : 'One colour as text'}
+        <small>{w ? 'on every other colour · WCAG 2.2' : 'select a colour in the palette'}</small>
+      </button>
+      {open && (
+        <>
+          {mine && others.length > 0 ? (
+            <div className={s.pairs}>
+              {others.map((o) => {
+                const ratio = contrast(mine.oklch, o.oklch);
+                const g = gradeOf(ratio);
+                return (
+                  <div key={o.id} className={s.pair} {...pointAt([mine.id, o.id])}>
+                    <Specimen text={mine.oklch} ground={o.oklch} />
+                    <span className={s.n}>
+                      <span>on {displayName(o)}</span>
+                      {o.role && <small>{o.role}</small>}
+                    </span>
+                    <span className={s.r}>{ratio.toFixed(2)}</span>
+                    <Badge label={g.label} tone={g.tone} target={4.5} ratio={ratio} />
+                    <Gauge ratio={ratio} target={4.5} />
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className={s.none}>{w ? 'Add another colour to compare it with.' : 'Pick a colour and see how it reads as text on every other.'}</p>
+          )}
+        </>
       )}
 
       {w && (
@@ -185,7 +191,7 @@ function RolePair({ doc, p, shown }: { doc: Doc; p: ContrastPair; shown: Swatch[
           {displayName(p.text)} on {displayName(p.ground)}
         </span>
         <small>
-          {p.text.role ?? 'No role'} on {p.ground.role ?? 'a ground'}
+          {p.text.role ?? 'Text'} on {p.ground.role ?? 'a ground'}
         </small>
       </span>
       <span className={s.r}>{p.ratio.toFixed(2)}</span>

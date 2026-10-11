@@ -8,13 +8,13 @@ import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { cssColor } from '../../../shared/color/index.ts';
 import { ALL_ON, hexRgb, MODE_NAME, muddyAll, recipeText, solveRecipe, typedHex, type Eyes, type FlatIn, type Recipe, type Rgb, type Space } from '../../../shared/palette/recipe.ts';
 import { cx } from '../../ui/cx.ts';
-import { Button, copyText, IconButton, InspectorGroup, NumberField, Segmented, Select, Toggle } from '../../ui/index.ts';
+import { Button, copyText, IconButton, InfoTip, InspectorGroup, NumberField, Segmented, Select, Toggle } from '../../ui/index.ts';
 import { GreyscaleButton } from '../common/Greyscale.tsx';
 import { plural } from '../common/names.ts';
 import { useSettled } from '../common/settled.ts';
 import { selected, type Doc } from './actions.ts';
 import { offerLayers, SHOWS, setFlag, setPart } from './layer-actions.ts';
-import { allFlats, allTogether, hintOf, paintRecipe, paintTargets, PARTS, partRamps, recipeFlats, rowsOf, shadowIn, type Row } from './layers.ts';
+import { allFlats, allTogether, GLOSS, hintOf, paintRecipe, paintTargets, PARTS, partRamps, recipeFlats, rowsOf, shadowIn, type Row } from './layers.ts';
 import { sceneLight } from './scene.ts';
 import { PART_IDS, stillLifeOf, type PartId } from './still-life.ts';
 import { patchView, type IllustrationView } from './view-state.ts';
@@ -211,6 +211,7 @@ const LayerRow = memo(function LayerRow({ r, lightMode, flip }: { r: Row; lightM
       <div className={s.lname}>
         <span>
           <b>{r.name}</b>
+          {GLOSS[r.key] && <InfoTip text={GLOSS[r.key]!} />}
           {r.key === 'light' ? (
             <Segmented
               className={s.lmode}
@@ -319,7 +320,7 @@ const FlatRow = memo(function FlatRow({ f, out }: { f: FlatIn; out: boolean }) {
       <i className={s.chip} data-colour="" style={{ background: f.hex }} />
       <div className={s.fname}>
         <b>{f.name}</b>
-        <IconButton icon="star" label={`${f.name} matters most`} tip="Matters most: counts three times in the fit" size="sm" latched={f.star} onClick={() => setFlag('layerStar', f.id, !f.star)} />
+        <IconButton icon="star" label={`${f.name} matters most`} tip="Matters most: the layers are fitted three times as hard to this flat, so it keeps its colour first when they disagree" size="sm" latched={f.star} onClick={() => setFlag('layerStar', f.id, !f.star)} />
       </div>
       <div className={s.flags}>
         <Toggle quiet label="In the recipe" checked={!out} onChange={(on) => setFlag('layerOut', f.id, !on)} />
