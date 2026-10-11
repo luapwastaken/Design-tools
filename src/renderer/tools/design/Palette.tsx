@@ -226,7 +226,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
           {ghosts?.items.map((p, i) => (
             <Ghost key={p.id} p={p} guess={guess[i]} data={v.chipData} shown={simulated(p.oklch, v.sim)} lockable={ghosts.from === 'generate'} onAdd={() => addProposals(doc, [p], false, ghosts.from)} onDiscard={() => dropOne(p)} onLock={() => toggleLock(p.id)} />
           ))}
-          <Tooltip content="Add a colour at the value the palette lacks most">
+          <Tooltip content="Add a colour at the value the palette lacks most" shortcut="Shift+A">
             <button type="button" className={s.add} aria-label="Add a swatch" onClick={() => addSwatch(doc)}>
               <Icon name="add" size={20} />
               <span>Add colour</span>
@@ -326,7 +326,7 @@ function Tile(p: TileProps) {
         </button>
         <span className={s.tools}>
           {p.onSwap && (
-            <Tooltip content="Show colours that could replace this one" side="below">
+            <Tooltip content="Show colours that could replace this one" shortcut="S" side="below">
               <button
                 type="button"
                 className={cx(s.swap, p.swapOpen && s.on)}

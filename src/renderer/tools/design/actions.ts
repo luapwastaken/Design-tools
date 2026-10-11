@@ -64,6 +64,13 @@ export function addSwatch(doc: Doc): void {
   select([w.id]);
 }
 
+/** Ctrl+A: every colour is selected, the first one staying the active one */
+export function selectAll(doc: Doc): void {
+  const ids = doc.get().swatches.map((w) => w.id);
+  const first = selection(doc.get())[0];
+  select(first ? [first, ...ids.filter((id) => id !== first)] : ids);
+}
+
 export function duplicate(doc: Doc): void {
   const d = doc.get();
   const ids = selection(d);

@@ -59,31 +59,31 @@ const onControl = (): boolean => !!document.activeElement?.closest('button, a[hr
 
 /**
  * The Variations tab's keys (spec: Asked and answered 1): 1 to 6 open a cell, Space refills the grid, and
- * while one is open the arrows step, M narrows, Enter uses it and Esc closes it. They exist only while the
- * tab shows, so every other tab keeps Design's own 1 to 7, arrows and Space. The other-colours row closes on
- * Esc from any tab, before the large view does. The keymap takes the first match, so these go first.
+ * while one is open the arrows step, M narrows, Enter uses it and Esc closes it. They are always listed,
+ * and `off` outside the tab (or with no cell open), so every other tab keeps Design's own 1 to 7, arrows
+ * and Space. The other-colours row closes on Esc from any tab, before the large view does. The keymap
+ * takes the first live match, so these go first.
  */
 export function variationKeys(doc: Doc): Shortcut[] {
   const v = getView();
-  const swap: Shortcut[] = v.swapRole && jobHolders(doc.get().swatches).some(([role]) => role === v.swapRole) ? [{ keys: 'Escape', label: 'Close the other-colours row', run: closeSwap }] : [];
+  const swap: Shortcut[] = v.swapRole && jobHolders(doc.get().swatches).some(([role]) => role === v.swapRole) ? [{ keys: 'Escape', label: 'Close the other-colours row', group: 'Make colours', when: 'other colours open', run: closeSwap }] : [];
   const d = doc.get();
-  if (v.tab !== 'variations' || !d.swatches.length) return swap;
-  const cells = cellsOf(d, v);
-  const open = openCell(cells, v);
+  const onTab = v.tab === 'variations' && d.swatches.length > 0;
+  const cells = onTab ? cellsOf(d, v) : [];
+  const open = onTab ? openCell(cells, v) : null;
+  const group = 'Variations';
+  const tab = 'Variations tab';
+  const one = 'one open';
   return [
     ...swap,
-    ...cells.map((c): Shortcut => ({ keys: String(c.n), label: `Variations: show ${c.n} larger`, run: () => showCell(c.n) })),
-    { keys: 'Space', label: 'Variations: a new set', run: newSet },
-    ...(open
-      ? [
-          { keys: 'ArrowLeft', label: 'Variations: previous', run: () => stepCell(cells.length, -1) },
-          { keys: 'ArrowRight', label: 'Variations: next', run: () => stepCell(cells.length, 1) },
-          { keys: 'M', label: 'Variations: more like this', run: () => moreLikeThis(d) },
-          { keys: 'Escape', label: 'Variations: close', run: closeCell },
-          // a focused button keeps its own Enter
-          ...(onControl() ? [] : [{ keys: 'Enter', label: 'Variations: use this palette', run: () => adoptCell(doc, open) }]),
-        ]
-      : []),
+    ...Array.from({ length: 6 }, (_, i): Shortcut => ({ keys: String(i + 1), label: `Open palette ${i + 1} larger`, group, when: tab, off: i >= cells.length, run: () => showCell(i + 1) })),
+    { keys: 'Space', label: 'New set of six', group, when: tab, off: !onTab, run: newSet },
+    { keys: 'ArrowLeft', label: 'Previous palette', group, when: one, off: !open, run: () => stepCell(cells.length, -1) },
+    { keys: 'ArrowRight', label: 'Next palette', group, when: one, off: !open, run: () => stepCell(cells.length, 1) },
+    { keys: 'M', label: 'More like this', group, when: one, off: !open, run: () => moreLikeThis(d) },
+    { keys: 'Escape', label: 'Close the open palette', group, when: one, off: !open, run: closeCell },
+    // a focused button keeps its own Enter
+    { keys: 'Enter', label: 'Use this palette', group, when: one, off: !open || onControl(), run: () => open && adoptCell(doc, open) },
   ];
 }
 
