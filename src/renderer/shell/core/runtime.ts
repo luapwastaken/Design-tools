@@ -34,6 +34,8 @@ export type Runtime = {
   view: unknown;
   /** the last workspace state written, so an unchanged one isn't written again */
   saved: string;
+  /** the item file body of the last change, so a change the file can't show (a lock) writes nothing */
+  body: string;
   crashes: number;
   /** what the first commit of a New document names its item, when the New gave a name */
   newName?: string;
@@ -64,6 +66,7 @@ export function makeRuntime(def: ToolDefinition<any>): Runtime {
     pending: 0,
     view: undefined,
     saved: '',
+    body: '',
     crashes: 0,
     detach: () => {},
   };

@@ -22,10 +22,10 @@ test('the list is what the keymap fires: the first of two on the same keys wins'
 
 test('a tool lists its keys in groups: single keys, keys with a modifier, tabs', () => {
   const g = toolGroups([sc('Alt+1', 'Contrast'), sc('Alt+2', 'Check palette'), sc('Space', 'Reroll'), sc('Ctrl+D', 'Duplicate'), sc('Alt+ArrowLeft', 'Move left'), sc('L', 'Lock'), sc('Shift+A', 'Add a colour')]);
-  assert.deepEqual(g.map((x) => x.title), ['Single keys', 'With Ctrl, Alt or Shift', 'Tabs']);
-  assert.deepEqual(g[0].rows.map((r) => r.keys), ['Space', 'L']);
-  assert.deepEqual(g[1].rows.map((r) => r.keys), ['Ctrl+D', 'Alt+ArrowLeft', 'Shift+A']);
-  assert.deepEqual(g[2].rows.map((r) => [r.keys, r.label]), [['Alt+1', 'Contrast'], ['Alt+2', 'Check palette']]);
+  assert.deepEqual(g.map((x) => x.title), ['Tabs', 'Single keys', 'With Ctrl, Alt or Shift']);
+  assert.deepEqual(g[0].rows.map((r) => [r.keys, r.label]), [['Alt+1', 'Contrast'], ['Alt+2', 'Check palette']]);
+  assert.deepEqual(g[1].rows.map((r) => r.keys), ['Space', 'L']);
+  assert.deepEqual(g[2].rows.map((r) => r.keys), ['Ctrl+D', 'Alt+ArrowLeft', 'Shift+A']);
   // an empty group is not shown
   assert.deepEqual(toolGroups([sc('G', 'Greyscale')]).map((x) => x.title), ['Single keys']);
   assert.deepEqual(toolGroups([]), []);

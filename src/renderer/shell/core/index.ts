@@ -65,7 +65,8 @@ export const shell: Shell = {
 
   setActive: send.setActive,
   toggleLibrary: (open) => setState({ libraryOpen: open ?? !getState().libraryOpen }),
-  openSettings: (open) => setState({ settingsOpen: open ?? !getState().settingsOpen }),
+  // the shortcuts sheet is built for one place, so it closes when Settings opens or closes under it
+  openSettings: (open) => setState({ settingsOpen: open ?? !getState().settingsOpen, shortcutsOpen: false }),
   openShortcuts: (open) => setState({ shortcutsOpen: open ?? !getState().shortcutsOpen }),
   setTheme: library.setTheme,
   setPicker,

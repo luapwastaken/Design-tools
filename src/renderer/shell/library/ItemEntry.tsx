@@ -1,6 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react';
 import type { LibraryItemRef, ToolId } from '../../../shared/types.ts';
-import { Button, ConfirmInline, LibraryItemRow, TextInput, menu, type MenuAnchor, type MenuOptions } from '../../ui/index.ts';
+import { ConfirmInline, IconButton, LibraryItemRow, TextInput, menu, type MenuAnchor, type MenuOptions } from '../../ui/index.ts';
 import { shell } from '../core/index.ts';
 import { cantOpen } from '../core/routing.ts';
 import { collectionLabel, formatBytes, KIND_WORD, ownerNote, sendToItems } from './actions.ts';
@@ -103,21 +103,15 @@ export function ItemEntry(p: Props) {
       actions={
         <>
           {/* an item open in a tool says so in its tag; Open is for the ones that aren't */}
-          {!owner && shell.openTarget(item.kind) && (
-            <Button size="xs" variant="ghost" tabIndex={-1} onClick={() => void shell.openItem(item)}>
-              Open
-            </Button>
-          )}
+          {!owner && shell.openTarget(item.kind) && <IconButton icon="open_in_new" label="Open" size="xs" tabIndex={-1} onClick={() => void shell.openItem(item)} />}
           {targets.length > 0 && !p.narrow && (
-            <Button
+            <IconButton
+              icon="send"
+              label="Send to"
               size="xs"
-              variant={p.selected ? 'secondary' : 'ghost'}
-              iconEnd="chevron_right"
               tabIndex={-1}
               onClick={(e) => menu.open(e.currentTarget.getBoundingClientRect(), targets, { initial: e.detail === 0 ? 0 : undefined })}
-            >
-              Send to
-            </Button>
+            />
           )}
         </>
       }

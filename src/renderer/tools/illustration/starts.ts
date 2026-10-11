@@ -9,7 +9,7 @@ import { shell } from '../../shell/core/index.ts';
 import { ipc } from '../../shell/core/ipc.ts';
 import { menu, toast } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
-import { addBase, eyedrop, newPalette, select, selected, type Doc } from './actions.ts';
+import { addBase, eyedrop, newPalette, nextBase, select, selected, type Doc } from './actions.ts';
 import { fromPayload, isLayer, looseOf, makeRamps, MAX_RAMPS, type IllustrationDoc } from './doc.ts';
 import { extract, picture, propose, sourcePop, type Source } from './proposals.ts';
 import { paletteBases, SETS, SUBJECTS, type Subject } from './scene.ts';
@@ -25,7 +25,13 @@ export const baseFromHex = (text: string): Oklch | null => {
 // ── one colour: its ramp is added at once ───────────────────────────────────────────────────────
 
 /** the Add colour button: the colour the picker shows now, and the picker's field ready to take the one you meant */
-export const addColour = (doc: Doc): void => addBase(doc, undefined, '', { focus: true });
+export function addColour(doc: Doc): void {
+  const d = doc.get();
+  const now = selected(d)?.oklch;
+  // a colour some ramp already starts from would add a twin ("Reads as another base"), so that one steps to a new hue
+  const twin = !!now && d.ramps.some((r) => JSON.stringify(r.base) === JSON.stringify(now));
+  addBase(doc, twin ? nextBase(d) : now, '', { focus: true });
+}
 
 /** a subject: its name, its material and a base that suits it */
 export const addSubject = (doc: Doc, s: Subject): void => addBase(doc, s.base, s.label, { material: s.material, focus: true });
@@ -33,8 +39,11 @@ export const addSubject = (doc: Doc, s: Subject): void => addBase(doc, s.base, s
 /** the Add by hex field: false when the text isn't a hex colour (the field shows why) */
 export function addTyped(doc: Doc, text: string): boolean {
   const o = baseFromHex(text);
-  if (o) addBase(doc, o, '', { focus: true });
-  return !!o;
+  if (!o) return false;
+  const had = doc.get().ramps.length;
+  addBase(doc, o, '', { focus: true });
+  // a full palette refuses (and says so): what was typed stays in the field
+  return doc.get().ramps.length > had;
 }
 
 // ── several colours: staged under a popover ─────────────────────────────────────────────────────

@@ -39,13 +39,25 @@ export function attach(r: Runtime): void {
 
 function changed(r: Runtime, entry: Entry<unknown>, cause: ChangeCause): void {
   r.data = entry.data;
+  // a commit the file can't show (a swatch lock rides on the history step only) is no edit: no write, no copy
+  const body = r.def.itemKind ? bodyOf(r, entry.data) : '';
+  const unchanged = cause === 'commit' && body !== '' && body === r.body;
+  r.body = body;
   if (cause === 'restore') return;
   r.crashes = 0; // another document now: an earlier crash no longer counts towards starting empty
   // spec §8: after a tool commit, Ctrl+Z belongs to the tool again
   if (cause === 'commit' || cause === 'receive') toast.noteCommit();
   else toast.refresh(); // an undo or redo can end a Send to toast's hold on Ctrl+Z
-  if (quiet === r) return;
+  if (quiet === r || unchanged) return;
   void enqueue(r, () => (r.def.itemKind ? persistItem(r, entry, cause) : saveWorkspace(r)));
+}
+
+function bodyOf(r: Runtime, data: unknown): string {
+  try {
+    return JSON.stringify(r.def.toItem!(data)) ?? '';
+  } catch {
+    return '';
+  }
 }
 
 async function persistItem(r: Runtime, entry: Entry<unknown>, cause: ChangeCause): Promise<void> {

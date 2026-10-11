@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { cx } from '../../ui/cx.ts';
 import { Tooltip } from '../../ui/index.ts';
 import s from './Section.module.css';
@@ -55,6 +55,10 @@ export function TabbedSection({ tabs, value, onChange, className, bodyClassName,
   const strip = useRef<HTMLDivElement>(null);
   const open = tabs.filter((t) => !t.disabled);
   const current = tabs.find((t) => t.id === value && !t.disabled) ?? open[0];
+  // a strip wider than its pane scrolls (without a bar): the tab you are on is always one you can see
+  useEffect(() => {
+    (strip.current?.querySelector('[aria-selected="true"]') as HTMLElement | null)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [current?.id]);
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const n = open.length;
     const at = Math.max(0, open.findIndex((t) => t.id === current?.id));

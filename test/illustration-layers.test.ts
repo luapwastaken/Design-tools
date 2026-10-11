@@ -184,6 +184,14 @@ test('the target view paints each flat’s own steps through the same masks', ()
   assert.ok(px2.every((x) => x === 100));
 });
 
+test('with a second Shadow, the sentence says close or near by the same bands as the row’s fit word', () => {
+  const flats = allFlats(palette(), flags());
+  const two = (dist: number) => ({ shadow2: { clip: [flats[0].id] }, shadow: { worst: { id: flats[0].id, dist: 0.2 } }, shadowAll: { id: flats[0].id, dist }, cast: null, lightAll: { id: flats[0].id, dist: 0 }, lightMode: 'add' }) as unknown as Recipe;
+  assert.match(hintOf(two(0.01), flats), /brings them close\./);
+  assert.match(hintOf(two(0.04), flats), new RegExp(`brings them near, a little off on ${flats[0].name}\\.`));
+  assert.ok(fitWord(0.04, flats[0].name).startsWith('near'));
+});
+
 test('the sentence under the stack is made from the same distance as the Shadow row, so the two never disagree', () => {
   const flats = allFlats(palette(), flags());
   const alone = (dist: number) => ({ shadow2: null, shadow: { worst: { id: flats[0].id, dist } }, shadowAll: { id: flats[0].id, dist }, cast: null, lightAll: { id: flats[0].id, dist: 0 }, lightMode: 'add' }) as unknown as Recipe;

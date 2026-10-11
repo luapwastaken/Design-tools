@@ -228,7 +228,7 @@ export function hintOf(r: Recipe, flats: FlatIn[]): string {
   const alone = r.shadow.worst.dist;
   const shadow = r.shadow2
     ? r.shadowAll.dist < OFF
-      ? `One Multiply cannot fit every character flat: ${names} would go muddy or stay visibly off. The second Shadow, clipped to ${r.shadow2.clip.length > 1 ? 'them' : 'it'}, brings them close.`
+      ? `One Multiply cannot fit every character flat: ${names} would go muddy or stay visibly off. The second Shadow, clipped to ${r.shadow2.clip.length > 1 ? 'them' : 'it'}, brings them ${r.shadowAll.dist < CLOSE ? 'close' : `near, a little off on ${name(r.shadowAll.id)}`}.`
       : `One Multiply cannot fit every character flat. A second Shadow clipped to ${names} helps, but ${name(r.shadowAll.id)} is still off even with it.`
     : alone < CLOSE
       ? 'One Multiply fits every character flat, so there is no second shadow layer.'

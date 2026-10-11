@@ -5,6 +5,11 @@
 .bottom.wide { grid-template-columns: minmax(0, 1fr); }
 .tabBody { container-type: inline-size; }
 .quiet { margin: 0; color: var(--ink-3); font-size: var(--fs-base); line-height: 1.45; }
+.word { white-space: nowrap; }
+/* the words go before any button does: Add colours first, then New (both keep their tooltip) */
+@container docbar (max-width: 1120px) {
+  .word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
 .gen { display: inline-flex; align-items: center; gap: 2px; }
 /* a section with a resize handle on its edge: the handle needs a positioned parent outside the section's clip */
 .cell { position: relative; display: flex; min-width: 0; min-height: 0; }

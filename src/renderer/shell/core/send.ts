@@ -266,7 +266,7 @@ export async function takeBack(id: ToolId): Promise<void> {
     await idle(other);
   }
   r.lostTo.delete(src.itemId);
-  await reopen(r, (name) => `Take back ${name}`);
+  await reopen(r, (name) => `Open ${name} here`);
 }
 
 /** CHANGED ON DISK: the file wins; Ctrl+Z brings mine back (and writes it) */

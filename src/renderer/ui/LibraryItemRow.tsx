@@ -124,7 +124,7 @@ export function LibraryItemRow(p: LibraryItemRowProps) {
             )}
             {openIn && (
               <Tooltip content={`Open in ${openIn}: it is that tool's document now, and what you change there is saved to this item.`}>
-                <span className={cx(s.keep, s.open)}>{longTag ? `Open in ${openIn}` : 'Open'}</span>
+                <span className={cx(s.keep, s.open)}>{longTag ? `Open in ${openIn}` : `In ${openIn}`}</span>
               </Tooltip>
             )}
           </span>

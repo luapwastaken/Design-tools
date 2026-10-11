@@ -59,7 +59,7 @@ function collapseDigits(list: Shortcut[]): Row[] {
   return out;
 }
 
-/** a tool's own keys in three groups: the single keys, the keys with Ctrl, Alt or Shift, and its tabs (Alt+N) */
+/** a tool's own keys in three groups: its tabs (Alt+N), the single keys, and the keys with Ctrl, Alt or Shift */
 export function toolGroups(list: Shortcut[]): Group[] {
   const mine = reachable(list);
   const tabs = mine.filter((s) => /^Alt\+\d$/.test(s.keys));
@@ -70,9 +70,10 @@ export function toolGroups(list: Shortcut[]): Group[] {
   });
   const single = rest.filter((s) => !withMod.includes(s));
   const groups: Group[] = [
+    // the tabs first: they are the keys least people know, and on a short window the list scrolls
+    { title: 'Tabs', rows: tabs.map((s) => ({ keys: s.keys, label: s.label })) },
     { title: 'Single keys', rows: collapseDigits(single) },
     { title: 'With Ctrl, Alt or Shift', rows: withMod.map((s) => ({ keys: s.keys, label: s.label })) },
-    { title: 'Tabs', rows: tabs.map((s) => ({ keys: s.keys, label: s.label })) },
   ];
   return groups.filter((g) => g.rows.length > 0);
 }

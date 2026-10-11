@@ -12,6 +12,7 @@ import { Button, Icon, NumberField, toast, Tooltip } from '../../ui/index.ts';
 import { partPair, type FixRules } from '../common/adjust.ts';
 import { toastMoved } from '../common/fixes.ts';
 import { Value } from '../common/Value.tsx';
+import { VISION_NAME } from '../common/vision-names.ts';
 import { VISIONS, type Kind } from '../common/Vision.tsx';
 import { setColours, type Doc } from './actions.ts';
 import { displayName, type DesignDoc, type DesignView, type Simulate } from './doc.ts';
@@ -19,7 +20,7 @@ import { pairKey, type Results, type Verdict } from './results.ts';
 import { patchView, pointAt } from './view-state.ts';
 import s from './Tabs.module.css';
 
-const LABEL: Record<Kind, string> = { typical: 'Typical vision', protan: 'Protanopia', deutan: 'Deuteranopia', tritan: 'Tritanopia', achromat: 'Achromatopsia' };
+const LABEL: Record<Kind, string> = { ...VISION_NAME, typical: 'Typical vision' };
 const CVDS = VISIONS.slice(1) as Cvd[];
 const samePair = (x: CvdClosest | null, y: CvdClosest) => !!x && ((x.a.id === y.a.id && x.b.id === y.b.id) || (x.a.id === y.b.id && x.b.id === y.a.id));
 

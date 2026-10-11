@@ -67,7 +67,8 @@ function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Sw
   return (
     <Section
       title="Colour picker"
-      sub={count > 1 ? `${name} · 1 of ${count} selected` : name}
+      // the name is in the field below; the header keeps its room for the key caps and says only what the field can't
+      sub={count > 1 ? `${count} selected` : undefined}
       className={s.section}
       bodyClassName={s.body}
       actions={

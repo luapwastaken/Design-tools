@@ -147,8 +147,8 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
               // Seen as is on for every tab until it is turned off: the strip says so wherever you are
               actions={
                 v.proof !== 'off' && (
-                  <Button size="xs" icon="visibility" latched tooltip="The swatches here are shown as this colour vision sees them, not as they are. Click to turn it off." onClick={() => patchView({ proof: 'off' })}>
-                    Seen as {VISION_NAME[v.proof]}
+                  <Button size="xs" icon="visibility" latched tooltip={`Seen as ${VISION_NAME[v.proof]}: the swatches here are shown as this colour vision sees them, not as they are. Click to turn it off.`} onClick={() => patchView({ proof: 'off' })}>
+                    {VISION_NAME[v.proof]}
                   </Button>
                 )
               }

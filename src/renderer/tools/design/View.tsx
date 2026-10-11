@@ -205,11 +205,12 @@ function DesignActions({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v: Design
         )}
         <IconButton ref={settings} icon="keyboard_arrow_down" label="Style and accent" size="sm" onClick={() => settings.current && onPop('style', settings.current)} />
       </span>
-      <Button ref={add} icon="add" iconEnd="keyboard_arrow_down" onClick={open}>
-        Add colours
+      {/* short of room these two lose their words (the bar's container query in View.module.css), never a button */}
+      <Button ref={add} icon="add" iconEnd="keyboard_arrow_down" tooltip="Add colours" onClick={open}>
+        <span className={s.word}>Add colours</span>
       </Button>
       <Button icon="note_add" shortcut="Ctrl+N" tooltip="New palette: this one closes and stays in the Library" onClick={() => void newPalette(doc)}>
-        New
+        <span className={s.word}>New</span>
       </Button>
     </>
   );

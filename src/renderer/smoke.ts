@@ -1039,9 +1039,9 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
 
   // the tabs under the palette: Check palette carries the count of what is left to look at (Smoke text on Smoke ground)
   patchDesign({ tab: 'check' });
-  const checkTab = await until(() => (/\d+/.test(designTab('check')?.textContent ?? '') && designPanel()?.textContent?.includes('Protanopia') ? designTab('check') : null));
+  const checkTab = await until(() => (/\d+/.test(designTab('check')?.textContent ?? '') && designPanel()?.textContent?.includes('Protan') ? designTab('check') : null));
   const checkText = designPanel()?.textContent ?? '';
-  check('the Check palette tab counts what is left to look at and shows vision, value and print', !!checkTab && ['Typical vision', 'Protanopia', 'Deuteranopia', 'Tritanopia', 'Rec. 709 luma', 'Print inks'].every((w) => checkText.includes(w)), [checkTab?.textContent, checkText.slice(0, 120)]);
+  check('the Check palette tab counts what is left to look at and shows vision, value and print', !!checkTab && ['Typical vision', 'Protan', 'Deutan', 'Tritan', 'Rec. 709 luma', 'Print inks'].every((w) => checkText.includes(w)), [checkTab?.textContent, checkText.slice(0, 120)]);
   patchDesign({ tab: 'contrast' });
 
   const inDesign = (id: string) => dd.get().swatches.find((w) => w.id === id);
@@ -1147,7 +1147,7 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
   clearProposals();
 
   // the tabs: each one shows its own panel, the palette and the picker stay, and the choice is saved with the workspace
-  const tabsOk: [string, string][] = [['contrast', 'role pairs'], ['check', 'Protanopia'], ['preview', ''], ['harmonies', 'Harmonies of']];
+  const tabsOk: [string, string][] = [['contrast', 'role pairs'], ['check', 'Protan'], ['preview', ''], ['harmonies', 'Harmonies of']];
   for (const [id, word] of tabsOk) {
     designTab(id)?.click();
     const shown = await until(() => designView().tab === id && designTab(id)?.getAttribute('aria-selected') === 'true' && (word ? designPanel()?.textContent?.includes(word) : host('design')?.querySelector('[role="img"][aria-label*="website preview"]')));
@@ -4850,7 +4850,7 @@ async function findabilityUi(): Promise<void> {
   shell.toggleLibrary(true);
   const rowsNow = () => [...document.querySelectorAll<HTMLElement>('[role="option"][id^="lib-row-"]')].filter((r) => shows(r));
   const rows = (await until(() => (rowsNow().length >= 2 ? rowsNow() : null), 3000)) ?? [];
-  const at = (r: HTMLElement, text: string) => [...r.querySelectorAll('button')].find((b) => b.textContent?.trim() === text);
+  const at = (r: HTMLElement, text: string) => r.querySelector<HTMLElement>(`button[aria-label="${text}"]`);
   const idle = rows.filter((r) => r.getAttribute('aria-selected') !== 'true');
   check('Library rows show Send to at rest, not only on hover', idle.some((r) => at(r, 'Send to') && getComputedStyle(at(r, 'Send to')!.parentElement!).display !== 'none' && shows(at(r, 'Send to'))), idle.map((r) => r.textContent));
   check('and Open, on the rows no tool has open', idle.some((r) => at(r, 'Open') && shows(at(r, 'Open'))), idle.map((r) => r.textContent));
@@ -4895,9 +4895,15 @@ async function findabilityUi(): Promise<void> {
   check('Hold value shows its V key cap where the control is', holdKey?.textContent === 'V', holdKey?.textContent);
   check('and the picker’s lock shows its L', !!pickerSection()?.querySelector('kbd') && pickerSection()!.querySelector('kbd')!.textContent === 'L', pickerSection()?.textContent);
   blur();
+  const mtime = () => shell.getState().library?.collections.flatMap((c) => c.items).find((i) => i.id === dd.source()?.itemId)?.mtimeMs;
+  await sleep(1500); // the earlier save and the Library's re-read of it have settled
+  const wrote = mtime();
   const before = dd.depth();
   press('l', { code: 'KeyL' });
   check('L locks the selected colour, as one history step with a name', !!(await until(() => designView().locked.includes(berry.id))) && dd.depth() === before + 1 && dd.undoLabel() === 'Lock Berry', [designView().locked, dd.depth() - before, dd.undoLabel()]);
+  // a lock is not an edit: the file is not rewritten (and on a locked or open-elsewhere item no copy is made)
+  await sleep(250);
+  check('a lock writes nothing to the Library file', wrote !== undefined && mtime() === wrote, [wrote, mtime()]);
   ctrlZ();
   check('Ctrl+Z takes the lock back', !!(await until(() => !designView().locked.includes(berry.id))), designView().locked);
   ctrlY();
@@ -4966,7 +4972,7 @@ async function findabilityUi(): Promise<void> {
   typeInto(hexBox()!, 'C26B4C');
   hexBox()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
   await until(() => il.get().ramps.length === 1, 2000);
-  check('Enter in it adds the ramp', il.get().ramps.length === 1 && toHex(il.get().ramps[0].base).toUpperCase() === '#C26B4C', il.get().ramps.map((r) => toHex(r.base)));
+  check('Enter in it adds the ramp', il.get().ramps.length === 1 && toHex(il.get().ramps[0].base).toUpperCase() === `#${'C26B4C'}`, il.get().ramps.map((r) => toHex(r.base)));
   await sleep(120);
   check('and the field stays after the first ramp, empty again', !!hexBox() && hexBox()!.value === '', hexBox()?.value);
   check('while the picture folds away once there is a ramp', pictureHead()?.getAttribute('aria-expanded') === 'false');
@@ -4974,11 +4980,18 @@ async function findabilityUi(): Promise<void> {
   button('illustration', 'Add colour')?.click();
   await until(() => il.get().ramps.length === 2, 2000);
   await sleep(200); // the picker's field takes focus a frame or two later
-  check('Add colour starts from the picker’s colour, not a random one', !!fromPicker && il.get().ramps[1].base.every((v, i) => v === fromPicker[i]), [fromPicker, il.get().ramps[1]?.base]);
+  check('Add colour on a colour some ramp already starts from steps to another, not a twin', !!fromPicker && il.get().ramps[1].base.some((v, k) => v !== fromPicker[k]), [fromPicker, il.get().ramps[1]?.base]);
+  const step = il.get().swatches.find((w) => w.group === il.get().ramps[0].id && w.step === 1);
+  patchIllustration({ selected: step?.id ?? null });
+  button('illustration', 'Add colour')?.click();
+  await until(() => il.get().ramps.length === 3, 2000);
+  await sleep(200);
+  check('and on any other colour it starts from the picker’s colour', !!step && il.get().ramps.some((r) => r.base.every((v, k) => v === step.oklch[k])), [step?.oklch, il.get().ramps.map((r) => r.base)]);
   check('and an unnamed ramp stays Cloth', il.get().ramps.every((r) => r.material === 'cloth'), il.get().ramps.map((r) => r.material));
   addBase(il, [0.74, 0.075, 55], 'Skin light');
   addBase(il, [0.5, 0.1, 140], 'Ultramarine');
-  check('a ramp named for a subject takes its material, any other name does not', il.get().ramps.at(-2)?.material === 'skin' && il.get().ramps.at(-1)?.material === 'cloth', il.get().ramps.map((r) => r.material));
+  const matOf = (name: string) => il.get().ramps.find((r) => il.get().swatches.some((w) => w.group === r.id && w.step === 0 && w.name === name))?.material;
+  check('a ramp named for a subject takes its material, any other name does not', matOf('Skin light') === 'skin' && matOf('Ultramarine') === 'cloth', il.get().ramps.map((r) => r.material));
   blur();
 
   // Layers: the words
@@ -4996,7 +5009,7 @@ async function findabilityUi(): Promise<void> {
 
   // Seen as: a chip in the strip on every tab, with the Colour vision check's names
   patchIllustration({ proof: 'deutan', tab: 'settings' });
-  const chipOn = (id: string) => [...(host('illustration')?.querySelectorAll('button') ?? [])].find((b) => /^Seen as Deutan$/.test(b.textContent?.trim() ?? '') && shows(b) && b.closest('header')?.querySelector(`[data-tab="${id}"]`));
+  const chipOn = (id: string) => [...(host('illustration')?.querySelectorAll('button') ?? [])].find((b) => /^Deutan$/.test(b.textContent?.trim() ?? '') && shows(b) && b.closest('header')?.querySelector(`[data-tab="${id}"]`));
   const onTabs: string[] = [];
   for (const id of ['settings', 'light', 'check', 'paint', 'variations']) {
     patchIllustration({ tab: id as 'settings' });
