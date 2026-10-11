@@ -23,7 +23,7 @@ import { LightTab } from './Light.tsx';
 import { ZonesTab } from './LightZones.tsx';
 import { Palette } from './Palette.tsx';
 import { PaintPane } from './PaintPane.tsx';
-import { PickerSection } from './PickerSection.tsx';
+import { PickerRow, PickerSection } from './PickerSection.tsx';
 import { sourcePop } from './proposals.ts';
 import { SelectedRamp } from './Ramps.tsx';
 import { VariationsTab } from './VariationsTab.tsx';
@@ -134,7 +134,7 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
             <ResizeHandle edge="bottom" label="Selected ramp height" value={v.rampHeight} min={SIZES.rampHeight[0]} max={SIZES.rampHeight[1]} reset={SIZES.rampHeight[2]} onChange={(rampHeight) => patchView({ rampHeight })} />
           </div>
           <div className={cx(s.lower, wide && s.wide)}>
-            {/* Variations, Light zones and Layers have no use for the picker, so the tab takes its width: six palettes, seven zones in a row, or a picture beside its layer stack, need the room */}
+            {/* Variations, Light zones and Layers have no use for the picker column, so the tab takes its width (six palettes, seven zones in a row, or a picture beside its layer stack need the room) and the tab bar keeps a one-row picker where the column was */}
             {!wide && (
               <div className={s.cell}>
                 <PickerSection doc={doc} d={d} v={v} />
@@ -153,6 +153,8 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
                   </Button>
                 )
               }
+              lead={wide ? <PickerRow doc={doc} d={d} v={v} /> : undefined}
+              leadClassName={s.lead}
               bodyClassName={tab === 'paint' ? s.flush : tab === 'variations' ? s.variations : undefined}
             />
           </div>

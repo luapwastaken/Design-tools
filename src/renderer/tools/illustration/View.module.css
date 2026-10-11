@@ -2,9 +2,12 @@
    At the window's minimum the columns shrink and each section scrolls inside; nothing overlaps. */
 .view { display: grid; grid-template-rows: var(--docbar) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
 .main { display: grid; grid-template-columns: minmax(200px, var(--ramps-w)) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
-.right { display: grid; grid-template-rows: minmax(160px, var(--ramp-h)) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
+/* the selected ramp's strip gives the tabs below it room on a short window (1366 × 768) */
+.right { display: grid; grid-template-rows: minmax(160px, min(var(--ramp-h), max(200px, calc(100vh - 520px)))) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
+/* the picker column's width and the gap after it, so the tabs stay where the column put them */
+.lead { width: calc(min(var(--picker-w), 60cqw) + var(--gap) - 10px); padding-right: var(--gap); }
 .lower.wide { grid-template-columns: minmax(0, 1fr); }
-.lower { display: grid; grid-template-columns: minmax(0, min(var(--picker-w), 60%)) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
+.lower { container-type: inline-size; display: grid; grid-template-columns: minmax(0, min(var(--picker-w), 60%)) minmax(0, 1fr); gap: var(--gap); min-width: 0; min-height: 0; }
 
 /* the Paint tab: no padding, no scrolling (the paper fits its box) */
 .flush { padding: 0; gap: 0; overflow: hidden; }

@@ -13,6 +13,8 @@
   background: var(--module);
   container: docbar / inline-size;
 }
+/* a tool with no modes gives the whole bar to its left end and the right end's own width: shared out evenly, the buttons on the left were cut to slivers at 1366 */
+.noModes { grid-template-columns: minmax(0, 1fr) auto max-content; }
 .left, .right, .modes { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .left { overflow: hidden; }
 .left > * { flex: none; }

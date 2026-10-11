@@ -16,7 +16,7 @@ import { CheckTab } from './CheckTab.tsx';
 import { ContrastTab } from './ContrastTab.tsx';
 import { plural, TAB_LABEL, type DesignDoc, type DesignTab, type DesignView } from './doc.ts';
 import { PaletteSection } from './Palette.tsx';
-import { PickerSection } from './PickerSection.tsx';
+import { PickerRow, PickerSection } from './PickerSection.tsx';
 import { DesignPopover, type OpenPop, type PopState } from './Popovers.tsx';
 import { PreviewTab } from './PreviewTab.tsx';
 import { proposals } from './proposals.ts';
@@ -132,14 +132,21 @@ export function View({ doc, active }: { doc: Doc; active: boolean }) {
         <ResizeHandle edge="bottom" label="Palette height" value={v.paletteH} min={PALETTE_H.min} max={PALETTE_H.max} reset={PALETTE_H.reset} onChange={(paletteH) => patchView({ paletteH })} />
       </div>
       <div className={cx(s.bottom, wide && s.wide)}>
-        {/* Variations has no use for the picker, so the tab takes its width: six palettes need the room */}
+        {/* Variations needs the room for six palettes, so the picker column gives way to a one-row picker in the tab bar, which keeps its place */}
         {!wide && (
           <div className={s.cell}>
             <PickerSection doc={pickerDoc} d={d} v={v} />
             <ResizeHandle edge="right" label="Colour picker width" value={v.pickerW} min={PICKER_W.min} max={PICKER_W.max} reset={PICKER_W.reset} onChange={(pickerW) => patchView({ pickerW })} />
           </div>
         )}
-        <TabbedSection tabs={tabs} value={v.tab} onChange={(tab) => patchView({ tab: tab as DesignTab, tabChosen: true })} bodyClassName={s.tabBody} />
+        <TabbedSection
+          tabs={tabs}
+          value={v.tab}
+          onChange={(tab) => patchView({ tab: tab as DesignTab, tabChosen: true })}
+          bodyClassName={s.tabBody}
+          lead={wide ? <PickerRow doc={pickerDoc} d={d} v={v} /> : undefined}
+          leadClassName={s.lead}
+        />
       </div>
       {pop && (
         <DesignPopover

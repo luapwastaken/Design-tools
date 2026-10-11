@@ -40,6 +40,28 @@ export function PickerSection({ doc, d, v }: { doc: Doc; d: DesignDoc; v: Design
   return <Editor key={w.id} doc={doc} d={d} w={w} v={v} count={sel.length} styles={styles} />;
 }
 
+/** the picker folded to one row (swatch, hex, Copy) for the wide tabs, where the picker column has given way */
+export function PickerRow({ doc, d, v }: { doc: Doc; d: DesignDoc; v: DesignView }) {
+  const w = d.swatches.find((x) => x.id === selection(d, v)[0]);
+  if (!w) return <span className={s.rowHint}>{d.swatches.length ? 'No colour selected' : 'No colours yet'}</span>;
+  return <RowEditor key={w.id} doc={doc} d={d} w={w} />;
+}
+
+function RowEditor({ doc, d, w }: { doc: Doc; d: DesignDoc; w: Swatch }) {
+  const colour = useDocColour(doc, {
+    label: `Change ${nameIn(d, w)}`,
+    key: `${w.id}:colour`,
+    get: (x) => x.swatches.find((y) => y.id === w.id)?.oklch ?? w.oklch,
+    set: (x, o) => recolour(x, { [w.id]: o }),
+  });
+  return (
+    <div className={s.miniRow}>
+      <HexField {...colour} steered name={nameIn(d, w)} className={s.hex} />
+      <CopyAs value={colour.value} />
+    </div>
+  );
+}
+
 type Gesture = { onBegin(): void; onCommit(fromKey?: boolean): void; onCancel(): void };
 
 function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Swatch; v: DesignView; count: number; styles: ReactNode }) {

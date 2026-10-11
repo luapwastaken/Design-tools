@@ -2,7 +2,8 @@
 // picker style (its switch is in this header), with Hex, HSB and RGB under it. Every value is typable.
 import { cssColor } from '../../../shared/color/index.ts';
 import type { RampSpec, Swatch } from '../../../shared/types.ts';
-import { IconButton, Picker, TextInput, useDocColour } from '../../ui/index.ts';
+import { CopyAs, IconButton, Picker, TextInput, useDocColour } from '../../ui/index.ts';
+import { HexField } from '../../ui/HexField.tsx';
 import { fmtV } from '../common/names.ts';
 import { Section } from '../common/Section.tsx';
 import { selected, type Doc } from './actions.ts';
@@ -25,6 +26,29 @@ export function PickerSection({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: 
     >
       {w ? <Editor key={w.id} doc={doc} d={d} w={w} r={r} /> : <p className={s.quiet}>Add a base colour and its steps are edited here.</p>}
     </Section>
+  );
+}
+
+/** the picker folded to one row (swatch, hex, Copy) for the wide tabs, where the picker column has given way */
+export function PickerRow({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: IllustrationView }) {
+  const w = selected(d, v.selected);
+  if (!w) return <span className={s.rowHint}>{d.swatches.length ? 'No colour selected' : 'No colours yet'}</span>;
+  return <RowEditor key={w.id} doc={doc} d={d} w={w} />;
+}
+
+function RowEditor({ doc, d, w }: { doc: Doc; d: IllustrationDoc; w: Swatch }) {
+  const name = nameOf(d, w);
+  const colour = useDocColour(doc, {
+    label: `Change ${name}`,
+    key: `${w.id}:colour`,
+    get: (x) => x.swatches.find((y) => y.id === w.id)?.oklch ?? w.oklch,
+    set: (x, o) => recolour(x, w.id, o),
+  });
+  return (
+    <div className={s.miniRow}>
+      <HexField {...colour} steered name={name} className={s.hex} />
+      <CopyAs value={colour.value} />
+    </div>
   );
 }
 

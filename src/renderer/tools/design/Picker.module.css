@@ -31,3 +31,7 @@
 .tint:hover { background: var(--well-hover); }
 /* the tint nearest the colour: a neutral ring, never ember */
 .tint.here { box-shadow: inset 0 0 0 1.5px var(--ink-2); }
+
+/* the one-row picker in the tab bar */
+.miniRow { display: flex; flex: 1; align-items: center; gap: 6px; min-width: 0; }
+.rowHint { color: var(--ink-3); font-size: var(--fs-base); white-space: nowrap; }

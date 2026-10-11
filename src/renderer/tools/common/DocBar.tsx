@@ -44,7 +44,7 @@ export type DocBarProps = {
 export function DocBar({ tool, doc, title, meta, actions, modes, send, exportButton, switcher }: DocBarProps) {
   const { ref, width } = useWidth<HTMLDivElement>();
   return (
-    <div ref={ref} className={s.docbar}>
+    <div ref={ref} className={cx(s.docbar, !modes && s.noModes)}>
       <div className={s.left}>
         {title === undefined ? <DocHead tool={tool} doc={doc} switcher={switcher} /> : <DocTitle>{title}</DocTitle>}
         <DocStatus tool={tool} />

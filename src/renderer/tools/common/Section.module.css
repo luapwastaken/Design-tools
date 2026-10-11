@@ -6,7 +6,11 @@
 .body { flex: 1; min-height: 0; min-width: 0; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 
 .tabsHead { padding: 0 10px; align-items: stretch; }
-.tabs { display: flex; align-items: stretch; gap: 4px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+/* a tab that does not fit folds into More: kept in the row, unseen and out of reach, so its width stays known */
+.tabs { position: relative; display: flex; flex: 1; align-items: stretch; gap: 4px; min-width: 0; overflow: hidden; }
+.lead { display: flex; flex: none; align-items: center; min-width: 0; }
+.tab.folded { position: absolute; visibility: hidden; pointer-events: none; }
+.more { flex: none; gap: 2px; padding-right: 8px; }
 .tab { position: relative; display: flex; align-items: center; gap: 8px; margin: 8px 0; padding: 0 12px; border: 0; border-radius: var(--r-ctl); background: none; color: var(--ink-2); font: 400 13.5px/1 var(--font-sans); white-space: nowrap; cursor: pointer; }
 .tab:hover:not(:disabled) { background: var(--well-hover); color: var(--ink); }
 .tab.on, .tab.on:hover { background: var(--raise); color: var(--ink); font-weight: 500; }
