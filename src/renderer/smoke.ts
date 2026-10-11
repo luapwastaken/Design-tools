@@ -87,7 +87,8 @@ import { datamoshChecks, flickerChecks, loopChecks, pipelineChecks, scaleChecks 
 import { Stack } from './tools/postfx/effects/stack.ts';
 import { decodeStack, encodeStack } from './tools/postfx/share.ts';
 import { togglePlay } from './tools/postfx/Transport.tsx';
-import { getView as postfxView, playhead } from './tools/postfx/view-state.ts';
+import { getView as postfxView, patchView as patchPostfx, playhead } from './tools/postfx/view-state.ts';
+import { playhead as ditherPlayhead } from './tools/dither/steps.ts';
 import { toast } from './ui/index.ts';
 import { LEAVE_MS, toastStore, type ToastEntry } from './ui/toast.ts';
 
@@ -371,6 +372,7 @@ async function full(): Promise<void> {
   await layersUi();
   await brandSafetyUi();
   await findabilityUi();
+  await toolKeysUi();
   await layoutUi();
   await greyscale();
 
@@ -5286,6 +5288,152 @@ async function layoutUi(): Promise<void> {
   shell.toggleLibrary(libraryWas);
   shell.setActive(activeWas);
   await sleep(150);
+}
+
+/**
+ * The tools' own keys (keyboard shortcuts 2026-10-11), pressed as the keyboard sends them once the tool is on
+ * screen: Design's Shift+A, Ctrl+A and Ctrl+V; Illustration's S, Smudge and the brush size; Pattern's Alt+2
+ * and Surprise me; Logo's Sheet; Halftone's Separations and plate keys; Dither's play; Post FX's hide key; and
+ * the sheet dimming a tab's rows while another tab shows. Leaves the documents and views as it found them.
+ */
+async function toolKeysUi(): Promise<void> {
+  const blur = () => (document.activeElement as HTMLElement | null)?.blur();
+  const ready = async (id: ToolId) => {
+    shell.setActive(id);
+    blur();
+    await until(() => shows(host(id)) && !host(id)?.hasAttribute('inert'), 3000);
+    await sleep(80);
+  };
+  const sheet = () => document.querySelector<HTMLElement>('[role="dialog"][aria-label="Keyboard shortcuts"]');
+
+  // ── Design ──
+  const dd = designDoc();
+  const [designWas, designSnap] = [dd.get(), { ...designView() }];
+  dd.transact('Smoke keys palette', (d) => ({ ...d, swatches: ['One', 'Two', 'Three'].map((n, i) => designSwatch([0.4 + i * 0.1, 0.1, 40 + i * 80], `Smoke key ${n}`)) }));
+  patchDesign({ selected: [dd.get().swatches[0].id] });
+  await ready('design');
+  press('A', { code: 'KeyA', shiftKey: true });
+  check('Design: Shift+A adds a colour', !!(await until(() => dd.get().swatches.length === 4, 1500)), dd.get().swatches.length);
+  press('a', { code: 'KeyA', ctrlKey: true });
+  check('Design: Ctrl+A selects every colour', !!(await until(() => designView().selected.length === dd.get().swatches.length, 1500)), designView().selected.length);
+  clearProposals();
+  const notCancelled = press('v', { code: 'KeyV', ctrlKey: true });
+  const data = new DataTransfer();
+  data.setData('text/plain', 'E8643C\n3C7DE8');
+  document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  check('Design: Ctrl+V keeps its keydown for the paste, and the pasted codes come in as proposals', notCancelled && !!(await until(() => proposals.get()?.items.length === 2, 1500)), [notCancelled, proposals.get()?.items.length]);
+  clearProposals();
+  dd.transact('Smoke keys back', () => designWas);
+  patchDesign(designSnap);
+
+  // ── Illustration ──
+  const il = illustrationDoc();
+  const [illustrationWas, illustrationSnap] = [il.get(), { ...illustrationView() }];
+  if (!il.get().ramps.length) il.transact('Smoke keys ramp', (d) => addRamp(d, [0.6, 0.12, 40], 'Smoke key ramp').doc);
+  patchIllustration({ tab: 'settings', swapRamp: '', selected: il.get().swatches[0]?.id ?? null });
+  await ready('illustration');
+  press('s', { code: 'KeyS' });
+  check('Illustration: S opens the other-colours row off the Paint tab', !!(await until(() => illustrationView().swapRamp !== '', 1500)), illustrationView().swapRamp);
+  press('Escape');
+  await until(() => illustrationView().swapRamp === '', 1500);
+  patchIllustration({ tab: 'paint', canvas: { ...illustrationView().canvas, tool: 'paint', size: 20 } });
+  await sleep(80);
+  press('s', { code: 'KeyS' });
+  check('Illustration: S is Smudge on the Paint tab, and does not open the row', !!(await until(() => paint().tool === 'smudge', 1500)) && illustrationView().swapRamp === '', [paint().tool, illustrationView().swapRamp]);
+  press('.', { code: 'Period' });
+  const larger = await until(() => (paint().size > 20 ? paint().size : null), 1500);
+  press(',', { code: 'Comma' });
+  press(',', { code: 'Comma' });
+  const smaller = await until(() => (paint().size < 20 ? paint().size : null), 1500);
+  check('Illustration: . makes the brush larger and , smaller on Paint', !!larger && !!smaller, [larger, smaller]);
+  // the sheet: Paint's rows are dimmed on another tab, and lit on Paint
+  const rowColour = (label: string) => getComputedStyle([...(sheet()?.querySelectorAll('dd') ?? [])].find((x) => x.textContent?.startsWith(label)) ?? document.body).color;
+  patchIllustration({ tab: 'settings' });
+  shell.openShortcuts(true);
+  await until(sheet, 1500);
+  const [dim, live] = [rowColour('Smudge'), rowColour('Add a colour')];
+  press('Escape');
+  await until(() => !sheet(), 1000);
+  patchIllustration({ tab: 'paint' });
+  shell.openShortcuts(true);
+  await until(sheet, 1500);
+  const lit = rowColour('Smudge');
+  press('Escape');
+  await until(() => !sheet(), 1000);
+  check('the sheet lists Illustration’s Paint rows dimmed on another tab, and lit on Paint', dim !== live && lit === live, [dim, live, lit]);
+  patchIllustration(illustrationSnap);
+  il.transact('Smoke keys back', () => illustrationWas);
+
+  // ── Pattern ──
+  const pd = patternDoc();
+  const patternWas = pd.get();
+  await ready('pattern');
+  press('2', { code: 'Digit2', altKey: true });
+  check('Pattern: Alt+2 switches to Half-drop', !!(await until(() => pd.get().arrangement === 'halfdrop', 1500)), pd.get().arrangement);
+  const before = JSON.stringify(pd.get());
+  press('R', { code: 'KeyR', shiftKey: true });
+  const surprised = await until(() => JSON.stringify(pd.get()) !== before, 1500);
+  press('Escape');
+  check('Pattern: Shift+R surprises and Esc restores the layout before it', !!surprised && !!(await until(() => JSON.stringify(pd.get()) === before, 1500)), pd.get().arrangement);
+  pd.transact('Smoke keys back', () => patternWas);
+
+  // ── Logo ──
+  const ld = shell.doc('logo') as DocController<LogoDoc>;
+  const logoSnap = { ...logoView() };
+  await ready('logo');
+  if (check('Logo has a logo to press keys on', !noParts(ld.get()))) {
+    patchLogo({ mode: 'edit' });
+    press('2', { code: 'Digit2', altKey: true });
+    check('Logo: Alt+2 shows the Sheet', !!(await until(() => logoView().mode === 'sheet', 1500)), logoView().mode);
+    press('1', { code: 'Digit1', altKey: true });
+    check('and Alt+1 goes back to Edit', !!(await until(() => logoView().mode === 'edit', 1500)), logoView().mode);
+  }
+  patchLogo(logoSnap);
+
+  // ── Halftone ──
+  const hd = shell.doc('halftone') as DocController<HalftoneDoc>;
+  const halftoneSnap = { ...halftoneView() };
+  await ready('halftone');
+  if (check('Halftone has an image to press keys on', !!hd.get().source)) {
+    press('3', { code: 'Digit3', altKey: true });
+    check('Halftone: Alt+3 shows Separations', !!(await until(() => halftoneView().show === 'separations', 1500)), halftoneView().show);
+    const was = hd.get().inks[0].visible;
+    press('1', { code: 'Digit1' });
+    const flipped = await until(() => hd.get().inks[0].visible === !was, 1500);
+    press('1', { code: 'Digit1' });
+    check('Halftone: 1 hides plate 1 and 1 again shows it', !!flipped && !!(await until(() => hd.get().inks[0].visible === was, 1500)), hd.get().inks[0].visible);
+  }
+  patchHalftone(halftoneSnap);
+
+  // ── Dither ──
+  const dt = ditherDoc();
+  await ready('dither');
+  if (check('Dither holds an animated GIF to press K on', (dt.get().source?.frames ?? 1) > 1, dt.get().source?.frames)) {
+    ditherPlayhead.set({ frame: 0, playing: false });
+    press('k', { code: 'KeyK' });
+    const playing = await until(() => ditherPlayhead.get().playing, 1500);
+    press('k', { code: 'KeyK' });
+    check('Dither: K plays and K again pauses the GIF', !!playing && !!(await until(() => !ditherPlayhead.get().playing, 1500)), ditherPlayhead.get());
+  }
+
+  // ── Post FX ──
+  const pf = postfxDoc();
+  const [postfxWas, postfxSnap] = [pf.get(), { ...postfxView() }];
+  if (!pf.get().stack.length) pf.transact('Smoke keys layer', (d) => ({ ...d, stack: [layerOf('grade', { saturation: 120 })] }));
+  const layerId = pf.get().stack[0].id;
+  patchPostfx({ selected: layerId });
+  await ready('postfx');
+  const on = () => pf.get().stack.find((l) => l.id === layerId)?.on;
+  const onWas = on();
+  press('H', { code: 'KeyH', ctrlKey: true, shiftKey: true });
+  const hidden = await until(() => on() === !onWas, 1500);
+  press('H', { code: 'KeyH', ctrlKey: true, shiftKey: true });
+  check('Post FX: Ctrl+Shift+H hides the selected layer and shows it again', !!hidden && !!(await until(() => on() === onWas, 1500)), on());
+  pf.transact('Smoke keys back', () => postfxWas);
+  patchPostfx(postfxSnap);
+
+  shell.setActive('design');
+  await sleep(100);
 }
 
 /**
