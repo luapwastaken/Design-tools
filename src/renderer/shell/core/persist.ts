@@ -147,7 +147,8 @@ export function keepCopy(r: Runtime): Promise<void> {
   return enqueue(r, async () => {
     const src = r.doc.source();
     const payload = src && payloadOf(r, r.data);
-    if (src && payload) await create(r, `${src.name} copy`, payload, src);
+    const scratch = getState().library?.collections.find((c) => c.name === SCRATCH)?.items ?? [];
+    if (src && payload) await create(r, editName(src.name, scratch.filter((i) => i.kind === r.def.itemKind).map((i) => i.name)), payload, src);
     refreshAll();
     await saveWorkspace(r);
   });

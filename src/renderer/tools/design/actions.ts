@@ -117,18 +117,16 @@ export function proposedRoles(swatches: Swatch[], items: Proposal[], assign: boo
 /** what a toast says about colours that came in from a file or a paste: they start locked */
 export const KEPT_NOTE = 'Imported colours are locked, so Reroll and Variations keep them. Unlock one (L) to let it change.';
 
-/** palette files already opened this session, so a reopen doesn't lock what Luap unlocked */
-const opened = new Set<string>();
-
 /**
- * A palette read from an .ase, .aco or .gpl file (every swatch still holds its imported values)
- * opens with every colour locked, once: Reroll and Variations would otherwise replace a brand's
- * colours with invented ones. A view setting, so the file is not touched.
+ * A palette read from an .ase, .aco or .gpl file opens with its imported colours locked (those that
+ * still hold their imported values): Reroll and Variations would otherwise replace a brand's colours
+ * with invented ones. A view setting, so the file is not touched, and it is made again at each open
+ * (locks are kept by swatch id, and ids are new per open), so an unlock lasts until the palette closes.
  */
-export function lockImported(itemId: string, swatches: Swatch[]): void {
-  if (opened.has(itemId) || !swatches.length || !swatches.every((w) => w.source)) return;
-  opened.add(itemId);
-  patchView({ locked: swatches.map((w) => w.id) });
+export function lockImported(swatches: Swatch[]): void {
+  const keep = swatches.filter((w) => w.source);
+  if (!keep.length) return;
+  patchView({ locked: keep.map((w) => w.id) });
   toast.show({ icon: 'lock', message: KEPT_NOTE });
 }
 
@@ -152,12 +150,15 @@ export function addProposals(doc: Doc, items: Proposal[], assign = false, from?:
   const guessed = add.filter((_, i) => roles[i] && !given[i]);
   if (!guessed.length && from !== 'paste') return;
   const after = doc.get();
+  // the lock sentence is long: with the roles it gets a toast of its own, so neither is cut off
+  const alone = !guessed.length;
   toast.show({
-    icon: guessed.length ? 'info' : 'lock',
-    message: `${guessed.length ? `Roles suggested: ${listNames(guessed.map((w) => w.role!))}.` : ''}${from === 'logo' ? ' The logo colours are locked.' : ''}${from === 'paste' ? ` ${KEPT_NOTE}` : ''}`.trim(),
+    icon: alone ? 'lock' : 'info',
+    message: `${alone ? '' : `Roles suggested: ${listNames(guessed.map((w) => w.role!))}.`}${from === 'logo' ? ' The logo colours are locked.' : ''}${from === 'paste' && alone ? ` ${KEPT_NOTE}` : ''}`.trim(),
     when: () => doc.get() === after,
     undo: () => void (doc.get() === after && doc.undo()),
   });
+  if (from === 'paste' && !alone) toast.show({ icon: 'lock', message: KEPT_NOTE });
 }
 
 /** an empty palette in place of this one: one undoable step; the first edit makes Scratch/Untitled palette N (spec §7.1) */

@@ -98,4 +98,7 @@ test('an Illustration palette sent here sends each ramp base first, so the cap c
   assert.equal(out.bases, 4);
   assert.deepEqual(out.doc.palette.slice(0, 4), swatches.filter((w) => w.step === 0).map((w) => w.oklch));
   assert.equal(out.left, 8);
+  // the leftover room is shared: one step of each ramp in turn, not the first ramps' steps alone
+  const rest = out.doc.palette.slice(4);
+  for (const g of [0, 1, 2, 3]) assert.ok(rest.some((o) => o[2] === g * 80), `ramp ${g} has a step in`);
 });

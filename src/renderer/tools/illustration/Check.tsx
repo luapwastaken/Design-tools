@@ -13,7 +13,7 @@ import { mergingCvd, Vision } from '../common/Vision.tsx';
 import type { Doc } from './actions.ts';
 import { fixRules, Problems, type Checks } from './CheckPane.tsx';
 import { toastMoved } from '../common/fixes.ts';
-import { isLayer, nameOf, rampName, rampOf, recolour, stepsOf, type IllustrationDoc } from './doc.ts';
+import { isGrouped, nameOf, rampName, rampOf, recolour, stepsOf, type IllustrationDoc } from './doc.ts';
 import { hot, patchView, pointAt, type IllustrationView } from './view-state.ts';
 import s from './Check.module.css';
 
@@ -27,7 +27,7 @@ export function CheckTab({ doc, d, v, checks }: { doc: Doc; d: IllustrationDoc; 
   const rows = [
     ...d.ramps.map((r) => ({ id: r.id, name: rampName(d, r), steps: stepsOf(d, r.id), ramp: true })),
     ...(() => {
-      const loose = d.swatches.filter((w) => !d.ramps.some((r) => r.id === w.group) && !isLayer(w));
+      const loose = d.swatches.filter((w) => !d.ramps.some((r) => r.id === w.group) && !isGrouped(w));
       return loose.length ? [{ id: 'loose', name: 'Loose', steps: loose, ramp: false }] : [];
     })(),
   ];

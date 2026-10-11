@@ -11,7 +11,7 @@ import type { RampSpec } from '../../../shared/types.ts';
 import { displayName } from '../common/names.ts';
 import { baseOf, rampName, rampOf, recolour, renameBase, replaceRamps, setScene, type IllustrationDoc } from './doc.ts';
 import { lookOf, type Look } from './shade.ts';
-import { presetOf, sceneLight, type LightPair } from './scene.ts';
+import { presetOf, sceneLight, SETS, SUBJECTS, type LightPair } from './scene.ts';
 import type { IllustrationView } from './view-state.ts';
 
 export { MAX_DEPTH };
@@ -142,6 +142,9 @@ export function inUse(d: IllustrationDoc, v: IllustrationView, cell: Cell): bool
   return mine.length === cell.bases.length && mine.every((b, i) => toHex(b.base) === toHex(cell.bases[i].base));
 }
 
+/** the names the app gives a ramp itself, apart from its colour's: a picture's subjects and a limited set's colours ("Earth four 2") */
+const APP_NAMES = new Set([...SUBJECTS.map((s) => s.label), ...SETS.flatMap((s) => [1, 2, 3, 4, 5, 6].map((i) => `${s.label} ${i}`))]);
+
 // ── using a cell ─────────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -156,9 +159,11 @@ export function applyCell(d: IllustrationDoc, v: IllustrationView, cell: Cell): 
     const to = cell.bases[i];
     const base = baseOf(x, r.id);
     if (!to || !base || locks.has(r.id)) return x;
+    const was = displayName({ name: '', oklch: base.oklch }); // what the app called the colour it had
     const next = recolour(x, base.id, to.base);
     // a ramp named for its old colour ("Hair black") is named for the new one, unless the name was typed; a picture cell keeps its subject's word
-    return next === x ? x : renameBase(next, r.id, 'kind' in cell && cell.kind === 'picture' ? to.name : displayName({ name: '', oklch: to.base }));
+    const picture = 'kind' in cell && cell.kind === 'picture';
+    return next === x ? x : renameBase(next, r.id, picture ? to.name : displayName({ name: '', oklch: to.base }), (n) => n === was || APP_NAMES.has(n));
   }, d);
 }
 

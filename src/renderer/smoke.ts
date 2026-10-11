@@ -4723,7 +4723,7 @@ async function brandSafetyUi(): Promise<void> {
   await shell.sendDoc('design', 'pattern');
   check('a role palette sent to Pattern uses the Background as the pattern background', JSON.stringify(pd.get().background) === JSON.stringify(snow.oklch), pd.get().background);
   check('and leaves out what is within 0.06 of it in value, so no shape draws as nothing', pd.get().palette.length === 2 && pd.get().palette.every((c) => Math.abs(valueOf(c) - valueOf(snow.oklch)) >= 0.06), pd.get().palette);
-  check('and the toast names what was left out', !!says(/Surface white is too close to the background in value, so it stayed out\./), toastStore.get().map((t) => t.message));
+  check('and the toast names what was left out', !!says(/Left out, too close to the background: Surface white\./), toastStore.get().map((t) => t.message));
 
   // aw-06: Illustration to Pattern, base first
   shell.setActive('illustration');
@@ -4733,7 +4733,13 @@ async function brandSafetyUi(): Promise<void> {
   await shell.sendDoc('illustration', 'pattern');
   const got = pd.get().palette;
   check('Illustration to Pattern sends each ramp’s base first, in ramp order', got.length === 12 && bases.every((b, i) => got[i].every((v, k) => v === b[k])), got.slice(0, 5));
-  check('and the toast says the bases went first and how many stayed out', !!says(/5 ramp bases went first and the last 13 colours stayed out/), toastStore.get().map((t) => t.message));
+  check('and the toast says the bases went first and how many stayed out', !!says(/5 ramp bases went first, the last 13 stayed out/), toastStore.get().map((t) => t.message));
+
+  // a palette that fits still says what went first
+  shell.setActive('illustration');
+  il.transact('Smoke two ramps', (d) => hues.slice(0, 2).reduce<IllustrationDoc>((x, h, i) => addRamp(x, [0.45 + i * 0.04, 0.14, h], `Pair ${i + 1}`).doc, bare(d)));
+  await shell.sendDoc('illustration', 'pattern');
+  check('a palette that fits says the ramp bases went first', !!says(/Sent 2 ramp bases first, then the other colours of/), toastStore.get().map((t) => t.message).slice(-4));
 
   shell.setActive('illustration');
   il.transact('Smoke ramps back', () => was);

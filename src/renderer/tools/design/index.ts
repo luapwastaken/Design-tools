@@ -45,7 +45,7 @@ export const tool: ToolDefinition<DesignDoc> = {
         clearProposals(); // they were built for the palette that was open
         {
           const doc = tool.fromItem!(item);
-          lockImported(item.ref.id, doc.swatches);
+          lockImported(doc.swatches);
           return doc;
         }
       case 'image':

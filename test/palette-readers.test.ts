@@ -148,7 +148,7 @@ test('ACO v1: colours in every supported space, no names', () => {
   assert.equal(toHex(rgb.oklch), '#e72a50');
   near(rgb.source?.values, [0xe7 / 255, 0x2a / 255, 0x50 / 255]);
   assert.equal(toHex(hsb.oklch), '#00ff00');
-  assert.equal(hsb.source, undefined, 'HSB has no source space to keep');
+  near(hsb.source?.values, [0, 1, 0]); // HSB is kept as the sRGB it makes, so a file's colours all count as imported
   assert.equal(toHex(cmyk.oklch), '#00ffff');
   assert.deepEqual(cmyk.source, { space: 'cmyk', values: [1, 0, 0, 0] });
   assert.deepEqual(lab.source, { space: 'lab', values: [50, 20, -30] });

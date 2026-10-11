@@ -191,7 +191,11 @@ export function withPalette(d: PatternDoc, swatches: Swatch[]): { doc: PatternDo
   const isBase = (w: Swatch) => w.group !== undefined && w.step === 0;
   const isStep = (w: Swatch) => w.group !== undefined && w.step !== 0;
   const bases = rest.filter(isBase);
-  const ordered = bases.length ? [...bases, ...rest.filter((w) => !isBase(w) && !isStep(w)), ...rest.filter(isStep)] : rest;
+  // the other steps go one per ramp in turn (every ramp's first, then every ramp's second), so a cap thins each ramp, not the later ones
+  const steps = rest.filter(isStep);
+  const turns = [...new Set(steps.map((w) => w.group))].map((g) => steps.filter((w) => w.group === g));
+  const interleaved = Array.from({ length: Math.max(0, ...turns.map((t) => t.length)) }, (_, i) => turns.flatMap((t) => (t[i] ? [t[i]] : []))).flat();
+  const ordered = bases.length ? [...bases, ...rest.filter((w) => !isBase(w) && !isStep(w)), ...interleaved] : rest;
   const gv = ground ? valueOf(ground.oklch) : 0;
   const shows = (w: Swatch) => !ground || Math.abs(valueOf(w.oklch) - gv) >= GROUND_GAP;
   const kept = ordered.filter(shows);

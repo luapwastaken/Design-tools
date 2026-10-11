@@ -5,7 +5,7 @@ import type { Oklch } from '../../../shared/color/index.ts';
 import { DAYLIGHT } from '../../../shared/palette/ramp.ts';
 import { fitChroma, wrapHue } from '../../../shared/palette/space.ts';
 import type { MaterialId, RampSpec } from '../../../shared/types.ts';
-import { baseOf, looseOf, MAX_RAMPS, type IllustrationDoc } from './doc.ts';
+import { baseOf, isLayer, looseOf, MAX_RAMPS, type IllustrationDoc } from './doc.ts';
 
 export type LightPair = { light: Oklch; shadow: Oklch };
 /** [key, fill, bounce, rim]: how strong each of the four lights is (Light zones) */
@@ -112,7 +112,7 @@ export function paletteBases(from: IllustrationDoc, room: number): { list: Candi
     const b = baseOf(from, r.id);
     return { oklch: b?.oklch ?? r.base, name: b?.name.trim() || r.name?.trim() || null, material: r.material };
   });
-  const loose = looseOf(from).map((w): Candidate => ({ oklch: w.oklch, name: w.name.trim() || null }));
+  const loose = looseOf(from).filter((w) => !isLayer(w)).map((w): Candidate => ({ oklch: w.oklch, name: w.name.trim() || null }));
   const all = [...ramps, ...loose];
   return { list: all.slice(0, Math.max(0, room)), total: all.length };
 }

@@ -46,6 +46,8 @@ export function looseOf(d: IllustrationDoc): Swatch[] {
 /** the group the layer colours kept from the Layers tab sit in: blend colours, not flats, so the checks and Make ramps leave them alone */
 export const LAYER_COLOURS = 'Layer colours';
 export const isLayer = (w: Swatch): boolean => w.set === LAYER_COLOURS;
+/** in any labelled group (layer colours, a row of Light zones): colours laid over or beside the flats, not flats */
+export const isGrouped = (w: Swatch): boolean => w.set !== undefined;
 
 /** the colours in no ramp as the palette shows them: the plain ones first, then each labelled group in the order it began */
 export function looseSets(d: IllustrationDoc): { label: string | null; list: Swatch[] }[] {
@@ -139,10 +141,15 @@ export const renameSwatch = (d: IllustrationDoc, id: string, name: string): Illu
   }),
 });
 
-/** a ramp's base named by the app (a picture's subject, a proposal) takes `name`; one the person named, or left blank to follow its colour, keeps what it has */
-export function renameBase(d: IllustrationDoc, ramp: string, name: string): IllustrationDoc {
+/**
+ * A ramp's base named by the app takes `name`. `appMade` says whether the app could have given it its
+ * name (its old colour's name, a picture's subject, a set's colour); any other name is the person's or a file's,
+ * typed before `named` existed or read from a palette, and stays.
+ */
+export function renameBase(d: IllustrationDoc, ramp: string, name: string, appMade: (name: string) => boolean): IllustrationDoc {
   const base = baseOf(d, ramp);
   if (!base || !base.name.trim() || base.named || base.name === name) return d;
+  if (!appMade(base.name)) return d;
   return { ...d, swatches: d.swatches.map((w) => (w === base ? { ...w, name } : w)) };
 }
 

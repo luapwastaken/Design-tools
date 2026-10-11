@@ -112,7 +112,7 @@ function acoSwatch(space: number, [a, b, c, d]: number[], name: string): Swatch 
     case 0:
       return swatch(name, { space: 'rgb', values: [a / 65535, b / 65535, c / 65535] });
     case 1:
-      return make(name, { mode: 'hsv', h: (a / 65535) * 360, s: b / 65535, v: c / 65535 });
+      return swatch(name, { space: 'rgb', values: hsvToRgb((a / 65535) * 360, b / 65535, c / 65535) });
     case 2: // 0 = 100% ink
       return swatch(name, { space: 'cmyk', values: [a, b, c, d].map((v) => 1 - v / 65535) });
     case 7:
@@ -175,6 +175,15 @@ function swatch(name: string, source: Source, type: Swatch['type'] = 'process'):
     // naive CMYK; the original values stay in `source`
     : { mode: 'rgb', r: (1 - v[0]) * (1 - v[3]), g: (1 - v[1]) * (1 - v[3]), b: (1 - v[2]) * (1 - v[3]) };
   return { ...make(name, color, type), source };
+}
+
+/** HSB (Photoshop's colour space 1) as sRGB, so the swatch holds its imported values like the others */
+function hsvToRgb(h: number, s: number, v: number): number[] {
+  const f = (n: number) => {
+    const k = (n + h / 60) % 6;
+    return v - v * s * Math.max(0, Math.min(k, 4 - k, 1));
+  };
+  return [f(5), f(3), f(1)];
 }
 
 function make(name: string, color: Color, type: Swatch['type'] = 'process'): Swatch {

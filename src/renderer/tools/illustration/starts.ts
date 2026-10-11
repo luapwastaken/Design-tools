@@ -10,7 +10,7 @@ import { ipc } from '../../shell/core/ipc.ts';
 import { menu, toast } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
 import { addBase, eyedrop, newPalette, select, selected, type Doc } from './actions.ts';
-import { fromPayload, looseOf, makeRamps, MAX_RAMPS, type IllustrationDoc } from './doc.ts';
+import { fromPayload, isLayer, looseOf, makeRamps, MAX_RAMPS, type IllustrationDoc } from './doc.ts';
 import { extract, picture, propose, sourcePop, type Source } from './proposals.ts';
 import { paletteBases, SETS, SUBJECTS, type Subject } from './scene.ts';
 
@@ -97,7 +97,7 @@ export async function readPalette(ref: LibraryItemRef): Promise<IllustrationDoc 
 export async function openPalette(doc: Doc, ref: LibraryItemRef): Promise<void> {
   const from = await readPalette(ref);
   if (!from) return;
-  const all = looseOf(from).map((w) => w.id);
+  const all = looseOf(from).filter((w) => !isLayer(w)).map((w) => w.id);
   if (!all.length) return void shell.openItem(ref);
   // a palette of its own holds as many ramps as any other
   const ids = all.slice(0, MAX_RAMPS);

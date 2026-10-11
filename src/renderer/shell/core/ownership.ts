@@ -38,8 +38,8 @@ export function docState(tool: ToolId, source: DocSource, facts: ItemFacts | nul
  */
 export const holdsItem = (s: DocState): boolean => s.t === 'saved' || s.t === 'locked' || s.t === 'changed-outside' || s.t === 'write-failed';
 
-/** a name without what an earlier fork added, so a copy of a copy is "X (edit 2)", never "X copy copy" */
-const editBase = (name: string): string => name.replace(/( \(edit( \d+)?\)| copy( \d+)?)+$/i, '') || name;
+/** a name without what an earlier fork added, so a copy of a copy is "X (edit 2)", never "X copy copy"; one " copy" alone may be the person's own word and stays */
+const editBase = (name: string): string => name.replace(/( \(edit( \d+)?\)| copy(?= copy))+( copy)?$/i, '') || name;
 
 /** the name an edit's copy takes: "X (edit)", then "X (edit 2)", the first one `taken` (names in the same place) doesn't have */
 export function editName(name: string, taken: string[]): string {

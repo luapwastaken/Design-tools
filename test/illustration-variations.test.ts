@@ -16,7 +16,7 @@ const view = (o: Partial<IllustrationView> = {}): IllustrationView =>
   ({ varSeed: 4242, varMode: 'colours', varPath: [], varOpen: 0, swapRamp: '', lockedRamps: [], pictureOn: [], pictureTones: {}, ...o }) as IllustrationView;
 
 const palette = (): IllustrationDoc =>
-  [[0.74, 0.075, 55], [0.6, 0.12, 140], [0.7, 0.09, 240], [0.5, 0.1, 25]].reduce((d, b) => addRamp(d, b as Oklch, `Colour ${d.ramps.length + 1}`).doc, emptyDoc());
+  [[0.74, 0.075, 55], [0.6, 0.12, 140], [0.7, 0.09, 240], [0.5, 0.1, 25]].reduce((d, b) => addRamp(d, b as Oklch, `Earth four ${d.ramps.length + 1}`).doc, emptyDoc());
 const baseHexes = (d: IllustrationDoc) => d.ramps.map((r) => toHex(baseOf(d, r.id)!.oklch));
 
 test('colour cells: six, the same for the same palette and view, with every locked ramp in each', () => {
@@ -228,10 +228,15 @@ test('using a cell names each changed ramp for its new colour, unless the name w
   const next = applyCell(blank, view(), cell);
   const nameOf = (id: string) => next.swatches.find((w) => w.id === id)!.name;
   assert.notEqual(toHex(baseOf(next, next.ramps[0].id)!.oklch), toHex(baseOf(blank, blank.ramps[0].id)!.oklch));
-  assert.notEqual(nameOf(a), 'Colour 1', 'an app-named ramp takes its new colour’s name');
+  assert.notEqual(nameOf(a), 'Earth four 1', 'an app-named ramp takes its new colour’s name');
   assert.ok(nameOf(a).length > 0);
   assert.equal(nameOf(b), 'My teal', 'a typed name stays');
   assert.equal(nameOf(c), '', 'a blank name already follows its colour');
+  // a name from a file, or typed before names were marked, is not the app's to replace
+  const brand = { ...blank, swatches: blank.swatches.map((w) => (w.id === a ? { ...w, name: 'Acme Teal' } : w)) };
+  const kept = applyCell(brand, view(), cell);
+  assert.notEqual(toHex(baseOf(kept, kept.ramps[0].id)!.oklch), toHex(baseOf(brand, brand.ramps[0].id)!.oklch));
+  assert.equal(kept.swatches.find((w) => w.id === a)!.name, 'Acme Teal');
   // a name typed, then cleared, follows the colour again and is no longer typed
   const cleared = renameSwatch(typed, b, '  ');
   assert.equal(cleared.swatches.find((w) => w.id === b)!.named, undefined);

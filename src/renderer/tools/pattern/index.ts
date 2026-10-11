@@ -45,8 +45,9 @@ export const tool: ToolDefinition<PatternDoc> = {
         const { doc, left, skipped, bases } = withPalette(current, item.payload.swatches);
         const name = item.ref.name;
         // a ramp palette goes base first, so the cap cuts the steps; the sentence says which colours did not make it
-        if (skipped.length) toast.show({ icon: 'info', message: `${listNames(skipped)} ${skipped.length === 1 ? 'is' : 'are'} too close to the background in value, so ${skipped.length === 1 ? 'it' : 'they'} stayed out.` });
-        if (left) toast.show({ icon: 'info', message: bases ? `A pattern holds ${MAX_COLOURS} shape colours, so ${name}'s ${plural(bases, 'ramp base')} went first and the last ${plural(left, 'colour')} stayed out.` : `A pattern holds ${MAX_COLOURS} shape colours, so the last ${plural(left, 'colour')} of ${name} stayed out.` });
+        if (skipped.length) toast.show({ icon: 'info', message: `Left out, too close to the background: ${listNames(skipped)}.` });
+        if (left) toast.show({ icon: 'info', message: bases ? `A pattern holds ${MAX_COLOURS} colours: ${plural(bases, 'ramp base')} went first, the last ${left} stayed out.` : `A pattern holds ${MAX_COLOURS} colours: the last ${left} of ${name} stayed out.` });
+        else if (bases) toast.show({ icon: 'info', message: `Sent ${plural(bases, 'ramp base')} first, then the other colours of ${name}.` });
         return doc;
       }
       case 'logo':
