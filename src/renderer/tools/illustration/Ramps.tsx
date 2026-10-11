@@ -11,7 +11,7 @@ import { fmtV, plural, stepWord } from '../common/names.ts';
 import { Section } from '../common/Section.tsx';
 import { surroundOf } from '../common/surround.ts';
 import { move, select, selected, type Doc } from './actions.ts';
-import { brokenSteps, looseOf, nameOf, rampName, revertRamp, rampOf, stepsOf, wordOf, type IllustrationDoc } from './doc.ts';
+import { brokenSteps, looseSets, nameOf, rampName, revertRamp, rampOf, stepsOf, wordOf, type IllustrationDoc } from './doc.ts';
 import { proofOf } from './proof.ts';
 import { clicked, hot, type IllustrationView } from './view-state.ts';
 import s from './Ramps.module.css';
@@ -23,14 +23,14 @@ export function SelectedRamp({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: I
   const lit = useSyncExternalStore(hot.subscribe, hot.get);
   const sel = selected(d, v.selected);
   const r = rampOf(d, sel?.group);
-  const loose = looseOf(d);
-  const looseOn = !r && !!sel && loose.some((w) => w.id === sel.id);
-  const list = r ? stepsOf(d, r.id) : looseOn ? loose : [];
+  // colours in no ramp show as their own group: the plain ones, a set of layer colours, a row of zones
+  const group = r || !sel ? undefined : looseSets(d).find((g) => g.list.some((w) => w.id === sel.id));
+  const list = r ? stepsOf(d, r.id) : (group?.list ?? []);
   const steps = list.map((w) => w.step ?? 0);
   const [lo, hi] = [Math.min(0, ...steps), Math.max(0, ...steps)];
   const broken = new Set(r ? brokenSteps(list) : []);
   const edited = list.filter((w) => w.edited).length;
-  const name = r ? rampName(d, r) : 'Loose colours';
+  const name = r ? rampName(d, r) : (group?.label ?? 'Loose colours');
   const surround = surroundOf(v.board, d.swatches);
   const plain = v.board === 'plain';
 
@@ -50,11 +50,11 @@ export function SelectedRamp({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: I
           <>
             <Tooltip content={`${plural(edited, 'step')} edited by hand: the ramp leaves ${edited === 1 ? 'it' : 'them'} when it changes`} disabled={!edited}>
               <span>
-                {plural(list.length, 'step')}
+                {r ? plural(list.length, 'step') : plural(list.length, 'colour')}
                 {edited ? ` · ${edited} edited` : ''}
               </span>
             </Tooltip>
-            {' · click a step to edit it'}
+            {r ? ' · click a step to edit it' : ' · click a colour to edit it'}
           </>
         ) : undefined
       }

@@ -14,7 +14,7 @@ import { Button, ColorField, InspectorGroup, InspectorRow, KelvinField, Select, 
 import { GreyscaleButton } from '../common/Greyscale.tsx';
 import { displayName } from '../common/names.ts';
 import { propose, proposals, ZONES_LABEL } from './proposals.ts';
-import { paletteFull, select, selected, type Doc } from './actions.ts';
+import { select, selected, type Doc } from './actions.ts';
 import { baseOf, type IllustrationDoc } from './doc.ts';
 import { LIT_VIEW } from './Light.tsx';
 import { BACKDROP, BANDS, drawRing, PREVIEW, readout, renderZones, ringOf, STRENGTH_NAMES, STRENGTH_RANGES, ZONE_ID, ZONE_TEXT, zoneMap, zoneName, zoneRig, zoneRows, type ZoneRow } from './light-zones.ts';
@@ -43,11 +43,10 @@ export function ZonesTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illus
   const pickRow = (r: ZoneRow) => select(baseOf(d, r.id)?.id ?? null);
   // colours offered to the palette as proposals; one set gathers them, and a colour already offered is not offered twice
   const offer = (r: ZoneRow, zones: ZoneId[]) => {
-    if (paletteFull(d)) return;
     const have = proposals.get()?.label === ZONES_LABEL ? proposals.get()!.items : [];
     const fresh = zones.filter((z) => !have.some((p) => p.name === zoneName(r.name, z) && p.oklch.every((x, i) => x === r.result.zones[z][i])));
     if (!fresh.length) return void toast.show({ icon: 'info', message: 'Already offered: keep or discard it in the Ramps panel.' });
-    propose(ZONES_LABEL, fresh.map((z) => r.result.zones[z]), fresh.map((z) => zoneName(r.name, z)), { materials: fresh.map(() => r.material) });
+    propose(ZONES_LABEL, fresh.map((z) => r.result.zones[z]), fresh.map((z) => zoneName(r.name, z)), { set: `${r.name} zones` });
     toast.show({ icon: 'info', message: `Offered ${fresh.length === 1 ? zoneName(r.name, fresh[0]) : `all of ${r.name}`}. Keep or discard it in the Ramps panel.` });
   };
   // the grid does not redraw as the pointer moves between cells: its handlers are the latest ones, behind stable wrappers

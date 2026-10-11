@@ -4,7 +4,8 @@ import type { DocKind, DocPayload, LibraryItemRef, ToolId, WorkspaceState, Write
 import { toast } from '../../ui/index.ts';
 import { errorText, guardSync } from './errors.ts';
 import { ipc, log } from './ipc.ts';
-import { docState, findRef, holdsItem, lockedIn, planChange, SCRATCH, sameStamp, sourceOf, stampOf } from './ownership.ts';
+import { docState, editName, findRef, holdsItem, lockedIn, planChange, SCRATCH, sameStamp, sourceOf, stampOf } from './ownership.ts';
+import { collectionLabel } from './routing.ts';
 import { allRuntimes, docRuntimes, enqueue, isEmptyDoc, type Linked, missing, rtOf, type Runtime } from './runtime.ts';
 import { getState, setState } from './store.ts';
 
@@ -52,7 +53,13 @@ async function persistItem(r: Runtime, entry: Entry<unknown>, cause: ChangeCause
   const plan = planChange({ cause, kind: r.def.itemKind!, source, state: stateOf(r, source), empty: isEmptyDoc(r, entry.data) });
   const payload = plan.t === 'none' ? null : payloadOf(r, entry.data);
   if (payload && plan.t === 'write') await write(r, source!, payload, cause === 'commit' || cause === 'receive');
-  else if (payload && plan.t === 'fork') await create(r, plan.name, payload, source);
+  else if (payload && plan.t === 'fork') {
+    // an edit to a locked item, or one open in another tool, lands in a copy; the name numbers itself and the toast says so
+    const scratch = getState().library?.collections.find((c) => c.name === SCRATCH)?.items ?? [];
+    const name = plan.original ? editName(plan.name, scratch.filter((i) => i.kind === r.def.itemKind).map((i) => i.name)) : plan.name;
+    await create(r, name, payload, source);
+    if (plan.original && !r.failed && source) toast.show({ icon: 'info', message: `Edited a copy: ${name}. The original stays in ${collectionLabel(source.collection)}.` });
+  }
   else if (payload && plan.t === 'create') {
     const name = r.newName ?? plan.name;
     r.newName = undefined;

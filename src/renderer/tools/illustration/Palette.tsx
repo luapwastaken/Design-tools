@@ -12,7 +12,7 @@ import { fmtV, plural } from '../common/names.ts';
 import { GreyscaleButton } from '../common/Greyscale.tsx';
 import { Section } from '../common/Section.tsx';
 import { addProposals, arm, deleteLoose, deleteRamp, duplicate, focusStep, move, rampsFromLoose, reorder, select, selected, type Doc } from './actions.ts';
-import { brokenSteps, looseOf, nameOf, rampName, regen, revertRamp, setSpec, stepsOf, wordOf, type IllustrationDoc } from './doc.ts';
+import { brokenSteps, isLayer, looseSets, nameOf, rampName, regen, revertRamp, setSpec, stepsOf, wordOf, type IllustrationDoc } from './doc.ts';
 import { AddColour } from './AddColour.tsx';
 import { LightRow } from './LightRow.tsx';
 import { Picture } from './Picture.tsx';
@@ -21,7 +21,7 @@ import { toggleRampLock, toggleSwap } from './variation-actions.ts';
 import { lockedIn } from './variations.ts';
 import { openSource } from './starts.ts';
 import { Start } from './Start.tsx';
-import { clearProposals, LAYERS_LABEL, proposals, sourcePop } from './proposals.ts';
+import { clearProposals, keptLoose, LAYERS_LABEL, proposals, sourcePop } from './proposals.ts';
 import { addToWell, paintSettings } from './paint-sources.ts';
 import { armed, clicked, getView, hot, patchView, type IllustrationView } from './view-state.ts';
 import s from './Palette.module.css';
@@ -39,14 +39,21 @@ function toWell(id: string): void {
   else toast.show({ icon: 'palette', message: 'The well holds 4 paints. Take one out to add another.' });
 }
 
+/** what the card under the ramps says about keeping what it offers */
+function ghostNote(label: string): string {
+  if (label === LAYERS_LABEL) return 'Click one to keep it as a loose swatch. Keep all replaces the layer colours kept before. Layer colours never become ramps.';
+  if (keptLoose(label)) return 'Click one to keep it as a loose swatch. Keep all adds each row as one group of loose swatches, never as ramps.';
+  return 'Click one to make its ramp. Colours picked on the paint canvas land here too.';
+}
+
 export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: IllustrationView }) {
   const ghosts = proposals.use();
-  const layered = ghosts?.label === LAYERS_LABEL;
+  const layered = keptLoose(ghosts?.label);
   const lit = hot.use();
   const armedId = armed.use();
   const sel = selected(d, v.selected);
   const [drag, setDrag] = useState<{ id: string; at: number | null } | null>(null);
-  const loose = looseOf(d);
+  const loose = looseSets(d);
   const locks = lockedIn(d, v);
   // the confirm belongs to the ramp (or loose colour) it was armed on
   const at = sel && d.ramps.some((r) => r.id === sel.group) ? sel.group : sel?.id;
@@ -60,7 +67,7 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
   useEffect(() => {
     // while a source's popover shows them, a scroll would close it (a press or scroll outside does); closed with colours left, they are brought into view
     if (firstGhost && !popOpen) document.querySelector('[data-tool="illustration"] [data-ghost-row]')?.scrollIntoView({ block: 'nearest' });
-  }, [firstGhost, popOpen]);
+  }, [firstGhost, ghosts?.items.length, popOpen]);
 
   const onDragOver = (e: DragEvent<HTMLDivElement>) => {
     if (!drag || !e.dataTransfer.types.includes(REORDER_MIME)) return; // files: the shell routes them to onFiles
@@ -131,7 +138,9 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
             onDragEnd={() => setDrag(null)}
           />
         ))}
-        {loose.length > 0 && <LooseItem doc={doc} d={d} v={v} list={loose} sel={sel} lit={lit} armed={armedId} />}
+        {loose.map((g) => (
+          <LooseItem key={g.label ?? ''} doc={doc} d={d} v={v} label={g.label} list={g.list} sel={sel} lit={lit} armed={armedId} />
+        ))}
         {ghosts && (
           <section className={s.ghosts} aria-label={`Proposed: ${ghosts.label}`} data-ghost-row="">
             <h3 className={s.ghostHead}>
@@ -158,9 +167,9 @@ export function Palette({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illust
                 );
               })}
             </div>
-            <p className={s.fine}>{layered ? 'Click one to keep it as a loose swatch. Layer colours never become ramps.' : 'Click one to make its ramp. Colours picked on the paint canvas or offered from Light zones land here too.'}</p>
+            <p className={s.fine}>{ghostNote(ghosts.label)}</p>
             <div className={s.ghostFoot}>
-              <Button size="xs" icon="add" onClick={() => addProposals(doc, ghosts.items)}>
+              <Button size="xs" icon="add" onClick={() => addProposals(doc, ghosts.items, true)}>
                 Keep all
               </Button>
               <Button size="xs" variant="ghost" onClick={clearProposals}>
@@ -416,10 +425,12 @@ function Chips({ d, v, list, sel, lit, broken, tall }: ChipsProps) {
   );
 }
 
-type LooseProps = { doc: Doc; d: IllustrationDoc; v: IllustrationView; list: Swatch[]; sel: Swatch | null; lit: string[]; armed: string | null };
+type LooseProps = { doc: Doc; d: IllustrationDoc; v: IllustrationView; /** the group's label; null for the plain loose colours */ label: string | null; list: Swatch[]; sel: Swatch | null; lit: string[]; armed: string | null };
 
 /** colours in no ramp (a flat palette opened here): each can become a ramp, or go */
-function LooseItem({ doc, d, v, list, sel, lit, armed: armedId }: LooseProps) {
+function LooseItem({ doc, d, v, label, list, sel, lit, armed: armedId }: LooseProps) {
+  // layer colours are blend colours: no ramp is made from them
+  const flats = !list.every(isLayer);
   const mine = list.find((w) => w.id === sel?.id) ?? null;
   const gone = list.find((w) => w.id === armedId);
   const openMenu = (at: MenuAnchor, fromKey: boolean, w = mine ?? list[0]) => {
@@ -428,9 +439,13 @@ function LooseItem({ doc, d, v, list, sel, lit, armed: armedId }: LooseProps) {
     menu.open(
       at,
       [
-        { label: `Make a ramp from ${name}`, icon: 'auto_awesome_motion', onSelect: () => rampsFromLoose(doc, [w.id]) },
-        { label: `Make ramps from all ${list.length}`, icon: 'auto_awesome_motion', disabled: list.length < 2, onSelect: () => rampsFromLoose(doc) },
-        'separator',
+        ...(flats
+          ? [
+              { label: `Make a ramp from ${name}`, icon: 'auto_awesome_motion' as const, onSelect: () => rampsFromLoose(doc, [w.id]) },
+              { label: `Make ramps from all ${list.length}`, icon: 'auto_awesome_motion' as const, disabled: list.length < 2, onSelect: () => rampsFromLoose(doc, list.map((x) => x.id)) },
+              'separator' as const,
+            ]
+          : []),
         { label: `Delete ${name}`, icon: 'delete', shortcut: 'Delete', danger: true, onSelect: () => arm(doc, w.id) },
       ],
       { initial: fromKey ? 0 : undefined },
@@ -439,7 +454,7 @@ function LooseItem({ doc, d, v, list, sel, lit, armed: armedId }: LooseProps) {
   return (
     <div
       role="group"
-      aria-label="Colours in no ramp"
+      aria-label={label ?? 'Colours in no ramp'}
       className={cx(s.item, s.loose, mine && s.on)}
       data-row={mine?.id ?? list[0].id}
       onContextMenu={(e) => {
@@ -450,12 +465,14 @@ function LooseItem({ doc, d, v, list, sel, lit, armed: armedId }: LooseProps) {
       }}
     >
       <div className={s.top}>
-        <span className={s.name}>Loose</span>
+        <span className={s.name}>{label ?? 'Loose'}</span>
         <span className={s.meta}>{plural(list.length, 'colour')}</span>
         <span className={s.grow} />
-        <Button size="xs" icon="auto_awesome_motion" onClick={() => rampsFromLoose(doc)} tooltip="Each colour becomes the base of a ramp">
-          Make ramps
-        </Button>
+        {flats && (
+          <Button size="xs" icon="auto_awesome_motion" onClick={() => rampsFromLoose(doc, list.map((x) => x.id))} tooltip="Each colour becomes the base of a ramp">
+            Make ramps
+          </Button>
+        )}
         <IconButton icon="more_horiz" label="More" size="sm" onClick={(e) => openMenu(e.currentTarget.getBoundingClientRect(), e.detail === 0)} />
       </div>
       {gone ? (

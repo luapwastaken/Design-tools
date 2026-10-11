@@ -5,8 +5,10 @@ import { layoutTile } from '../../../shared/pattern/layout.ts';
 import { previewSvg, PX_PER } from '../../../shared/pattern/svg.ts';
 import { namespace, parseSize } from '../../../shared/svg/index.ts';
 import type { PatternDoc, ShapeSlot, Unit } from '../../../shared/pattern/types.ts';
+import { valueOf } from '../../../shared/color/value.ts';
 import { isGround } from '../../../shared/palette/roles.ts';
 import type { PatternPayload, Swatch } from '../../../shared/types.ts';
+import { displayName } from '../common/names.ts';
 
 export type { Arrangement, PatternDoc, ShapeSlot, Unit } from '../../../shared/pattern/types.ts';
 export type Bounds = ShapeSlot['bounds'];
@@ -171,15 +173,31 @@ export function paletteColour(d: PatternDoc, id: string): Oklch | null {
   return i < 0 || !d.palette.length ? null : d.palette[i % d.palette.length];
 }
 
+/** a shape colour this close to the background in value (0..1) disappears into it */
+export const GROUND_GAP = 0.06;
+
 /**
  * A palette as the shape colours (Send to: SHAPE COLOURS). A swatch whose job is a ground becomes the
  * background; the rest colour the shapes, every recolouring shape following the palette again. A
  * shape that keeps its own colours keeps them (spec §5 q2): flattening a many-coloured logo is its
- * own switch's job, never a side effect. Up to MAX_COLOURS; `left` is how many stayed out.
+ * own switch's job, never a side effect. A colour too close to the background in value would draw
+ * as nothing, so it stays out (`skipped` names them). An Illustration palette sends each ramp's
+ * base first, then its loose colours, then the other steps, so a cap cuts the steps, not the brand
+ * (`bases` is how many ramps went). Up to MAX_COLOURS; `left` is how many the cap kept out.
  */
-export function withPalette(d: PatternDoc, swatches: Swatch[]): { doc: PatternDoc; left: number } {
+export function withPalette(d: PatternDoc, swatches: Swatch[]): { doc: PatternDoc; left: number; skipped: string[]; bases: number } {
   const ground = swatches.find((w) => w.role === 'Background') ?? swatches.find((w) => isGround(w.role));
-  const inks: Oklch[] = swatches.filter((w) => w !== ground).map((w) => w.oklch);
+  const rest = swatches.filter((w) => w !== ground);
+  const isBase = (w: Swatch) => w.group !== undefined && w.step === 0;
+  const isStep = (w: Swatch) => w.group !== undefined && w.step !== 0;
+  const bases = rest.filter(isBase);
+  const ordered = bases.length ? [...bases, ...rest.filter((w) => !isBase(w) && !isStep(w)), ...rest.filter(isStep)] : rest;
+  const gv = ground ? valueOf(ground.oklch) : 0;
+  const shows = (w: Swatch) => !ground || Math.abs(valueOf(w.oklch) - gv) >= GROUND_GAP;
+  const kept = ordered.filter(shows);
+  // when every colour would vanish, the palette still goes in: a pattern with no colours is worse
+  const skippedSw = kept.length ? ordered.filter((w) => !shows(w)) : [];
+  const inks: Oklch[] = (kept.length ? kept : ordered).map((w) => w.oklch);
   const all = inks.length ? inks : swatches.map((w) => w.oklch);
   return {
     doc: {
@@ -189,5 +207,7 @@ export function withPalette(d: PatternDoc, swatches: Swatch[]): { doc: PatternDo
       slots: d.slots.map((s) => (s.recolour ? { ...s, colour: null } : s)),
     },
     left: Math.max(0, all.length - MAX_COLOURS),
+    skipped: skippedSw.map(displayName),
+    bases: bases.length,
   };
 }

@@ -15,7 +15,7 @@ import { displayName, fmtL } from '../common/names.ts';
 import { createStore } from '../common/store.ts';
 import { useWidth } from '../common/useWidth.ts';
 import { SURROUNDS, surroundColour, surroundOf, type Surround } from '../common/surround.ts';
-import { looseOf, lookForAll, rampName, rampOf, setSpec, stepsOf, stepWord, type IllustrationDoc } from './doc.ts';
+import { isLayer, looseOf, lookForAll, rampName, rampOf, setSpec, stepsOf, stepWord, type IllustrationDoc } from './doc.ts';
 import { lightEveryRamp, rampsFromLoose, select, selected, type Doc } from './actions.ts';
 import { FOLDS, type Fold } from './cloth.ts';
 import { finishOf, hasOverrides, SURFACE_SLIDERS } from './finish.ts';
@@ -114,7 +114,7 @@ export function LightTab({ doc, d, v }: { doc: Doc; d: IllustrationDoc; v: Illus
   const dragging = live !== null || inGesture;
   const k = dragging ? DRAGGING : 1;
 
-  const loose = looseOf(d).length > 0;
+  const loose = looseOf(d).some((w) => !isLayer(w));
   const spec = ramp?.spec;
   // several objects on the stage: the sun is small and its ring stays behind them
   const multi = !!ramp && (view.all || shape === 'all');

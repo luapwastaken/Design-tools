@@ -23,7 +23,12 @@ const HEX = (o: Oklch) => toHex(o).toUpperCase();
 const vary = (patch: Partial<DesignView>) => patchView({ ...patch, varPath: [], varOpen: 0 });
 
 /** the line under the bar: what the grid is, or why it is what it is */
-function statusOf(v: DesignView, cells: DesignCell[], locks: number): string {
+function statusOf(v: DesignView, cells: DesignCell[], locks: number, primaryFree: boolean): string {
+  const base = baseStatus(v, cells, locks);
+  return primaryFree ? `${base} Primary may change in these.` : base;
+}
+
+function baseStatus(v: DesignView, cells: DesignCell[], locks: number): string {
   if (locks >= ROLES.length) return 'Everything is locked, so all six are the same. Unlock a colour to see variations.';
   if (v.varPath.length) {
     const times = v.varPath.length === 1 ? 'once' : `${v.varPath.length} times`;
@@ -37,6 +42,7 @@ export function VariationsTab({ doc, d, v }: { doc: Doc; d: DesignDoc; v: Design
   const cells = cellsOf(d, v);
   const open = openCell(cells, v);
   const locks = d.swatches.filter((w) => w.role && v.locked.includes(w.id)).length;
+  const primary = d.swatches.find((w) => w.role === 'Primary');
   const region = useRef<HTMLDivElement>(null);
   const was = useRef(0);
   const wasPath = useRef(0);
@@ -71,7 +77,7 @@ export function VariationsTab({ doc, d, v }: { doc: Doc; d: DesignDoc; v: Design
           </Button>
         </span>
       </div>
-      <p className={s.status}>{statusOf(v, cells, locks)}</p>
+      <p className={s.status}>{statusOf(v, cells, locks, primary !== undefined && !v.locked.includes(primary.id))}</p>
       {open && (
         <div ref={region} tabIndex={-1} role="region" aria-label={`Variation ${open.n} larger`} data-variations-large className={s.large}>
           <Large doc={doc} d={d} cell={open} count={cells.length} />

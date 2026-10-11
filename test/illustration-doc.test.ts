@@ -7,6 +7,10 @@ import { writeJson } from '../src/shared/palette/writers.ts';
 import type { Swatch } from '../src/shared/types.ts';
 import {
   addRamp,
+  addSet,
+  isLayer,
+  LAYER_COLOURS,
+  looseSets,
   baseOf,
   brokenSteps,
   duplicateRamp,
@@ -271,4 +275,36 @@ test('a Push or Surface change regenerates the ramp (push) or leaves its colours
   const shiny = setSpec(d, id, { surface: { gloss: 0.9 } });
   assert.deepEqual(stepsOf(shiny, id).map((w) => w.oklch), stepsOf(d, id).map((w) => w.oklch));
   assert.deepEqual(shiny.ramps[0].surface, { gloss: 0.9 });
+});
+
+test('layer colours are one labelled group of loose swatches; a new set replaces the old, and they never become ramps', () => {
+  const layer = (n: number) => Array.from({ length: n }, (_, i) => ({ oklch: [0.5 + i * 0.05, 0.05, 40] as [number, number, number], name: `Layer ${i}`, set: LAYER_COLOURS }));
+  const base = addRamp(emptyDoc(), [0.6, 0.12, 30], 'Skin').doc;
+  const once = addSet(base, layer(3), true).doc;
+  assert.equal(looseOf(once).length, 3);
+  assert.ok(looseOf(once).every(isLayer));
+  assert.deepEqual(looseSets(once).map((g) => [g.label, g.list.length]), [[LAYER_COLOURS, 3]]);
+  // the light changed: adding the layer colours again stands for the set before it
+  const twice = addSet(once, layer(2), true).doc;
+  assert.equal(looseOf(twice).length, 2);
+  // one chip joins the set, and a name already in it is replaced, not doubled
+  const chip = addSet(twice, [{ oklch: [0.9, 0.02, 80], name: 'Layer 0', set: LAYER_COLOURS }]).doc;
+  assert.equal(looseOf(chip).length, 2);
+  assert.deepEqual(looseOf(chip).map((w) => w.name).sort(), ['Layer 0', 'Layer 1']);
+  // plain loose colours stay plain, and come first
+  const mixed = addSet({ ...chip, swatches: [...chip.swatches, flat('f', [0.4, 0.1, 100])] }, [], false).doc;
+  assert.deepEqual(looseSets(mixed).map((g) => g.label), [null, LAYER_COLOURS]);
+  // Make ramps passes them by
+  const made = makeRamps(mixed, looseOf(mixed).map((w) => w.id));
+  assert.equal(made.ramps.length, mixed.ramps.length + 1);
+  assert.equal(looseOf(made).filter(isLayer).length, 2);
+});
+
+test('a row of Light zones kept is one group of loose swatches under its own label, never ramps', () => {
+  const zones = ['highlight', 'light', 'core shadow'].map((z, i) => ({ oklch: [0.9 - i * 0.2, 0.05, 50] as [number, number, number], name: `Skin medium ${z}`, set: 'Skin medium zones' }));
+  const d = addSet(addRamp(emptyDoc(), [0.6, 0.12, 30], 'Skin').doc, zones).doc;
+  assert.equal(d.ramps.length, 1);
+  assert.deepEqual(looseSets(d).map((g) => [g.label, g.list.length]), [['Skin medium zones', 3]]);
+  // offered again, the same names replace, so it never doubles
+  assert.equal(looseOf(addSet(d, zones).doc).length, 3);
 });

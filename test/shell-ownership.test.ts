@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { docState, findRef, holdsItem, type ItemFacts, lockedIn, planChange, sameStamp, sourceOf } from '../src/renderer/shell/core/ownership.ts';
+import { docState, editName, findRef, holdsItem, type ItemFacts, lockedIn, planChange, sameStamp, sourceOf } from '../src/renderer/shell/core/ownership.ts';
 import type { ChangeCause, DocSource, DocState } from '../src/shared/doc-api.ts';
 import type { LibraryIndex, LibraryItemRef } from '../src/shared/types.ts';
 
@@ -93,9 +93,9 @@ test('every commit, undo, redo and applied item of an owned item writes it', () 
 });
 
 test('an edit to a detached document forks; undo and redo only follow it', () => {
-  assert.deepEqual(plan('commit', src(), { t: 'owned-elsewhere', by: 'illustration' }), { t: 'fork', name: 'Monolith core copy' });
-  assert.deepEqual(plan('commit', src(), { t: 'locked', collection: 'Monolith' }), { t: 'fork', name: 'Monolith core copy' });
-  assert.deepEqual(plan('receive', src(), { t: 'locked', collection: 'Monolith' }), { t: 'fork', name: 'Monolith core copy' });
+  assert.deepEqual(plan('commit', src(), { t: 'owned-elsewhere', by: 'illustration' }), { t: 'fork', name: 'Monolith core', original: true });
+  assert.deepEqual(plan('commit', src(), { t: 'locked', collection: 'Monolith' }), { t: 'fork', name: 'Monolith core', original: true });
+  assert.deepEqual(plan('receive', src(), { t: 'locked', collection: 'Monolith' }), { t: 'fork', name: 'Monolith core', original: true });
   assert.deepEqual(plan('commit', src(), { t: 'missing' }), { t: 'fork', name: 'Monolith core' });
   for (const state of [{ t: 'owned-elsewhere', by: 'logo' }, { t: 'locked', collection: 'M' }, { t: 'missing' }] as DocState[]) {
     assert.deepEqual(plan('undo', src(), state), { t: 'none' }, state.t);
@@ -120,4 +120,13 @@ test('sources, stamps and index lookups', () => {
   assert.equal(lockedIn(index(), 'monolith'), 'Monolith');
   assert.equal(lockedIn(index(), 'Scratch'), null);
   assert.equal(lockedIn(index(), 'Gone'), null);
+});
+
+test('an edit copy is named "X (edit)", then "X (edit 2)", and never grows a "copy copy"', () => {
+  assert.equal(editName('Monolith core', []), 'Monolith core (edit)');
+  assert.equal(editName('Monolith core', ['monolith core (EDIT)']), 'Monolith core (edit 2)');
+  // a copy of a copy starts from the original's name
+  assert.equal(editName('Monolith core (edit)', ['Monolith core (edit)']), 'Monolith core (edit 2)');
+  assert.equal(editName('Monolith core (edit 2)', ['Monolith core (edit)', 'Monolith core (edit 2)']), 'Monolith core (edit 3)');
+  assert.equal(editName('Monolith core copy copy', []), 'Monolith core (edit)');
 });

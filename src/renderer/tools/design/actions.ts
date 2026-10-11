@@ -114,11 +114,30 @@ export function proposedRoles(swatches: Swatch[], items: Proposal[], assign: boo
   return { given, roles: given.map((r, i) => r ?? suggested[i] ?? null) };
 }
 
+/** what a toast says about colours that came in from a file or a paste: they start locked */
+export const KEPT_NOTE = 'Imported colours are locked, so Reroll and Variations keep them. Unlock one (L) to let it change.';
+
+/** palette files already opened this session, so a reopen doesn't lock what Luap unlocked */
+const opened = new Set<string>();
+
+/**
+ * A palette read from an .ase, .aco or .gpl file (every swatch still holds its imported values)
+ * opens with every colour locked, once: Reroll and Variations would otherwise replace a brand's
+ * colours with invented ones. A view setting, so the file is not touched.
+ */
+export function lockImported(itemId: string, swatches: Swatch[]): void {
+  if (opened.has(itemId) || !swatches.length || !swatches.every((w) => w.source)) return;
+  opened.add(itemId);
+  patchView({ locked: swatches.map((w) => w.id) });
+  toast.show({ icon: 'lock', message: KEPT_NOTE });
+}
+
 /**
  * Proposals into the palette, one step. A proposal made for a role (Complete the palette) takes it;
  * with `assign` (Keep all) the rest are given the roles the palette lacks (suggestRoles), and a role
  * the palette already uses is never taken from its owner. Colours kept from a logo or SVG are the
- * client's own and start locked (`from`); an image's or a paste's are not.
+ * client's own and start locked (`from`), and so do pasted codes (their colours are given, not
+ * guessed); an image's are not.
  */
 export function addProposals(doc: Doc, items: Proposal[], assign = false, from?: BuildMethod): void {
   if (!items.length) return;
@@ -128,13 +147,14 @@ export function addProposals(doc: Doc, items: Proposal[], assign = false, from?:
   dropProposals(items.map((p) => p.id));
   // the brand colour in the inspector (the first one when none is): selecting all would read as editing all of them
   const lead = add.find((w) => w.role === 'Primary') ?? add[0];
-  patchView({ selected: [lead.id], ...(from === 'logo' && { locked: [...new Set([...getView().locked, ...add.map((w) => w.id)])] }) });
+  const keeps = from === 'logo' || from === 'paste';
+  patchView({ selected: [lead.id], ...(keeps && { locked: [...new Set([...getView().locked, ...add.map((w) => w.id)])] }) });
   const guessed = add.filter((_, i) => roles[i] && !given[i]);
-  if (!guessed.length) return;
+  if (!guessed.length && from !== 'paste') return;
   const after = doc.get();
   toast.show({
-    icon: 'info',
-    message: `Roles suggested: ${listNames(guessed.map((w) => w.role!))}.${from === 'logo' ? ' The logo colours are locked.' : ''}`,
+    icon: guessed.length ? 'info' : 'lock',
+    message: `${guessed.length ? `Roles suggested: ${listNames(guessed.map((w) => w.role!))}.` : ''}${from === 'logo' ? ' The logo colours are locked.' : ''}${from === 'paste' ? ` ${KEPT_NOTE}` : ''}`.trim(),
     when: () => doc.get() === after,
     undo: () => void (doc.get() === after && doc.undo()),
   });

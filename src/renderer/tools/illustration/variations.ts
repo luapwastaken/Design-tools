@@ -9,7 +9,7 @@ import {
 } from '../../../shared/palette/variations.ts';
 import type { RampSpec } from '../../../shared/types.ts';
 import { displayName } from '../common/names.ts';
-import { baseOf, rampName, rampOf, recolour, replaceRamps, setScene, type IllustrationDoc } from './doc.ts';
+import { baseOf, rampName, rampOf, recolour, renameBase, replaceRamps, setScene, type IllustrationDoc } from './doc.ts';
 import { lookOf, type Look } from './shade.ts';
 import { presetOf, sceneLight, type LightPair } from './scene.ts';
 import type { IllustrationView } from './view-state.ts';
@@ -145,7 +145,7 @@ export function inUse(d: IllustrationDoc, v: IllustrationView, cell: Cell): bool
 // ── using a cell ─────────────────────────────────────────────────────────────────────────────────
 
 /**
- * The cell written into the palette. Vary the colours: each unlocked ramp's base takes the cell's colour (its
+ * The cell written into the palette. Vary the colours: each unlocked ramp's base takes the cell's colour (and its colour's name, unless typed; its
  * unedited steps follow; steps edited by hand stay, as regenerate promises). Vary the light: the cell's light
  * pair goes to every ramp. The very same doc comes back when nothing would change.
  */
@@ -155,7 +155,10 @@ export function applyCell(d: IllustrationDoc, v: IllustrationView, cell: Cell): 
   return d.ramps.reduce((x, r, i) => {
     const to = cell.bases[i];
     const base = baseOf(x, r.id);
-    return to && base && !locks.has(r.id) ? recolour(x, base.id, to.base) : x;
+    if (!to || !base || locks.has(r.id)) return x;
+    const next = recolour(x, base.id, to.base);
+    // a ramp named for its old colour ("Hair black") is named for the new one, unless the name was typed; a picture cell keeps its subject's word
+    return next === x ? x : renameBase(next, r.id, 'kind' in cell && cell.kind === 'picture' ? to.name : displayName({ name: '', oklch: to.base }));
   }, d);
 }
 

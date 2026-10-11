@@ -4,7 +4,7 @@ import { toHex, type Oklch } from '../src/shared/color/index.ts';
 import { valueOf } from '../src/shared/color/value.ts';
 import { createDocController } from '../src/shared/doc.ts';
 import { KINDS, subjectBases } from '../src/shared/palette/variations.ts';
-import { addRamp, baseOf, emptyDoc, looseOf, recolour, stepsOf, type IllustrationDoc } from '../src/renderer/tools/illustration/doc.ts';
+import { addRamp, baseOf, emptyDoc, looseOf, recolour, renameSwatch, stepsOf, type IllustrationDoc } from '../src/renderer/tools/illustration/doc.ts';
 import { LIGHTS, sceneLight, SUBJECTS } from '../src/renderer/tools/illustration/scene.ts';
 import {
   alternatives, applyCell, cellRamps, cellsOf, cleanCell, cleanLocks, cleanPath, cleanPicture, fitsPicture, inUse, lockedIn, makeRamps, pictureOf, toggled,
@@ -216,4 +216,23 @@ test('a picture cell fits only ramps that are the ticked subjects', () => {
   assert.ok(!fitsPicture(d, view({ pictureOn: ['skin'] })), 'a different count never fits');
   assert.ok(fitsPicture(makeRamps(d, v), v), 'Make ramps makes ramps that fit');
   assert.ok(fitsPicture(d, view({ ...v, varMode: 'light' })), 'the light grid never reads the ticks');
+});
+
+test('using a cell names each changed ramp for its new colour, unless the name was typed or follows the colour', () => {
+  // ramps named the way Make ramps names them, by their subject
+  const d0 = palette();
+  const [a, b, c] = d0.ramps.map((r) => baseOf(d0, r.id)!.id);
+  const typed = renameSwatch(d0, b, 'My teal');
+  const blank = { ...typed, swatches: typed.swatches.map((w) => (w.id === c ? { ...w, name: '' } : w)) };
+  const cell = cellsOf(blank, view())[2];
+  const next = applyCell(blank, view(), cell);
+  const nameOf = (id: string) => next.swatches.find((w) => w.id === id)!.name;
+  assert.notEqual(toHex(baseOf(next, next.ramps[0].id)!.oklch), toHex(baseOf(blank, blank.ramps[0].id)!.oklch));
+  assert.notEqual(nameOf(a), 'Colour 1', 'an app-named ramp takes its new colour’s name');
+  assert.ok(nameOf(a).length > 0);
+  assert.equal(nameOf(b), 'My teal', 'a typed name stays');
+  assert.equal(nameOf(c), '', 'a blank name already follows its colour');
+  // a name typed, then cleared, follows the colour again and is no longer typed
+  const cleared = renameSwatch(typed, b, '  ');
+  assert.equal(cleared.swatches.find((w) => w.id === b)!.named, undefined);
 });

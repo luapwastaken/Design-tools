@@ -6,7 +6,7 @@ import { toggleGreyscale } from '../common/Greyscale.tsx';
 import { toggleValueLock } from '../../ui/PickerStyles.tsx';
 import { baseName, fetchBlob, isSvg } from '../common/take.ts';
 import { ROLES } from '../../../shared/palette/roles.ts';
-import { armDelete, copySelected, duplicate, escape, eyedrop, keepAll, newPalette, nudge, roleSelected, spaceNow, step, toggleLocked } from './actions.ts';
+import { armDelete, copySelected, duplicate, escape, eyedrop, keepAll, lockImported, newPalette, nudge, roleSelected, spaceNow, step, toggleLocked } from './actions.ts';
 import { emptyDoc, fromPayload, toPayload, type DesignDoc } from './doc.ts';
 import { clearProposals } from './proposals.ts';
 import { takeImage, takeSvg } from './sources.ts';
@@ -43,7 +43,11 @@ export const tool: ToolDefinition<DesignDoc> = {
     switch (item.kind) {
       case 'palette':
         clearProposals(); // they were built for the palette that was open
-        return tool.fromItem!(item);
+        {
+          const doc = tool.fromItem!(item);
+          lockImported(item.ref.id, doc.swatches);
+          return doc;
+        }
       case 'image':
         await takeImage(await fetchBlob(item.url, item.ref.name), item.ref.name);
         return current;

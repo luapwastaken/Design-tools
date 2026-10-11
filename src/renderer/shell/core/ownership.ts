@@ -38,7 +38,21 @@ export function docState(tool: ToolId, source: DocSource, facts: ItemFacts | nul
  */
 export const holdsItem = (s: DocState): boolean => s.t === 'saved' || s.t === 'locked' || s.t === 'changed-outside' || s.t === 'write-failed';
 
-export type Plan = { t: 'none' } | { t: 'write' } | { t: 'create'; name: string } | { t: 'fork'; name: string };
+/** a name without what an earlier fork added, so a copy of a copy is "X (edit 2)", never "X copy copy" */
+const editBase = (name: string): string => name.replace(/( \(edit( \d+)?\)| copy( \d+)?)+$/i, '') || name;
+
+/** the name an edit's copy takes: "X (edit)", then "X (edit 2)", the first one `taken` (names in the same place) doesn't have */
+export function editName(name: string, taken: string[]): string {
+  const base = editBase(name);
+  const used = new Set(taken.map((n) => n.toLowerCase()));
+  for (let n = 1; ; n++) {
+    const next = n === 1 ? `${base} (edit)` : `${base} (edit ${n})`;
+    if (!used.has(next.toLowerCase())) return next;
+  }
+}
+
+/** `original`: the item it forks from is still there, so the edit made a copy beside it (persist says so) */
+export type Plan = { t: 'none' } | { t: 'write' } | { t: 'create'; name: string } | { t: 'fork'; name: string; original?: boolean };
 
 const NONE: Plan = { t: 'none' };
 
@@ -53,7 +67,7 @@ export function planChange(o: { cause: ChangeCause; kind: DocKind; source: DocSo
   switch (o.state.t) {
     case 'owned-elsewhere':
     case 'locked':
-      return edit ? { t: 'fork', name: `${o.source.name} copy` } : NONE;
+      return edit ? { t: 'fork', name: editBase(o.source.name), original: true } : NONE;
     case 'missing':
       return edit ? { t: 'fork', name: o.source.name } : NONE;
     case 'changed-outside':

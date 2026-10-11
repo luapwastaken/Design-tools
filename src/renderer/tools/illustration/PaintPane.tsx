@@ -8,7 +8,7 @@ import type { Recipe } from '../../../shared/paint/recipe.ts';
 import { toast } from '../../ui/index.ts';
 import { useSettled } from '../common/settled.ts';
 import { selected, type Doc } from './actions.ts';
-import { looseOf, named, rampName, stepsOf, type IllustrationDoc } from './doc.ts';
+import { looseSets, named, rampName, stepsOf, type IllustrationDoc } from './doc.ts';
 import { PaintCanvas } from './PaintCanvas.tsx';
 import { ownedPaints } from './Paints.tsx';
 import { paintSettings, wellFromRecipe, type PaintSettings, type PaletteSet, type WellPart } from './paint-sources.ts';
@@ -46,10 +46,9 @@ export function PaintPane({ doc, d, v, hidden }: { doc: Doc; d: IllustrationDoc;
   // the tray's palette colours: a set per ramp, each step by its name ("Skin shadow")
   const sets = useMemo((): PaletteSet[] => {
     const shown = new Map(named(d).map((w) => [w.id, w]));
-    const loose = looseOf(d);
     return [
       ...d.ramps.map((r) => ({ key: r.id, name: rampName(d, r), swatches: stepsOf(d, r.id).map((w) => shown.get(w.id)!) })),
-      ...(loose.length ? [{ key: 'loose', name: 'Loose', swatches: loose.map((w) => shown.get(w.id)!) }] : []),
+      ...looseSets(d).map((g) => ({ key: g.label ?? 'loose', name: g.label ?? 'Loose', swatches: g.list.map((w) => shown.get(w.id)!) })),
     ];
   }, [d]);
 

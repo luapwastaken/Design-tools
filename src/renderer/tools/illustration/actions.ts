@@ -6,9 +6,9 @@ import type { MaterialId, Swatch } from '../../../shared/types.ts';
 import { shell } from '../../shell/core/index.ts';
 import { pickFromScreen, toast } from '../../ui/index.ts';
 import { plural } from '../common/names.ts';
-import { addLoose, addRamp, baseOf, carryLight, duplicateRamp, lightForAll, looseOf, makeRamps, MAX_RAMPS, moveRamp, nameOf, rampName, rampOf, removeLoose, removeRamp, stepsOf, type IllustrationDoc } from './doc.ts';
+import { addRamp, addSet, baseOf, carryLight, duplicateRamp, lightForAll, isLayer, LAYER_COLOURS, looseOf, looseSets, makeRamps, MAX_RAMPS, moveRamp, nameOf, rampName, rampOf, removeLoose, removeRamp, stepsOf, type IllustrationDoc } from './doc.ts';
 import { sceneLight } from './scene.ts';
-import { clearProposals, dropProposals, LAYERS_LABEL, proposals, restoreProposals, type Proposal } from './proposals.ts';
+import { clearProposals, dropProposals, keptLoose, LAYERS_LABEL, proposals, restoreProposals, type Proposal } from './proposals.ts';
 import { armed, getView, patchView } from './view-state.ts';
 
 export type Doc = DocController<IllustrationDoc>;
@@ -28,8 +28,8 @@ export const select = (id: string | null): void => patchView({ selected: id });
 export const focusStep = (id: string | undefined): void =>
   void requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-step="${id}"]`)?.focus({ preventScroll: false }));
 
-/** the rows as the ramps area shows them: each ramp's steps, then the loose colours as one row */
-export const rows = (d: IllustrationDoc): Swatch[][] => [...d.ramps.map((r) => stepsOf(d, r.id)), ...(looseOf(d).length ? [looseOf(d)] : [])];
+/** the rows as the ramps area shows them: each ramp's steps, then each group of loose colours as a row */
+export const rows = (d: IllustrationDoc): Swatch[][] => [...d.ramps.map((r) => stepsOf(d, r.id)), ...looseSets(d).map((g) => g.list)];
 
 /**
  * Arrows: left and right along a ramp, up and down to the neighbouring ramp at the same place. Only
@@ -102,9 +102,11 @@ export function addBase(doc: Doc, oklch: Oklch = nextBase(doc.get()), name = '',
   if (opts.focus) focusPickerColour();
 }
 
-export function addProposals(doc: Doc, all: Proposal[]): void {
-  // the layer colours are blend colours, not flats: they land as loose swatches (they still travel in the exports) and never feed the recipe
-  const loose = proposals.get()?.label === LAYERS_LABEL;
+/** `keepAll`: the Keep all button, not a chip: for the layer colours that replaces the set kept before */
+export function addProposals(doc: Doc, all: Proposal[], keepAll = false): void {
+  // the layer colours and the zone colours are not flats: they land as groups of loose swatches (they still travel in the exports) and never feed the recipe
+  const label = proposals.get()?.label;
+  const loose = keptLoose(label);
   const room = MAX_RAMPS - doc.get().ramps.length;
   const items = loose ? all : all.slice(0, Math.max(0, room));
   if (items.length < all.length) toast.show({ kind: 'error', message: room > 0 ? `A palette holds ${MAX_RAMPS} ramps: ${plural(items.length, 'colour')} added, ${all.length - items.length} left out.` : `This palette already holds ${MAX_RAMPS} ramps. Delete one to add more.` });
@@ -112,13 +114,20 @@ export function addProposals(doc: Doc, all: Proposal[]): void {
   const was = proposals.get();
   const before = doc.get();
   let first = '';
-  doc.transact(loose ? `Add ${plural(items.length, 'layer colour')}` : items.length === 1 ? 'Add base colour' : `Add ${plural(items.length, 'base colour')}`, (d) =>
-    items.reduce((x, p, i) => {
-      const r = loose ? addLoose(x, p.oklch, p.name ?? '') : addRamp(x, p.oklch, p.name ?? '', null, p.material);
-      if (!i) first = 'base' in r ? r.base : r.id;
+  // Keep all of the layer colours stands for the set before it (a changed Light made that stale); a chip joins the set
+  const everyLayer = label === LAYERS_LABEL && keepAll;
+  doc.transact(loose ? `Add ${plural(items.length, label === LAYERS_LABEL ? 'layer colour' : 'zone colour')}` : items.length === 1 ? 'Add base colour' : `Add ${plural(items.length, 'base colour')}`, (d) => {
+    if (loose) {
+      const r = addSet(d, items.map((p) => ({ oklch: p.oklch, name: p.name ?? '', set: label === LAYERS_LABEL ? LAYER_COLOURS : (p.set ?? 'Zones') })), everyLayer);
+      first = r.id;
       return r.doc;
-    }, d),
-  );
+    }
+    return items.reduce((x, p, i) => {
+      const r = addRamp(x, p.oklch, p.name ?? '', null, p.material);
+      if (!i) first = r.base;
+      return r.doc;
+    }, d);
+  });
   const after = doc.get();
   dropProposals(items.map((p) => p.id));
   select(first);
@@ -132,7 +141,7 @@ export function addProposals(doc: Doc, all: Proposal[]): void {
 }
 
 /** a flat palette's colours (or the loose ones of this; `ids`: just those) each become a ramp's base */
-export function rampsFromLoose(doc: Doc, ids = looseOf(doc.get()).map((w) => w.id)): void {
+export function rampsFromLoose(doc: Doc, ids = looseOf(doc.get()).filter((w) => !isLayer(w)).map((w) => w.id)): void {
   if (!ids.length || paletteFull(doc.get())) return;
   const room = MAX_RAMPS - doc.get().ramps.length;
   if (ids.length > room) {

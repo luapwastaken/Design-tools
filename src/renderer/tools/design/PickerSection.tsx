@@ -104,7 +104,7 @@ function Editor({ doc, d, w, v, count, styles }: { doc: Doc; d: DesignDoc; w: Sw
         <TextInput
           value={w.name}
           placeholder={w.name.trim() ? displayName({ name: '', oklch: w.oklch }) : name}
-          onCommit={(t) => edit(`Rename ${name}`, (x) => ({ ...x, name: t.trim() }))}
+          onCommit={(t) => edit(`Rename ${name}`, (x) => ({ ...x, name: t.trim(), named: t.trim() ? true : undefined }))}
           className={s.name}
           data-design-name=""
         />

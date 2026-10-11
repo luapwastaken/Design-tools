@@ -2,7 +2,7 @@
 // artboard or a PNG. Spec: docs/superpowers/specs/2026-09-29-pattern-tool.md; plan unit V.
 import type { ToolDefinition } from '../../shell/tool.ts';
 import { toast } from '../../ui/index.ts';
-import { plural } from '../common/names.ts';
+import { listNames, plural } from '../common/names.ts';
 import { fetchBlob } from '../common/take.ts';
 import { leftOut, newPattern, reseed, slotFrom, takeFiles, withSlots } from './actions.ts';
 import { emptyDoc, fromPayload, MAX_COLOURS, toPayload, withPalette, type PatternDoc } from './doc.ts';
@@ -42,8 +42,11 @@ export const tool: ToolDefinition<PatternDoc> = {
         return tool.fromItem!(item);
       case 'palette': {
         if (!current.slots.some((s) => s.recolour)) toast.show({ icon: 'info', message: 'Every shape keeps its own colours. Turn on Colour from palette on a shape to use these.' });
-        const { doc, left } = withPalette(current, item.payload.swatches);
-        if (left) toast.show({ icon: 'info', message: `A pattern holds ${MAX_COLOURS} shape colours, so the last ${plural(left, 'colour')} of ${item.ref.name} stayed out.` });
+        const { doc, left, skipped, bases } = withPalette(current, item.payload.swatches);
+        const name = item.ref.name;
+        // a ramp palette goes base first, so the cap cuts the steps; the sentence says which colours did not make it
+        if (skipped.length) toast.show({ icon: 'info', message: `${listNames(skipped)} ${skipped.length === 1 ? 'is' : 'are'} too close to the background in value, so ${skipped.length === 1 ? 'it' : 'they'} stayed out.` });
+        if (left) toast.show({ icon: 'info', message: bases ? `A pattern holds ${MAX_COLOURS} shape colours, so ${name}'s ${plural(bases, 'ramp base')} went first and the last ${plural(left, 'colour')} stayed out.` : `A pattern holds ${MAX_COLOURS} shape colours, so the last ${plural(left, 'colour')} of ${name} stayed out.` });
         return doc;
       }
       case 'logo':

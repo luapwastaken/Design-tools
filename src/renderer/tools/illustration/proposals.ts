@@ -9,8 +9,8 @@ import { createStore } from '../common/store.ts';
 import { svgColours } from '../../../shared/svg/index.ts';
 import { pixelsOf, unique } from '../common/take.ts';
 
-/** `material`: what the ramp made from it is (a Library palette's own ramps, a subject) */
-export type Proposal = { id: string; oklch: Oklch; name: string | null; material?: MaterialId };
+/** `material`: what the ramp made from it is (a Library palette's own ramps, a subject); `set`: the group of loose swatches it joins when kept (a row of Light zones) */
+export type Proposal = { id: string; oklch: Oklch; name: string | null; material?: MaterialId; set?: string };
 /** `from`: the source whose popover shows these; `note`: what it left out, in a sentence */
 export type Proposals = { label: string; items: Proposal[]; from?: Source; note?: string };
 
@@ -34,10 +34,12 @@ export const CANVAS_LABEL = 'Picked from the canvas';
 export const ZONES_LABEL = 'From Light zones';
 /** the layer colours offered from the Layers tab: one set, replaced when offered again */
 export const LAYERS_LABEL = 'From Layers';
+/** these are kept as groups of loose swatches, never as ramps */
+export const keptLoose = (label: string | undefined): boolean => label === LAYERS_LABEL || label === ZONES_LABEL;
 
 /** one set at a time: a new source replaces the last; picks off the canvas add to theirs. `sort`: light to dark, names and materials along */
-export function propose(label: string, colours: Oklch[], names: (string | null)[] = [], more: { from?: Source; sort?: boolean; note?: string; materials?: (MaterialId | undefined)[] } = {}): void {
-  let items: Proposal[] = colours.map((oklch, i) => ({ id: crypto.randomUUID(), oklch, name: names[i] ?? null, ...(more.materials?.[i] && { material: more.materials[i] }) }));
+export function propose(label: string, colours: Oklch[], names: (string | null)[] = [], more: { from?: Source; sort?: boolean; note?: string; materials?: (MaterialId | undefined)[]; set?: string } = {}): void {
+  let items: Proposal[] = colours.map((oklch, i) => ({ id: crypto.randomUUID(), oklch, name: names[i] ?? null, ...(more.materials?.[i] && { material: more.materials[i] }), ...(more.set && { set: more.set }) }));
   if (more.sort) items = items.sort((a, b) => valueOf(b.oklch) - valueOf(a.oklch));
   if (more.from !== 'image') picture.set(null); // another source: the picture's pixels go
   const cur = proposals.get();

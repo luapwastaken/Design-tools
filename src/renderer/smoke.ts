@@ -48,7 +48,8 @@ import { platesFor, pngBlob, svgFor } from './tools/halftone/exports.ts';
 import { ready, screen, shownDots, svgOver, totals } from './tools/halftone/screening.ts';
 import { patchView as patchHalftone, status as halftoneStatus } from './tools/halftone/view-state.ts';
 import { eyedrop, rampsFromLoose } from './tools/illustration/actions.ts';
-import { carryLight, addRamp, baseOf, rampName, recolour, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
+import { carryLight, addRamp, baseOf, rampName, recolour, renameSwatch, setSpec, stepsOf, type IllustrationDoc } from './tools/illustration/doc.ts';
+import { adoptCell } from './tools/illustration/variation-actions.ts';
 import { FINISH_PRESETS } from './tools/illustration/finish.ts';
 import { cleanColour, cleanStrengths, readout as splitText, zoneRig, zoneRows } from './tools/illustration/light-zones.ts';
 import { allFlats, DEFAULT_LAYERS, recipeFlats } from './tools/illustration/layers.ts';
@@ -275,6 +276,12 @@ async function full(): Promise<void> {
   const owner = () => shell.getState().owners[palette.id];
   await shell.sendItem(palette, 'design');
   check("Open: the palette becomes Design's document", dp.source()?.itemId === palette.id && owner() === 'design', dp.source());
+  const importedLocked = designView().locked;
+  const brandToast = toastStore.get().find((t) => /^Imported colours are locked, so Reroll and Variations keep them\. Unlock one \(L\) to let it change\.$/.test(String(t.message)));
+  check('a palette read from an .ase opens in Design with every colour locked, and a toast says so', dp.get().swatches.length > 0 && dp.get().swatches.every((w) => importedLocked.includes(w.id)) && !!brandToast, [dp.get().swatches.length, importedLocked.length, brandToast?.message]);
+  const lockBadge = await until(() => host('design')?.querySelector<HTMLElement>(`[data-swatch="${dp.get().swatches[0]?.id}"] button[aria-label="Lock swatch"]`));
+  check('and a locked swatch shows its lock badge at rest, not only on hover', !!lockBadge && getComputedStyle(lockBadge).display !== 'none' && lockBadge.getAttribute('aria-pressed') === 'true', lockBadge && getComputedStyle(lockBadge).display);
+  patchDesign({ locked: [] });
   await shell.sendItem(palette, 'illustration');
   const lost = dp.state();
   check('opening it in Illustration moves ownership there', owner() === 'illustration' && lost.t === 'owned-elsewhere' && lost.by === 'illustration' && il.state().t === 'saved', [owner(), lost, il.state()]);
@@ -293,6 +300,7 @@ async function full(): Promise<void> {
     return s && s.itemId !== palette.id && dp.state().t === 'saved' ? s : null;
   });
   check('an edit to a locked palette forks a copy into Scratch', fork?.collection === 'Scratch', fork ?? dp.state());
+  check('the copy is named "<name> (edit)", never "copy copy", and a toast says it is a copy and where the original stays', fork?.name === `${palette.name} (edit)` && !!toastStore.get().find((t) => String(t.message) === `Edited a copy: ${palette.name} (edit). The original stays in Brand.`), [fork?.name, toastStore.get().map((t) => t.message)]);
   const after = await stat(palette.id);
   check('the locked file is untouched', before && after && before.mtimeMs === after.mtimeMs && before.size === after.size, [before, after]);
   await shell.setCollectionLocked('Brand', false);
@@ -345,6 +353,7 @@ async function full(): Promise<void> {
   await variationsIllustrationUi();
   await lightZonesUi();
   await layersUi();
+  await brandSafetyUi();
   await greyscale();
 
   // brief §8: nothing loops, and there is no spinner to run: no running animation repeats, and no loaded
@@ -423,6 +432,10 @@ async function variationsUi(): Promise<void> {
   check('the bar offers Let these change (Style, Accent, Light or dark page), New set and the seed in mono', ['Let these change', 'Style', 'Accent', 'Light or dark page', 'New set', 'Seed 4242'].every((t) => panel()?.textContent?.includes(t)), panel()?.textContent?.slice(0, 160));
   const wide = all();
   check('the six palettes are all different', new Set(wide).size === 6);
+  check('Variations says in its status line that Primary may change while it is unlocked', !!panel()?.textContent?.includes('Primary may change in these'), panel()?.textContent?.slice(0, 200));
+  patchDesign({ locked: [held('Primary').id] });
+  check('and says nothing of it once Primary is locked', !!(await until(() => !panel()?.textContent?.includes('Primary may change in these'))));
+  patchDesign({ locked: [] });
 
   // on this tab a number opens a cell and the role keys are not there
   const plain = dd.get();
@@ -1113,6 +1126,16 @@ async function design(dir: string, image: LibraryItemRef, dt: DocController<Dith
     const got = (await until(() => proposals.get()?.items.length === 3 && proposals.get()!.items)) || [];
     check('Paste codes reads three plain numbers, 0xRRGGBB and a token named for its job (that one proposed as the Primary)', got.map((p) => toHex(p.oklch).toLowerCase().slice(1)).join() === 'e8643c,112233,ff8800' && got[1]?.role === 'Primary', got.map((p) => [toHex(p.oklch), p.role]));
   } else check('Paste codes opens again for the numbers', false);
+  // kept, pasted colours are locked (the codes are the client's own), and a toast says so
+  if (proposals.get()?.from === 'paste') {
+    const [pasted, depthPaste] = [dd.get(), dd.depth()];
+    button('design', 'Keep all')?.click();
+    const kept = await until(() => (dd.depth() === depthPaste + 1 ? dd.get().swatches.filter((w) => !pasted.swatches.includes(w)) : null));
+    check('Keep all on pasted codes locks the colours it adds, and a toast says so', !!kept && kept.length === 3 && kept.every((w) => designView().locked.includes(w.id)) && !!toastStore.get().find((t) => /Imported colours are locked/.test(String(t.message))), [kept?.length, designView().locked.length]);
+    ctrlZ();
+    await until(() => dd.get() === pasted);
+    patchDesign({ locked: [] });
+  }
 
   clearProposals();
 
@@ -4308,8 +4331,25 @@ async function lightZonesUi(): Promise<void> {
   check('the click also selected that row’s ramp', !!(await until(() => selectedRamp() === il.get().ramps[0].id)));
   button('illustration', 'Add row')?.click();
   const seven = await until(() => (bases.get()?.items.length === 7 ? bases.get() : null));
-  check('Add row offers all seven of its colours, the one already offered not twice', !!seven && new Set(seven.items.map((p) => p.name)).size === 7 && seven.items.some((p) => p.name === 'Skin cast shadow') && seven.items.every((p) => p.material === 'skin'), seven?.items.map((p) => p.name));
+  check('Add row offers all seven of its colours, the one already offered not twice', !!seven && new Set(seven.items.map((p) => p.name)).size === 7 && seven.items.some((p) => p.name === 'Skin cast shadow') && seven.items.every((p) => p.set === 'Skin zones'), seven?.items.map((p) => p.name));
+  const keepBtn = () => button('illustration', 'Keep all');
+  const scrollsInto = (el: Element | null | undefined) => {
+    if (!el) return false;
+    let p = el.parentElement;
+    while (p && !/(auto|scroll)/.test(getComputedStyle(p).overflowY)) p = p.parentElement;
+    const [r, c] = [el.getBoundingClientRect(), (p ?? document.documentElement).getBoundingClientRect()];
+    return r.top >= c.top - 1 && r.bottom <= c.bottom + 1;
+  };
+  check('the offered zones are scrolled into view in the Ramps panel', !!(await until(() => scrollsInto(keepBtn()))), keepBtn()?.getBoundingClientRect().top);
+  const [rampsBefore, swatchesBefore] = [il.get().ramps.length, il.get().swatches.length];
+  keepBtn()?.click();
+  await until(() => il.get().swatches.length === swatchesBefore + 7);
+  const zoneGroup = () => host('illustration')?.querySelector<HTMLElement>('[role="group"][aria-label="Skin zones"]') ?? null;
+  check('Keep all adds the row as ONE labelled group of seven loose swatches, never as ramps, in one undo step', il.get().ramps.length === rampsBefore && il.get().swatches.filter((w) => w.set === 'Skin zones' && w.group === undefined).length === 7 && !!(await until(zoneGroup)) && il.depth() === depth + 1, [il.get().ramps.length, rampsBefore, il.depth() - depth]);
+  ctrlZ();
+  check('and one Ctrl+Z takes the group back out', !!(await until(() => il.get() === doc0)), [il.get().ramps.length, il.get().swatches.length, il.depth() - depth]);
   clearBases();
+  await sleep(200); // the selection moving back to a ramp scrolls its row, which would close a menu opened now
 
   // a preset writes the palette's light pair, as the Light row does: one undo step, the Ramps panel follows
   const preset = () => sceneLight(il.get()).preset?.id;
@@ -4582,6 +4622,30 @@ async function layersUi(): Promise<void> {
   ctrlZ();
   await until(() => il.get() === doc0);
   check('and undo gives them back as proposals', il.get() === doc0 && bases.get()?.label === 'From Layers');
+  // kept again, they are one group labelled Layer colours with no Make ramps; Check values leaves them out; a second Keep all replaces the set
+  button('illustration', 'Keep all')?.click();
+  await until(() => il.get().swatches.length === doc0.swatches.length + want.length);
+  const layerGroup = () => host('illustration')?.querySelector<HTMLElement>('[role="group"][aria-label="Layer colours"]') ?? null;
+  const kept = await until(layerGroup);
+  check('the kept layer colours sit in one group labelled Layer colours, tagged as such, with no Make ramps and no plain Loose group', !!kept && il.get().swatches.filter((w) => w.set === 'Layer colours').length === want.length && ![...kept.querySelectorAll('button')].some((b) => /Make ramps/.test(b.textContent ?? '')) && !host('illustration')?.querySelector('[aria-label="Colours in no ramp"]'), [kept?.textContent?.slice(0, 80)]);
+  illusTab('check')?.click();
+  const board = await until(() => {
+    const t = panel()?.textContent ?? '';
+    return t.includes('Value') && t.includes('Skin') ? t : null;
+  });
+  check('Check values leaves the layer colours out: no Loose row, none of their names', !!board && !/Loose|Rim · Add|Cast shadow · Multiply|Light · Screen/.test(board), board?.slice(0, 200));
+  illusTab('layers')?.click();
+  await until(() => button('illustration', 'Add layer colours to palette'));
+  button('illustration', 'Add layer colours to palette')?.click();
+  await until(() => bases.get()?.label === 'From Layers');
+  const d3 = il.depth();
+  button('illustration', 'Keep all')?.click();
+  await until(() => il.depth() === d3 + 1);
+  check('adding the layer colours again replaces the set instead of piling up, in one undo step', il.get().swatches.filter((w) => w.set === 'Layer colours').length === want.length && il.get().swatches.length === doc0.swatches.length + want.length && il.depth() === d3 + 1, [il.get().swatches.length, doc0.swatches.length + want.length]);
+  ctrlZ();
+  ctrlZ();
+  await until(() => il.get() === doc0);
+  clearBases();
   check('the still life’s masks are built once per size', stillLifeOf(520) === stillLifeOf(520));
   clearBases();
 
@@ -4615,6 +4679,65 @@ async function layersUi(): Promise<void> {
   // back as it was
   clearBases();
   il.transact('Smoke ramps back', () => was);
+  patchIllustration({ ...snap });
+}
+
+/**
+ * Brand colour safety: adopting a Variations cell renames the ramps it changes (not one typed by hand), a role palette
+ * sent to Pattern leaves out what would vanish into its background and says so, and an Illustration palette sends each
+ * ramp's base first so Pattern's cap cuts steps and not the brand.
+ */
+async function brandSafetyUi(): Promise<void> {
+  const il = illustrationDoc();
+  const [was, snap] = [il.get(), { ...illustrationView() }];
+  const says = (re: RegExp) => toastStore.get().find((t) => re.test(String(t.message)));
+
+  // ill-02: ramps named for a subject, three of them; the second named by hand
+  shell.setActive('illustration');
+  const bare = (d: IllustrationDoc): IllustrationDoc => ({ ...d, ramps: [], swatches: [], scene: undefined });
+  const fixture: [Oklch, string][] = [[[0.3, 0.04, 60], 'Hair black'], [[0.74, 0.075, 55], 'Skin medium'], [[0.55, 0.09, 250], 'Cloth']];
+  il.transact('Smoke ramps', (d) => fixture.reduce<IllustrationDoc>((x, [b, name]) => addRamp(x, b, name).doc, bare(d)));
+  const second = baseOf(il.get(), il.get().ramps[1].id)!.id;
+  il.transact('Name by hand', (d) => renameSwatch(d, second, 'My skin'));
+  patchIllustration({ tab: 'variations', varMode: 'colours', varPath: [], varOpen: 0, lockedRamps: [], pictureOn: [], pictureTones: {} });
+  const before = il.get();
+  const d0 = il.depth();
+  const cell = illustrationCells(before, illustrationView())[1];
+  adoptCell(il, cell);
+  const after = il.get();
+  const nameOf = (d: IllustrationDoc, i: number) => baseOf(d, d.ramps[i].id)!.name;
+  const hexOfBase = (d: IllustrationDoc, i: number) => toHex(baseOf(d, d.ramps[i].id)!.oklch);
+  check('Use variation changes the ramps’ colours in one undo step', il.depth() === d0 + 1 && [0, 1, 2].some((i) => hexOfBase(after, i) !== hexOfBase(before, i)), [il.depth() - d0]);
+  check('and renames each changed ramp for its new colour, in that same step', [0, 2].every((i) => hexOfBase(after, i) === hexOfBase(before, i) || (nameOf(after, i) !== fixture[i][1] && nameOf(after, i).length > 0)), [0, 1, 2].map((i) => nameOf(after, i)));
+  check('except the one named by hand', nameOf(after, 1) === 'My skin', nameOf(after, 1));
+  ctrlZ();
+  check('Ctrl+Z brings the colours and the names back together', !!(await until(() => il.get() === before)), [0, 1, 2].map((i) => nameOf(il.get(), i)));
+
+  // pl-01: a role palette to Pattern
+  const dd = designDoc();
+  const pd = patternDoc();
+  const designWas = dd.get();
+  const snow = designSwatch([0.97, 0.01, 90], 'Snow', 'Background');
+  const white = designSwatch([0.99, 0.0, 90], 'Surface white', 'Surface');
+  dd.transact('Smoke roles', (d) => ({ ...d, swatches: [snow, white, designSwatch([0.55, 0.18, 10], 'Berry', 'Primary'), designSwatch([0.2, 0.02, 40], 'Ink', 'Text')] }));
+  await shell.sendDoc('design', 'pattern');
+  check('a role palette sent to Pattern uses the Background as the pattern background', JSON.stringify(pd.get().background) === JSON.stringify(snow.oklch), pd.get().background);
+  check('and leaves out what is within 0.06 of it in value, so no shape draws as nothing', pd.get().palette.length === 2 && pd.get().palette.every((c) => Math.abs(valueOf(c) - valueOf(snow.oklch)) >= 0.06), pd.get().palette);
+  check('and the toast names what was left out', !!says(/Surface white is too close to the background in value, so it stayed out\./), toastStore.get().map((t) => t.message));
+
+  // aw-06: Illustration to Pattern, base first
+  shell.setActive('illustration');
+  const hues = [20, 90, 160, 230, 300];
+  il.transact('Smoke ramps', (d) => hues.reduce<IllustrationDoc>((x, h, i) => addRamp(x, [0.45 + i * 0.04, 0.14, h], `Brand ${i + 1}`).doc, bare(d)));
+  const bases = il.get().ramps.map((r) => baseOf(il.get(), r.id)!.oklch);
+  await shell.sendDoc('illustration', 'pattern');
+  const got = pd.get().palette;
+  check('Illustration to Pattern sends each ramp’s base first, in ramp order', got.length === 12 && bases.every((b, i) => got[i].every((v, k) => v === b[k])), got.slice(0, 5));
+  check('and the toast says the bases went first and how many stayed out', !!says(/5 ramp bases went first and the last 13 colours stayed out/), toastStore.get().map((t) => t.message));
+
+  shell.setActive('illustration');
+  il.transact('Smoke ramps back', () => was);
+  dd.transact('Smoke roles back', () => designWas);
   patchIllustration({ ...snap });
 }
 

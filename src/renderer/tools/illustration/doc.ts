@@ -43,6 +43,18 @@ export function looseOf(d: IllustrationDoc): Swatch[] {
   return d.swatches.filter((w) => w.group === undefined || !ids.has(w.group));
 }
 
+/** the group the layer colours kept from the Layers tab sit in: blend colours, not flats, so the checks and Make ramps leave them alone */
+export const LAYER_COLOURS = 'Layer colours';
+export const isLayer = (w: Swatch): boolean => w.set === LAYER_COLOURS;
+
+/** the colours in no ramp as the palette shows them: the plain ones first, then each labelled group in the order it began */
+export function looseSets(d: IllustrationDoc): { label: string | null; list: Swatch[] }[] {
+  const loose = looseOf(d);
+  const labels = [...new Set(loose.flatMap((w) => (w.set ? [w.set] : [])))];
+  const plain = loose.filter((w) => !w.set);
+  return [...(plain.length ? [{ label: null, list: plain }] : []), ...labels.map((label) => ({ label, list: loose.filter((w) => w.set === label) }))];
+}
+
 /** the base's name; with no base (another tool deleted it) the name its file kept; else the nearest colour name */
 export const rampName = (d: IllustrationDoc, r: RampSpec): string => {
   const base = baseOf(d, r.id);
@@ -117,7 +129,22 @@ export function recolour(d: IllustrationDoc, id: string, oklch: Oklch): Illustra
   return { ...d, swatches: d.swatches.map((x) => (x.id === id ? { ...rest, oklch, ...(r && { edited: true }) } : x)) };
 }
 
-export const renameSwatch = (d: IllustrationDoc, id: string, name: string): IllustrationDoc => ({ ...d, swatches: d.swatches.map((w) => (w.id === id ? { ...w, name } : w)) });
+/** a name typed by hand: it is marked, so Variations leaves it when the colour changes; a cleared name follows the colour again */
+export const renameSwatch = (d: IllustrationDoc, id: string, name: string): IllustrationDoc => ({
+  ...d,
+  swatches: d.swatches.map((w) => {
+    if (w.id !== id) return w;
+    const { named: _, ...rest } = w;
+    return name.trim() ? { ...rest, name, named: true } : { ...rest, name };
+  }),
+});
+
+/** a ramp's base named by the app (a picture's subject, a proposal) takes `name`; one the person named, or left blank to follow its colour, keeps what it has */
+export function renameBase(d: IllustrationDoc, ramp: string, name: string): IllustrationDoc {
+  const base = baseOf(d, ramp);
+  if (!base || !base.name.trim() || base.named || base.name === name) return d;
+  return { ...d, swatches: d.swatches.map((w) => (w === base ? { ...w, name } : w)) };
+}
 
 /** a hand-edited step back to what its ramp makes */
 export function revertStep(d: IllustrationDoc, id: string): IllustrationDoc {
@@ -146,11 +173,30 @@ function spawn(d: IllustrationDoc, base: Oklch, like: RampSpec | null | undefine
 
 const baseSwatch = (id: string, oklch: Oklch, name: string): Swatch => ({ id: crypto.randomUUID(), name, role: null, oklch, type: 'process', group: id, step: 0 });
 
-/** a colour in no ramp, named as given: the layer colours kept from the Layers tab */
-export const addLoose = (d: IllustrationDoc, oklch: Oklch, name: string): { doc: IllustrationDoc; id: string } => {
-  const w: Swatch = { id: crypto.randomUUID(), name, role: null, oklch, type: 'process' };
+/** a colour in no ramp, named as given; `set` puts it in a labelled group (the layer colours from the Layers tab, a row of Light zones) */
+export const addLoose = (d: IllustrationDoc, oklch: Oklch, name: string, set?: string): { doc: IllustrationDoc; id: string } => {
+  const w: Swatch = { id: crypto.randomUUID(), name, role: null, oklch, type: 'process', ...(set && { set }) };
   return { doc: { ...d, swatches: [...d.swatches, w] }, id: w.id };
 };
+
+/**
+ * Colours into labelled groups of loose swatches. `replaceAll` takes the whole group of the same label
+ * out first (the layer colours: a new set stands for the old one, which a changed Light made stale);
+ * otherwise a colour with the name of one already in its group replaces it, so a row of zones
+ * offered again never doubles. Returns the first new swatch's id.
+ */
+export function addSet(d: IllustrationDoc, items: { oklch: Oklch; name: string; set: string }[], replaceAll = false): { doc: IllustrationDoc; id: string } {
+  const loose = new Set(looseOf(d));
+  const gone = (w: Swatch) => loose.has(w) && !!w.set && (replaceAll ? items.some((i) => i.set === w.set) : items.some((i) => i.set === w.set && i.name === w.name));
+  let doc: IllustrationDoc = { ...d, swatches: d.swatches.filter((w) => !gone(w)) };
+  let first = '';
+  for (const i of items) {
+    const r = addLoose(doc, i.oklch, i.name, i.set);
+    first ||= r.id;
+    doc = r.doc;
+  }
+  return { doc, id: first };
+}
 
 /**
  * A new ramp from a base colour, after `after` (the end when null), lit as that ramp (or the last)
@@ -180,13 +226,13 @@ export function replaceRamps(d: IllustrationDoc, picks: { name: string; base: Ok
 
 /** loose swatches become ramp bases, each keeping its id, name and role, lit as the last ramp is (plan: "Make ramps from these"); as many as the palette has room for */
 export function makeRamps(d: IllustrationDoc, ids: string[]): IllustrationDoc {
-  const taking = looseOf(d).filter((w) => ids.includes(w.id)).slice(0, Math.max(0, MAX_RAMPS - d.ramps.length));
+  const taking = looseOf(d).filter((w) => ids.includes(w.id) && !isLayer(w)).slice(0, Math.max(0, MAX_RAMPS - d.ramps.length));
   const specs = taking.map((w) => spawn(d, w.oklch, d.ramps.at(-1)));
   const bases = new Map(taking.map((w, i) => [w.id, specs[i].id]));
   const swatches = d.swatches.map((w) => {
     const group = bases.get(w.id);
     if (!group) return w;
-    const { edited: _, ...rest } = w;
+    const { edited: _, set: _s, ...rest } = w;
     return { ...rest, group, step: 0 };
   });
   return ordered(specs.reduce((x, s) => regen(x, s.id), { ...d, ramps: [...d.ramps, ...specs], swatches }));

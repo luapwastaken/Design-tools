@@ -16,13 +16,13 @@ import { useSettled } from '../common/settled.ts';
 import { clustersOf } from '../common/Value.tsx';
 import { VISIONS, type Kind } from '../common/Vision.tsx';
 import type { Doc } from './actions.ts';
-import { named, recolour, type IllustrationDoc } from './doc.ts';
+import { isLayer, named, recolour, type IllustrationDoc } from './doc.ts';
 import { pointAt, type IllustrationView } from './view-state.ts';
 import s from './Check.module.css';
 
 export type Checks = {
   settled: IllustrationDoc;
-  /** blank names filled in, as the checks' sentences name them */
+  /** blank names filled in, as the checks' sentences name them; the layer colours are not checked */
   shown: Swatch[];
   /** the bases, and colours in no ramp: what a painting's big shapes are */
   bases: Swatch[];
@@ -40,7 +40,8 @@ export type Checks = {
 export function useChecks(doc: Doc, v: IllustrationView): Checks {
   const settled = useSettled(doc);
   return useMemo(() => {
-    const shown = named(settled);
+    // layer colours are blend colours laid over the flats, not flats: they would only raise collisions the recipe depends on
+    const shown = named(settled).filter((w) => !isLayer(w));
     const bases = shown.filter((w) => w.step === 0 || !settled.ramps.some((r) => r.id === w.group));
     const collisions = valueCollisions(bases, v.flagL / 100);
     const clusters = clustersOf(collisions);

@@ -76,3 +76,26 @@ test('a palette sent here colours the shapes that take palette colours; a shape 
   assert.equal(big.doc.palette.length, MAX_COLOURS);
   assert.equal(big.left, 18);
 });
+
+test('a role palette sent here leaves out what would vanish into its background, and says which', () => {
+  const sw = (name: string, oklch: [number, number, number], role: string | null = null): Swatch => ({ id: name, name, role, oklch, type: 'process' });
+  const snow = sw('Snow', [0.97, 0.01, 20], 'Background');
+  const out = withPalette(emptyDoc(), [snow, sw('White', [0.99, 0.0, 20], 'Surface'), sw('Berry', [0.55, 0.18, 10], 'Primary'), sw('Ink', [0.2, 0.02, 20], 'Text')]);
+  assert.deepEqual(out.doc.palette, [[0.55, 0.18, 10], [0.2, 0.02, 20]]);
+  assert.deepEqual(out.doc.background, snow.oklch);
+  assert.deepEqual(out.skipped, ['White']);
+  // every colour too close: they still go in, rather than an empty palette
+  const all = withPalette(emptyDoc(), [snow, sw('White', [0.99, 0.0, 20], 'Surface')]);
+  assert.equal(all.doc.palette.length, 1);
+  assert.deepEqual(all.skipped, []);
+});
+
+test('an Illustration palette sent here sends each ramp base first, so the cap cuts steps and not the brand', () => {
+  const ramp = (group: string, h: number): Swatch[] => [-2, -1, 0, 1, 2].map((step) => ({ id: `${group}${step}`, name: '', role: null, oklch: [0.6 - step * 0.08, 0.1, h], type: 'process', group, step }));
+  const swatches = ['a', 'b', 'c', 'd'].flatMap((g, i) => ramp(g, i * 80)); // 20 colours, four bases
+  const out = withPalette(emptyDoc(), swatches);
+  assert.equal(out.doc.palette.length, MAX_COLOURS);
+  assert.equal(out.bases, 4);
+  assert.deepEqual(out.doc.palette.slice(0, 4), swatches.filter((w) => w.step === 0).map((w) => w.oklch));
+  assert.equal(out.left, 8);
+});

@@ -33,6 +33,10 @@ export type Swatch = {
   group?: string;
   /** position in its ramp: 0 = base, negative = lighter (toward the highlight), positive = darker */
   step?: number;
+  /** Illustration: the labelled group a colour in no ramp belongs to ("Layer colours", "Skin medium zones"); absent = plain loose */
+  set?: string;
+  /** a name the person typed: nothing that renames colours by itself (using a Variation) touches it */
+  named?: boolean;
   /** a hand-edited ramp step: regenerating the ramp leaves it alone */
   edited?: boolean;
 };

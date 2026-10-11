@@ -145,7 +145,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
             <span className={s.from}>
               <b>{plural(ghosts.items.length, 'colour')} proposed</b> {ghosts.label}
             </span>
-            <Button size="xs" variant="primary" icon="add" shortcut="A" onClick={() => addProposals(doc, ghosts.items, true)}>
+            <Button size="xs" variant="primary" icon="add" shortcut="A" onClick={() => addProposals(doc, ghosts.items, true, ghosts.from)}>
               Keep all
             </Button>
             <Button size="xs" shortcut="Escape" onClick={clearProposals}>
@@ -219,7 +219,7 @@ export function PaletteSection({ doc, d, v, onPop }: { doc: Doc; d: DesignDoc; v
             />
           ))}
           {ghosts?.items.map((p, i) => (
-            <Ghost key={p.id} p={p} guess={guess[i]} data={v.chipData} shown={simulated(p.oklch, v.sim)} lockable={ghosts.from === 'generate'} onAdd={() => addProposals(doc, [p])} onDiscard={() => dropOne(p)} onLock={() => toggleLock(p.id)} />
+            <Ghost key={p.id} p={p} guess={guess[i]} data={v.chipData} shown={simulated(p.oklch, v.sim)} lockable={ghosts.from === 'generate'} onAdd={() => addProposals(doc, [p], false, ghosts.from)} onDiscard={() => dropOne(p)} onLock={() => toggleLock(p.id)} />
           ))}
           <Tooltip content="Add a colour at the value the palette lacks most">
             <button type="button" className={s.add} aria-label="Add a swatch" onClick={() => addSwatch(doc)}>
